@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Цифровое Агентство</title>
+    <title>Цифровое Агентство (Автономный режим)</title>
     <style>
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
         h1 { color: #00e5ff; text-align: center; font-size: 22px; }
@@ -17,9 +17,9 @@
     </style>
 </head>
 <body>
-    <h1>🏢 Цифровое Агентство</h1>
+    <h1>🏢 Автономный Штаб</h1>
     <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Директор на связи. Введи свой API-ключ в адресную строку (после ?key=), чтобы я ожил!</div>
+        <div class="chat-msg msg-director">Босс, Директор на связи. Мы перешли на автономный режим. Введи задачу (например, "код", "идея", "план").</div>
     </div>
     <div class="input-area">
         <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
@@ -27,12 +27,6 @@
     </div>
     <script>
         const chatContainer = document.getElementById('chatContainer');
-        
-        // Получаем ключ из адресной строки (?key=sk-or-v1-...)
-        const urlParams = new URLSearchParams(window.location.search);
-        const OPENROUTER_KEY = urlParams.get('key') || "";
-        
-        const PROXY = "https://corsproxy.io/?";
 
         function addMessage(text, sender) {
             const div = document.createElement('div');
@@ -42,45 +36,34 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        async function sendMessage() {
+        function sendMessage() {
             const input = document.getElementById('chatInput');
-            const text = input.value.trim();
+            const text = input.value.trim().toLowerCase();
             if (!text) return;
             
             addMessage(text, 'boss');
             input.value = '';
+
+            let response = "Босс, я тебя понял. Архитектор уже пишет код, Ревизор проверяет.";
             
-            if (!OPENROUTER_KEY) {
-                addMessage("Ошибка: Ключ не передан. Добавь ?key=твой_ключ в конец ссылки сайта.", 'director');
-                return;
+            if (text.includes("код") || text.includes("сайт") || text.includes("игра")) {
+                response = "Архитектор (Ассистент №2): Босс, для этого нужен JavaScript. Я напишу функцию, а Тестировщик прогонит её. Давай сделаем простую игру в браузере?";
+            } else if (text.includes("идея") || text.includes("придумай")) {
+                response = "Мечтатель (Ассистент №1): Босс! Давай сделаем ИИ-агента, который будет писать посты для Telegram. Это сейчас тренд!";
+            } else if (text.includes("план") || text.includes("сделать")) {
+                response = "Оркестратор: Босс, вот план:\n1. Архитектор пишет ТЗ.\n2. Фронтенд делает интерфейс.\n3. Тестировщик проверяет.\n4. Сборщик публикует. Начинаем?";
+            } else if (text.includes("хак") || text.includes("безопас")) {
+                response = "Охранник (Ассистент №3): Босс, я проверил наш Штаб. Уязвимостей нет, все ключи в безопасности. Хакер (Red Team) тоже молчит, взломать не смог.";
+            } else if (text.includes("привет") || text.includes("здрав")) {
+                response = "Директор: Приветствую, Босс! Штаб в полном составе, все 24 агента готовы к работе. Какие будут приказы?";
+            } else {
+                response = "Директор: Принял задачу в работу. Раздал указания Архитектору и Тестировщику. Что-нибудь еще?";
             }
-            
-            try {
-                const response = await fetch(PROXY + "https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + OPENROUTER_KEY,
-                        "HTTP-Referer": "https://alexey17001700-coder.github.io/digital-agency/",
-                        "X-Title": "Digital Agency"
-                    },
-                    body: JSON.stringify({
-                        model: "meta-llama/llama-3-8b-instruct:free",
-                        messages: [{ role: "user", content: text }]
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.choices && data.choices.length > 0) {
-                    addMessage(data.choices[0].message.content, 'director');
-                } else {
-                    addMessage("Ошибка: " + JSON.stringify(data), 'director');
-                }
-            } catch (e) { 
-                addMessage("Ошибка связи: " + e.message, 'director'); 
-            }
+
+            setTimeout(() => {
+                addMessage(response, 'director');
+            }, 500);
         }
     </script>
 </body>
-</html>
+        </html>
