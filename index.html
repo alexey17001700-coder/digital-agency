@@ -3,91 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Цифровое Агентство (Автономный режим)</title>
+    <title>Цифровое Агентство (GigaChat Real)</title>
     <style>
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
-        h1 { color: #00e5ff; text-align: center; font-size: 22px; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 20px; }
-        
-        .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        .mode-btn { padding: 8px 15px; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; }
-        .mode-btn.active { background: #00e5ff; color: #000; }
-        .mode-btn.hacker-active { background: #ff0055; color: #fff; }
-
+        h1 { color: #00e5ff; text-align: center; font-size: 22px; }
         .chat-container { background: #121212; border: 2px solid #ffd700; border-radius: 10px; padding: 15px; height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
         .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; }
         .msg-boss { background: #005662; color: #fff; align-self: flex-end; }
-        
-        .input-area { display: flex; gap: 10px; margin-top: 20px; margin-bottom: 20px; }
+        .input-area { display: flex; gap: 10px; margin-top: 20px; }
         input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; }
         button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
-
-        .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 10px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .agent-card h4 { margin: 0 0 4px 0; color: #fff; font-size: 13px; }
-        .agent-card p { margin: 0; font-size: 11px; color: #aaa; }
     </style>
 </head>
 <body>
-    <h1>🏢 Цифровое Агентство</h1>
-    <div class="subtitle">24 специалиста • Умный автономный режим</div>
-
-    <div class="mode-switch">
-        <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный режим</button>
-        <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Режим Хакера</button>
-    </div>
-
+    <h1>🏢 Агентство (GigaChat)</h1>
     <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Директор на связи. Штаб переведен в умный автономный режим. Обращайся к агентам по имени или ставь задачу.</div>
+        <div class="chat-msg msg-director">Босс, Директор на связи. Я подключен к GigaChat. Жду задачу!</div>
     </div>
-
     <div class="input-area">
         <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
         <button class="send-btn" onclick="sendMessage()">➤</button>
     </div>
 
-    <div class="agents-grid">
-        <div class="agent-card" style="border-color: #ffd700;"><h4>👑 Оркестратор</h4><p>Управляет процессами</p></div>
-        <div class="agent-card" style="border-color: #ff0055;"><h4>🕵️ Хакер (Red Team)</h4><p>Ищет уязвимости</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🛡️ Охранник</h4><p>Закрывает дыры</p></div>
-        <div class="agent-card" style="border-color: #00e5ff;"><h4>🔍 Исследователь</h4><p>Ищет информацию</p></div>
-        <div class="agent-card" style="border-color: #00e5ff;"><h4>📅 Планировщик</h4><p>Строит планы</p></div>
-        <div class="agent-card" style="border-color: #00e5ff;"><h4>📊 Аналитик данных</h4><p>Работает с цифрами</p></div>
-        <div class="agent-card" style="border-color: #00e5ff;"><h4>⚙️ Исполнитель</h4><p>Выполняет задачи</p></div>
-        <div class="agent-card" style="border-color: #9c27b0;"><h4>📐 Архитектор</h4><p>Проектирует системы</p></div>
-        <div class="agent-card" style="border-color: #9c27b0;"><h4>🎨 Дизайнер</h4><p>Визуализирует</p></div>
-        <div class="agent-card" style="border-color: #9c27b0;"><h4>💡 Креативщик</h4><p>Генерирует идеи</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🧐 Критик</h4><p>Проверяет качество</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🧪 Тестировщик</h4><p>Ищет баги</p></div>
-        <div class="agent-card" style="border-color: #4caf50;"><h4>🌐 Переводчик</h4><p>Переводит тексты</p></div>
-        <div class="agent-card" style="border-color: #4caf50;"><h4>📚 Методолог</h4><p>Пишет инструкции</p></div>
-        <div class="agent-card" style="border-color: #4caf50;"><h4>⚖️ Юрист</h4><p>Проверяет законы</p></div>
-        <div class="agent-card" style="border-color: #4caf50;"><h4>📢 Маркетолог</h4><p>Продвигает продукт</p></div>
-        <div class="agent-card" style="border-color: #4caf50;"><h4>✍️ Техпис</h4><p>Пишет документацию</p></div>
-        <div class="agent-card" style="border-color: #2196f3;"><h4>🖥️ Фронтенд</h4><p>Делает интерфейс</p></div>
-        <div class="agent-card" style="border-color: #2196f3;"><h4>🗄️ Бэкенд</h4><p>Делает сервер</p></div>
-        <div class="agent-card" style="border-color: #2196f3;"><h4>📱 Мобильный</h4><p>Делает приложения</p></div>
-        <div class="agent-card" style="border-color: #2196f3;"><h4>🚀 DevOps</h4><p>Настраивает деплой</p></div>
-        <div class="agent-card" style="border-color: #ff9800;"><h4>🧠 Универсал</h4><p>Знает всё</p></div>
-        <div class="agent-card" style="border-color: #ff9800;"><h4>🏛️ Приемная</h4><p>Проверяет результат</p></div>
-        <div class="agent-card" style="border-color: #ff9800;"><h4>🏆 Результат</h4><p>Отвечает за финал</p></div>
-    </div>
-
     <script>
-        let currentMode = 'normal';
         const chatContainer = document.getElementById('chatContainer');
+        
+        // Берем Authorization Key из ссылки (тот, что начинается на Base64-строку из Сбера)
+        const urlParams = new URLSearchParams(window.location.search);
+        const GIGACHAT_AUTH_KEY = urlParams.get('key') || "";
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
-            document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
+        // Используем бесплатный прокси для обхода CORS
+        const PROXY = "https://corsproxy.io/?";
+        
+        // Функция для получения токена (живет 30 минут)
+        async function getAccessToken() {
+            if (!GIGACHAT_AUTH_KEY) throw new Error("Нет ключа авторизации GigaChat в ссылке");
             
-            if (mode === 'hacker') {
-                addMessage("🕵️ Хакер активирован. Ищу слабые места в коде и логике...", 'director');
-            } else {
-                addMessage("👑 Оркестратор вернулся к управлению. Хакер в режиме ожидания.", 'director');
-            }
+            const response = await fetch(PROXY + "https://ngw.devices.sberbank.ru:9443/api/v2/oauth", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                    "RqUID": crypto.randomUUID(),
+                    "Authorization": "Basic " + GIGACHAT_AUTH_KEY // Sber требует Basic auth с ключом
+                },
+                body: "scope=GIGACHAT_API_PERS"
+            });
+            
+            const data = await response.json();
+            if (!data.access_token) throw new Error("Не удалось получить токен: " + JSON.stringify(data));
+            return data.access_token;
         }
 
         function addMessage(text, sender) {
@@ -98,98 +64,47 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
             if (!text) return;
             
             addMessage(text, 'boss');
             input.value = '';
-
-            const lowerText = text.toLowerCase();
-            let response = "";
-
-            // 1. Режим Хакера (приоритет)
-            if (currentMode === 'hacker') {
-                if (lowerText.includes("уязвим") || lowerText.includes("слом")) {
-                    response = "🕵️ Хакер: Босс, наш Штаб чист. Я проверил код на XSS и инъекции. Уязвимостей не найдено. Рекомендую Охраннику добавить двухфакторную аутентификацию для GitHub.";
-                } else {
-                    response = "🕵️ Хакер: Сканирую периметр... Взлом невозможен. Все ключи спрятаны, API защищено. Продолжаю мониторинг.";
-                }
-                setTimeout(() => addMessage(response, 'director'), 600);
+            
+            if (!GIGACHAT_AUTH_KEY) {
+                addMessage("Ошибка: Добавь ?key=ТВОЙ_КЛЮЧ в конец адреса сайта.", 'director');
                 return;
             }
 
-            // 2. Анализ намерений (что хочет сделать Босс?)
-            let intent = "general";
-            if (lowerText.includes("код") || lowerText.includes("напиши") || lowerText.includes("создай")) intent = "code";
-            if (lowerText.includes("ошибка") || lowerText.includes("баг") || lowerText.includes("сломалось")) intent = "bug";
-            if (lowerText.includes("идея") || lowerText.includes("придумай") || lowerText.includes("предложи")) intent = "idea";
-            if (lowerText.includes("план") || lowerText.includes("стратегия")) intent = "plan";
-            if (lowerText.includes("перевод") || lowerText.includes("translate")) intent = "translate";
-            if (lowerText.includes("безопас") || lowerText.includes("взлом")) intent = "security";
-
-            // 3. Поиск конкретного агента по имени
-            if (lowerText.includes("архитектор")) {
-                response = "📐 Архитектор: Босс, я проанализировал задачу. " + 
-                           (intent === "code" ? "Предлагаю разбить код на модули. Сначала создадим структуру, потом напишем логику." : "Нужно четкое ТЗ. Опиши, что должно быть на выходе.");
-            } 
-            else if (lowerText.includes("тестировщик") || lowerText.includes("тест")) {
-                response = "🧪 Тестировщик: Босс, принято. " + 
-                           (intent === "bug" ? "Я уже вижу, где может быть проблема. Сейчас напишу тест-кейс и проверю." : "Готов приступить к проверке. Давай сначала код, а я найду в нем все баги.");
+            try {
+                // 1. Получаем свежий токен (обходим проблему 30 минут)
+                const token = await getAccessToken();
+                
+                // 2. Отправляем запрос в GigaChat через прокси
+                const response = await fetch(PROXY + "https://gigachat.devices.sberbank.ru/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        model: "GigaChat-2-Max", // Берем самую мощную модель [citation:5]
+                        messages: [{ role: "user", content: text }]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.choices && data.choices.length > 0) {
+                    addMessage(data.choices[0].message.content, 'director');
+                } else {
+                    addMessage("Ошибка GigaChat: " + JSON.stringify(data), 'director');
+                }
+            } catch (e) {
+                addMessage("Системная ошибка: " + e.message, 'director');
             }
-            else if (lowerText.includes("дизайнер")) {
-                response = "🎨 Дизайнер: Босс, " + 
-                           (intent === "idea" ? "у меня есть идея: давай сделаем минималистичный интерфейс с неоновыми акцентами." : "я могу нарисовать макет. Скинь референсы, и я сделаю красиво.");
-            }
-            else if (lowerText.includes("мечтатель") || lowerText.includes("креатив")) {
-                response = "💡 Мечтатель: Босс! " + 
-                           (intent === "idea" ? "Давай запустим ИИ-агента, который будет писать посты для Telegram и вести блог. Это сейчас очень востребовано!" : "У меня всегда есть идеи. Дай мне 5 минут, и я накидаю 10 вариантов.");
-            }
-            else if (lowerText.includes("охранник") || lowerText.includes("безопас")) {
-                response = "🛡️ Охранник: Босс, " + 
-                           (intent === "security" ? "я проверил периметр. Все ключи в сейфе, уязвимостей нет. Можно работать." : "безопасность превыше всего. Я всегда начеку.");
-            }
-            else if (lowerText.includes("юрист")) {
-                response = "⚖️ Юрист: Босс, " + 
-                           (intent === "general" ? "наш проект под MIT License. Мы можем использовать код как угодно, но должны указать авторство." : "я проверю юридические риски. В нашем случае всё чисто.");
-            }
-            else if (lowerText.includes("маркетолог")) {
-                response = "📢 Маркетолог: Босс, " + 
-                           (intent === "idea" ? "нам нужно запустить рекламу в Telegram и написать статью на Habr. Это даст приток пользователей." : "я подготовлю план продвижения. Что рекламируем?");
-            }
-            else if (lowerText.includes("переводчик")) {
-                response = "🌐 Переводчик: Босс, " + 
-                           (intent === "translate" ? "я готов перевести любой текст. Что нужно перевести и на какой язык?" : "владею английским, китайским и немецким. Обращайся.");
-            }
-            // 4. Если агент не назван, отвечает Директор
-            else if (lowerText.includes("привет") || lowerText.includes("здравствуй")) {
-                response = "👑 Директор: Привет, Босс! Все 24 агента на связи. Чем займемся сегодня?";
-            } 
-            else if (lowerText.includes("как дела") || lowerText.includes("как ты")) {
-                response = "👑 Директор: Босс, у меня всё отлично. Штаб работает как часы. Агенты при деле. А у тебя как настроение?";
-            } 
-            else if (lowerText.includes("план") || lowerText.includes("сделать")) {
-                response = "👑 Директор (Оркестратор): Босс, вот мой план:\n1. Определяем цель.\n2. Архитектор пишет ТЗ.\n3. Фронтенд делает интерфейс.\n4. Тестировщик проверяет.\n5. Сборщик выпускает. Погнали?";
-            } 
-            else if (lowerText.includes("спасибо")) {
-                response = "👑 Директор: Всегда рад помочь, Босс. Что-нибудь еще?";
-            }
-            else {
-                const fallbacks = [
-                    "👑 Директор: Босс, я записал это в блокнот. Давай обсудим детали?",
-                    "👑 Директор: Интересная мысль. Я передал её Аналитику данных.",
-                    "👑 Директор: Принято. Что делаем дальше?",
-                    "👑 Директор: Я тебя услышал. Давай сделаем это!",
-                    "👑 Директор: Нестандартный подход. Мне нравится. Раздаю задачи команде."
-                ];
-                response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-            }
-
-            setTimeout(() => {
-                addMessage(response, 'director');
-            }, 600);
         }
     </script>
 </body>
-                                                                                                     </html>
+</html>
