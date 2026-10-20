@@ -1,0 +1,23 @@
+name: Deploy with Secret Key
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Inject Secret
+        run: |
+          # Заменяем пустую строку на ключ из секрета
+          sed -i 's/const OPENROUTER_KEY = "";/const OPENROUTER_KEY = "${{ secrets.OPENROUTER_KEY }}";/' index.html
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
