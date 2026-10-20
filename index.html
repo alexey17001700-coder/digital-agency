@@ -31,7 +31,7 @@
 </head>
 <body>
     <h1>🏢 Цифровое Агентство</h1>
-    <div class="subtitle">24 специалиста • OpenRouter AI</div>
+    <div class="subtitle">24 специалиста • Авто-выбор модели</div>
 
     <div class="mode-switch">
         <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный режим</button>
@@ -78,7 +78,6 @@
         let currentMode = 'normal';
         const chatContainer = document.getElementById('chatContainer');
         
-        // Твой прокси-воркер из Cloudflare (ключ там уже спрятан)
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
 
         function setMode(mode) {
@@ -121,7 +120,7 @@
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "qwen/qwen3.6-plus:free", // Актуальная бесплатная модель
+                        model: "openrouter/free", // УМНЫЙ РОУТЕР: сам выбирает рабочую бесплатную модель
                         messages: [
                             { role: "system", content: systemPrompt },
                             { role: "user", content: text }
