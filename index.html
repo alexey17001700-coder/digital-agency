@@ -29,10 +29,6 @@
     <script>
         const chatContainer = document.getElementById('chatContainer');
         
-        // Берем ключ из ссылки (?key=sk-or-v1-...)
-        const urlParams = new URLSearchParams(window.location.search);
-        const OPENROUTER_KEY = urlParams.get('key') || "";
-        
         // Твой прокси-воркер из Cloudflare
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
 
@@ -51,21 +47,16 @@
             
             addMessage(text, 'boss');
             input.value = '';
-            
-            if (!OPENROUTER_KEY) {
-                addMessage("Ошибка: Добавь ?key=ТВОЙ_КЛЮЧ в конец адреса сайта.", 'director');
-                return;
-            }
 
             try {
+                // Отправляем запрос БЕЗ ключа, воркер сам его добавит
                 const response = await fetch(PROXY + "/api/v1/chat/completions", {
                     method: "POST",
                     headers: { 
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + OPENROUTER_KEY
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "openrouter/free", // Умный роутер, сам выбирает рабочую модель
+                        model: "openrouter/free",
                         messages: [{ role: "user", content: text }]
                     })
                 });
