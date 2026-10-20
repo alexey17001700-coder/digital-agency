@@ -19,7 +19,7 @@
 <body>
     <h1>🏢 Цифровое Агентство</h1>
     <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Директор на связи. Мы на GitHub Pages. Жду задачу!</div>
+        <div class="chat-msg msg-director">Босс, Директор на связи. Введи свой API-ключ в адресную строку (после ?key=), чтобы я ожил!</div>
     </div>
     <div class="input-area">
         <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
@@ -28,10 +28,10 @@
     <script>
         const chatContainer = document.getElementById('chatContainer');
         
-        // Ключ будет подтягиваться из GitHub Secrets (пока оставляем пустым)
-        const OPENROUTER_KEY = ""; 
+        // Получаем ключ из адресной строки (?key=sk-or-v1-...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const OPENROUTER_KEY = urlParams.get('key') || "";
         
-        // Прокси для обхода CORS
         const PROXY = "https://corsproxy.io/?";
 
         function addMessage(text, sender) {
@@ -51,7 +51,7 @@
             input.value = '';
             
             if (!OPENROUTER_KEY) {
-                addMessage("Ошибка: Ключ OpenRouter еще не добавлен в настройки GitHub.", 'director');
+                addMessage("Ошибка: Ключ не передан. Добавь ?key=твой_ключ в конец ссылки сайта.", 'director');
                 return;
             }
             
