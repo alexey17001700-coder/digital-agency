@@ -3,125 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Цифровое Агентство v8.0</title>
+    <title>Цифровое Агентство</title>
     <style>
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
-        h1 { color: #00e5ff; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-size: 22px; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 20px; }
-        
-        .chat-container { background: #121212; border: 2px solid #ffd700; border-radius: 10px; padding: 15px; margin-bottom: 20px; height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.1); }
-        .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4; animation: fadeIn 0.3s ease; word-wrap: break-word; }
-        .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        .mode-btn { padding: 8px 15px; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; }
-        .mode-btn.active { background: #00e5ff; color: #000; }
-        .mode-btn.hacker-active { background: #ff0055; color: #fff; }
-
-        .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 10px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .agent-card h4 { margin: 0 0 4px 0; color: #fff; font-size: 13px; }
-        .agent-card p { margin: 0; font-size: 11px; color: #aaa; }
-        
-        .input-area { display: flex; gap: 10px; margin-bottom: 25px; position: sticky; bottom: 10px; background: #0a0a0a; padding-top: 10px; }
-        input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; font-size: 15px; outline: none; }
-        input[type="text"]:focus { border-color: #00e5ff; }
-        button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 15px; color: #000; }
-        button.send-btn:active { transform: scale(0.95); }
-        button.send-btn:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+        h1 { color: #00e5ff; text-align: center; font-size: 22px; }
+        .chat-container { background: #121212; border: 2px solid #ffd700; border-radius: 10px; padding: 15px; height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
+        .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; }
+        .msg-boss { background: #005662; color: #fff; align-self: flex-end; }
+        .input-area { display: flex; gap: 10px; margin-top: 20px; }
+        input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; }
+        button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <h1>🏢 Цифровое Агентство v8.0</h1>
-    <div class="subtitle">24 специалиста • Red Team включен</div>
-
-    <div class="mode-switch">
-        <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный режим</button>
-        <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Режим Хакера</button>
-    </div>
-
+    <h1>🏢 Цифровое Агентство</h1>
     <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Оркестратор на связи. В штате 24 агента. Включая этичного Хакера и Охранника. Ждем команды.</div>
+        <div class="chat-msg msg-director">Босс, Директор на связи. Мы на GitHub Pages. Жду задачу!</div>
     </div>
-
     <div class="input-area">
-        <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="handleKeyPress(event)">
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
+        <button class="send-btn" onclick="sendMessage()">➤</button>
     </div>
-
-    <div class="agents-grid">
-        <div class="agent-card" style="border-color: #ffd700;"><h4>👑 Оркестратор</h4><p>Управляет процессами</p></div>
-        <div class="agent-card" style="border-color: #ff0055;"><h4>🕵️ Хакер (Red Team)</h4><p>Ищет уязвимости</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🛡️ Охранник</h4><p>Закрывает дыры</p></div>
-        <div class="agent-card" style="border-color: #00e5ff;"><h4>🔍 Исследователь</h4><p>Ищет информацию</p></div>
-        <div class="agent-card" style="border-color: #9c27b0;"><h4>📐 Архитектор</h4><p>Проектирует системы</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🧪 Тестировщик</h4><p>Ищет баги</p></div>
-        <div class="agent-card" style="border-color: #ff9800;"><h4>🏆 Результат</h4><p>Отвечает за финал</p></div>
-    </div>
-
     <script>
-        let currentMode = 'normal';
-        // СЮДА ВСТАВЛЯЕМ ССЫЛКУ НА ПРОКСИ
-        const PROXY_URL = ""; 
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
-            document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
-            
-            if (mode === 'hacker') {
-                addMessage("🕵️ Хакер активирован. Начинаю сканирование.", 'director');
-            } else {
-                addMessage("👑 Оркестратор вернулся к управлению.", 'director');
-            }
-        }
-
         const chatContainer = document.getElementById('chatContainer');
+        
+        // Ключ будет подтягиваться из GitHub Secrets (пока оставляем пустым)
+        const OPENROUTER_KEY = ""; 
+        
+        // Прокси для обхода CORS
+        const PROXY = "https://corsproxy.io/?";
 
         function addMessage(text, sender) {
             const div = document.createElement('div');
-            div.className = `chat-msg msg-${sender}`;
+            div.className = 'chat-msg msg-' + sender;
             div.innerText = text;
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
-        }
-
         async function sendMessage() {
             const input = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendBtn');
             const text = input.value.trim();
+            if (!text) return;
             
-            if (text === "") return;
-
             addMessage(text, 'boss');
             input.value = '';
-            sendBtn.disabled = true;
-            sendBtn.innerText = "...";
-
-            let systemPrompt = currentMode === 'hacker' 
-                ? "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости." 
-                : "Ты - Оркестратор Цифрового Агентства. Распределяй задачи среди 24 агентов.";
-
+            
+            if (!OPENROUTER_KEY) {
+                addMessage("Ошибка: Ключ OpenRouter еще не добавлен в настройки GitHub.", 'director');
+                return;
+            }
+            
             try {
-                const response = await fetch(PROXY_URL + "/chat/completions", {
+                const response = await fetch(PROXY + "https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + OPENROUTER_KEY,
+                        "HTTP-Referer": "https://alexey17001700-coder.github.io/digital-agency/",
+                        "X-Title": "Digital Agency"
+                    },
                     body: JSON.stringify({
-                        model: "deepseek-chat",
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            { role: "user", content: text }
-                        ]
+                        model: "meta-llama/llama-3-8b-instruct:free",
+                        messages: [{ role: "user", content: text }]
                     })
                 });
-
+                
                 const data = await response.json();
                 
                 if (data.choices && data.choices.length > 0) {
@@ -129,11 +77,8 @@
                 } else {
                     addMessage("Ошибка: " + JSON.stringify(data), 'director');
                 }
-            } catch (error) {
-                addMessage("Ошибка связи: " + error.message, 'director');
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.innerText = "➤";
+            } catch (e) { 
+                addMessage("Ошибка связи: " + e.message, 'director'); 
             }
         }
     </script>
