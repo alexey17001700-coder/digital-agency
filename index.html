@@ -6,27 +6,89 @@
     <title>Цифровое Агентство (Автономный режим)</title>
     <style>
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
-        h1 { color: #00e5ff; text-align: center; font-size: 22px; }
+        h1 { color: #00e5ff; text-align: center; font-size: 22px; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 20px; }
+        
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .mode-btn { padding: 8px 15px; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; }
+        .mode-btn.active { background: #00e5ff; color: #000; }
+        .mode-btn.hacker-active { background: #ff0055; color: #fff; }
+
         .chat-container { background: #121212; border: 2px solid #ffd700; border-radius: 10px; padding: 15px; height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
+        .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
         .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; }
         .msg-boss { background: #005662; color: #fff; align-self: flex-end; }
-        .input-area { display: flex; gap: 10px; margin-top: 20px; }
+        
+        .input-area { display: flex; gap: 10px; margin-top: 20px; margin-bottom: 20px; }
         input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; }
         button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
+
+        .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 10px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .agent-card h4 { margin: 0 0 4px 0; color: #fff; font-size: 13px; }
+        .agent-card p { margin: 0; font-size: 11px; color: #aaa; }
     </style>
 </head>
 <body>
-    <h1>🏢 Автономный Штаб</h1>
-    <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Директор на связи. Мы перешли на автономный режим. Введи задачу (например, "код", "идея", "план").</div>
+    <h1>🏢 Цифровое Агентство</h1>
+    <div class="subtitle">24 специалиста • Обращайтесь по имени</div>
+
+    <div class="mode-switch">
+        <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный режим</button>
+        <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Режим Хакера</button>
     </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-msg msg-director">Босс, Директор на связи. Можешь обратиться к любому агенту (например: "Архитектор, напиши код").</div>
+    </div>
+
     <div class="input-area">
         <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
         <button class="send-btn" onclick="sendMessage()">➤</button>
     </div>
+
+    <div class="agents-grid">
+        <div class="agent-card" style="border-color: #ffd700;"><h4>👑 Оркестратор</h4><p>Управляет процессами</p></div>
+        <div class="agent-card" style="border-color: #ff0055;"><h4>🕵️ Хакер (Red Team)</h4><p>Ищет уязвимости</p></div>
+        <div class="agent-card" style="border-color: #f44336;"><h4>🛡️ Охранник</h4><p>Закрывает дыры</p></div>
+        <div class="agent-card" style="border-color: #00e5ff;"><h4>🔍 Исследователь</h4><p>Ищет информацию</p></div>
+        <div class="agent-card" style="border-color: #00e5ff;"><h4>📅 Планировщик</h4><p>Строит планы</p></div>
+        <div class="agent-card" style="border-color: #00e5ff;"><h4>📊 Аналитик данных</h4><p>Работает с цифрами</p></div>
+        <div class="agent-card" style="border-color: #00e5ff;"><h4>⚙️ Исполнитель</h4><p>Выполняет задачи</p></div>
+        <div class="agent-card" style="border-color: #9c27b0;"><h4>📐 Архитектор</h4><p>Проектирует системы</p></div>
+        <div class="agent-card" style="border-color: #9c27b0;"><h4>🎨 Дизайнер</h4><p>Визуализирует</p></div>
+        <div class="agent-card" style="border-color: #9c27b0;"><h4>💡 Креативщик</h4><p>Генерирует идеи</p></div>
+        <div class="agent-card" style="border-color: #f44336;"><h4>🧐 Критик</h4><p>Проверяет качество</p></div>
+        <div class="agent-card" style="border-color: #f44336;"><h4>🧪 Тестировщик</h4><p>Ищет баги</p></div>
+        <div class="agent-card" style="border-color: #4caf50;"><h4>🌐 Переводчик</h4><p>Переводит тексты</p></div>
+        <div class="agent-card" style="border-color: #4caf50;"><h4>📚 Методолог</h4><p>Пишет инструкции</p></div>
+        <div class="agent-card" style="border-color: #4caf50;"><h4>⚖️ Юрист</h4><p>Проверяет законы</p></div>
+        <div class="agent-card" style="border-color: #4caf50;"><h4>📢 Маркетолог</h4><p>Продвигает продукт</p></div>
+        <div class="agent-card" style="border-color: #4caf50;"><h4>✍️ Техпис</h4><p>Пишет документацию</p></div>
+        <div class="agent-card" style="border-color: #2196f3;"><h4>🖥️ Фронтенд</h4><p>Делает интерфейс</p></div>
+        <div class="agent-card" style="border-color: #2196f3;"><h4>🗄️ Бэкенд</h4><p>Делает сервер</p></div>
+        <div class="agent-card" style="border-color: #2196f3;"><h4>📱 Мобильный</h4><p>Делает приложения</p></div>
+        <div class="agent-card" style="border-color: #2196f3;"><h4>🚀 DevOps</h4><p>Настраивает деплой</p></div>
+        <div class="agent-card" style="border-color: #ff9800;"><h4>🧠 Универсал</h4><p>Знает всё</p></div>
+        <div class="agent-card" style="border-color: #ff9800;"><h4>🏛️ Приемная</h4><p>Проверяет результат</p></div>
+        <div class="agent-card" style="border-color: #ff9800;"><h4>🏆 Результат</h4><p>Отвечает за финал</p></div>
+    </div>
+
     <script>
+        let currentMode = 'normal';
         const chatContainer = document.getElementById('chatContainer');
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
+            document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
+            
+            if (mode === 'hacker') {
+                addMessage("🕵️ Хакер активирован. Начинаю сканирование. Ищу уязвимости...", 'director');
+            } else {
+                addMessage("👑 Оркестратор вернулся к управлению.", 'director');
+            }
+        }
 
         function addMessage(text, sender) {
             const div = document.createElement('div');
@@ -38,32 +100,74 @@
 
         function sendMessage() {
             const input = document.getElementById('chatInput');
-            const text = input.value.trim().toLowerCase();
+            const text = input.value.trim();
             if (!text) return;
             
             addMessage(text, 'boss');
             input.value = '';
 
-            let response = "Босс, я тебя понял. Архитектор уже пишет код, Ревизор проверяет.";
-            
-            if (text.includes("код") || text.includes("сайт") || text.includes("игра")) {
-                response = "Архитектор (Ассистент №2): Босс, для этого нужен JavaScript. Я напишу функцию, а Тестировщик прогонит её. Давай сделаем простую игру в браузере?";
-            } else if (text.includes("идея") || text.includes("придумай")) {
-                response = "Мечтатель (Ассистент №1): Босс! Давай сделаем ИИ-агента, который будет писать посты для Telegram. Это сейчас тренд!";
-            } else if (text.includes("план") || text.includes("сделать")) {
-                response = "Оркестратор: Босс, вот план:\n1. Архитектор пишет ТЗ.\n2. Фронтенд делает интерфейс.\n3. Тестировщик проверяет.\n4. Сборщик публикует. Начинаем?";
-            } else if (text.includes("хак") || text.includes("безопас")) {
-                response = "Охранник (Ассистент №3): Босс, я проверил наш Штаб. Уязвимостей нет, все ключи в безопасности. Хакер (Red Team) тоже молчит, взломать не смог.";
-            } else if (text.includes("привет") || text.includes("здрав")) {
-                response = "Директор: Приветствую, Босс! Штаб в полном составе, все 24 агента готовы к работе. Какие будут приказы?";
-            } else {
-                response = "Директор: Принял задачу в работу. Раздал указания Архитектору и Тестировщику. Что-нибудь еще?";
+            const lowerText = text.toLowerCase();
+            let response = "";
+
+            // 1. Проверка на Хакера (если включен режим)
+            if (currentMode === 'hacker') {
+                response = "🕵️ Хакер: Сканирую... Взлом невозможен. Все ключи спрятаны, API защищено. Продолжаю мониторинг.";
+                setTimeout(() => addMessage(response, 'director'), 600);
+                return;
+            }
+
+            // 2. Поиск конкретного агента по имени
+            if (lowerText.includes("архитектор")) {
+                response = "📐 Архитектор: Босс, я подготовил структуру проекта. Нужно написать код для фронтенда и бэкенда. С чего начнем?";
+            } 
+            else if (lowerText.includes("тестировщик") || lowerText.includes("тест")) {
+                response = "🧪 Тестировщик: Босс, я готов приступить к проверке. Давай сначала напишем код, а я найду в нем все баги.";
+            }
+            else if (lowerText.includes("дизайнер")) {
+                response = "🎨 Дизайнер: Босс, я предлагаю сделать интерфейс в темных тонах с неоновыми акцентами. Есть референсы?";
+            }
+            else if (lowerText.includes("мечтатель") || lowerText.includes("идея")) {
+                response = "💡 Мечтатель: Босс! У меня куча идей. Давай сделаем что-то прорывное, например, ИИ-помощника для бизнеса!";
+            }
+            else if (lowerText.includes("охранник") || lowerText.includes("безопас")) {
+                response = "🛡️ Охранник: Босс, я проверил наш Штаб. Все ключи в сейфе, уязвимостей нет. Можем работать спокойно.";
+            }
+            else if (lowerText.includes("юрист")) {
+                response = "⚖️ Юрист: Босс, я изучил лицензии. Наш проект под MIT License, мы можем использовать код как угодно, но должны указать авторство.";
+            }
+            else if (lowerText.includes("маркетолог")) {
+                response = "📢 Маркетолог: Босс, нам нужно продвигать Штаб. Я предлагаю запустить рекламу в Telegram и написать статью на Habr.";
+            }
+            else if (lowerText.includes("переводчик")) {
+                response = "🌐 Переводчик: Босс, я готов перевести любой текст на английский, китайский или немецкий. Что нужно перевести?";
+            }
+            // 3. Если агент не назван, отвечает Директор
+            else if (lowerText.includes("привет") || lowerText.includes("здравствуй")) {
+                response = "👑 Директор: Привет, Босс! Все 24 агента на связи. Обращайся к любому по имени, и он ответит.";
+            } 
+            else if (lowerText.includes("как дела") || lowerText.includes("как ты")) {
+                response = "👑 Директор: Босс, у меня всё отлично. Штаб работает как часы. А у тебя как настроение?";
+            } 
+            else if (lowerText.includes("план") || lowerText.includes("сделать")) {
+                response = "👑 Директор (Оркестратор): Босс, вот мой план:\n1. Определяем цель.\n2. Архитектор пишет ТЗ.\n3. Тестировщик проверяет.\n4. Сборщик выпускает. Погнали?";
+            } 
+            else if (lowerText.includes("спасибо")) {
+                response = "👑 Директор: Всегда рад помочь, Босс. Что-нибудь еще?";
+            }
+            else {
+                const fallbacks = [
+                    "👑 Директор: Босс, я записал это в блокнот. Давай обсудим детали?",
+                    "👑 Директор: Интересная мысль. Я передал её Аналитику данных.",
+                    "👑 Директор: Принято. Что делаем дальше?",
+                    "👑 Директор: Я тебя услышал. Давай сделаем это!"
+                ];
+                response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
             }
 
             setTimeout(() => {
                 addMessage(response, 'director');
-            }, 500);
+            }, 600);
         }
     </script>
 </body>
-        </html>
+                                                                   </html>
