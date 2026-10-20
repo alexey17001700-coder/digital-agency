@@ -53,16 +53,15 @@
         .overlay.active { display: block; }
 
         /* Сетка агентов */
-        .agents-wrapper { background: #0a0a0a; padding: 10px; border-top: 1px solid #333; max-height: 220px; overflow-y: auto; flex-shrink: 0; }
+        .agents-wrapper { background: #0a0a0a; padding: 10px 10px 20px 10px; border-top: 1px solid #333; max-height: 220px; overflow-y: auto; flex-shrink: 0; }
         .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
         .agent-info h4 { margin: 0 0 2px 0; color: #fff; font-size: 12px; }
         .agent-info p { margin: 0; font-size: 10px; color: #aaa; }
         
         /* Индикатор статуса */
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 5px #00ff00; flex-shrink: 0; }
         .status-dot.busy { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; }
-        .status-dot.offline { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
     </style>
 </head>
 <body>
@@ -196,8 +195,8 @@
                 </div>
             </div>
         </div>
-                        </div>
-                            <script>
+                    </div>
+                        <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
@@ -210,6 +209,9 @@
         const chatTitleEl = document.getElementById('currentChatTitle');
 
         const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. В нашем штате 24 специалиста. С чего начнем?";
+
+        // СПИСОК РЕАЛЬНЫХ АГЕНТОВ ДЛЯ ИИ
+        const AGENT_LIST = "Оркестратор, Хакер, Охранник, Исследователь, Планировщик, Аналитик, Исполнитель, Архитектор, Дизайнер, Креативщик, Критик, Тестировщик, Переводчик, Методолог, Юрист, Маркетолог, Техпис, Фронтенд, Бэкенд, Мобильный, DevOps, Универсал, Приемная, Результат";
 
         function init() {
             if (!currentChatId || !allChats[currentChatId]) {
@@ -232,7 +234,7 @@
                 title: "Новый чат",
                 pinned: false,
                 messages: [
-                    { role: "system", content: "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy] чтобы показать, кто занят, или [Статус: ИмяАгента: free] чтобы показать, что свободен. Доступные имена: Оркестратор, Хакер, Охранник, Архитектор, Тестировщик, Дизайнер." }
+                    { role: "system", content: `Ты - Оркестратор Цифрового Агентства. У тебя есть строго эти агенты: ${AGENT_LIST}. НЕ ПРИДУМЫВАЙ других имен. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy], чтобы показать, кто занят. Доступные имена: ${AGENT_LIST}.` }
                 ]
             };
             currentChatId = id;
@@ -246,7 +248,6 @@
 
             typeMessage(WELCOME_TEXT, 'director'); 
             
-            // Сбрасываем всех в "свободен"
             document.querySelectorAll('.status-dot').forEach(dot => {
                 dot.classList.remove('busy');
             });
@@ -335,7 +336,6 @@
             const div = document.createElement('div');
             div.className = 'chat-msg msg-' + sender;
             
-            // Вылавливаем теги статуса
             if (sender === 'director') {
                 const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
                 let match;
@@ -344,7 +344,6 @@
                     const agentStatus = match[2];
                     updateAgentStatus(agentName, agentStatus);
                 }
-                // Убираем теги из отображаемого текста
                 text = text.replace(statusRegex, '').trim();
                 div.innerHTML = marked.parse(text);
             } else {
@@ -412,7 +411,7 @@
                 allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости. В КОНЦЕ ответа пиши [Статус: Хакер: busy].";
                 addMessage("🕵️ Хакер активирован.", 'director');
             } else {
-                allChats[currentChatId].messages[0].content = "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента. Отвечай четко, по делу.";
+                allChats[currentChatId].messages[0].content = `Ты - Оркестратор Цифрового Агентства. У тебя есть строго эти агенты: ${AGENT_LIST}. НЕ ПРИДУМЫВАЙ других имен. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy], чтобы показать, кто занят. Доступные имена: ${AGENT_LIST}.`;
                 addMessage("👑 Оркестратор вернулся к управлению.", 'director');
             }
             saveAll();
@@ -428,7 +427,6 @@
             sendBtn.disabled = true;
             sendBtn.innerText = "...";
 
-            // Визуально показываем, что Оркестратор занят
             updateAgentStatus('Оркестратор', 'busy');
 
             try {
@@ -457,7 +455,6 @@
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.innerText = "➤";
-                // Сбрасываем Оркестратора в свободен
                 updateAgentStatus('Оркестратор', 'free');
             }
         }
