@@ -65,7 +65,7 @@
                         "Authorization": "Bearer " + OPENROUTER_KEY
                     },
                     body: JSON.stringify({
-                        model: "qwen/qwen-2.5-72b-instruct:free", // Умная бесплатная модель
+                        model: "openrouter/free", // Умный роутер, сам выбирает рабочую модель
                         messages: [{ role: "user", content: text }]
                     })
                 });
