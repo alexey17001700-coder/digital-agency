@@ -33,7 +33,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const OPENROUTER_KEY = urlParams.get('key') || "";
         
-        // Используем бесплатный прокси для обхода CORS
+        // Твой прокси-воркер из Cloudflare
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
 
         function addMessage(text, sender) {
@@ -58,13 +58,12 @@
             }
 
             try {
-                const response = await fetch(PROXY + "https://openrouter.ai/api/v1/chat/completions", {
+                const response = await fetch(PROXY + "/api/v1/chat/completions", {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json",
-                        "Authorization": "Bearer " + OPENROUTER_KEY,
-                        "HTTP-Referer": "https://alexey17001700-coder.github.io/digital-agency/",
-                        "X-Title": "Digital Agency"
+                        "Authorization": "Bearer " + OPENROUTER_KEY
+                        // Убрали HTTP-Referer и X-Title, чтобы OpenRouter не блокировал
                     },
                     body: JSON.stringify({
                         model: "meta-llama/llama-3-8b-instruct:free",
@@ -85,4 +84,4 @@
         }
     </script>
 </body>
-        </html>
+</html>
