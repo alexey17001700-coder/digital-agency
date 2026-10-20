@@ -25,12 +25,12 @@
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
 
         /* Основная часть */
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100vh; }
         .top-bar { padding: 10px 15px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; }
         .top-bar h1 { font-size: 18px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
@@ -44,7 +44,7 @@
         .chat-msg th, .chat-msg td { border: 1px solid #555; padding: 5px; }
         .chat-msg th { background-color: #1a252f; }
         
-        .input-area { padding: 15px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; }
+        .input-area { padding: 15px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; flex-shrink: 0; }
         input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
         button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
         button.send-btn:disabled { background: #555; }
@@ -53,7 +53,8 @@
         .overlay.active { display: block; }
 
         /* Сетка агентов */
-        .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 15px; background: #0a0a0a; max-height: 250px; overflow-y: auto; }
+        .agents-wrapper { background: #0a0a0a; padding: 10px; border-top: 1px solid #333; max-height: 200px; overflow-y: auto; flex-shrink: 0; }
+        .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 8px; border-radius: 6px; }
         .agent-card h4 { margin: 0 0 4px 0; color: #fff; font-size: 12px; }
         .agent-card p { margin: 0; font-size: 10px; color: #aaa; }
@@ -84,40 +85,42 @@
 
         <div class="chat-container" id="chatContainer"></div>
 
-        <!-- Сетка Агентов -->
-        <div class="agents-grid">
-            <div class="agent-card" style="border-color: #ffd700;"><h4>👑 Оркестратор</h4><p>Управляет</p></div>
-            <div class="agent-card" style="border-color: #ff0055;"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div>
-            <div class="agent-card" style="border-color: #f44336;"><h4>🛡️ Охранник</h4><p>Закрывает</p></div>
-            <div class="agent-card" style="border-color: #00e5ff;"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div>
-            <div class="agent-card" style="border-color: #00e5ff;"><h4>📅 Планировщик</h4><p>Строит планы</p></div>
-            <div class="agent-card" style="border-color: #00e5ff;"><h4>📊 Аналитик</h4><p>Цифры</p></div>
-            <div class="agent-card" style="border-color: #00e5ff;"><h4>⚙️ Исполнитель</h4><p>Делает</p></div>
-            <div class="agent-card" style="border-color: #9c27b0;"><h4>📐 Архитектор</h4><p>Проект</p></div>
-            <div class="agent-card" style="border-color: #9c27b0;"><h4>🎨 Дизайнер</h4><p>Визуал</p></div>
-            <div class="agent-card" style="border-color: #9c27b0;"><h4>💡 Креативщик</h4><p>Идеи</p></div>
-            <div class="agent-card" style="border-color: #f44336;"><h4>🧐 Критик</h4><p>Качество</p></div>
-            <div class="agent-card" style="border-color: #f44336;"><h4>🧪 Тестировщик</h4><p>Баги</p></div>
-            <div class="agent-card" style="border-color: #4caf50;"><h4>🌐 Переводчик</h4><p>Языки</p></div>
-            <div class="agent-card" style="border-color: #4caf50;"><h4>📚 Методолог</h4><p>Инструкции</p></div>
-            <div class="agent-card" style="border-color: #4caf50;"><h4>⚖️ Юрист</h4><p>Законы</p></div>
-            <div class="agent-card" style="border-color: #4caf50;"><h4>📢 Маркетолог</h4><p>Продвижение</p></div>
-            <div class="agent-card" style="border-color: #4caf50;"><h4>✍️ Техпис</h4><p>Документация</p></div>
-            <div class="agent-card" style="border-color: #2196f3;"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div>
-            <div class="agent-card" style="border-color: #2196f3;"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div>
-            <div class="agent-card" style="border-color: #2196f3;"><h4>📱 Мобильный</h4><p>Приложения</p></div>
-            <div class="agent-card" style="border-color: #2196f3;"><h4>🚀 DevOps</h4><p>Деплой</p></div>
-            <div class="agent-card" style="border-color: #ff9800;"><h4>🧠 Универсал</h4><p>Знает всё</p></div>
-            <div class="agent-card" style="border-color: #ff9800;"><h4>🏛️ Приемная</h4><p>Проверка</p></div>
-            <div class="agent-card" style="border-color: #ff9800;"><h4>🏆 Результат</h4><p>Финал</p></div>
-        </div>
-
         <div class="input-area">
             <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
-    </div>
-        <script>
+
+        <!-- Сетка Агентов -->
+        <div class="agents-wrapper">
+            <div class="agents-grid">
+                <div class="agent-card" style="border-color: #ffd700;"><h4>👑 Оркестратор</h4><p>Управляет</p></div>
+                <div class="agent-card" style="border-color: #ff0055;"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div>
+                <div class="agent-card" style="border-color: #f44336;"><h4>🛡️ Охранник</h4><p>Закрывает</p></div>
+                <div class="agent-card" style="border-color: #00e5ff;"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div>
+                <div class="agent-card" style="border-color: #00e5ff;"><h4>📅 Планировщик</h4><p>Планы</p></div>
+                <div class="agent-card" style="border-color: #00e5ff;"><h4>📊 Аналитик</h4><p>Цифры</p></div>
+                <div class="agent-card" style="border-color: #00e5ff;"><h4>⚙️ Исполнитель</h4><p>Делает</p></div>
+                <div class="agent-card" style="border-color: #9c27b0;"><h4>📐 Архитектор</h4><p>Проект</p></div>
+                <div class="agent-card" style="border-color: #9c27b0;"><h4>🎨 Дизайнер</h4><p>Визуал</p></div>
+                <div class="agent-card" style="border-color: #9c27b0;"><h4>💡 Креативщик</h4><p>Идеи</p></div>
+                <div class="agent-card" style="border-color: #f44336;"><h4>🧐 Критик</h4><p>Качество</p></div>
+                <div class="agent-card" style="border-color: #f44336;"><h4>🧪 Тестировщик</h4><p>Баги</p></div>
+                <div class="agent-card" style="border-color: #4caf50;"><h4>🌐 Переводчик</h4><p>Языки</p></div>
+                <div class="agent-card" style="border-color: #4caf50;"><h4>📚 Методолог</h4><p>Инструкции</p></div>
+                <div class="agent-card" style="border-color: #4caf50;"><h4>⚖️ Юрист</h4><p>Законы</p></div>
+                <div class="agent-card" style="border-color: #4caf50;"><h4>📢 Маркетолог</h4><p>Продвижение</p></div>
+                <div class="agent-card" style="border-color: #4caf50;"><h4>✍️ Техпис</h4><p>Документация</p></div>
+                <div class="agent-card" style="border-color: #2196f3;"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div>
+                <div class="agent-card" style="border-color: #2196f3;"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div>
+                <div class="agent-card" style="border-color: #2196f3;"><h4>📱 Мобильный</h4><p>Приложения</p></div>
+                <div class="agent-card" style="border-color: #2196f3;"><h4>🚀 DevOps</h4><p>Деплой</p></div>
+                <div class="agent-card" style="border-color: #ff9800;"><h4>🧠 Универсал</h4><p>Знает всё</p></div>
+                <div class="agent-card" style="border-color: #ff9800;"><h4>🏛️ Приемная</h4><p>Проверка</p></div>
+                <div class="agent-card" style="border-color: #ff9800;"><h4>🏆 Результат</h4><p>Финал</p></div>
+            </div>
+        </div>
+        </div>
+            <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
@@ -128,6 +131,8 @@
         const chatListEl = document.getElementById('chatList');
         const sendBtn = document.getElementById('sendBtn');
         const chatTitleEl = document.getElementById('currentChatTitle');
+
+        const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. В нашем штате 24 специалиста: Архитектор, Тестировщик, Хакер, Охранник и другие.\n\nМы можем помочь тебе в любом деле: от написания кода до стратегических планов. С чего начнем?";
 
         function init() {
             if (!currentChatId || !allChats[currentChatId]) {
@@ -155,7 +160,17 @@
             };
             currentChatId = id;
             saveAll();
-            loadChat(id);
+            
+            chatContainer.innerHTML = '';
+            chatTitleEl.innerText = "Новый чат";
+            
+            // Сохраняем приветствие в историю
+            allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT });
+            saveAll();
+
+            // Печатаем
+            typeMessage(WELCOME_TEXT, 'director'); 
+            
             renderChatList();
             toggleSidebar(); 
         }
@@ -172,9 +187,6 @@
                 renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director');
             }
             
-            if (msgs.length === 1) {
-                renderMessage("Босс, Директор на связи. Я помню наш диалог. Жду задачу!", 'director');
-            }
             chatContainer.scrollTop = chatContainer.scrollHeight;
             renderChatList();
         }
@@ -251,6 +263,27 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
+        function typeMessage(fullText, sender) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg msg-' + sender;
+            chatContainer.appendChild(div);
+            
+            let i = 0;
+            const speed = 30;
+            
+            function type() {
+                if (i < fullText.length) {
+                    div.innerText = fullText.substring(0, i + 1);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    div.innerHTML = marked.parse(fullText);
+                }
+            }
+            type();
+        }
+
         function addMessage(text, sender) {
             renderMessage(text, sender);
             
@@ -323,4 +356,5 @@
         init();
     </script>
 </body>
-</html>
+    </html>
+    
