@@ -65,7 +65,7 @@
                         "Authorization": "Bearer " + OPENROUTER_KEY
                     },
                     body: JSON.stringify({
-                        model: "meta-llama/llama-3.3-70b-instruct:free", // Рабочая бесплатная модель
+                        model: "openrouter/free", // Умный роутер, сам выбирает бесплатную модель
                         messages: [{ role: "user", content: text }]
                     })
                 });
