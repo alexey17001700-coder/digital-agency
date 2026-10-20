@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Цифровое Агентство (GigaChat Real)</title>
+    <title>Цифровое Агентство (OpenRouter)</title>
     <style>
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
         h1 { color: #00e5ff; text-align: center; font-size: 22px; }
@@ -17,9 +17,9 @@
     </style>
 </head>
 <body>
-    <h1>🏢 Агентство (GigaChat)</h1>
+    <h1>🏢 Агентство (OpenRouter)</h1>
     <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Директор на связи. Я подключен к GigaChat. Жду задачу!</div>
+        <div class="chat-msg msg-director">Босс, Директор на связи. Подключен к OpenRouter. Жду задачу!</div>
     </div>
     <div class="input-area">
         <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
@@ -29,32 +29,12 @@
     <script>
         const chatContainer = document.getElementById('chatContainer');
         
-        // Берем Authorization Key из ссылки (тот, что начинается на Base64-строку из Сбера)
+        // Берем ключ из ссылки (?key=sk-or-v1-...)
         const urlParams = new URLSearchParams(window.location.search);
-        const GIGACHAT_AUTH_KEY = urlParams.get('key') || "";
-
+        const OPENROUTER_KEY = urlParams.get('key') || "";
+        
         // Используем бесплатный прокси для обхода CORS
         const PROXY = "https://corsproxy.io/?";
-        
-        // Функция для получения токена (живет 30 минут)
-        async function getAccessToken() {
-            if (!GIGACHAT_AUTH_KEY) throw new Error("Нет ключа авторизации GigaChat в ссылке");
-            
-            const response = await fetch(PROXY + "https://ngw.devices.sberbank.ru:9443/api/v2/oauth", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "application/json",
-                    "RqUID": crypto.randomUUID(),
-                    "Authorization": "Basic " + GIGACHAT_AUTH_KEY // Sber требует Basic auth с ключом
-                },
-                body: "scope=GIGACHAT_API_PERS"
-            });
-            
-            const data = await response.json();
-            if (!data.access_token) throw new Error("Не удалось получить токен: " + JSON.stringify(data));
-            return data.access_token;
-        }
 
         function addMessage(text, sender) {
             const div = document.createElement('div');
@@ -72,24 +52,22 @@
             addMessage(text, 'boss');
             input.value = '';
             
-            if (!GIGACHAT_AUTH_KEY) {
+            if (!OPENROUTER_KEY) {
                 addMessage("Ошибка: Добавь ?key=ТВОЙ_КЛЮЧ в конец адреса сайта.", 'director');
                 return;
             }
 
             try {
-                // 1. Получаем свежий токен (обходим проблему 30 минут)
-                const token = await getAccessToken();
-                
-                // 2. Отправляем запрос в GigaChat через прокси
-                const response = await fetch(PROXY + "https://gigachat.devices.sberbank.ru/api/v1/chat/completions", {
+                const response = await fetch(PROXY + "https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
-                    headers: {
+                    headers: { 
                         "Content-Type": "application/json",
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + OPENROUTER_KEY,
+                        "HTTP-Referer": "https://alexey17001700-coder.github.io/digital-agency/",
+                        "X-Title": "Digital Agency"
                     },
                     body: JSON.stringify({
-                        model: "GigaChat-2-Max", // Берем самую мощную модель [citation:5]
+                        model: "meta-llama/llama-3-8b-instruct:free",
                         messages: [{ role: "user", content: text }]
                     })
                 });
@@ -99,12 +77,12 @@
                 if (data.choices && data.choices.length > 0) {
                     addMessage(data.choices[0].message.content, 'director');
                 } else {
-                    addMessage("Ошибка GigaChat: " + JSON.stringify(data), 'director');
+                    addMessage("Ошибка: " + JSON.stringify(data), 'director');
                 }
-            } catch (e) {
-                addMessage("Системная ошибка: " + e.message, 'director');
+            } catch (e) { 
+                addMessage("Ошибка связи: " + e.message, 'director'); 
             }
         }
     </script>
 </body>
-</html>
+        </html>
