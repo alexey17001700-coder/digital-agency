@@ -3,110 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Цифровое Агентство (AI)</title>
-    <!-- Подключаем библиотеку для красивого форматирования (Markdown) -->
+    <title>Цифровое Агентство</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
-        h1 { color: #00e5ff; text-align: center; font-size: 22px; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 20px; }
+        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        .mode-btn { padding: 8px 15px; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; }
+        /* Боковая панель */
+        .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
+        .sidebar.open { transform: translateX(0); }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { font-size: 16px; margin: 0; color: #00e5ff; }
+        .new-chat-btn { background: #00e5ff; color: #000; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: calc(100% - 20px); margin: 10px; }
+        
+        .chat-list { flex-grow: 1; overflow-y: auto; padding: 0 10px 10px 10px; display: flex; flex-direction: column; gap: 5px; }
+        .chat-item { padding: 10px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: #1e1e1e; }
+        .chat-item:hover { background: #2c3e50; }
+        .chat-item.pinned { border-left: 3px solid #ffd700; }
+        .chat-item-actions { display: flex; gap: 5px; opacity: 0.5; }
+        .chat-item-actions span { cursor: pointer; font-size: 14px; }
+        .chat-item-actions span:hover { opacity: 1; }
+        .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
+
+        /* Основная часть */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; }
+        .top-bar { padding: 10px 15px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+        .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; }
+        .top-bar h1 { font-size: 18px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
+        .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
 
-        .chat-container { background: #121212; border: 2px solid #ffd700; border-radius: 10px; padding: 15px; height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
         .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
         
-        /* Стили для таблиц и кода внутри ответов ИИ */
-        .chat-msg table { border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 10px; font-size: 12px; }
-        .chat-msg th, .chat-msg td { border: 1px solid #555; padding: 5px; text-align: left; }
+        .chat-msg table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 12px; }
+        .chat-msg th, .chat-msg td { border: 1px solid #555; padding: 5px; }
         .chat-msg th { background-color: #1a252f; }
-        .chat-msg code { background-color: #1e1e1e; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
         
-        .input-area { display: flex; gap: 10px; margin-top: 20px; margin-bottom: 20px; }
+        .input-area { padding: 15px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; }
         input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
-        input[type="text"]:focus { border-color: #00e5ff; }
         button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
-        button.send-btn:disabled { background: #555; cursor: not-allowed; }
+        button.send-btn:disabled { background: #555; }
 
-        .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 10px; border-radius: 6px; }
-        .agent-card h4 { margin: 0 0 4px 0; color: #fff; font-size: 13px; }
-        .agent-card p { margin: 0; font-size: 11px; color: #aaa; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
+        .overlay.active { display: block; }
     </style>
 </head>
 <body>
-    <h1>🏢 Цифровое Агентство</h1>
-    <div class="subtitle">24 специалиста • Память диалога</div>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-    <div class="mode-switch">
-        <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный режим</button>
-        <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Режим Хакера</button>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>📂 История чатов</h2>
+            <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
+        </div>
+        <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
+        <div class="chat-list" id="chatList"></div>
     </div>
 
-    <div class="chat-container" id="chatContainer">
-        <div class="chat-msg msg-director">Босс, Директор на связи. Теперь я помню контекст диалога. Жду задачу!</div>
-    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <h1 id="currentChatTitle">Новый чат</h1>
+        </div>
 
-    <div class="input-area">
-        <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
-    </div>
+        <div class="mode-switch">
+            <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
+            <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
+        </div>
 
-    <div class="agents-grid">
-        <div class="agent-card" style="border-color: #ffd700;"><h4>👑 Оркестратор</h4><p>Управляет процессами</p></div>
-        <div class="agent-card" style="border-color: #ff0055;"><h4>🕵️ Хакер (Red Team)</h4><p>Ищет уязвимости</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🛡️ Охранник</h4><p>Закрывает дыры</p></div>
-        <div class="agent-card" style="border-color: #00e5ff;"><h4>🔍 Исследователь</h4><p>Ищет информацию</p></div>
-        <div class="agent-card" style="border-color: #9c27b0;"><h4>📐 Архитектор</h4><p>Проектирует системы</p></div>
-        <div class="agent-card" style="border-color: #f44336;"><h4>🧪 Тестировщик</h4><p>Ищет баги</p></div>
-        <div class="agent-card" style="border-color: #ff9800;"><h4>🏆 Результат</h4><p>Отвечает за финал</p></div>
-    </div>
+        <div class="chat-container" id="chatContainer"></div>
 
-    <script>
-        let currentMode = 'normal';
-        const chatContainer = document.getElementById('chatContainer');
-        const sendBtn = document.getElementById('sendBtn');
-        
+        <div class="input-area">
+            <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+        <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
+        let currentMode = 'normal';
+        
+        let allChats = JSON.parse(localStorage.getItem('shtabAllChats')) || {};
+        let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 
-        // МАССИВ ПАМЯТИ (Хранит историю переписки)
-        let chatHistory = [
-            { role: "system", content: "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента (включая Хакера и Охранника). Отвечай четко, по делу, как опытный менеджер. Используй Markdown для форматирования." }
-        ];
+        const chatContainer = document.getElementById('chatContainer');
+        const chatListEl = document.getElementById('chatList');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatTitleEl = document.getElementById('currentChatTitle');
+
+        function init() {
+            if (!currentChatId || !allChats[currentChatId]) {
+                createNewChat();
+            } else {
+                loadChat(currentChatId);
+            }
+            renderChatList();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function createNewChat() {
+            const id = 'chat_' + Date.now();
+            allChats[id] = {
+                id: id,
+                title: "Новый чат",
+                pinned: false,
+                messages: [
+                    { role: "system", content: "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента. Отвечай четко, по делу." }
+                ]
+            };
+            currentChatId = id;
+            saveAll();
+            loadChat(id);
+            renderChatList();
+            toggleSidebar(); 
+        }
+
+        function loadChat(id) {
+            currentChatId = id;
+            localStorage.setItem('shtabCurrentChatId', id);
+            chatTitleEl.innerText = allChats[id].title;
+            
+            chatContainer.innerHTML = '';
+            const msgs = allChats[id].messages;
+            
+            for (let i = 1; i < msgs.length; i++) {
+                renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director');
+            }
+            
+            if (msgs.length === 1) {
+                renderMessage("Босс, Директор на связи. Я помню наш диалог. Жду задачу!", 'director');
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            renderChatList();
+        }
+
+        function saveAll() {
+            localStorage.setItem('shtabAllChats', JSON.stringify(allChats));
+        }
+
+        function renderChatList() {
+            chatListEl.innerHTML = '';
+            
+            const sortedIds = Object.keys(allChats).sort((a, b) => {
+                if (allChats[a].pinned && !allChats[b].pinned) return -1;
+                if (!allChats[a].pinned && allChats[b].pinned) return 1;
+                return b.localeCompare(a);
+            });
+
+            sortedIds.forEach(id => {
+                const chat = allChats[id];
+                const div = document.createElement('div');
+                div.className = `chat-item ${chat.pinned ? 'pinned' : ''}`;
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'chat-title';
+                titleSpan.innerText = chat.title;
+                titleSpan.onclick = () => { loadChat(id); toggleSidebar(); };
+
+                const actions = document.createElement('div');
+                actions.className = 'chat-item-actions';
+                
+                const pinBtn = document.createElement('span');
+                pinBtn.innerText = chat.pinned ? '📌' : '📍';
+                pinBtn.onclick = (e) => { e.stopPropagation(); togglePin(id); };
+                
+                const delBtn = document.createElement('span');
+                delBtn.innerText = '🗑️';
+                delBtn.onclick = (e) => { e.stopPropagation(); deleteChat(id); };
+
+                actions.appendChild(pinBtn);
+                actions.appendChild(delBtn);
+                div.appendChild(titleSpan);
+                div.appendChild(actions);
+                chatListEl.appendChild(div);
+            });
+        }
+
+        function togglePin(id) {
+            allChats[id].pinned = !allChats[id].pinned;
+            saveAll();
+            renderChatList();
+        }
+
+        function deleteChat(id) {
+            if (confirm("Удалить этот чат?")) {
+                delete allChats[id];
+                if (currentChatId === id) {
+                    createNewChat();
+                } else {
+                    saveAll();
+                    renderChatList();
+                }
+            }
+        }
+
+        function renderMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg msg-' + sender;
+            if (sender === 'director') {
+                div.innerHTML = marked.parse(text);
+            } else {
+                div.innerText = text;
+            }
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addMessage(text, sender) {
+            renderMessage(text, sender);
+            
+            const role = sender === 'boss' ? 'user' : 'assistant';
+            allChats[currentChatId].messages.push({ role, content: text });
+            
+            if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
+                allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
+                chatTitleEl.innerText = allChats[currentChatId].title;
+            }
+            
+            saveAll();
+            renderChatList();
+        }
 
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
             document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
             
-            // Меняем системный промпт при смене режима
             if (mode === 'hacker') {
-                chatHistory[0].content = "Ты - Этичный Хакер (Red Team). Твоя задача: анализировать код Штаба, искать уязвимости (XSS, утечки данных) и писать отчет для Охранника.";
-                addMessage("🕵️ Хакер активирован. Начинаю сканирование...", 'director');
+                allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Твоя задача: анализировать код Штаба, искать уязвимости.";
+                addMessage("🕵️ Хакер активирован.", 'director');
             } else {
-                chatHistory[0].content = "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента. Отвечай четко, по делу.";
+                allChats[currentChatId].messages[0].content = "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента. Отвечай четко, по делу.";
                 addMessage("👑 Оркестратор вернулся к управлению.", 'director');
             }
-        }
-
-        function addMessage(text, sender) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg msg-' + sender;
-            
-            // Если это сообщение от ИИ, рендерим Markdown (таблицы, жирный шрифт)
-            if (sender === 'director') {
-                div.innerHTML = marked.parse(text);
-            } else {
-                div.innerText = text; // Сообщения Босса выводим как есть
-            }
-            
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            saveAll();
         }
 
         async function sendMessage() {
@@ -116,11 +254,6 @@
             
             addMessage(text, 'boss');
             input.value = '';
-            
-            // Добавляем сообщение Босса в память
-            chatHistory.push({ role: "user", content: text });
-
-            // Блокируем кнопку, пока ждем ответ
             sendBtn.disabled = true;
             sendBtn.innerText = "...";
 
@@ -130,30 +263,30 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         model: "openrouter/free",
-                        messages: chatHistory // Отправляем ВСЮ историю
+                        messages: allChats[currentChatId].messages
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (data.choices && data.choices.length > 0) {
-                    const aiResponse = data.choices[0].message.content;
-                    addMessage(aiResponse, 'director');
-                    // Добавляем ответ ИИ в память
-                    chatHistory.push({ role: "assistant", content: aiResponse });
+                    addMessage(data.choices[0].message.content, 'director');
                 } else {
                     addMessage("Ошибка: " + JSON.stringify(data), 'director');
-                    // Если ошибка, удаляем последнее сообщение из памяти, чтобы не зациклиться
-                    chatHistory.pop(); 
+                    allChats[currentChatId].messages.pop();
+                    saveAll();
                 }
             } catch (e) { 
                 addMessage("Ошибка связи: " + e.message, 'director'); 
-                chatHistory.pop();
+                allChats[currentChatId].messages.pop();
+                saveAll();
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.innerText = "➤";
             }
         }
+
+        init();
     </script>
 </body>
 </html>
