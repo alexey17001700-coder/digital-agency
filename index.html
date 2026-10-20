@@ -109,7 +109,6 @@
             addMessage(text, 'boss');
             input.value = '';
 
-            // Формируем системный промпт в зависимости от режима
             let systemPrompt = "Ты - Оркестратор Цифрового Агентства. У тебя 24 агента (включая Хакера и Охранника). Отвечай четко, по делу, как опытный менеджер.";
             if (currentMode === 'hacker') {
                 systemPrompt = "Ты - Этичный Хакер (Red Team). Твоя задача: анализировать код Штаба, искать уязвимости (XSS, утечки данных) и писать отчет для Охранника.";
@@ -122,7 +121,7 @@
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "qwen/qwen-2.5-7b-instruct:free", // Фиксируем умную модель
+                        model: "qwen/qwen3.6-plus:free", // Актуальная бесплатная модель
                         messages: [
                             { role: "system", content: systemPrompt },
                             { role: "user", content: text }
@@ -143,4 +142,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
