@@ -30,6 +30,14 @@
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; }
         .top-bar h1 { font-size: 18px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
+        /* Радио */
+        .radio-container { position: relative; }
+        .radio-btn { background: #333; border: none; color: #fff; font-size: 18px; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .radio-player { display: none; position: absolute; right: 0; top: 40px; background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 220px; z-index: 101; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .radio-player.open { display: block; }
+        .radio-player select { width: 100%; padding: 8px; margin-bottom: 10px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 5px; }
+        .radio-player audio { width: 100%; }
+
         .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
@@ -79,6 +87,20 @@
         <div class="top-bar">
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <h1 id="currentChatTitle">Новый чат</h1>
+            
+            <!-- РАДИО -->
+            <div class="radio-container">
+                <button class="radio-btn" onclick="toggleRadio()">📻</button>
+                <div class="radio-player" id="radioPlayer">
+                    <select id="radioSelect" onchange="changeRadio()">
+                        <option value="https://ice1.somafm.com/groovesalad-128-mp3">SomaFM Groove Salad</option>
+                        <option value="https://ice1.somafm.com/dronezone-128-mp3">SomaFM Drone Zone</option>
+                        <option value="https://ice1.somafm.com/lush-128-mp3">SomaFM Lush</option>
+                        <option value="https://online.radiorecord.ru:8102/rr_128">Radio Record</option>
+                    </select>
+                    <audio id="radioAudio" controls></audio>
+                </div>
+            </div>
         </div>
 
         <div class="mode-switch">
@@ -121,8 +143,8 @@
                 <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
             </div>
         </div>
-                                                                                               </div>
-                                                                                      <script>
+    </div>
+        <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
@@ -135,9 +157,49 @@
         const chatTitleEl = document.getElementById('currentChatTitle');
 
         const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. В нашем штате 24 специалиста. С чего начнем?";
-
         const AGENT_LIST = "Оркестратор, Хакер, Охранник, Исследователь, Планировщик, Аналитик, Исполнитель, Архитектор, Дизайнер, Креативщик, Критик, Тестировщик, Переводчик, Методолог, Юрист, Маркетолог, Техпис, Фронтенд, Бэкенд, Мобильный, DevOps, Универсал, Приемная, Результат";
 
+        // --- ЗВУКИ ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 'send') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+            } else if (type === 'receive') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2);
+            }
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // --- РАДИО ---
+        function toggleRadio() {
+            const player = document.getElementById('radioPlayer');
+            player.classList.toggle('open');
+        }
+
+        function changeRadio() {
+            const select = document.getElementById('radioSelect');
+            const audio = document.getElementById('radioAudio');
+            audio.src = select.value;
+            audio.play();
+        }
+
+        // --- ОСНОВНАЯ ЛОГИКА ---
         function init() {
             if (!currentChatId || !allChats[currentChatId]) {
                 createNewChat();
@@ -159,7 +221,7 @@
                 title: "Новый чат",
                 pinned: false,
                 messages: [
-                    { role: "system", content: `Ты - Оркестратор Цифрового Агентства. У тебя есть строго эти агенты: ${AGENT_LIST}. НЕ ПРИДУМЫВАЙ других имен. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy], чтобы показать, кто занят. Доступные имена: ${AGENT_LIST}.` }
+                    { role: "system", content: `Ты - Оркестратор Цифрового Агентства. У тебя есть строго эти агенты: ${AGENT_LIST}. НЕ ПРИДУМЫВАЙ других имен. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy].` }
                 ]
             };
             currentChatId = id;
@@ -336,7 +398,7 @@
                 allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости. В КОНЦЕ ответа пиши [Статус: Хакер: busy].";
                 addMessage("🕵️ Хакер активирован.", 'director');
             } else {
-                allChats[currentChatId].messages[0].content = `Ты - Оркестратор Цифрового Агентства. У тебя есть строго эти агенты: ${AGENT_LIST}. НЕ ПРИДУМЫВАЙ других имен. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy], чтобы показать, кто занят. Доступные имена: ${AGENT_LIST}.`;
+                allChats[currentChatId].messages[0].content = `Ты - Оркестратор Цифрового Агентства. У тебя есть строго эти агенты: ${AGENT_LIST}. НЕ ПРИДУМЫВАЙ других имен. Отвечай четко. В КОНЦЕ КАЖДОГО ОТВЕТА добавляй строку [Статус: ИмяАгента: busy].`;
                 addMessage("👑 Оркестратор вернулся к управлению.", 'director');
             }
             saveAll();
@@ -347,6 +409,7 @@
             const text = input.value.trim();
             if (!text) return;
             
+            playSound('send'); // Звук отправки
             addMessage(text, 'boss');
             input.value = '';
             sendBtn.disabled = true;
@@ -367,6 +430,7 @@
                 const data = await response.json();
                 
                 if (data.choices && data.choices.length > 0) {
+                    playSound('receive'); // Звук ответа
                     addMessage(data.choices[0].message.content, 'director');
                 } else {
                     addMessage("Ошибка: " + JSON.stringify(data), 'director');
