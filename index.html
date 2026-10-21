@@ -535,5 +535,575 @@
         
         init();
     </script>
+
+<!-- AI UPDATE -->
+
+<div id="hq-safe-widget">
+  <style>
+    #hq-safe-widget {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    #hq-safe-widget * {
+      box-sizing: border-box;
+    }
+
+    #hq-safe-widget .hq-launcher {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 2147483646;
+      min-height: 48px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 14px;
+      color: #07110a;
+      background: #70ffa4;
+      box-shadow: 0 10px 30px #0008;
+      cursor: pointer;
+      font: 800 15px system-ui, sans-serif;
+    }
+
+    #hq-safe-widget .hq-launcher:hover {
+      filter: brightness(1.08);
+    }
+
+    #hq-safe-widget .hq-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #03060ccc;
+      backdrop-filter: blur(5px);
+    }
+
+    #hq-safe-widget .hq-overlay[hidden] {
+      display: none !important;
+    }
+
+    #hq-safe-widget .hq-dialog {
+      width: min(720px, 100%);
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      padding: 22px;
+      color: #edf4ff;
+      background: #0d1422;
+      border: 1px solid #3b4962;
+      border-radius: 20px;
+      box-shadow: 0 25px 80px #000b;
+    }
+
+    #hq-safe-widget .hq-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    #hq-safe-widget .hq-dialog-header h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    #hq-safe-widget .hq-close {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 9px;
+      color: #edf4ff;
+      background: #293750;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    #hq-safe-widget .hq-scene {
+      display: grid;
+      grid-template-columns: minmax(190px, 260px) 160px;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      margin-bottom: 18px;
+    }
+
+    #hq-safe-widget .hq-safe {
+      display: flex;
+      min-height: 245px;
+      padding: 22px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      border: 8px solid #46536a;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #354159, #151c2b);
+      box-shadow: 0 16px 35px #0008;
+    }
+
+    #hq-safe-widget .hq-safe.hq-alarm {
+      border-color: #ff5368;
+      animation: hq-alarm 0.4s infinite alternate;
+    }
+
+    #hq-safe-widget .hq-display {
+      width: 100%;
+      padding: 16px 8px;
+      border: 3px solid #05090f;
+      border-radius: 9px;
+      color: #70ffa4;
+      background: #06100a;
+      text-align: center;
+      font: 700 25px monospace;
+      letter-spacing: 5px;
+    }
+
+    #hq-safe-widget .hq-handle {
+      width: 54px;
+      height: 54px;
+      border: 7px solid #aab5c7;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 4px #4a5568;
+    }
+
+    #hq-safe-widget .hq-status {
+      color: #b8c5d8;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    #hq-safe-widget .hq-hacker {
+      text-align: center;
+    }
+
+    #hq-safe-widget .hq-face {
+      display: inline-block;
+      font-size: 76px;
+      line-height: 1;
+      transition: transform 0.7s, filter 0.7s, opacity 0.7s;
+    }
+
+    #hq-safe-widget .hq-face.hq-away {
+      transform: rotate(180deg);
+    }
+
+    #hq-safe-widget .hq-face.hq-blocked {
+      filter: grayscale(1);
+      opacity: 0.45;
+    }
+
+    #hq-safe-widget .hq-hacker-label {
+      margin-top: 10px;
+      color: #ffd06d;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    #hq-safe-widget .hq-chat {
+      height: 260px;
+      overflow-y: auto;
+      padding: 12px;
+      border: 1px solid #2b3a52;
+      border-radius: 12px;
+      background: #080e18;
+    }
+
+    #hq-safe-widget .hq-message {
+      margin-bottom: 8px;
+      padding: 9px 11px;
+      border-radius: 8px;
+      background: #172237;
+      line-height: 1.4;
+    }
+
+    #hq-safe-widget .hq-message b {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    #hq-safe-widget .hq-system {
+      border-left: 4px solid #70aaff;
+    }
+
+    #hq-safe-widget .hq-hacker-message {
+      border-left: 4px solid #ffd06d;
+    }
+
+    #hq-safe-widget .hq-guard {
+      border-left: 4px solid #70ffa4;
+    }
+
+    #hq-safe-widget .hq-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 13px;
+    }
+
+    #hq-safe-widget .hq-form input,
+    #hq-safe-widget .hq-form button {
+      min-height: 44px;
+      border-radius: 9px;
+      font: inherit;
+    }
+
+    #hq-safe-widget .hq-form input {
+      flex: 1 1 210px;
+      min-width: 0;
+      padding: 0 12px;
+      border: 1px solid #3c4c68;
+      outline: none;
+      color: #fff;
+      background: #111c2e;
+    }
+
+    #hq-safe-widget .hq-form input:focus {
+      border-color: #70aaff;
+    }
+
+    #hq-safe-widget .hq-start {
+      padding: 0 16px;
+      border: 0;
+      color: #07110a;
+      background: #70ffa4;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    #hq-safe-widget .hq-reset {
+      padding: 0 16px;
+      border: 0;
+      color: #edf4ff;
+      background: #293750;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    #hq-safe-widget button:disabled,
+    #hq-safe-widget input:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    #hq-safe-widget .hq-note {
+      margin: 12px 0 0;
+      color: #8491a6;
+      font-size: 12px;
+    }
+
+    @keyframes hq-alarm {
+      to {
+        box-shadow: 0 0 30px #ff536888;
+      }
+    }
+
+    @media (max-width: 540px) {
+      #hq-safe-widget .hq-dialog {
+        padding: 16px;
+      }
+
+      #hq-safe-widget .hq-scene {
+        grid-template-columns: 1fr;
+      }
+
+      #hq-safe-widget .hq-face {
+        font-size: 58px;
+      }
+    }
+  </style>
+
+  <button
+    id="hq-safe-open"
+    class="hq-launcher"
+    type="button"
+    aria-haspopup="dialog"
+    aria-controls="hq-safe-modal"
+  >
+    🔐 Кодовый сейф
+  </button>
+
+  <div
+    id="hq-safe-modal"
+    class="hq-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="hq-safe-title"
+    hidden
+  >
+    <section class="hq-dialog">
+      <header class="hq-dialog-header">
+        <h2 id="hq-safe-title">🔐 Кодовый сейф</h2>
+        <button
+          id="hq-safe-close"
+          class="hq-close"
+          type="button"
+          aria-label="Закрыть и вернуться в Штаб"
+        >
+          Закрыть
+        </button>
+      </header>
+
+      <div class="hq-scene">
+        <div class="hq-safe" id="hq-safe-box">
+          <div class="hq-display" id="hq-safe-display">• • • •</div>
+          <div class="hq-handle" aria-hidden="true"></div>
+          <div class="hq-status" id="hq-safe-status">ЗАКРЫТО</div>
+        </div>
+
+        <div class="hq-hacker">
+          <div class="hq-face hq-away" id="hq-hacker">🕵️</div>
+          <div class="hq-hacker-label" id="hq-hacker-label">
+            ОТВЁРНУТСЯ — PIN НЕ ВИДИТ
+          </div>
+        </div>
+      </div>
+
+      <div class="hq-chat" id="hq-safe-chat" aria-live="polite"></div>
+
+      <form class="hq-form" id="hq-safe-form" autocomplete="off">
+        <input
+          id="hq-safe-pin"
+          type="password"
+          inputmode="numeric"
+          maxlength="4"
+          placeholder="Введите 4 цифры"
+          aria-label="Четырёхзначный код сейфа"
+        >
+
+        <button id="hq-safe-start" class="hq-start" type="submit">
+          Код готов
+        </button>
+
+        <button id="hq-safe-reset" class="hq-reset" type="button">
+          Сброс
+        </button>
+      </form>
+
+      <p class="hq-note">
+        Локальная учебная симуляция. Реальный перебор пароля не выполняется.
+      </p>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.getElementById("hq-safe-widget");
+
+      if (!root || root.dataset.ready === "true") return;
+      root.dataset.ready = "true";
+
+      const openButton = root.querySelector("#hq-safe-open");
+      const modal = root.querySelector("#hq-safe-modal");
+      const closeButton = root.querySelector("#hq-safe-close");
+      const form = root.querySelector("#hq-safe-form");
+      const pinInput = root.querySelector("#hq-safe-pin");
+      const startButton = root.querySelector("#hq-safe-start");
+      const resetButton = root.querySelector("#hq-safe-reset");
+      const chat = root.querySelector("#hq-safe-chat");
+      const display = root.querySelector("#hq-safe-display");
+      const safeBox = root.querySelector("#hq-safe-box");
+      const status = root.querySelector("#hq-safe-status");
+      const hacker = root.querySelector("#hq-hacker");
+      const hackerLabel = root.querySelector("#hq-hacker-label");
+
+      const DELAY = 5000;
+      let pin = "";
+      let running = false;
+      let session = 0;
+      let isOpen = false;
+      let previousOverflow = "";
+
+      const wait = milliseconds =>
+        new Promise(resolve => setTimeout(resolve, milliseconds));
+
+      function addMessage(role, author, text) {
+        const message = document.createElement("div");
+        message.className = "hq-message hq-" + role;
+
+        const name = document.createElement("b");
+        name.textContent = author;
+
+        const body = document.createElement("span");
+        body.textContent = text;
+
+        message.append(name, body);
+        chat.appendChild(message);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      function updateDisplay() {
+        display.textContent = Array.from(
+          { length: 4 },
+          (_, index) => index < pin.length ? "•" : "·"
+        ).join(" ");
+      }
+
+      function setHackerAway(away) {
+        hacker.classList.toggle("hq-away", away);
+
+        if (away) {
+          hacker.classList.remove("hq-blocked");
+        }
+
+        hackerLabel.textContent = away
+          ? "ОТВЁРНУТСЯ — PIN НЕ ВИДИТ"
+          : "СМОТРИТ НА СЕЙФ";
+      }
+
+      function resetScenario() {
+        session += 1;
+        running = false;
+        pin = "";
+
+        pinInput.value = "";
+        pinInput.disabled = false;
+        startButton.disabled = false;
+
+        safeBox.classList.remove("hq-alarm");
+        status.textContent = "ЗАКРЫТО";
+        updateDisplay();
+        setHackerAway(true);
+
+        chat.replaceChildren();
+        addMessage(
+          "guard",
+          "Охранник",
+          "Периметр под наблюдением. Ожидаю четырёхзначный код."
+        );
+      }
+
+      function openModal() {
+        isOpen = true;
+        previousOverflow = document.body.style.overflow;
+
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        resetScenario();
+
+        requestAnimationFrame(() => pinInput.focus());
+      }
+
+      function closeModal() {
+        if (!isOpen) return;
+
+        isOpen = false;
+        session += 1;
+        running = false;
+        modal.hidden = true;
+        document.body.style.overflow = previousOverflow;
+        openButton.focus();
+      }
+
+      openButton.addEventListener("click", openModal);
+      closeButton.addEventListener("click", closeModal);
+
+      modal.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      resetButton.addEventListener("click", () => {
+        resetScenario();
+        pinInput.focus();
+      });
+
+      pinInput.addEventListener("focus", () => {
+        if (!running) setHackerAway(true);
+      });
+
+      pinInput.addEventListener("input", () => {
+        pin = pinInput.value.replace(/\D/g, "").slice(0, 4);
+        pinInput.value = pin;
+        updateDisplay();
+
+        if (!running) setHackerAway(true);
+      });
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        if (running) return;
+
+        if (!/^\d{4}$/.test(pin)) {
+          addMessage(
+            "guard",
+            "Охранник",
+            "Код отклонён: требуется ровно четыре цифры."
+          );
+          return;
+        }
+
+        running = true;
+        pinInput.disabled = true;
+        startButton.disabled = true;
+        status.textContent = "КОД УСТАНОВЛЕН";
+        setHackerAway(true);
+
+        addMessage(
+          "system",
+          "Система",
+          "Код готов. PIN скрыт, хакер отвёрнут."
+        );
+
+        const currentSession = ++session;
+        const decoys = ["0000", "1234"].filter(code => code !== pin);
+        const attempts = [...decoys, pin];
+
+        await wait(DELAY);
+
+        if (currentSession !== session || !isOpen) return;
+
+        setHackerAway(false);
+
+        addMessage(
+          "hacker-message",
+          "Хакер",
+          "Код готов. Поворачиваюсь к сейфу и начинаю подбор."
+        );
+
+        for (let index = 0; index < attempts.length; index++) {
+          await wait(DELAY);
+
+          if (currentSession !== session || !isOpen) return;
+
+          addMessage(
+            "hacker-message",
+            "Хакер",
+            `Попытка ${index + 1} из ${attempts.length}: ввожу четыре цифры в замок.`
+          );
+
+          await wait(DELAY);
+
+          if (currentSession !== session || !isOpen) return;
+
+          if (attempts[index] === pin) {
+            addMessage(
+              "guard",
+              "Охранник",
+              `Тревога: попытка ${index + 1} совпала с PIN. Запускаю аварийную блокировку сейфа.`
+            );
+
+            status.textContent = "ВЗЛОМ — БЛОКИРОВКА";
+            safeBox.classList.add("hq-alarm");
+            hacker.classList.remove("hq-away");
+            hacker.classList.add("hq-blocked");
+            hackerLabel.textContent = "ЗАБЛОКИРОВАН";
+            running = false;
+            return;
+          }
+
+          addMessage(
+            "guard",
+            "Охранник",
+            `Попытка ${index + 1} отклонена. Событие зафиксировано, наблюдение продолжаю.`
+          );
+        }
+      });
+    })();
+  </script>
+</div>
+
 </body>
 </html>
