@@ -48,6 +48,8 @@
         .chat-msg table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 12px; }
         .chat-msg th, .chat-msg td { border: 1px solid #555; padding: 5px; }
         .chat-msg th { background-color: #1a252f; }
+        .chat-msg pre { background: #1a1a1a; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px; }
+        .chat-msg code { font-family: monospace; color: #00e5ff; }
         
         .input-area { padding: 15px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; flex-shrink: 0; }
         input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
@@ -70,7 +72,6 @@
         .status-dot.busy { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; }
         .status-dot.error { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
 
-        /* Модальное окно инструкции */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: #1e1e1e; border: 2px solid #00e5ff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); position: relative; animation: slideUp 0.3s ease; }
@@ -83,7 +84,6 @@
     </style>
 </head>
 <body>
-    <!-- Модальное окно -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -177,34 +177,33 @@
         const sendBtn = document.getElementById('sendBtn');
         const chatTitleEl = document.getElementById('currentChatTitle');
 
-        const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. В нашем штате 24 специалиста. С чего начнем?";
+        const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Мы умеем писать код и можем обновлять этот Штаб. С чего начнем?";
         
-        // БАЗА ЗНАНИЙ ОБ АГЕНТАХ
         const AGENT_INFO = {
-            "Оркестратор": "<strong>Роль:</strong> Главный менеджер проекта.<br><br><strong>Задачи:</strong> Принимает задачу от Босса, разбивает её на подзадачи, назначает исполнителей и следит за тем, чтобы конвейер не останавливался.",
-            "Хакер": "<strong>Роль:</strong> Этичный хакер (Red Team).<br><br><strong>Задачи:</strong> Проверяет систему на прочность. Ищет уязвимости (XSS, SQL-инъекции), тестирует защиту и предлагает векторы атак.",
-            "Охранник": "<strong>Роль:</strong> Специалист по безопасности (Blue Team).<br><br><strong>Задачи:</strong> Устраняет уязвимости, найденные Хакером. Настраивает защиту, следит за утечками ключей и блокирует подозрительные запросы.",
-            "Исследователь": "<strong>Роль:</strong> Аналитик-разведчик.<br><br><strong>Задачи:</strong> Собирает информацию по теме проекта, ищет референсы, изучает конкурентов и предоставляет данные команде.",
-            "Планировщик": "<strong>Роль:</strong> Стратег.<br><br><strong>Задачи:</strong> Составляет дорожную карту (Roadmap). Разбивает длинные задачи на этапы, расставляет дедлайны и приоритеты.",
-            "Аналитик": "<strong>Роль:</strong> Data Scientist.<br><br><strong>Задачи:</strong> Работает с цифрами и метриками. Считает стоимость проекта, анализирует эффективность и строит прогнозы.",
-            "Исполнитель": "<strong>Роль:</strong> Универсальный работник.<br><br><strong>Задачи:</strong> Выполняет мелкие рутинные задачи, которые не требуют узкой специализации. Делает быстро и четко.",
-            "Архитектор": "<strong>Роль:</strong> Системный архитектор.<br><br><strong>Задачи:</strong> Проектирует структуру проекта, выбирает технологии, продумывает базу данных и взаимодействие модулей.",
-            "Дизайнер": "<strong>Роль:</strong> UI/UX Дизайнер.<br><br><strong>Задачи:</strong> Создает визуальную концепцию, рисует макеты, подбирает цвета, шрифты и делает так, чтобы пользователю было удобно.",
-            "Креативщик": "<strong>Роль:</strong> Генератор идей.<br><br><strong>Задачи:</strong> Придумывает нестандартные решения, генерирует креативные концепты, ищет вдохновение и предлагает 'вау-эффекты'.",
-            "Критик": "<strong>Роль:</strong> Внутренний рецензент.<br><br><strong>Задачи:</strong> Проверяет идеи и код на логические ошибки. Ищет слабые места и предлагает, как сделать лучше.",
-            "Тестировщик": "<strong>Роль:</strong> QA Инженер.<br><br><strong>Задачи:</strong> Пишет тесты, ломает код, ищет баги. Если находит ошибку, отправляет задачу назад разработчику (Фронтенду/Бэкенду).",
-            "Переводчик": "<strong>Роль:</strong> Локализатор.<br><br><strong>Задачи:</strong> Переводит интерфейсы, тексты и документацию на разные языки, сохраняя смысл и адаптируя под культуру.",
-            "Методолог": "<strong>Роль:</strong> Автор инструкций.<br><br><strong>Задачи:</strong> Пишет регламенты, инструкции, гайды и стандарты для команды, чтобы все работали по единым правилам.",
-            "Юрист": "<strong>Роль:</strong> Комплаенс-агент.<br><br><strong>Задачи:</strong> Проверяет лицензии, договоры, авторские права и соответствие проекта законам.",
-            "Маркетолог": "<strong>Роль:</strong> Специалист по продвижению.<br><br><strong>Задачи:</strong> Придумывает, как продать продукт. Пишет рекламные тексты, анализирует аудиторию и предлагает каналы трафика.",
-            "Техпис": "<strong>Роль:</strong> Технический писатель.<br><br><strong>Задачи:</strong> Пишет документацию к коду, создает README-файлы, описывает API и объясняет, как пользоваться продуктом.",
-            "Фронтенд": "<strong>Роль:</strong> Frontend-разработчик.<br><br><strong>Задачи:</strong> Верстает интерфейсы, пишет код на HTML/CSS/JS (React/Vue), делает так, чтобы сайт был красивым и быстрым.",
-            "Бэкенд": "<strong>Роль:</strong> Backend-разработчик.<br><br><strong>Задачи:</strong> Пишет серверную логику, настраивает базы данных, API и следит за безопасностью данных.",
-            "Мобильный": "<strong>Роль:</strong> Mobile-разработчик.<br><br><strong>Задачи:</strong> Создает мобильные приложения под iOS и Android (Flutter/React Native/Swift/Kotlin).",
-            "DevOps": "<strong>Роль:</strong> Инженер инфраструктуры.<br><br><strong>Задачи:</strong> Настраивает серверы, CI/CD (автоматическую сборку), Docker и следит за тем, чтобы проект был доступен 24/7.",
-            "Универсал": "<strong>Роль:</strong> Fullstack-универсал.<br><br><strong>Задачи:</strong> Знает всё понемногу. Выполняет задачи, которые не подошли другим специалистам.",
-            "Приемная": "<strong>Роль:</strong> Комиссия по приемке.<br><br><strong>Задачи:</strong> Проверяет готовый результат на соответствие ТЗ. Если всё ок — ставит печать «Готово».",
-            "Результат": "<strong>Роль:</strong> Ответственный за финал.<br><br><strong>Задачи:</strong> Упаковывает готовый проект, формирует итоговый отчет и передает его Боссу."
+            "Оркестратор": "<strong>Роль:</strong> Главный менеджер.<br><br><strong>Задачи:</strong> Разбивает задачи и назначает исполнителей.",
+            "Хакер": "<strong>Роль:</strong> Red Team.<br><br><strong>Задачи:</strong> Ищет уязвимости.",
+            "Охранник": "<strong>Роль:</strong> Blue Team.<br><br><strong>Задачи:</strong> Устраняет уязвимости.",
+            "Исследователь": "<strong>Роль:</strong> Аналитик.<br><br><strong>Задачи:</strong> Собирает информацию.",
+            "Планировщик": "<strong>Роль:</strong> Стратег.<br><br><strong>Задачи:</strong> Составляет планы.",
+            "Аналитик": "<strong>Роль:</strong> Data Scientist.<br><br><strong>Задачи:</strong> Работает с цифрами.",
+            "Исполнитель": "<strong>Роль:</strong> Универсал.<br><br><strong>Задачи:</strong> Делает мелкие задачи.",
+            "Архитектор": "<strong>Роль:</strong> Системный архитектор.<br><br><strong>Задачи:</strong> Проектирует структуру.",
+            "Дизайнер": "<strong>Роль:</strong> UI/UX.<br><br><strong>Задачи:</strong> Рисует макеты.",
+            "Креативщик": "<strong>Роль:</strong> Генератор идей.<br><br><strong>Задачи:</strong> Придумывает концепты.",
+            "Критик": "<strong>Роль:</strong> Рецензент.<br><br><strong>Задачи:</strong> Ищет слабые места.",
+            "Тестировщик": "<strong>Роль:</strong> QA.<br><br><strong>Задачи:</strong> Ищет баги и возвращает на доработку.",
+            "Переводчик": "<strong>Роль:</strong> Локализатор.<br><br><strong>Задачи:</strong> Переводит тексты.",
+            "Методолог": "<strong>Роль:</strong> Автор инструкций.<br><br><strong>Задачи:</strong> Пишет регламенты.",
+            "Юрист": "<strong>Роль:</strong> Комплаенс.<br><br><strong>Задачи:</strong> Проверяет законы.",
+            "Маркетолог": "<strong>Роль:</strong> Специалист по продвижению.<br><br><strong>Задачи:</strong> Придумывает рекламу.",
+            "Техпис": "<strong>Роль:</strong> Технический писатель.<br><br><strong>Задачи:</strong> Пишет документацию.",
+            "Фронтенд": "<strong>Роль:</strong> Frontend-разработчик.<br><br><strong>Задачи:</strong> Верстает интерфейсы.",
+            "Бэкенд": "<strong>Роль:</strong> Backend-разработчик.<br><br><strong>Задачи:</strong> Пишет серверную логику.",
+            "Мобильный": "<strong>Роль:</strong> Mobile-разработчик.<br><br><strong>Задачи:</strong> Создает приложения.",
+            "DevOps": "<strong>Роль:</strong> Инженер инфраструктуры.<br><br><strong>Задачи:</strong> Настраивает серверы.",
+            "Универсал": "<strong>Роль:</strong> Fullstack.<br><br><strong>Задачи:</strong> Знает всё понемногу.",
+            "Приемная": "<strong>Роль:</strong> Комиссия.<br><br><strong>Задачи:</strong> Проверяет результат.",
+            "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект."
         };
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -234,10 +233,9 @@
             audio.play().catch(e => console.log("Автовоспроизведение заблокировано"));
         }
 
-        // МОДАЛЬНОЕ ОКНО АГЕНТА
         function showAgentInfo(name) {
             document.getElementById('modalTitle').innerText = name;
-            document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация об агенте отсутствует.";
+            document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
             document.getElementById('agentModal').classList.add('active');
         }
         function closeModal(e) {
