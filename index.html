@@ -583,12 +583,68 @@
             const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
             try {
-                const response = await fetch(PROXY + "/api/v1/chat/completions", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: "openrouter/free", messages: allChats[currentChatId].messages }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
+    const modelsToTry = [
+        "openrouter/free", 
+        "meta-llama/llama-3.3-70b-instruct:free", 
+        "google/gemma-2-9b-it:free", 
+        "qwen/qwen-2.5-72b-instruct:free"
+    ];
+    let success = false;
+    let aiText = "";
+
+    for (let i = 0; i < modelsToTry.length; i++) {
+        try {
+            const response = await fetch(PROXY + "/api/v1/chat/completions", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: modelsToTry[i], messages: allChats[currentChatId].messages }),
+                signal: controller.signal
+            });
+            
+            if (!response.ok) continue; // Если ошибка, пробуем следующую
+
+            const data = await response.json();
+            if (data.choices && data.choices.length > 0) {
+                aiText = data.choices[0].message.content;
+                success = true;
+                break; // Успех, выходим из цикла
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') throw e; // Если это таймаут
+            // Если сетевая ошибка (CORS), пробуем следующую
+        }
+    }
+
+    clearTimeout(timeoutId);
+
+    if (success) {
+        playSound('receive'); 
+        addMessage(aiText, 'director');
+        elAi.className = 'status-item online';
+        
+        const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
+        let foundBusy = false;
+        let match;
+        while ((match = statusRegex.exec(aiText)) !== null) {
+            if (match[2] === 'busy') foundBusy = true;
+        }
+        if (!foundBusy) resetAllStatuses();
+        
+        sendBtn.disabled = false; sendBtn.innerText = "➤";
+        updateAgentStatus('Оркестратор', 'free');
+    } else {
+        // Если ВСЕ модели упали — врубаем офлайн
+        elAi.className = 'status-item offline';
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 25000 - elapsed);
+        setTimeout(() => { runOfflineAgents(text); }, remaining);
+    }
+} catch (e) { 
+    clearTimeout(timeoutId);
+    elAi.className = 'status-item offline';
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, 25000 - elapsed);
+    setTimeout(() => { runOfflineAgents(text); }, remaining);
+            }
                 
                 const data = await response.json();
                 if (data.choices && data.choices.length > 0) {
