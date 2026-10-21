@@ -412,21 +412,13 @@
             input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
             
             resetAllStatuses();
-
-            if (!navigator.onLine) {
-                updateAgentStatus('Охранник', 'error');
-                addMessage("🛡️ Охранник: Босс, у нас пропало интернет-соединение. Проверь Wi-Fi или мобильный интернет. Если сеть есть, но запросы блокируются — включи VPN.", 'director');
-                sendBtn.disabled = false; sendBtn.innerText = "➤";
-                return;
-            }
-
             updateAgentStatus('Оркестратор', 'busy');
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 25000);
 
             try {
-                const response = await fetch(PROXY + "/api/v1/chat/completions", {
+                const response = await fetch(PROXY + "/chat/completions", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ model: "openrouter/free", messages: allChats[currentChatId].messages }),
                     signal: controller.signal
