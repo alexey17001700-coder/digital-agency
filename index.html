@@ -21,9 +21,9 @@
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
         
         .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100vh; }
-        .top-bar { padding: 10px 15px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
-        .top-bar h1 { font-size: 16px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         
         /* СТАТУС-БАР */
         .status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
@@ -36,8 +36,8 @@
         @keyframes pulse { to { opacity: 0.3; } }
 
         .radio-container { position: relative; flex-shrink: 0; }
-        .radio-btn { background: #333; border: none; color: #fff; font-size: 18px; padding: 5px 10px; border-radius: 5px; cursor: pointer; display: block; }
-        .radio-player { display: none; position: absolute; right: 0; top: 40px; background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 220px; z-index: 101; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .radio-btn { background: #333; border: none; color: #fff; font-size: 16px; padding: 4px 8px; border-radius: 5px; cursor: pointer; display: block; }
+        .radio-player { display: none; position: absolute; right: 0; top: 35px; background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 220px; z-index: 101; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .radio-player.open { display: block; }
         .radio-player select { width: 100%; padding: 8px; margin-bottom: 10px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 5px; }
         .radio-player audio { width: 100%; }
@@ -58,9 +58,9 @@
         .chat-msg pre { background: #1a1a1a; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px; }
         .chat-msg code { font-family: monospace; color: #00e5ff; }
         
-        .input-area { padding: 15px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; flex-shrink: 0; }
-        input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
-        button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
+        .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; flex-shrink: 0; }
+        input[type="text"] { flex-grow: 1; padding: 10px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
+        button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
         button.send-btn:disabled { background: #555; }
 
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
@@ -92,6 +92,7 @@
     </style>
 </head>
 <body>
+    <!-- Модальное окно для информации об агенте -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -104,6 +105,7 @@
 
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
+    <!-- Боковая панель с историей -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>📂 История чатов</h2>
@@ -113,12 +115,14 @@
         <div class="chat-list" id="chatList"></div>
     </div>
 
+    <!-- Основной контент -->
     <div class="main-content">
+        <!-- Верхняя панель -->
         <div class="top-bar">
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <h1 id="currentChatTitle">Новый чат</h1>
             
-            <!-- ИНДИКАТОРЫ СТАТУСА -->
+            <!-- Статус-бар -->
             <div class="status-bar">
                 <div class="status-item" id="status-internet" title="Интернет">
                     <span class="dot"></span> <span class="text">NET</span>
@@ -134,6 +138,7 @@
                 </div>
             </div>
 
+            <!-- Радио -->
             <div class="radio-container">
                 <button class="radio-btn" onclick="toggleRadio()">📻</button>
                 <div class="radio-player" id="radioPlayer">
@@ -148,18 +153,22 @@
             </div>
         </div>
 
+        <!-- Переключатель режимов -->
         <div class="mode-switch">
             <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
             <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
         </div>
 
+        <!-- Контейнер чата -->
         <div class="chat-container" id="chatContainer"></div>
 
+        <!-- Поле ввода -->
         <div class="input-area">
             <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
 
+        <!-- Сетка агентов -->
         <div class="agents-wrapper">
             <div class="agents-grid">
                 <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
@@ -305,7 +314,7 @@
 
         window.addEventListener('online', updateNetStatus);
         window.addEventListener('offline', updateNetStatus);
-        setInterval(checkPing, 10000); // Каждые 10 сек проверяем пинг
+        setInterval(checkPing, 10000);
 
         // --- ОСТАЛЬНАЯ ЛОГИКА ---
         function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
@@ -339,7 +348,7 @@
         function init() {
             if (!currentChatId || !allChats[currentChatId]) { createNewChat(); } else { loadChat(currentChatId); }
             renderChatList();
-            updateNetStatus(); // Запускаем проверку при старте
+            updateNetStatus();
         }
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -419,28 +428,6 @@
             chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        async function applyCodeToGitHub(newCode) {
-            addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
-            setAlarm(true); // Тревога при внедрении
-            try {
-                const response = await fetch(PROXY + "/update-code", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ code: newCode })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    addMessage("✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.", 'director');
-                } else {
-                    addMessage("❌ DevOps: Ошибка обновления. " + JSON.stringify(data.error), 'director');
-                }
-            } catch (e) {
-                addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
-            } finally {
-                setTimeout(() => setAlarm(false), 3000); // Тушим тревогу через 3 сек
-            }
-        }
-
         function updateAgentStatus(agentName, status) {
             const card = document.getElementById('agent-' + agentName);
             if (card) {
@@ -490,33 +477,45 @@
             saveAll();
         }
 
-        // --- УМНЫЙ ОФЛАЙН-РЕЖИМ (С ТРЕВОГОЙ) ---
-        function runOfflineAgents(userText) {
-            // Включаем сирену тревоги в статус-баре
-            setAlarm(true);
+        async function applyCodeToGitHub(newCode) {
+            addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
+            setAlarm(true); 
+            try {
+                const response = await fetch(PROXY + "/update-code", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: newCode })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    addMessage("✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.", 'director');
+                } else {
+                    addMessage("❌ DevOps: Ошибка обновления. " + JSON.stringify(data.error), 'director');
+                }
+            } catch (e) {
+                addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
+            } finally {
+                setTimeout(() => setAlarm(false), 3000); 
+            }
+        }
 
-            // 1. ОХРАННИК БЬЕТ ТРЕВОГУ
+        function runOfflineAgents(userText) {
+            setAlarm(true);
             addMessage("🛡️ **Охранник:** Внимание! Потеряна связь с внешним миром. Переключаюсь на автономный протокол. Сейчас придут офлайн-агенты.", 'director');
             updateAgentStatus('Охранник', 'error'); 
             
             setTimeout(() => {
                 updateAgentStatus('Охранник', 'free');
-
-                // 2. ОРКЕСТРАТОР ПРИНИМАЕТ ЗАДАЧУ
                 addMessage("👑 **Оркестратор:** Принял задачу в офлайн-режиме. Передаю Архитектору.", 'director');
                 updateAgentStatus('Оркестратор', 'busy');
 
                 setTimeout(() => {
                     updateAgentStatus('Оркестратор', 'free');
-
-                    // 3. АРХИТЕКТОР ПРОЕКТИРУЕТ
                     addMessage("📐 **Архитектор:** Проектирую решение для работы без сети.", 'director');
                     updateAgentStatus('Архитектор', 'busy');
 
                     setTimeout(() => {
                         updateAgentStatus('Архитектор', 'free');
-
-                        // 4. ФРОНТЕНД ПИШЕТ КОД
                         let codeResponse = "";
                         const lowerText = userText.toLowerCase();
 
@@ -530,19 +529,13 @@
 
                         setTimeout(() => {
                             updateAgentStatus('Фронтенд', 'free');
-
-                            // 5. ТЕСТИРОВЩИК ПРОВЕРЯЕТ
                             addMessage("🧪 **Тестировщик:** Проверяю код. Багов не обнаружено.", 'director');
                             updateAgentStatus('Тестировщик', 'busy');
 
                             setTimeout(() => {
                                 updateAgentStatus('Тестировщик', 'free');
-
-                                // 6. РЕЗУЛЬТАТ ЗАВЕРШАЕТ
                                 addMessage("🏆 **Результат:** Задача выполнена в офлайн-режиме. Код готов к внедрению.", 'director');
                                 resetAllStatuses();
-                                
-                                // Выключаем сирену и разблокируем кнопку
                                 setAlarm(false);
                                 sendBtn.disabled = false; 
                                 sendBtn.innerText = "➤";
@@ -564,18 +557,16 @@
             
             resetAllStatuses();
             updateAgentStatus('Оркестратор', 'busy');
-            
-            // Статус ИИ: "Думает" (желтый)
             elAi.className = 'status-item loading';
 
             const startTime = Date.now();
-            const TIMEOUT_MS = 90000; // 90 секунд
+            const TIMEOUT_MS = 90000; 
 
             if (!navigator.onLine) {
                 setTimeout(() => {
                     elAi.className = 'status-item offline';
                     runOfflineAgents(text);
-                }, 25000); // Офлайн ждем 25 сек
+                }, 25000); 
                 return;
             }
 
@@ -583,144 +574,69 @@
             const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
             try {
-    const modelsToTry = [
-        "openrouter/free", 
-        "meta-llama/llama-3.3-70b-instruct:free", 
-        "google/gemma-2-9b-it:free", 
-        "qwen/qwen-2.5-72b-instruct:free"
-    ];
-    let success = false;
-    let aiText = "";
+                const modelsToTry = [
+                    "openrouter/free", 
+                    "meta-llama/llama-3.3-70b-instruct:free", 
+                    "google/gemma-2-9b-it:free", 
+                    "qwen/qwen-2.5-72b-instruct:free"
+                ];
+                let success = false;
+                let aiText = "";
 
-    for (let i = 0; i < modelsToTry.length; i++) {
-        try {
-            const response = await fetch(PROXY + "/api/v1/chat/completions", {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ model: modelsToTry[i], messages: allChats[currentChatId].messages }),
-                signal: controller.signal
-            });
-            
-            if (!response.ok) continue; // Если ошибка, пробуем следующую
+                for (let i = 0; i < modelsToTry.length; i++) {
+                    try {
+                        const response = await fetch(PROXY + "/api/v1/chat/completions", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ model: modelsToTry[i], messages: allChats[currentChatId].messages }),
+                            signal: controller.signal
+                        });
+                        
+                        if (!response.ok) continue; 
 
-            const data = await response.json();
-            if (data.choices && data.choices.length > 0) {
-                aiText = data.choices[0].message.content;
-                success = true;
-                break; // Успех, выходим из цикла
-            }
-        } catch (e) {
-            if (e.name === 'AbortError') throw e; // Если это таймаут
-            // Если сетевая ошибка (CORS), пробуем следующую
-        }
-    }
-
-    clearTimeout(timeoutId);
-
-    if (success) {
-        playSound('receive'); 
-        addMessage(aiText, 'director');
-        elAi.className = 'status-item online';
-        
-        const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
-        let foundBusy = false;
-        let match;
-        while ((match = statusRegex.exec(aiText)) !== null) {
-            if (match[2] === 'busy') foundBusy = true;
-        }
-        if (!foundBusy) resetAllStatuses();
-        
-        sendBtn.disabled = false; sendBtn.innerText = "➤";
-async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text) return;
-    
-    playSound('send'); 
-    addMessage(text, 'boss');
-    input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
-    
-    resetAllStatuses();
-    updateAgentStatus('Оркестратор', 'busy');
-    
-    elAi.className = 'status-item loading';
-
-    const startTime = Date.now();
-    const TIMEOUT_MS = 90000; 
-
-    if (!navigator.onLine) {
-        setTimeout(() => {
-            elAi.className = 'status-item offline';
-            runOfflineAgents(text);
-        }, 25000); 
-        return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-    try {
-        const modelsToTry = [
-            "openrouter/free", 
-            "meta-llama/llama-3.3-70b-instruct:free", 
-            "google/gemma-2-9b-it:free", 
-            "qwen/qwen-2.5-72b-instruct:free"
-        ];
-        let success = false;
-        let aiText = "";
-
-        for (let i = 0; i < modelsToTry.length; i++) {
-            try {
-                const response = await fetch(PROXY + "/api/v1/chat/completions", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: modelsToTry[i], messages: allChats[currentChatId].messages }),
-                    signal: controller.signal
-                });
-                
-                if (!response.ok) continue; 
-
-                const data = await response.json();
-                if (data.choices && data.choices.length > 0) {
-                    aiText = data.choices[0].message.content;
-                    success = true;
-                    break; 
-                }
-            } catch (e) {
-                if (e.name === 'AbortError') throw e; 
-            }
-        }
-
-        clearTimeout(timeoutId);
-
-        if (success) {
-            playSound('receive'); 
-            addMessage(aiText, 'director');
-            elAi.className = 'status-item online';
-            
-            const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
-            let foundBusy = false;
-            let match;
-            while ((match = statusRegex.exec(aiText)) !== null) {
-                if (match[2] === 'busy') foundBusy = true;
-            }
-            if (!foundBusy) resetAllStatuses();
-            
-            sendBtn.disabled = false; sendBtn.innerText = "➤";
-            updateAgentStatus('Оркестратор', 'free');
-        } else {
-            elAi.className = 'status-item offline';
-            const elapsed = Date.now() - startTime;
-            const remaining = Math.max(0, 25000 - elapsed);
-            setTimeout(() => { runOfflineAgents(text); }, remaining);
-        }
-    } catch (e) { 
-        clearTimeout(timeoutId);
-        elAi.className = 'status-item offline';
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, 25000 - elapsed);
-        setTimeout(() => { runOfflineAgents(text); }, remaining);
-    }
+                        const data = await response.json();
+                        if (data.choices && data.choices.length > 0) {
+                            aiText = data.choices[0].message.content;
+                            success = true;
+                            break; 
+                        }
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw e; 
                     }
-                init();
+                }
+
+                clearTimeout(timeoutId);
+
+                if (success) {
+                    playSound('receive'); 
+                    addMessage(aiText, 'director');
+                    elAi.className = 'status-item online';
+                    
+                    const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
+                    let foundBusy = false;
+                    let match;
+                    while ((match = statusRegex.exec(aiText)) !== null) {
+                        if (match[2] === 'busy') foundBusy = true;
+                    }
+                    if (!foundBusy) resetAllStatuses();
+                    
+                    sendBtn.disabled = false; sendBtn.innerText = "➤";
+                    updateAgentStatus('Оркестратор', 'free');
+                } else {
+                    elAi.className = 'status-item offline';
+                    const elapsed = Date.now() - startTime;
+                    const remaining = Math.max(0, 25000 - elapsed);
+                    setTimeout(() => { runOfflineAgents(text); }, remaining);
+                }
+            } catch (e) { 
+                clearTimeout(timeoutId);
+                elAi.className = 'status-item offline';
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, 25000 - elapsed);
+                setTimeout(() => { runOfflineAgents(text); }, remaining);
+            }
+        }
+        
+        init();
     </script>
 </body>
 </html>
