@@ -321,7 +321,6 @@
             
             resetAllStatuses();
 
-            // --- ПРОВЕРКА ИНТЕРНЕТА ---
             if (!navigator.onLine) {
                 updateAgentStatus('Охранник', 'error');
                 addMessage("🛡️ Охранник: Босс, у нас пропало интернет-соединение. Проверь Wi-Fi или мобильный интернет. Если сеть есть, но запросы блокируются — включи VPN.", 'director');
@@ -331,9 +330,9 @@
 
             updateAgentStatus('Оркестратор', 'busy');
 
-            // Таймаут на 10 секунд (если OpenRouter блокируется)
+            // Ждем 25 секунд
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
 
             try {
                 const response = await fetch(PROXY + "/api/v1/chat/completions", {
@@ -363,9 +362,8 @@
                 }
             } catch (e) { 
                 clearTimeout(timeoutId);
-                // Если произошла ошибка сети или таймаут
                 updateAgentStatus('Охранник', 'error');
-                addMessage("🛡️ Охранник: Босс, соединение с сервером ИИ не установлено. Скорее всего, твой провайдер блокирует запрос. ВКЛЮЧИ VPN и попробуй снова.", 'director');
+                addMessage("🛡️ Охранник: Босс, сервер ИИ не отвечает уже 25 секунд. Скорее всего, твой провайдер блокирует запрос. ВКЛЮЧИ VPN и попробуй снова.", 'director');
                 
                 allChats[currentChatId].messages.pop(); saveAll();
             } finally {
