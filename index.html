@@ -480,65 +480,77 @@
             }, 2000); // Охранник ждет 2 секунды перед передачей
         }
 
-        async function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-            
-            playSound('send'); 
-            addMessage(text, 'boss');
-            input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
-            
-            resetAllStatuses();
-            updateAgentStatus('Оркестратор', 'busy');
+    async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    playSound('send'); 
+    addMessage(text, 'boss');
+    input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
+    
+    resetAllStatuses();
+    updateAgentStatus('Оркестратор', 'busy');
 
-            // Если нет интернета - офлайн
-            if (!navigator.onLine) {
-    setTimeout(() => {
-        runOfflineAgents(text);
-        sendBtn.disabled = false; 
-        sendBtn.innerText = "➤";
-    }, 25000); // Ждем 25 секунд
-    return;
+    const startTime = Date.now();
+    const TIMEOUT_MS = 25000; // 25 секунд
+
+    // Если режим полета (нет сети вообще)
+    if (!navigator.onLine) {
+        setTimeout(() => {
+            runOfflineAgents(text);
+            sendBtn.disabled = false; 
+            sendBtn.innerText = "➤";
+        }, TIMEOUT_MS);
+        return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+        const response = await fetch(PROXY + "/api/v1/chat/completions", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: "openrouter/free", messages: allChats[currentChatId].messages }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        if (data.choices && data.choices.length > 0) {
+            playSound('receive'); 
+            const aiText = data.choices[0].message.content;
+            addMessage(aiText, 'director');
+            
+            const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
+            let foundBusy = false;
+            let match;
+            while ((match = statusRegex.exec(aiText)) !== null) {
+                if (match[2] === 'busy') foundBusy = true;
             }
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 25000);
-
-            try {
-                const response = await fetch(PROXY + "/api/v1/chat/completions", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: "openrouter/free", messages: allChats[currentChatId].messages }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                if (data.choices && data.choices.length > 0) {
-                    playSound('receive'); 
-                    const aiText = data.choices[0].message.content;
-                    addMessage(aiText, 'director');
-                    
-                    const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
-                    let foundBusy = false;
-                    let match;
-                    while ((match = statusRegex.exec(aiText)) !== null) {
-                        if (match[2] === 'busy') foundBusy = true;
-                    }
-                    if (!foundBusy) resetAllStatuses();
-                } else {
-                    // Если API вернул ошибку, тоже уходим в офлайн
-                    runOfflineAgents(text);
-                }
-            } catch (e) { 
-                clearTimeout(timeoutId);
-                // Если таймаут или сеть упала — уходим в офлайн
+            if (!foundBusy) resetAllStatuses();
+            
+            sendBtn.disabled = false; sendBtn.innerText = "➤";
+            updateAgentStatus('Оркестратор', 'free');
+        } else {
+            // Если сервер вернул ошибку — ждем 25 секунд
+            setTimeout(() => {
                 runOfflineAgents(text);
-            } finally {
                 sendBtn.disabled = false; sendBtn.innerText = "➤";
-                updateAgentStatus('Оркестратор', 'free');
-            }
+            }, TIMEOUT_MS);
         }
+    } catch (e) { 
+        clearTimeout(timeoutId);
+        // Если интернет пропал во время запроса — ждем остаток времени
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, TIMEOUT_MS - elapsed);
+        setTimeout(() => {
+            runOfflineAgents(text);
+            sendBtn.disabled = false; 
+            sendBtn.innerText = "➤";
+        }, remaining);
+      }
+    }
         
         init();
     </script>
