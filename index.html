@@ -24,12 +24,12 @@
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
 
         .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100vh; }
-        .top-bar { padding: 10px 15px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
-        .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; }
-        .top-bar h1 { font-size: 18px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .top-bar { padding: 10px 15px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
+        .top-bar h1 { font-size: 18px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         
-        .radio-container { position: relative; }
-        .radio-btn { background: #333; border: none; color: #fff; font-size: 18px; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .radio-container { position: relative; flex-shrink: 0; }
+        .radio-btn { background: #333; border: none; color: #fff; font-size: 18px; padding: 5px 10px; border-radius: 5px; cursor: pointer; display: block; }
         .radio-player { display: none; position: absolute; right: 0; top: 40px; background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 220px; z-index: 101; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .radio-player.open { display: block; }
         .radio-player select { width: 100%; padding: 8px; margin-bottom: 10px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 5px; }
@@ -94,7 +94,7 @@
                         <option value="https://ice1.somafm.com/groovesalad-128-mp3">SomaFM Groove Salad</option>
                         <option value="https://ice1.somafm.com/dronezone-128-mp3">SomaFM Drone Zone</option>
                         <option value="https://ice1.somafm.com/lush-128-mp3">SomaFM Lush</option>
-                        <option value="https://online.radiorecord.ru:8102/rr_128">Radio Record (128 mp3)</option>
+                        <option value="https://online.radiorecord.ru:8102/rr_128">Radio Record</option>
                     </select>
                     <audio id="radioAudio" controls></audio>
                 </div>
@@ -141,8 +141,8 @@
                 <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
             </div>
         </div>
-    </div>
-        <script>
+                </div>
+                    <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
@@ -155,7 +155,17 @@
         const chatTitleEl = document.getElementById('currentChatTitle');
 
         const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. В нашем штате 24 специалиста. С чего начнем?";
-        const AGENT_LIST = "Оркестратор, Хакер, Охранник, Исследователь, Планировщик, Аналитик, Исполнитель, Архитектор, Дизайнер, Креативщик, Критик, Тестировщик, Переводчик, Методолог, Юрист, Маркетолог, Техпис, Фронтенд, Бэкенд, Мобильный, DevOps, Универсал, Приемная, Результат";
+        
+        // СИСТЕМНЫЙ ПРОМПТ: Заставляет ИИ работать как конвейер
+        const SYSTEM_PROMPT = `Ты - Управляющий ИИ Цифрового Агентства. Твоя задача - выполнять задачи Босса, строго следуя конвейеру ролей:
+1. ОРКЕСТРАТОР: Принимает задачу и ставит цели.
+2. ИССЛЕДОВАТЕЛЬ: Собирает вводные данные.
+3. АРХИТЕКТОР: Проектирует решение.
+4. ФРОНТЕНД/БЭКЕНД: Пишут код (если задача про программирование).
+5. ТЕСТИРОВЩИК: Проверяет код. Если находит баги, ОБЯЗАТЕЛЬНО возвращает задачу Фронтенду с пометкой "На переделку".
+6. РЕЗУЛЬТАТ: Объявляет о завершении.
+
+Пиши диалог от лица каждого агента по очереди. В конце каждого сообщения агента ОБЯЗАТЕЛЬНО добавляй тег [Статус: ИмяАгента: busy] (когда работает) и [Статус: ИмяАгента: free] (когда закончил). Используй только реальные имена агентов.`;
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
@@ -181,8 +191,7 @@
             const audio = document.getElementById('radioAudio');
             audio.src = select.value;
             audio.load();
-            // Автоматически пробуем запустить (браузер может заблокировать, но попытка не пытка)
-            audio.play().catch(e => console.log("Автовоспроизведение заблокировано, нажмите Play."));
+            audio.play().catch(e => console.log("Автовоспроизведение заблокировано"));
         }
 
         function resetAllStatuses() {
@@ -206,7 +215,7 @@
             const id = 'chat_' + Date.now();
             allChats[id] = {
                 id: id, title: "Новый чат", pinned: false,
-                messages: [{ role: "system", content: `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду на переделку. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy].` }]
+                messages: [{ role: "system", content: SYSTEM_PROMPT }]
             };
             currentChatId = id; saveAll();
             chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
@@ -278,7 +287,7 @@
             const div = document.createElement('div');
             div.className = 'chat-msg msg-' + sender;
             chatContainer.appendChild(div);
-            let i = 0; const speed = 20;
+            let i = 0; const speed = 10;
             function type() {
                 if (i < fullText.length) {
                     div.innerText = fullText.substring(0, i + 1);
@@ -306,7 +315,7 @@
                 allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости. В КОНЦЕ ответа пиши [Статус: Хакер: busy].";
                 addMessage("🕵️ Хакер активирован.", 'director');
             } else {
-                allChats[currentChatId].messages[0].content = `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy].`;
+                allChats[currentChatId].messages[0].content = SYSTEM_PROMPT;
                 addMessage("👑 Оркестратор вернулся к управлению.", 'director');
             }
             saveAll();
