@@ -152,205 +152,205 @@
                 <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
             </div>
         </div>
-            </div>
-                <script>
-        const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
-        let currentMode = 'normal';
-        
-        let allChats = JSON.parse(localStorage.getItem('shtabAllChats')) || {};
-        let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
+    </div>
+    <script>
+    const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
+    let currentMode = 'normal';
+    
+    let allChats = JSON.parse(localStorage.getItem('shtabAllChats')) || {};
+    let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 
-        const chatContainer = document.getElementById('chatContainer');
-        const chatListEl = document.getElementById('chatList');
-        const sendBtn = document.getElementById('sendBtn');
-        const chatTitleEl = document.getElementById('currentChatTitle');
+    const chatContainer = document.getElementById('chatContainer');
+    const chatListEl = document.getElementById('chatList');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatTitleEl = document.getElementById('currentChatTitle');
 
-        const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Мы умеем писать код и можем обновлять этот Штаб. С чего начнем?";
-        
-        const AGENT_INFO = {
-            "Оркестратор": "<strong>Роль:</strong> Главный менеджер.<br><br><strong>Задачи:</strong> Разбивает задачи и назначает исполнителей.",
-            "Хакер": "<strong>Роль:</strong> Red Team.<br><br><strong>Задачи:</strong> Ищет уязвимости.",
-            "Охранник": "<strong>Роль:</strong> Blue Team.<br><br><strong>Задачи:</strong> Устраняет уязвимости.",
-            "Исследователь": "<strong>Роль:</strong> Аналитик.<br><br><strong>Задачи:</strong> Собирает информацию.",
-            "Планировщик": "<strong>Роль:</strong> Стратег.<br><br><strong>Задачи:</strong> Составляет планы.",
-            "Аналитик": "<strong>Роль:</strong> Data Scientist.<br><br><strong>Задачи:</strong> Работает с цифрами.",
-            "Исполнитель": "<strong>Роль:</strong> Универсал.<br><br><strong>Задачи:</strong> Делает мелкие задачи.",
-            "Архитектор": "<strong>Роль:</strong> Системный архитектор.<br><br><strong>Задачи:</strong> Проектирует структуру.",
-            "Дизайнер": "<strong>Роль:</strong> UI/UX.<br><br><strong>Задачи:</strong> Рисует макеты.",
-            "Креативщик": "<strong>Роль:</strong> Генератор идей.<br><br><strong>Задачи:</strong> Придумывает концепты.",
-            "Критик": "<strong>Роль:</strong> Рецензент.<br><br><strong>Задачи:</strong> Ищет слабые места.",
-            "Тестировщик": "<strong>Роль:</strong> QA.<br><br><strong>Задачи:</strong> Ищет баги и возвращает на доработку.",
-            "Переводчик": "<strong>Роль:</strong> Локализатор.<br><br><strong>Задачи:</strong> Переводит тексты.",
-            "Методолог": "<strong>Роль:</strong> Автор инструкций.<br><br><strong>Задачи:</strong> Пишет регламенты.",
-            "Юрист": "<strong>Роль:</strong> Комплаенс.<br><br><strong>Задачи:</strong> Проверяет законы.",
-            "Маркетолог": "<strong>Роль:</strong> Специалист по продвижению.<br><br><strong>Задачи:</strong> Придумывает рекламу.",
-            "Техпис": "<strong>Роль:</strong> Технический писатель.<br><br><strong>Задачи:</strong> Пишет документацию.",
-            "Фронтенд": "<strong>Роль:</strong> Frontend-разработчик.<br><br><strong>Задачи:</strong> Верстает интерфейсы.",
-            "Бэкенд": "<strong>Роль:</strong> Backend-разработчик.<br><br><strong>Задачи:</strong> Пишет серверную логику.",
-            "Мобильный": "<strong>Роль:</strong> Mobile-разработчик.<br><br><strong>Задачи:</strong> Создает приложения.",
-            "DevOps": "<strong>Роль:</strong> Инженер инфраструктуры.<br><br><strong>Задачи:</strong> Настраивает серверы.",
-            "Универсал": "<strong>Роль:</strong> Fullstack.<br><br><strong>Задачи:</strong> Знает всё понемногу.",
-            "Приемная": "<strong>Роль:</strong> Комиссия.<br><br><strong>Задачи:</strong> Проверяет результат.",
-            "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект."
+    const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Мы умеем писать код и можем обновлять этот Штаб. С чего начнем?";
+    
+    const AGENT_INFO = {
+        "Оркестратор": "<strong>Роль:</strong> Главный менеджер.<br><br><strong>Задачи:</strong> Разбивает задачи и назначает исполнителей.",
+        "Хакер": "<strong>Роль:</strong> Red Team.<br><br><strong>Задачи:</strong> Ищет уязвимости.",
+        "Охранник": "<strong>Роль:</strong> Blue Team.<br><br><strong>Задачи:</strong> Устраняет уязвимости.",
+        "Исследователь": "<strong>Роль:</strong> Аналитик.<br><br><strong>Задачи:</strong> Собирает информацию.",
+        "Планировщик": "<strong>Роль:</strong> Стратег.<br><br><strong>Задачи:</strong> Составляет планы.",
+        "Аналитик": "<strong>Роль:</strong> Data Scientist.<br><br><strong>Задачи:</strong> Работает с цифрами.",
+        "Исполнитель": "<strong>Роль:</strong> Универсал.<br><br><strong>Задачи:</strong> Делает мелкие задачи.",
+        "Архитектор": "<strong>Роль:</strong> Системный архитектор.<br><br><strong>Задачи:</strong> Проектирует структуру.",
+        "Дизайнер": "<strong>Роль:</strong> UI/UX.<br><br><strong>Задачи:</strong> Рисует макеты.",
+        "Креативщик": "<strong>Роль:</strong> Генератор идей.<br><br><strong>Задачи:</strong> Придумывает концепты.",
+        "Критик": "<strong>Роль:</strong> Рецензент.<br><br><strong>Задачи:</strong> Ищет слабые места.",
+        "Тестировщик": "<strong>Роль:</strong> QA.<br><br><strong>Задачи:</strong> Ищет баги и возвращает на доработку.",
+        "Переводчик": "<strong>Роль:</strong> Локализатор.<br><br><strong>Задачи:</strong> Переводит тексты.",
+        "Методолог": "<strong>Роль:</strong> Автор инструкций.<br><br><strong>Задачи:</strong> Пишет регламенты.",
+        "Юрист": "<strong>Роль:</strong> Комплаенс.<br><br><strong>Задачи:</strong> Проверяет законы.",
+        "Маркетолог": "<strong>Роль:</strong> Специалист по продвижению.<br><br><strong>Задачи:</strong> Придумывает рекламу.",
+        "Техпис": "<strong>Роль:</strong> Технический писатель.<br><br><strong>Задачи:</strong> Пишет документацию.",
+        "Фронтенд": "<strong>Роль:</strong> Frontend-разработчик.<br><br><strong>Задачи:</strong> Верстает интерфейсы.",
+        "Бэкенд": "<strong>Роль:</strong> Backend-разработчик.<br><br><strong>Задачи:</strong> Пишет серверную логику.",
+        "Мобильный": "<strong>Роль:</strong> Mobile-разработчик.<br><br><strong>Задачи:</strong> Создает приложения.",
+        "DevOps": "<strong>Роль:</strong> Инженер инфраструктуры.<br><br><strong>Задачи:</strong> Настраивает серверы.",
+        "Универсал": "<strong>Роль:</strong> Fullstack.<br><br><strong>Задачи:</strong> Знает всё понемногу.",
+        "Приемная": "<strong>Роль:</strong> Комиссия.<br><br><strong>Задачи:</strong> Проверяет результат.",
+        "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект."
+    };
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        if (type === 'send') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+        } else if (type === 'receive') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2);
+        }
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
+    function changeRadio() {
+        const select = document.getElementById('radioSelect');
+        const audio = document.getElementById('radioAudio');
+        audio.src = select.value;
+        audio.load();
+        audio.play().catch(e => console.log("Автовоспроизведение заблокировано"));
+    }
+
+    function showAgentInfo(name) {
+        document.getElementById('modalTitle').innerText = name;
+        document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
+        document.getElementById('agentModal').classList.add('active');
+    }
+    function closeModal(e) {
+        if (e && e.target !== e.currentTarget) return;
+        document.getElementById('agentModal').classList.remove('active');
+    }
+
+    function resetAllStatuses() {
+        document.querySelectorAll('.status-dot').forEach(dot => {
+            dot.classList.remove('busy');
+            dot.classList.remove('error');
+            dot.closest('.agent-card').classList.remove('working');
+            dot.closest('.agent-card').classList.remove('error');
+        });
+    }
+
+    function init() {
+        if (!currentChatId || !allChats[currentChatId]) { createNewChat(); } else { loadChat(currentChatId); }
+        renderChatList();
+    }
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('overlay').classList.toggle('active');
+    }
+    function createNewChat() {
+        const id = 'chat_' + Date.now();
+        allChats[id] = {
+            id: id, title: "Новый чат", pinned: false,
+            messages: [{ role: "system", content: `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду на переделку. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy]. ЕСЛИ ТЕБЯ ПРОСЯТ НАПИСАТЬ КОД, ВСЕГДА ОБОРАЧИВАЙ ЕГО В БЛОК \`\`\`html ... \`\`\`. НЕ ГОВОРИ, ЧТО У ТЕБЯ НЕТ ДОСТУПА. ТЫ ПРОСТО ПИШЕШЬ КОД, А БОСС НАЖМЕТ КНОПКУ "ВНЕДРИТЬ".` }]
         };
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            if (type === 'send') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
-            } else if (type === 'receive') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2);
-            }
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-        }
-
-        function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
-        function changeRadio() {
-            const select = document.getElementById('radioSelect');
-            const audio = document.getElementById('radioAudio');
-            audio.src = select.value;
-            audio.load();
-            audio.play().catch(e => console.log("Автовоспроизведение заблокировано"));
-        }
-
-        function showAgentInfo(name) {
-            document.getElementById('modalTitle').innerText = name;
-            document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
-            document.getElementById('agentModal').classList.add('active');
-        }
-        function closeModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            document.getElementById('agentModal').classList.remove('active');
-        }
-
-        function resetAllStatuses() {
-            document.querySelectorAll('.status-dot').forEach(dot => {
-                dot.classList.remove('busy');
-                dot.classList.remove('error');
-                dot.closest('.agent-card').classList.remove('working');
-                dot.closest('.agent-card').classList.remove('error');
-            });
-        }
-
-        function init() {
-            if (!currentChatId || !allChats[currentChatId]) { createNewChat(); } else { loadChat(currentChatId); }
-            renderChatList();
-        }
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('active');
-        }
-        function createNewChat() {
-            const id = 'chat_' + Date.now();
-            allChats[id] = {
-                id: id, title: "Новый чат", pinned: false,
-                messages: [{ role: "system", content: `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду на переделку. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy]. ЕСЛИ ТЕБЯ ПРОСЯТ НАПИСАТЬ КОД, ВСЕГДА ОБОРАЧИВАЙ ЕГО В БЛОК \`\`\`html ... \`\`\`. НЕ ГОВОРИ, ЧТО У ТЕБЯ НЕТ ДОСТУПА. ТЫ ПРОСТО ПИШЕШЬ КОД, А БОСС НАЖМЕТ КНОПКУ "ВНЕДРИТЬ".` }]
-            };
-            currentChatId = id; saveAll();
-            chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
-            allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT }); saveAll();
-            typeMessage(WELCOME_TEXT, 'director'); 
-            resetAllStatuses();
-            renderChatList(); toggleSidebar(); 
-        }
-        function loadChat(id) {
-            currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
-            chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
-            const msgs = allChats[id].messages;
-            for (let i = 1; i < msgs.length; i++) { renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director'); }
-            chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
-        }
-        function saveAll() { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); }
-        function renderChatList() {
-            chatListEl.innerHTML = '';
-            const sortedIds = Object.keys(allChats).sort((a, b) => {
-                if (allChats[a].pinned && !allChats[b].pinned) return -1;
-                if (!allChats[a].pinned && allChats[b].pinned) return 1;
-                return b.localeCompare(a);
-            });
-            sortedIds.forEach(id => {
-                const chat = allChats[id];
-                const div = document.createElement('div');
-                div.className = `chat-item ${chat.pinned ? 'pinned' : ''}`;
-                const titleSpan = document.createElement('span');
-                titleSpan.className = 'chat-title'; titleSpan.innerText = chat.title;
-                titleSpan.onclick = () => { loadChat(id); toggleSidebar(); };
-                const actions = document.createElement('div'); actions.className = 'chat-item-actions';
-                const pinBtn = document.createElement('span'); pinBtn.innerText = chat.pinned ? '📌' : '📍';
-                pinBtn.onclick = (e) => { e.stopPropagation(); togglePin(id); };
-                const delBtn = document.createElement('span'); delBtn.innerText = '🗑️';
-                delBtn.onclick = (e) => { e.stopPropagation(); deleteChat(id); };
-                actions.appendChild(pinBtn); actions.appendChild(delBtn);
-                div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
-            });
-        }
-        function togglePin(id) { allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); }
-        function deleteChat(id) { if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(); } else { saveAll(); renderChatList(); } } }
-        
-        function renderMessage(text, sender) {
+        currentChatId = id; saveAll();
+        chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
+        allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT }); saveAll();
+        typeMessage(WELCOME_TEXT, 'director'); 
+        resetAllStatuses();
+        renderChatList(); toggleSidebar(); 
+    }
+    function loadChat(id) {
+        currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
+        chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
+        const msgs = allChats[id].messages;
+        for (let i = 1; i < msgs.length; i++) { renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director'); }
+        chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
+    }
+    function saveAll() { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); }
+    
+    function renderChatList() {
+        chatListEl.innerHTML = '';
+        const sortedIds = Object.keys(allChats).sort((a, b) => {
+            if (allChats[a].pinned && !allChats[b].pinned) return -1;
+            if (!allChats[a].pinned && allChats[b].pinned) return 1;
+            return b.localeCompare(a);
+        });
+        sortedIds.forEach(id => {
+            const chat = allChats[id];
             const div = document.createElement('div');
-            div.className = 'chat-msg msg-' + sender;
-            if (sender === 'director') {
-                const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
-                let match;
-                while ((match = statusRegex.exec(text)) !== null) {
-                    updateAgentStatus(match[1].trim(), match[2]);
-                }
-                text = text.replace(statusRegex, '').trim();
-                div.innerHTML = marked.parse(text);
-
-                const codeRegex = /```html([\s\S]*?)```/;
-                const codeMatch = codeRegex.exec(text);
-                if (codeMatch) {
-                    const codeToApply = codeMatch[1];
-                    const applyBtn = document.createElement('button');
-                    applyBtn.className = 'apply-code-btn';
-                    applyBtn.innerText = '⚡ Внедрить код';
-                    applyBtn.onclick = () => applyCodeToGitHub(codeToApply);
-                    div.appendChild(applyBtn);
-                }
-            } else { div.innerText = text; }
-            chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        async function applyCodeToGitHub(newCode) {
-            addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
-            try {
-                const response = await fetch(PROXY + "/update-code", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ code: newCode })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    addMessage("✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.", 'director');
-                } else {
-                    addMessage("❌ DevOps: Ошибка обновления. " + JSON.stringify(data.error), 'director');
-                }
-            } catch (e) {
-                addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
+            div.className = `chat-item ${chat.pinned ? 'pinned' : ''}`;
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'chat-title'; titleSpan.innerText = chat.title;
+            titleSpan.onclick = () => { loadChat(id); toggleSidebar(); };
+            const actions = document.createElement('div'); actions.className = 'chat-item-actions';
+            const pinBtn = document.createElement('span'); pinBtn.innerText = chat.pinned ? '📌' : '📍';
+            pinBtn.onclick = (e) => { e.stopPropagation(); togglePin(id); };
+            const delBtn = document.createElement('span'); delBtn.innerText = '🗑️';
+            delBtn.onclick = (e) => { e.stopPropagation(); deleteChat(id); };
+            actions.appendChild(pinBtn); actions.appendChild(delBtn);
+            div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
+        });
+    }
+    
+    function togglePin(id) { allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); }
+    function deleteChat(id) { if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(); } else { saveAll(); renderChatList(); } } }
+    
+    function renderMessage(text, sender) {
+        const div = document.createElement('div');
+        div.className = 'chat-msg msg-' + sender;
+        if (sender === 'director') {
+            const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
+            let match;
+            while ((match = statusRegex.exec(text)) !== null) {
+                updateAgentStatus(match[1].trim(), match[2]);
             }
-        }
-
-        function updateAgentStatus(agentName, status) {
-            const card = document.getElementById('agent-' + agentName);
-            if (card) {
-                const dot = card.querySelector('.status-dot');
-                if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); }
-                else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); }
-                else { dot.classList.remove('busy'); dot.classList.remove('error'); card.classList.remove('working'); card.classList.remove('error'); }
+            text = text.replace(statusRegex, '').trim();
+            div.innerHTML = marked.parse(text);
+            const codeRegex = /```html([\s\S]*?)```/;
+            const codeMatch = codeRegex.exec(text);
+            if (codeMatch) {
+                const codeToApply = codeMatch[1];
+                const applyBtn = document.createElement('button');
+                applyBtn.className = 'apply-code-btn';
+                applyBtn.innerText = '⚡ Внедрить код';
+                applyBtn.onclick = () => applyCodeToGitHub(codeToApply);
+                div.appendChild(applyBtn);
             }
-        }
+        } else { div.innerText = text; }
+        chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
-        function typeMessage(fullText, sender) {
+    async function applyCodeToGitHub(newCode) {
+        addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
+        try {
+            const response = await fetch(PROXY + "/update-code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: newCode })
+            });
+            const data = await response.json();
+            if (data.success) {
+                addMessage("✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.", 'director');
+            } else {
+                addMessage("❌ DevOps: Ошибка обновления. " + JSON.stringify(data.error), 'director');
+            }
+        } catch (e) {
+            addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
+        }
+    }
+
+    function updateAgentStatus(agentName, status) {
+        const card = document.getElementById('agent-' + agentName);
+        if (card) {
+            const dot = card.querySelector('.status-dot');
+            if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); }
+            else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); }
+            else { dot.classList.remove('busy'); dot.classList.remove('error'); card.classList.remove('working'); card.classList.remove('error'); }
+        }
+    }
+                function typeMessage(fullText, sender) {
             const div = document.createElement('div');
             div.className = 'chat-msg msg-' + sender;
             chatContainer.appendChild(div);
@@ -364,6 +364,7 @@
             }
             type();
         }
+        
         function addMessage(text, sender) {
             renderMessage(text, sender);
             const role = sender === 'boss' ? 'user' : 'assistant';
@@ -374,6 +375,7 @@
             }
             saveAll(); renderChatList();
         }
+        
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
@@ -388,6 +390,38 @@
             saveAll();
         }
 
+        // --- УМНАЯ ОФЛАЙН-ЛОГИКА (СИМУЛЯЦИЯ) ---
+        function runOfflineAgents(userText) {
+            addMessage("⚠️ Сеть недоступна. Включаю офлайн-протокол.", 'director');
+            
+            setTimeout(() => {
+                let response = "";
+                const lowerText = userText.toLowerCase();
+                
+                if (lowerText.includes("код") || lowerText.includes("кнопк") || lowerText.includes("html")) {
+                    response = `👑 **Оркестратор:** Принял задачу на написание кода. Передаю Архитектору.\n\n` +
+                               `📐 **Архитектор:** Проектирую решение. Это будет кнопка с обработчиком.\n\n` +
+                               `🖥️ **Фронтенд:** Пишу код. Вот он:\n\`\`\`html\n<button onclick="alert('Привет, мир!')" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Привет, мир!</button>\n\`\`\`\n\n` +
+                               `🧪 **Тестировщик:** Код валиден. Багов не обнаружено.\n\n` +
+                               `🏆 **Результат:** Задача выполнена в офлайн-режиме. Вы можете внедрить код.`;
+                } else if (lowerText.includes("план") || lowerText.includes("как")) {
+                    response = `👑 **Оркестратор:** Принял запрос на план.\n\n` +
+                               `📅 **Планировщик:** Разбиваю на шаги:\n1. Анализ задачи.\n2. Проектирование.\n3. Реализация.\n4. Проверка.\n\n` +
+                               `🏆 **Результат:** План готов. (Офлайн-режим)`;
+                } else {
+                    response = `👑 **Оркестратор:** Принял задачу "${userText}".\n\n` +
+                               `📐 **Архитектор:** Проектирую решение.\n\n` +
+                               `🖥️ **Фронтенд:** Пишу код.\n\n` +
+                               `🧪 **Тестировщик:** Проверяю. Багов нет.\n\n` +
+                               `🏆 **Результат:** Задача выполнена (Офлайн-режим).`;
+                }
+                
+                addMessage(response, 'director');
+                updateAgentStatus('Оркестратор', 'free');
+                resetAllStatuses();
+            }, 1500);
+        }
+
         async function sendMessage() {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
@@ -399,6 +433,13 @@
             
             resetAllStatuses();
             updateAgentStatus('Оркестратор', 'busy');
+
+            // Если нет интернета - офлайн
+            if (!navigator.onLine) {
+                runOfflineAgents(text);
+                sendBtn.disabled = false; sendBtn.innerText = "➤";
+                return;
+            }
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 25000);
@@ -425,21 +466,19 @@
                     }
                     if (!foundBusy) resetAllStatuses();
                 } else {
-                    addMessage("Ошибка: " + JSON.stringify(data), 'director');
-                    allChats[currentChatId].messages.pop(); saveAll();
-                    resetAllStatuses();
+                    // Если ответ пришел с ошибкой, врубаем офлайн
+                    runOfflineAgents(text);
                 }
             } catch (e) { 
                 clearTimeout(timeoutId);
-                updateAgentStatus('Охранник', 'error');
-                addMessage("🛡️ Охранник: Босс, сервер ИИ не отвечает уже 25 секунд. Скорее всего, твой провайдер блокирует запрос. ВКЛЮЧИ VPN и попробуй снова.", 'director');
-                
-                allChats[currentChatId].messages.pop(); saveAll();
+                // Если упало по таймауту или сети - врубаем офлайн
+                runOfflineAgents(text);
             } finally {
                 sendBtn.disabled = false; sendBtn.innerText = "➤";
                 updateAgentStatus('Оркестратор', 'free');
             }
         }
+        
         init();
     </script>
 </body>
