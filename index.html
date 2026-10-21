@@ -1105,5 +1105,31 @@
   </script>
 </div>
 
+
+<!-- AI UPDATE -->
+
+<div id="remove-safe-widgets">
+  <script>
+    (() => {
+      const widgetIds = [
+        "hq-safe-widget",
+        "digital-safe-demo"
+      ];
+
+      widgetIds.forEach(id => {
+        document.querySelectorAll("#" + id).forEach(widget => {
+          widget.remove();
+        });
+      });
+
+      if (document.body.style.overflow === "hidden") {
+        document.body.style.overflow = "";
+      }
+
+      console.log("Виджеты кодового сейфа удалены.");
+    })();
+  </script>
+</div>
+
 </body>
 </html>
