@@ -494,9 +494,12 @@
 
             // Если нет интернета - офлайн
             if (!navigator.onLine) {
-                runOfflineAgents(text);
-                sendBtn.disabled = false; sendBtn.innerText = "➤";
-                return;
+    setTimeout(() => {
+        runOfflineAgents(text);
+        sendBtn.disabled = false; 
+        sendBtn.innerText = "➤";
+    }, 25000); // Ждем 25 секунд
+    return;
             }
 
             const controller = new AbortController();
