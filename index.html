@@ -61,11 +61,13 @@
         .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; }
         .agent-card.working { border-color: #ffaa00; background: #2a2a2a; box-shadow: 0 0 10px rgba(255, 170, 0, 0.3); }
+        .agent-card.error { border-color: #ff0000; background: #2a0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
         .agent-info h4 { margin: 0 0 2px 0; color: #fff; font-size: 12px; }
         .agent-info p { margin: 0; font-size: 10px; color: #aaa; }
         
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 5px #00ff00; flex-shrink: 0; }
         .status-dot.busy { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; }
+        .status-dot.error { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
     </style>
 </head>
 <body>
@@ -184,7 +186,9 @@
         function resetAllStatuses() {
             document.querySelectorAll('.status-dot').forEach(dot => {
                 dot.classList.remove('busy');
+                dot.classList.remove('error');
                 dot.closest('.agent-card').classList.remove('working');
+                dot.closest('.agent-card').classList.remove('error');
             });
         }
 
@@ -263,7 +267,8 @@
             if (card) {
                 const dot = card.querySelector('.status-dot');
                 if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); }
-                else { dot.classList.remove('busy'); card.classList.remove('working'); }
+                else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); }
+                else { dot.classList.remove('busy'); dot.classList.remove('error'); card.classList.remove('working'); card.classList.remove('error'); }
             }
         }
 
@@ -315,13 +320,29 @@
             input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
             
             resetAllStatuses();
+
+            // --- ПРОВЕРКА ИНТЕРНЕТА ---
+            if (!navigator.onLine) {
+                updateAgentStatus('Охранник', 'error');
+                addMessage("🛡️ Охранник: Босс, у нас пропало интернет-соединение. Проверь Wi-Fi или мобильный интернет. Если сеть есть, но запросы блокируются — включи VPN.", 'director');
+                sendBtn.disabled = false; sendBtn.innerText = "➤";
+                return;
+            }
+
             updateAgentStatus('Оркестратор', 'busy');
+
+            // Таймаут на 10 секунд (если OpenRouter блокируется)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             try {
                 const response = await fetch(PROXY + "/api/v1/chat/completions", {
                     method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: "openrouter/free", messages: allChats[currentChatId].messages })
+                    body: JSON.stringify({ model: "openrouter/free", messages: allChats[currentChatId].messages }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
+                
                 const data = await response.json();
                 if (data.choices && data.choices.length > 0) {
                     playSound('receive'); 
@@ -334,20 +355,22 @@
                     while ((match = statusRegex.exec(aiText)) !== null) {
                         if (match[2] === 'busy') foundBusy = true;
                     }
-                    if (!foundBusy) {
-                        resetAllStatuses();
-                    }
+                    if (!foundBusy) resetAllStatuses();
                 } else {
                     addMessage("Ошибка: " + JSON.stringify(data), 'director');
                     allChats[currentChatId].messages.pop(); saveAll();
                     resetAllStatuses();
                 }
             } catch (e) { 
-                addMessage("Ошибка связи: " + e.message, 'director'); 
+                clearTimeout(timeoutId);
+                // Если произошла ошибка сети или таймаут
+                updateAgentStatus('Охранник', 'error');
+                addMessage("🛡️ Охранник: Босс, соединение с сервером ИИ не установлено. Скорее всего, твой провайдер блокирует запрос. ВКЛЮЧИ VPN и попробуй снова.", 'director');
+                
                 allChats[currentChatId].messages.pop(); saveAll();
-                resetAllStatuses();
             } finally {
                 sendBtn.disabled = false; sendBtn.innerText = "➤";
+                updateAgentStatus('Оркестратор', 'free');
             }
         }
         init();
