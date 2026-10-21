@@ -123,34 +123,35 @@
             <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
-            <div class="agents-wrapper">
-        <div class="agents-grid">
-            <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055;" onclick="showAgentInfo('Хакер')"><div class="agent-info"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Охранник" style="border-color: #f44336;" onclick="showAgentInfo('Охранник')"><div class="agent-info"><h4>🛡️ Охранник</h4><p>Закрывает</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff;" onclick="showAgentInfo('Исследователь')"><div class="agent-info"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff;" onclick="showAgentInfo('Планировщик')"><div class="agent-info"><h4>📅 Планировщик</h4><p>Планы</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff;" onclick="showAgentInfo('Аналитик')"><div class="agent-info"><h4>📊 Аналитик</h4><p>Цифры</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff;" onclick="showAgentInfo('Исполнитель')"><div class="agent-info"><h4>⚙️ Исполнитель</h4><p>Делает</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0;" onclick="showAgentInfo('Архитектор')"><div class="agent-info"><h4>📐 Архитектор</h4><p>Проект</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0;" onclick="showAgentInfo('Дизайнер')"><div class="agent-info"><h4>🎨 Дизайнер</h4><p>Визуал</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0;" onclick="showAgentInfo('Креативщик')"><div class="agent-info"><h4>💡 Креативщик</h4><p>Идеи</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Критик" style="border-color: #f44336;" onclick="showAgentInfo('Критик')"><div class="agent-info"><h4>🧐 Критик</h4><p>Качество</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336;" onclick="showAgentInfo('Тестировщик')"><div class="agent-info"><h4>🧪 Тестировщик</h4><p>Баги</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50;" onclick="showAgentInfo('Переводчик')"><div class="agent-info"><h4>🌐 Переводчик</h4><p>Языки</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50;" onclick="showAgentInfo('Методолог')"><div class="agent-info"><h4>📚 Методолог</h4><p>Инструкции</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50;" onclick="showAgentInfo('Юрист')"><div class="agent-info"><h4>⚖️ Юрист</h4><p>Законы</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50;" onclick="showAgentInfo('Маркетолог')"><div class="agent-info"><h4>📢 Маркетолог</h4><p>Продвижение</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50;" onclick="showAgentInfo('Техпис')"><div class="agent-info"><h4>✍️ Техпис</h4><p>Документация</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3;" onclick="showAgentInfo('Фронтенд')"><div class="agent-info"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3;" onclick="showAgentInfo('Бэкенд')"><div class="agent-info"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3;" onclick="showAgentInfo('Мобильный')"><div class="agent-info"><h4>📱 Мобильный</h4><p>Приложения</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3;" onclick="showAgentInfo('DevOps')"><div class="agent-info"><h4>🚀 DevOps</h4><p>Деплой</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800;" onclick="showAgentInfo('Универсал')"><div class="agent-info"><h4>🧠 Универсал</h4><p>Знает всё</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800;" onclick="showAgentInfo('Приемная')"><div class="agent-info"><h4>🏛️ Приемная</h4><p>Проверка</p></div><div class="status-dot"></div></div>
-            <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
+
+        <div class="agents-wrapper">
+            <div class="agents-grid">
+                <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055;" onclick="showAgentInfo('Хакер')"><div class="agent-info"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Охранник" style="border-color: #f44336;" onclick="showAgentInfo('Охранник')"><div class="agent-info"><h4>🛡️ Охранник</h4><p>Закрывает</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff;" onclick="showAgentInfo('Исследователь')"><div class="agent-info"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff;" onclick="showAgentInfo('Планировщик')"><div class="agent-info"><h4>📅 Планировщик</h4><p>Планы</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff;" onclick="showAgentInfo('Аналитик')"><div class="agent-info"><h4>📊 Аналитик</h4><p>Цифры</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff;" onclick="showAgentInfo('Исполнитель')"><div class="agent-info"><h4>⚙️ Исполнитель</h4><p>Делает</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0;" onclick="showAgentInfo('Архитектор')"><div class="agent-info"><h4>📐 Архитектор</h4><p>Проект</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0;" onclick="showAgentInfo('Дизайнер')"><div class="agent-info"><h4>🎨 Дизайнер</h4><p>Визуал</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0;" onclick="showAgentInfo('Креативщик')"><div class="agent-info"><h4>💡 Креативщик</h4><p>Идеи</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Критик" style="border-color: #f44336;" onclick="showAgentInfo('Критик')"><div class="agent-info"><h4>🧐 Критик</h4><p>Качество</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336;" onclick="showAgentInfo('Тестировщик')"><div class="agent-info"><h4>🧪 Тестировщик</h4><p>Баги</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50;" onclick="showAgentInfo('Переводчик')"><div class="agent-info"><h4>🌐 Переводчик</h4><p>Языки</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50;" onclick="showAgentInfo('Методолог')"><div class="agent-info"><h4>📚 Методолог</h4><p>Инструкции</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50;" onclick="showAgentInfo('Юрист')"><div class="agent-info"><h4>⚖️ Юрист</h4><p>Законы</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50;" onclick="showAgentInfo('Маркетолог')"><div class="agent-info"><h4>📢 Маркетолог</h4><p>Продвижение</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50;" onclick="showAgentInfo('Техпис')"><div class="agent-info"><h4>✍️ Техпис</h4><p>Документация</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3;" onclick="showAgentInfo('Фронтенд')"><div class="agent-info"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3;" onclick="showAgentInfo('Бэкенд')"><div class="agent-info"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3;" onclick="showAgentInfo('Мобильный')"><div class="agent-info"><h4>📱 Мобильный</h4><p>Приложения</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3;" onclick="showAgentInfo('DevOps')"><div class="agent-info"><h4>🚀 DevOps</h4><p>Деплой</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800;" onclick="showAgentInfo('Универсал')"><div class="agent-info"><h4>🧠 Универсал</h4><p>Знает всё</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800;" onclick="showAgentInfo('Приемная')"><div class="agent-info"><h4>🏛️ Приемная</h4><p>Проверка</p></div><div class="status-dot"></div></div>
+                <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
+            </div>
         </div>
-    </div>
     </div>
         <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
@@ -251,7 +252,7 @@
             const id = 'chat_' + Date.now();
             allChats[id] = {
                 id: id, title: "Новый чат", pinned: false,
-                messages: [{ role: "system", content: `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду на переделку. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy]. ЕСЛИ ТЕБЯ ПРОСЯТ НАПИСАТЬ КОД, ВСЕГДА ОБОРАЧИВАЙ ЕГО В БЛОК \`\`\`html ... \`\`\`.` }]
+                messages: [{ role: "system", content: `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду на переделку. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy]. ЕСЛИ ТЕБЯ ПРОСЯТ НАПИСАТЬ КОД, ВСЕГДА ОБОРАЧИВАЙ ЕГО В БЛОК \`\`\`html ... \`\`\`. НЕ ГОВОРИ, ЧТО У ТЕБЯ НЕТ ДОСТУПА. ТЫ ПРОСТО ПИШЕШЬ КОД, А БОСС НАЖМЕТ КНОПКУ "ВНЕДРИТЬ", ЧТОБЫ СОХРАНИТЬ ЕГО.` }]
             };
             currentChatId = id; saveAll();
             chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
@@ -381,7 +382,7 @@
                 allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости. В КОНЦЕ ответа пиши [Статус: Хакер: busy].";
                 addMessage("🕵️ Хакер активирован.", 'director');
             } else {
-                allChats[currentChatId].messages[0].content = `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy]. ЕСЛИ ТЕБЯ ПРОСЯТ НАПИСАТЬ КОД, ВСЕГДА ОБОРАЧИВАЙ ЕГО В БЛОК \`\`\`html ... \`\`\`.`;
+                allChats[currentChatId].messages[0].content = `Ты - Управляющий ИИ Цифрового Агентства. Ты строго следуешь цепочке: 1. Оркестратор -> 2. Архитектор -> 3. Фронтенд/Бэкенд -> 4. Тестировщик -> 5. Результат. Если Тестировщик находит баг, он ОБЯЗАН вернуть задачу Фронтенду. Каждый шаг пиши от лица агента. В конце каждого сообщения пиши [Статус: ИмяАгента: busy]. ЕСЛИ ТЕБЯ ПРОСЯТ НАПИСАТЬ КОД, ВСЕГДА ОБОРАЧИВАЙ ЕГО В БЛОК \`\`\`html ... \`\`\`. НЕ ГОВОРИ, ЧТО У ТЕБЯ НЕТ ДОСТУПА. ТЫ ПРОСТО ПИШЕШЬ КОД, А БОСС НАЖМЕТ КНОПКУ "ВНЕДРИТЬ".`;
                 addMessage("👑 Оркестратор вернулся к управлению.", 'director');
             }
             saveAll();
