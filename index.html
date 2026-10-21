@@ -446,6 +446,7 @@
             } catch (e) { 
                 clearTimeout(timeoutId);
                 updateAgentStatus('Охранник', 'error');
+                addMessage("❌ РЕАЛЬНАЯ ОШИБКА: " + e.message, 'director');
                 addMessage("🛡️ Охранник: Босс, сервер ИИ не отвечает уже 25 секунд. Скорее всего, твой провайдер блокирует запрос. ВКЛЮЧИ VPN и попробуй снова.", 'director');
                 
                 allChats[currentChatId].messages.pop(); saveAll();
