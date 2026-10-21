@@ -6,7 +6,7 @@
     <title>Цифровое Агентство</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; touch-action: manipulation; user-select: none; }
         .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
         .sidebar.open { transform: translateX(0); }
         .sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
@@ -19,35 +19,53 @@
         .chat-item-actions { display: flex; gap: 5px; opacity: 0.5; }
         .chat-item-actions span { cursor: pointer; font-size: 14px; }
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
+        
         .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100vh; }
         .top-bar { padding: 10px 15px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
-        .top-bar h1 { font-size: 18px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .top-bar h1 { font-size: 16px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        
+        /* СТАТУС-БАР */
+        .status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
+        .status-item { display: flex; align-items: center; gap: 3px; background: #1e1e1e; padding: 3px 6px; border-radius: 10px; border: 1px solid #333; transition: all 0.3s; }
+        .status-item .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
+        .status-item.online .dot { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+        .status-item.offline .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
+        .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
+        .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
+        @keyframes pulse { to { opacity: 0.3; } }
+
         .radio-container { position: relative; flex-shrink: 0; }
         .radio-btn { background: #333; border: none; color: #fff; font-size: 18px; padding: 5px 10px; border-radius: 5px; cursor: pointer; display: block; }
         .radio-player { display: none; position: absolute; right: 0; top: 40px; background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 220px; z-index: 101; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .radio-player.open { display: block; }
         .radio-player select { width: 100%; padding: 8px; margin-bottom: 10px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 5px; }
         .radio-player audio { width: 100%; }
+
         .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
+
         .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
         .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+        
         .chat-msg table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 12px; }
         .chat-msg th, .chat-msg td { border: 1px solid #555; padding: 5px; }
         .chat-msg th { background-color: #1a252f; }
         .chat-msg pre { background: #1a1a1a; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px; }
         .chat-msg code { font-family: monospace; color: #00e5ff; }
+        
         .input-area { padding: 15px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; flex-shrink: 0; }
         input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
         button.send-btn { padding: 12px 20px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
         button.send-btn:disabled { background: #555; }
+
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
         .overlay.active { display: block; }
+
         .agents-wrapper { background: #0a0a0a; padding: 10px 10px 40px 10px; border-top: 1px solid #333; flex-shrink: 0; max-height: 35vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; cursor: pointer; }
@@ -56,9 +74,11 @@
         .agent-card.error { border-color: #ff0000; background: #2a0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
         .agent-info h4 { margin: 0 0 2px 0; color: #fff; font-size: 12px; }
         .agent-info p { margin: 0; font-size: 10px; color: #aaa; }
+        
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 5px #00ff00; flex-shrink: 0; }
         .status-dot.busy { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; }
         .status-dot.error { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
+
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: #1e1e1e; border: 2px solid #00e5ff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); position: relative; animation: slideUp 0.3s ease; }
@@ -98,6 +118,22 @@
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <h1 id="currentChatTitle">Новый чат</h1>
             
+            <!-- ИНДИКАТОРЫ СТАТУСА -->
+            <div class="status-bar">
+                <div class="status-item" id="status-internet" title="Интернет">
+                    <span class="dot"></span> <span class="text">NET</span>
+                </div>
+                <div class="status-item" id="status-ai" title="Нейросеть">
+                    <span class="dot"></span> <span class="text">AI</span>
+                </div>
+                <div class="status-item" id="status-ping" title="Задержка">
+                    <span class="text">-- ms</span>
+                </div>
+                <div class="status-item" id="status-alarm" title="Тревога">
+                    <span class="dot"></span> <span class="text">ALARM</span>
+                </div>
+            </div>
+
             <div class="radio-container">
                 <button class="radio-btn" onclick="toggleRadio()">📻</button>
                 <div class="radio-player" id="radioPlayer">
@@ -165,6 +201,13 @@
         const sendBtn = document.getElementById('sendBtn');
         const chatTitleEl = document.getElementById('currentChatTitle');
 
+        // Элементы статус-бара
+        const elNet = document.getElementById('status-internet');
+        const elAi = document.getElementById('status-ai');
+        const elPing = document.getElementById('status-ping');
+        const elAlarm = document.getElementById('status-alarm');
+        const pingText = elPing.querySelector('.text');
+
         const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. В нашем штате 24 специалиста, у каждого есть свои жесткие правила работы. С чего начнем?";
         
         const AGENT_INFO = {
@@ -194,8 +237,7 @@
             "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект и передает его Боссу."
         };
 
-        // СИСТЕМНЫЙ ПРОМПТ С ПРАВИЛАМИ ДЛЯ ВСЕХ АГЕНТОВ
-                const SYSTEM_PROMPT = `Ты - Управляющий ИИ Цифрового Агентства. Твоя задача - выполнять задачи Босса.
+        const SYSTEM_PROMPT = `Ты - Управляющий ИИ Цифрового Агентства. Твоя задача - выполнять задачи Босса.
 Если Босс просит НАПИСАТЬ КОД (кнопку, скрипт, стили):
 1. Оркестратор: принять задачу и передать.
 2. Архитектор: продумать структуру.
@@ -205,7 +247,7 @@
 ВАЖНО: Пиши ТОЛЬКО фрагмент (без <!DOCTYPE html>, <html>, <body>), чтобы Босс мог внедрить его.
 
 Если Босс просит АНАЛИЗ или ПЛАН:
-Распиши ответ от лица профильных агентов (Юрист, Маркетолог, Аналитик и т.д.) с их правилами.
+Распиши ответ от лица профильных агентов (Юрист, Маркетолог, Аналитик и т.д.).
 
 В конце каждого сообщения пиши [Статус: ИмяАгента: busy].`;
 
@@ -227,6 +269,45 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
         }
 
+        // --- ЛОГИКА СТАТУС-БАРА ---
+        function updateNetStatus() {
+            if (navigator.onLine) {
+                elNet.className = 'status-item online';
+                checkPing();
+            } else {
+                elNet.className = 'status-item offline';
+                elAi.className = 'status-item offline';
+                pingText.innerText = 'OFFLINE';
+            }
+        }
+
+        async function checkPing() {
+            if (!navigator.onLine) return;
+            const start = Date.now();
+            try {
+                await fetch('https://www.google.com/favicon.ico?t=' + start, { mode: 'no-cors', cache: 'no-store' });
+                const ping = Date.now() - start;
+                pingText.innerText = ping + ' ms';
+                elPing.className = 'status-item ' + (ping < 200 ? 'online' : 'loading');
+            } catch (e) {
+                pingText.innerText = 'ERR';
+                elPing.className = 'status-item offline';
+            }
+        }
+
+        function setAlarm(state) {
+            if (state) {
+                elAlarm.className = 'status-item alarm-active';
+            } else {
+                elAlarm.className = 'status-item online';
+            }
+        }
+
+        window.addEventListener('online', updateNetStatus);
+        window.addEventListener('offline', updateNetStatus);
+        setInterval(checkPing, 10000); // Каждые 10 сек проверяем пинг
+
+        // --- ОСТАЛЬНАЯ ЛОГИКА ---
         function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
         function changeRadio() {
             const select = document.getElementById('radioSelect');
@@ -258,6 +339,7 @@
         function init() {
             if (!currentChatId || !allChats[currentChatId]) { createNewChat(); } else { loadChat(currentChatId); }
             renderChatList();
+            updateNetStatus(); // Запускаем проверку при старте
         }
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -339,6 +421,7 @@
 
         async function applyCodeToGitHub(newCode) {
             addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
+            setAlarm(true); // Тревога при внедрении
             try {
                 const response = await fetch(PROXY + "/update-code", {
                     method: "POST",
@@ -353,6 +436,8 @@
                 }
             } catch (e) {
                 addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
+            } finally {
+                setTimeout(() => setAlarm(false), 3000); // Тушим тревогу через 3 сек
             }
         }
 
@@ -405,9 +490,12 @@
             saveAll();
         }
 
-        // --- УМНЫЙ ОФЛАЙН-РЕЖИМ (С ОЖИДАНИЕМ) ---
+        // --- УМНЫЙ ОФЛАЙН-РЕЖИМ (С ТРЕВОГОЙ) ---
         function runOfflineAgents(userText) {
-            // 1. ОХРАННИК БЬЕТ ТРЕВОГУ (первым!)
+            // Включаем сирену тревоги в статус-баре
+            setAlarm(true);
+
+            // 1. ОХРАННИК БЬЕТ ТРЕВОГУ
             addMessage("🛡️ **Охранник:** Внимание! Потеряна связь с внешним миром. Переключаюсь на автономный протокол. Сейчас придут офлайн-агенты.", 'director');
             updateAgentStatus('Охранник', 'error'); 
             
@@ -454,7 +542,8 @@
                                 addMessage("🏆 **Результат:** Задача выполнена в офлайн-режиме. Код готов к внедрению.", 'director');
                                 resetAllStatuses();
                                 
-                                // Разблокируем кнопку только когда всё закончилось
+                                // Выключаем сирену и разблокируем кнопку
+                                setAlarm(false);
                                 sendBtn.disabled = false; 
                                 sendBtn.innerText = "➤";
                             }, 1500);
@@ -475,15 +564,18 @@
             
             resetAllStatuses();
             updateAgentStatus('Оркестратор', 'busy');
+            
+            // Статус ИИ: "Думает" (желтый)
+            elAi.className = 'status-item loading';
 
             const startTime = Date.now();
-            const TIMEOUT_MS = 90000; // Ровно 90 секунд
+            const TIMEOUT_MS = 90000; // 90 секунд
 
-            // Если нет интернета (режим полета) — ЖДЕМ 90 СЕКУНД и запускаем офлайн
             if (!navigator.onLine) {
                 setTimeout(() => {
+                    elAi.className = 'status-item offline';
                     runOfflineAgents(text);
-                }, TIMEOUT_MS);
+                }, 25000); // Офлайн ждем 25 сек
                 return;
             }
 
@@ -504,6 +596,9 @@
                     const aiText = data.choices[0].message.content;
                     addMessage(aiText, 'director');
                     
+                    // Статус ИИ: Успех (зеленый)
+                    elAi.className = 'status-item online';
+                    
                     const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
                     let foundBusy = false;
                     let match;
@@ -515,621 +610,23 @@
                     sendBtn.disabled = false; sendBtn.innerText = "➤";
                     updateAgentStatus('Оркестратор', 'free');
                 } else {
-                    // Если API ответил ошибкой — ждем остаток времени и врубаем офлайн
+                    // Ошибка API
+                    elAi.className = 'status-item offline';
                     const elapsed = Date.now() - startTime;
-                    const remaining = Math.max(0, TIMEOUT_MS - elapsed);
-                    setTimeout(() => {
-                        runOfflineAgents(text);
-                    }, remaining);
+                    const remaining = Math.max(0, 25000 - elapsed);
+                    setTimeout(() => { runOfflineAgents(text); }, remaining);
                 }
             } catch (e) { 
                 clearTimeout(timeoutId);
-                // Если запрос упал — ждем остаток времени и врубаем офлайн
+                // Ошибка сети / Таймаут
+                elAi.className = 'status-item offline';
                 const elapsed = Date.now() - startTime;
-                const remaining = Math.max(0, TIMEOUT_MS - elapsed);
-                setTimeout(() => {
-                    runOfflineAgents(text);
-                }, remaining);
+                const remaining = Math.max(0, 25000 - elapsed);
+                setTimeout(() => { runOfflineAgents(text); }, remaining);
             }
         }
         
         init();
     </script>
-
-<!-- AI UPDATE -->
-
-<div id="hq-safe-widget">
-  <style>
-    #hq-safe-widget {
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-
-    #hq-safe-widget * {
-      box-sizing: border-box;
-    }
-
-    #hq-safe-widget .hq-launcher {
-      position: fixed;
-      right: 20px;
-      bottom: 20px;
-      z-index: 2147483646;
-      min-height: 48px;
-      padding: 0 18px;
-      border: 0;
-      border-radius: 14px;
-      color: #07110a;
-      background: #70ffa4;
-      box-shadow: 0 10px 30px #0008;
-      cursor: pointer;
-      font: 800 15px system-ui, sans-serif;
-    }
-
-    #hq-safe-widget .hq-launcher:hover {
-      filter: brightness(1.08);
-    }
-
-    #hq-safe-widget .hq-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 2147483647;
-      display: grid;
-      place-items: center;
-      padding: 16px;
-      background: #03060ccc;
-      backdrop-filter: blur(5px);
-    }
-
-    #hq-safe-widget .hq-overlay[hidden] {
-      display: none !important;
-    }
-
-    #hq-safe-widget .hq-dialog {
-      width: min(720px, 100%);
-      max-height: calc(100vh - 32px);
-      overflow-y: auto;
-      padding: 22px;
-      color: #edf4ff;
-      background: #0d1422;
-      border: 1px solid #3b4962;
-      border-radius: 20px;
-      box-shadow: 0 25px 80px #000b;
-    }
-
-    #hq-safe-widget .hq-dialog-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
-    #hq-safe-widget .hq-dialog-header h2 {
-      margin: 0;
-      font-size: 24px;
-    }
-
-    #hq-safe-widget .hq-close {
-      min-height: 38px;
-      padding: 0 14px;
-      border: 0;
-      border-radius: 9px;
-      color: #edf4ff;
-      background: #293750;
-      cursor: pointer;
-      font-weight: 800;
-    }
-
-    #hq-safe-widget .hq-scene {
-      display: grid;
-      grid-template-columns: minmax(190px, 260px) 160px;
-      align-items: center;
-      justify-content: center;
-      gap: 26px;
-      margin-bottom: 18px;
-    }
-
-    #hq-safe-widget .hq-safe {
-      display: flex;
-      min-height: 245px;
-      padding: 22px;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      border: 8px solid #46536a;
-      border-radius: 20px;
-      background: linear-gradient(145deg, #354159, #151c2b);
-      box-shadow: 0 16px 35px #0008;
-    }
-
-    #hq-safe-widget .hq-safe.hq-alarm {
-      border-color: #ff5368;
-      animation: hq-alarm 0.4s infinite alternate;
-    }
-
-    #hq-safe-widget .hq-display {
-      width: 100%;
-      padding: 16px 8px;
-      border: 3px solid #05090f;
-      border-radius: 9px;
-      color: #70ffa4;
-      background: #06100a;
-      text-align: center;
-      font: 700 25px monospace;
-      letter-spacing: 5px;
-    }
-
-    #hq-safe-widget .hq-handle {
-      width: 54px;
-      height: 54px;
-      border: 7px solid #aab5c7;
-      border-radius: 50%;
-      box-shadow: inset 0 0 0 4px #4a5568;
-    }
-
-    #hq-safe-widget .hq-status {
-      color: #b8c5d8;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 1px;
-    }
-
-    #hq-safe-widget .hq-hacker {
-      text-align: center;
-    }
-
-    #hq-safe-widget .hq-face {
-      display: inline-block;
-      font-size: 76px;
-      line-height: 1;
-      transition: transform 0.7s, filter 0.7s, opacity 0.7s;
-    }
-
-    #hq-safe-widget .hq-face.hq-away {
-      transform: rotate(180deg);
-    }
-
-    #hq-safe-widget .hq-face.hq-blocked {
-      filter: grayscale(1);
-      opacity: 0.45;
-    }
-
-    #hq-safe-widget .hq-hacker-label {
-      margin-top: 10px;
-      color: #ffd06d;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    #hq-safe-widget .hq-chat {
-      height: 260px;
-      overflow-y: auto;
-      padding: 12px;
-      border: 1px solid #2b3a52;
-      border-radius: 12px;
-      background: #080e18;
-    }
-
-    #hq-safe-widget .hq-message {
-      margin-bottom: 8px;
-      padding: 9px 11px;
-      border-radius: 8px;
-      background: #172237;
-      line-height: 1.4;
-    }
-
-    #hq-safe-widget .hq-message b {
-      display: block;
-      margin-bottom: 3px;
-    }
-
-    #hq-safe-widget .hq-system {
-      border-left: 4px solid #70aaff;
-    }
-
-    #hq-safe-widget .hq-hacker-message {
-      border-left: 4px solid #ffd06d;
-    }
-
-    #hq-safe-widget .hq-guard {
-      border-left: 4px solid #70ffa4;
-    }
-
-    #hq-safe-widget .hq-form {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 9px;
-      margin-top: 13px;
-    }
-
-    #hq-safe-widget .hq-form input,
-    #hq-safe-widget .hq-form button {
-      min-height: 44px;
-      border-radius: 9px;
-      font: inherit;
-    }
-
-    #hq-safe-widget .hq-form input {
-      flex: 1 1 210px;
-      min-width: 0;
-      padding: 0 12px;
-      border: 1px solid #3c4c68;
-      outline: none;
-      color: #fff;
-      background: #111c2e;
-    }
-
-    #hq-safe-widget .hq-form input:focus {
-      border-color: #70aaff;
-    }
-
-    #hq-safe-widget .hq-start {
-      padding: 0 16px;
-      border: 0;
-      color: #07110a;
-      background: #70ffa4;
-      cursor: pointer;
-      font-weight: 900;
-    }
-
-    #hq-safe-widget .hq-reset {
-      padding: 0 16px;
-      border: 0;
-      color: #edf4ff;
-      background: #293750;
-      cursor: pointer;
-      font-weight: 800;
-    }
-
-    #hq-safe-widget button:disabled,
-    #hq-safe-widget input:disabled {
-      cursor: wait;
-      opacity: 0.55;
-    }
-
-    #hq-safe-widget .hq-note {
-      margin: 12px 0 0;
-      color: #8491a6;
-      font-size: 12px;
-    }
-
-    @keyframes hq-alarm {
-      to {
-        box-shadow: 0 0 30px #ff536888;
-      }
-    }
-
-    @media (max-width: 540px) {
-      #hq-safe-widget .hq-dialog {
-        padding: 16px;
-      }
-
-      #hq-safe-widget .hq-scene {
-        grid-template-columns: 1fr;
-      }
-
-      #hq-safe-widget .hq-face {
-        font-size: 58px;
-      }
-    }
-  </style>
-
-  <button
-    id="hq-safe-open"
-    class="hq-launcher"
-    type="button"
-    aria-haspopup="dialog"
-    aria-controls="hq-safe-modal"
-  >
-    🔐 Кодовый сейф
-  </button>
-
-  <div
-    id="hq-safe-modal"
-    class="hq-overlay"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="hq-safe-title"
-    hidden
-  >
-    <section class="hq-dialog">
-      <header class="hq-dialog-header">
-        <h2 id="hq-safe-title">🔐 Кодовый сейф</h2>
-        <button
-          id="hq-safe-close"
-          class="hq-close"
-          type="button"
-          aria-label="Закрыть и вернуться в Штаб"
-        >
-          Закрыть
-        </button>
-      </header>
-
-      <div class="hq-scene">
-        <div class="hq-safe" id="hq-safe-box">
-          <div class="hq-display" id="hq-safe-display">• • • •</div>
-          <div class="hq-handle" aria-hidden="true"></div>
-          <div class="hq-status" id="hq-safe-status">ЗАКРЫТО</div>
-        </div>
-
-        <div class="hq-hacker">
-          <div class="hq-face hq-away" id="hq-hacker">🕵️</div>
-          <div class="hq-hacker-label" id="hq-hacker-label">
-            ОТВЁРНУТСЯ — PIN НЕ ВИДИТ
-          </div>
-        </div>
-      </div>
-
-      <div class="hq-chat" id="hq-safe-chat" aria-live="polite"></div>
-
-      <form class="hq-form" id="hq-safe-form" autocomplete="off">
-        <input
-          id="hq-safe-pin"
-          type="password"
-          inputmode="numeric"
-          maxlength="4"
-          placeholder="Введите 4 цифры"
-          aria-label="Четырёхзначный код сейфа"
-        >
-
-        <button id="hq-safe-start" class="hq-start" type="submit">
-          Код готов
-        </button>
-
-        <button id="hq-safe-reset" class="hq-reset" type="button">
-          Сброс
-        </button>
-      </form>
-
-      <p class="hq-note">
-        Локальная учебная симуляция. Реальный перебор пароля не выполняется.
-      </p>
-    </section>
-  </div>
-
-  <script>
-    (() => {
-      const root = document.getElementById("hq-safe-widget");
-
-      if (!root || root.dataset.ready === "true") return;
-      root.dataset.ready = "true";
-
-      const openButton = root.querySelector("#hq-safe-open");
-      const modal = root.querySelector("#hq-safe-modal");
-      const closeButton = root.querySelector("#hq-safe-close");
-      const form = root.querySelector("#hq-safe-form");
-      const pinInput = root.querySelector("#hq-safe-pin");
-      const startButton = root.querySelector("#hq-safe-start");
-      const resetButton = root.querySelector("#hq-safe-reset");
-      const chat = root.querySelector("#hq-safe-chat");
-      const display = root.querySelector("#hq-safe-display");
-      const safeBox = root.querySelector("#hq-safe-box");
-      const status = root.querySelector("#hq-safe-status");
-      const hacker = root.querySelector("#hq-hacker");
-      const hackerLabel = root.querySelector("#hq-hacker-label");
-
-      const DELAY = 5000;
-      let pin = "";
-      let running = false;
-      let session = 0;
-      let isOpen = false;
-      let previousOverflow = "";
-
-      const wait = milliseconds =>
-        new Promise(resolve => setTimeout(resolve, milliseconds));
-
-      function addMessage(role, author, text) {
-        const message = document.createElement("div");
-        message.className = "hq-message hq-" + role;
-
-        const name = document.createElement("b");
-        name.textContent = author;
-
-        const body = document.createElement("span");
-        body.textContent = text;
-
-        message.append(name, body);
-        chat.appendChild(message);
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function updateDisplay() {
-        display.textContent = Array.from(
-          { length: 4 },
-          (_, index) => index < pin.length ? "•" : "·"
-        ).join(" ");
-      }
-
-      function setHackerAway(away) {
-        hacker.classList.toggle("hq-away", away);
-
-        if (away) {
-          hacker.classList.remove("hq-blocked");
-        }
-
-        hackerLabel.textContent = away
-          ? "ОТВЁРНУТСЯ — PIN НЕ ВИДИТ"
-          : "СМОТРИТ НА СЕЙФ";
-      }
-
-      function resetScenario() {
-        session += 1;
-        running = false;
-        pin = "";
-
-        pinInput.value = "";
-        pinInput.disabled = false;
-        startButton.disabled = false;
-
-        safeBox.classList.remove("hq-alarm");
-        status.textContent = "ЗАКРЫТО";
-        updateDisplay();
-        setHackerAway(true);
-
-        chat.replaceChildren();
-        addMessage(
-          "guard",
-          "Охранник",
-          "Периметр под наблюдением. Ожидаю четырёхзначный код."
-        );
-      }
-
-      function openModal() {
-        isOpen = true;
-        previousOverflow = document.body.style.overflow;
-
-        modal.hidden = false;
-        document.body.style.overflow = "hidden";
-        resetScenario();
-
-        requestAnimationFrame(() => pinInput.focus());
-      }
-
-      function closeModal() {
-        if (!isOpen) return;
-
-        isOpen = false;
-        session += 1;
-        running = false;
-        modal.hidden = true;
-        document.body.style.overflow = previousOverflow;
-        openButton.focus();
-      }
-
-      openButton.addEventListener("click", openModal);
-      closeButton.addEventListener("click", closeModal);
-
-      modal.addEventListener("keydown", event => {
-        if (event.key === "Escape") {
-          closeModal();
-        }
-      });
-
-      resetButton.addEventListener("click", () => {
-        resetScenario();
-        pinInput.focus();
-      });
-
-      pinInput.addEventListener("focus", () => {
-        if (!running) setHackerAway(true);
-      });
-
-      pinInput.addEventListener("input", () => {
-        pin = pinInput.value.replace(/\D/g, "").slice(0, 4);
-        pinInput.value = pin;
-        updateDisplay();
-
-        if (!running) setHackerAway(true);
-      });
-
-      form.addEventListener("submit", async event => {
-        event.preventDefault();
-
-        if (running) return;
-
-        if (!/^\d{4}$/.test(pin)) {
-          addMessage(
-            "guard",
-            "Охранник",
-            "Код отклонён: требуется ровно четыре цифры."
-          );
-          return;
-        }
-
-        running = true;
-        pinInput.disabled = true;
-        startButton.disabled = true;
-        status.textContent = "КОД УСТАНОВЛЕН";
-        setHackerAway(true);
-
-        addMessage(
-          "system",
-          "Система",
-          "Код готов. PIN скрыт, хакер отвёрнут."
-        );
-
-        const currentSession = ++session;
-        const decoys = ["0000", "1234"].filter(code => code !== pin);
-        const attempts = [...decoys, pin];
-
-        await wait(DELAY);
-
-        if (currentSession !== session || !isOpen) return;
-
-        setHackerAway(false);
-
-        addMessage(
-          "hacker-message",
-          "Хакер",
-          "Код готов. Поворачиваюсь к сейфу и начинаю подбор."
-        );
-
-        for (let index = 0; index < attempts.length; index++) {
-          await wait(DELAY);
-
-          if (currentSession !== session || !isOpen) return;
-
-          addMessage(
-            "hacker-message",
-            "Хакер",
-            `Попытка ${index + 1} из ${attempts.length}: ввожу четыре цифры в замок.`
-          );
-
-          await wait(DELAY);
-
-          if (currentSession !== session || !isOpen) return;
-
-          if (attempts[index] === pin) {
-            addMessage(
-              "guard",
-              "Охранник",
-              `Тревога: попытка ${index + 1} совпала с PIN. Запускаю аварийную блокировку сейфа.`
-            );
-
-            status.textContent = "ВЗЛОМ — БЛОКИРОВКА";
-            safeBox.classList.add("hq-alarm");
-            hacker.classList.remove("hq-away");
-            hacker.classList.add("hq-blocked");
-            hackerLabel.textContent = "ЗАБЛОКИРОВАН";
-            running = false;
-            return;
-          }
-
-          addMessage(
-            "guard",
-            "Охранник",
-            `Попытка ${index + 1} отклонена. Событие зафиксировано, наблюдение продолжаю.`
-          );
-        }
-      });
-    })();
-  </script>
-</div>
-
-
-<!-- AI UPDATE -->
-
-<div id="remove-safe-widgets">
-  <script>
-    (() => {
-      const widgetIds = [
-        "hq-safe-widget",
-        "digital-safe-demo"
-      ];
-
-      widgetIds.forEach(id => {
-        document.querySelectorAll("#" + id).forEach(widget => {
-          widget.remove();
-        });
-      });
-
-      if (document.body.style.overflow === "hidden") {
-        document.body.style.overflow = "";
-      }
-
-      console.log("Виджеты кодового сейфа удалены.");
-    })();
-  </script>
-</div>
-
 </body>
 </html>
