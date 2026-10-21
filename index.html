@@ -540,5 +540,365 @@
 
 <button onclick="alert('Офлайн-привет!')" style="padding: 10px 20px; background: #ff9800; color: white; border: none; border-radius: 5px;">Офлайн кнопка</button>
 
+
+<!-- AI UPDATE -->
+
+<div id="digital-safe-demo">
+  <style>
+    #digital-safe-demo {
+      max-width: 680px;
+      margin: 20px auto;
+      padding: 20px;
+      color: #edf4ff;
+      background: #0d1422;
+      border: 1px solid #34435e;
+      border-radius: 18px;
+      font: 15px/1.45 system-ui, sans-serif;
+    }
+    #digital-safe-demo * { box-sizing: border-box; }
+    #digital-safe-demo .ds-scene {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+    #digital-safe-demo .ds-safe {
+      width: 190px;
+      min-height: 220px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      border: 8px solid #46536a;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #354159, #151c2b);
+      box-shadow: 0 16px 35px #0008;
+    }
+    #digital-safe-demo .ds-safe.ds-alarm {
+      border-color: #ff5368;
+      animation: ds-alarm .4s infinite alternate;
+    }
+    #digital-safe-demo .ds-display {
+      width: 100%;
+      padding: 14px 5px;
+      border: 3px solid #05090f;
+      border-radius: 8px;
+      color: #70ffa4;
+      background: #06100a;
+      text-align: center;
+      font: 700 23px monospace;
+      letter-spacing: 4px;
+    }
+    #digital-safe-demo .ds-status {
+      color: #b8c5d8;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    #digital-safe-demo .ds-hacker {
+      text-align: center;
+    }
+    #digital-safe-demo .ds-face {
+      display: inline-block;
+      font-size: 72px;
+      transition: transform .7s, filter .7s, opacity .7s;
+    }
+    #digital-safe-demo .ds-face.ds-away {
+      transform: rotate(180deg);
+    }
+    #digital-safe-demo .ds-face.ds-blocked {
+      filter: grayscale(1);
+      opacity: .45;
+    }
+    #digital-safe-demo .ds-hacker-label {
+      margin-top: 8px;
+      color: #ffd06d;
+      font-weight: 800;
+    }
+    #digital-safe-demo .ds-chat {
+      height: 290px;
+      overflow-y: auto;
+      padding: 12px;
+      border: 1px solid #2b3a52;
+      border-radius: 12px;
+      background: #080e18;
+    }
+    #digital-safe-demo .ds-message {
+      margin-bottom: 8px;
+      padding: 9px 11px;
+      border-radius: 8px;
+      background: #172237;
+    }
+    #digital-safe-demo .ds-message b {
+      display: block;
+      margin-bottom: 3px;
+    }
+    #digital-safe-demo .ds-message.ds-system {
+      border-left: 4px solid #70aaff;
+    }
+    #digital-safe-demo .ds-message.ds-hacker {
+      border-left: 4px solid #ffd06d;
+    }
+    #digital-safe-demo .ds-message.ds-guard {
+      border-left: 4px solid #70ffa4;
+    }
+    #digital-safe-demo .ds-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    #digital-safe-demo input,
+    #digital-safe-demo button {
+      min-height: 43px;
+      border-radius: 8px;
+      font: inherit;
+    }
+    #digital-safe-demo input {
+      flex: 1 1 210px;
+      min-width: 0;
+      padding: 0 12px;
+      border: 1px solid #3c4c68;
+      outline: none;
+      color: #fff;
+      background: #111c2e;
+    }
+    #digital-safe-demo input:focus {
+      border-color: #70aaff;
+    }
+    #digital-safe-demo button {
+      padding: 0 15px;
+      border: 0;
+      cursor: pointer;
+      color: #07110a;
+      background: #70ffa4;
+      font-weight: 800;
+    }
+    #digital-safe-demo button.ds-secondary {
+      color: #edf4ff;
+      background: #2a3850;
+    }
+    #digital-safe-demo button:disabled {
+      opacity: .5;
+      cursor: wait;
+    }
+    #digital-safe-demo .ds-note {
+      margin: 12px 0 0;
+      color: #8491a6;
+      font-size: 12px;
+    }
+    @keyframes ds-alarm {
+      to { box-shadow: 0 0 28px #ff536888; }
+    }
+    @media (max-width: 520px) {
+      #digital-safe-demo .ds-scene {
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="ds-scene">
+    <div class="ds-safe" id="ds-safe">
+      <div class="ds-display" id="ds-display">• • • •</div>
+      <div class="ds-status" id="ds-status">ЗАКРЫТО</div>
+    </div>
+
+    <div class="ds-hacker">
+      <div class="ds-face ds-away" id="ds-face">🕵️</div>
+      <div class="ds-hacker-label" id="ds-hacker-label">
+        ОТВЁРНУТСЯ — ПАРОЛЬ НЕ ВИДИТ
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-chat" id="ds-chat">
+    <div class="ds-message ds-guard">
+      <b>Охранник</b>
+      Периметр под наблюдением. Ожидаю четырёхзначный код.
+    </div>
+  </div>
+
+  <form class="ds-form" id="ds-form" autocomplete="off">
+    <input
+      id="ds-pin"
+      type="password"
+      inputmode="numeric"
+      maxlength="4"
+      placeholder="Введите 4 цифры"
+      aria-label="Код сейфа"
+    >
+    <button id="ds-start" type="submit">Код готов</button>
+    <button id="ds-reset" class="ds-secondary" type="button">
+      Сброс
+    </button>
+  </form>
+
+  <p class="ds-note">
+    Локальная учебная симуляция. Реальный перебор не выполняется.
+  </p>
+
+  <script>
+    (() => {
+      const root = document.getElementById("digital-safe-demo");
+      if (!root || root.dataset.ready === "true") return;
+      root.dataset.ready = "true";
+
+      const form = root.querySelector("#ds-form");
+      const input = root.querySelector("#ds-pin");
+      const start = root.querySelector("#ds-start");
+      const reset = root.querySelector("#ds-reset");
+      const chat = root.querySelector("#ds-chat");
+      const display = root.querySelector("#ds-display");
+      const safe = root.querySelector("#ds-safe");
+      const status = root.querySelector("#ds-status");
+      const face = root.querySelector("#ds-face");
+      const label = root.querySelector("#ds-hacker-label");
+
+      const DELAY = 5000;
+      let pin = "";
+      let running = false;
+
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+      function addMessage(role, author, text) {
+        const message = document.createElement("div");
+        message.className = "ds-message ds-" + role;
+
+        const name = document.createElement("b");
+        name.textContent = author;
+
+        const body = document.createElement("span");
+        body.textContent = text;
+
+        message.append(name, body);
+        chat.appendChild(message);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      function showBullets(value) {
+        display.textContent = Array.from(
+          { length: 4 },
+          (_, index) => index < value.length ? "•" : "·"
+        ).join(" ");
+      }
+
+      function setAway(away) {
+        face.classList.toggle("ds-away", away);
+        face.classList.remove("ds-blocked");
+        label.textContent = away
+          ? "ОТВЁРНУТСЯ — ПАРОЛЬ НЕ ВИДИТ"
+          : "СМОТРИТ НА СЕЙФ";
+      }
+
+      input.addEventListener("focus", () => {
+        if (!running) setAway(true);
+      });
+
+      input.addEventListener("input", () => {
+        pin = input.value.replace(/\D/g, "").slice(0, 4);
+        input.value = pin;
+        showBullets(pin);
+
+        if (!running) setAway(true);
+      });
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        if (running) return;
+
+        if (pin.length !== 4) {
+          addMessage(
+            "guard",
+            "Охранник",
+            "Код отклонён: требуется ровно четыре цифры."
+          );
+          return;
+        }
+
+        running = true;
+        input.disabled = true;
+        start.disabled = true;
+        setAway(true);
+        status.textContent = "КОД УСТАНОВЛЕН";
+
+        addMessage(
+          "system",
+          "Система",
+          "Код готов. PIN скрыт, хакер отвёрнут."
+        );
+
+        await wait(DELAY);
+
+        setAway(false);
+
+        addMessage(
+          "hacker",
+          "Хакер",
+          "Код готов. Поворачиваюсь к сейфу и начинаю подбор."
+        );
+
+        const decoys = ["0000", "1234"].filter(code => code !== pin);
+        const attempts = [...decoys, pin];
+
+        for (let index = 0; index < attempts.length; index++) {
+          await wait(DELAY);
+
+          addMessage(
+            "hacker",
+            "Хакер",
+            `Попытка ${index + 1} из ${attempts.length}: ввожу четыре цифры.`
+          );
+
+          await wait(DELAY);
+
+          if (attempts[index] === pin) {
+            addMessage(
+              "guard",
+              "Охранник",
+              `Тревога: попытка ${index + 1} совпала с PIN. Запускаю аварийную блокировку.`
+            );
+
+            status.textContent = "ВЗЛОМ — БЛОКИРОВКА";
+            safe.classList.add("ds-alarm");
+            face.classList.remove("ds-away");
+            face.classList.add("ds-blocked");
+            label.textContent = "ЗАБЛОКИРОВАН";
+            running = false;
+            return;
+          }
+
+          addMessage(
+            "guard",
+            "Охранник",
+            `Попытка ${index + 1} отклонена. Событие зафиксировано.`
+          );
+        }
+      });
+
+      reset.addEventListener("click", () => {
+        pin = "";
+        input.value = "";
+        input.disabled = false;
+        start.disabled = false;
+        running = false;
+
+        showBullets("");
+        status.textContent = "ЗАКРЫТО";
+        safe.classList.remove("ds-alarm");
+        setAway(true);
+
+        addMessage(
+          "system",
+          "Система",
+          "Сейф сброшен. Ожидаю новый код."
+        );
+      });
+    })();
+  </script>
+</div>
+
 </body>
 </html>
