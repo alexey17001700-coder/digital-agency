@@ -81,6 +81,9 @@
         .modal-close { background: none; border: none; color: #ff0055; font-size: 24px; cursor: pointer; }
         .modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
         .modal-body strong { color: #ffd700; }
+
+        .apply-code-btn { background: #00ff00; color: #000; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; width: 100%; text-align: center; }
+        .apply-code-btn:hover { background: #00cc00; }
     </style>
 </head>
 <body>
@@ -135,35 +138,34 @@
             <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
-
-        <div class="agents-wrapper">
-            <div class="agents-grid">
-                <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055;" onclick="showAgentInfo('Хакер')"><div class="agent-info"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Охранник" style="border-color: #f44336;" onclick="showAgentInfo('Охранник')"><div class="agent-info"><h4>🛡️ Охранник</h4><p>Закрывает</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff;" onclick="showAgentInfo('Исследователь')"><div class="agent-info"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff;" onclick="showAgentInfo('Планировщик')"><div class="agent-info"><h4>📅 Планировщик</h4><p>Планы</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff;" onclick="showAgentInfo('Аналитик')"><div class="agent-info"><h4>📊 Аналитик</h4><p>Цифры</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff;" onclick="showAgentInfo('Исполнитель')"><div class="agent-info"><h4>⚙️ Исполнитель</h4><p>Делает</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0;" onclick="showAgentInfo('Архитектор')"><div class="agent-info"><h4>📐 Архитектор</h4><p>Проект</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0;" onclick="showAgentInfo('Дизайнер')"><div class="agent-info"><h4>🎨 Дизайнер</h4><p>Визуал</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0;" onclick="showAgentInfo('Креативщик')"><div class="agent-info"><h4>💡 Креативщик</h4><p>Идеи</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Критик" style="border-color: #f44336;" onclick="showAgentInfo('Критик')"><div class="agent-info"><h4>🧐 Критик</h4><p>Качество</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336;" onclick="showAgentInfo('Тестировщик')"><div class="agent-info"><h4>🧪 Тестировщик</h4><p>Баги</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50;" onclick="showAgentInfo('Переводчик')"><div class="agent-info"><h4>🌐 Переводчик</h4><p>Языки</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50;" onclick="showAgentInfo('Методолог')"><div class="agent-info"><h4>📚 Методолог</h4><p>Инструкции</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50;" onclick="showAgentInfo('Юрист')"><div class="agent-info"><h4>⚖️ Юрист</h4><p>Законы</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50;" onclick="showAgentInfo('Маркетолог')"><div class="agent-info"><h4>📢 Маркетолог</h4><p>Продвижение</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50;" onclick="showAgentInfo('Техпис')"><div class="agent-info"><h4>✍️ Техпис</h4><p>Документация</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3;" onclick="showAgentInfo('Фронтенд')"><div class="agent-info"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3;" onclick="showAgentInfo('Бэкенд')"><div class="agent-info"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3;" onclick="showAgentInfo('Мобильный')"><div class="agent-info"><h4>📱 Мобильный</h4><p>Приложения</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3;" onclick="showAgentInfo('DevOps')"><div class="agent-info"><h4>🚀 DevOps</h4><p>Деплой</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800;" onclick="showAgentInfo('Универсал')"><div class="agent-info"><h4>🧠 Универсал</h4><p>Знает всё</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800;" onclick="showAgentInfo('Приемная')"><div class="agent-info"><h4>🏛️ Приемная</h4><p>Проверка</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
-            </div>
+            <div class="agents-wrapper">
+        <div class="agents-grid">
+            <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055;" onclick="showAgentInfo('Хакер')"><div class="agent-info"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Охранник" style="border-color: #f44336;" onclick="showAgentInfo('Охранник')"><div class="agent-info"><h4>🛡️ Охранник</h4><p>Закрывает</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff;" onclick="showAgentInfo('Исследователь')"><div class="agent-info"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff;" onclick="showAgentInfo('Планировщик')"><div class="agent-info"><h4>📅 Планировщик</h4><p>Планы</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff;" onclick="showAgentInfo('Аналитик')"><div class="agent-info"><h4>📊 Аналитик</h4><p>Цифры</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff;" onclick="showAgentInfo('Исполнитель')"><div class="agent-info"><h4>⚙️ Исполнитель</h4><p>Делает</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0;" onclick="showAgentInfo('Архитектор')"><div class="agent-info"><h4>📐 Архитектор</h4><p>Проект</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0;" onclick="showAgentInfo('Дизайнер')"><div class="agent-info"><h4>🎨 Дизайнер</h4><p>Визуал</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0;" onclick="showAgentInfo('Креативщик')"><div class="agent-info"><h4>💡 Креативщик</h4><p>Идеи</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Критик" style="border-color: #f44336;" onclick="showAgentInfo('Критик')"><div class="agent-info"><h4>🧐 Критик</h4><p>Качество</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336;" onclick="showAgentInfo('Тестировщик')"><div class="agent-info"><h4>🧪 Тестировщик</h4><p>Баги</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50;" onclick="showAgentInfo('Переводчик')"><div class="agent-info"><h4>🌐 Переводчик</h4><p>Языки</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50;" onclick="showAgentInfo('Методолог')"><div class="agent-info"><h4>📚 Методолог</h4><p>Инструкции</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50;" onclick="showAgentInfo('Юрист')"><div class="agent-info"><h4>⚖️ Юрист</h4><p>Законы</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50;" onclick="showAgentInfo('Маркетолог')"><div class="agent-info"><h4>📢 Маркетолог</h4><p>Продвижение</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50;" onclick="showAgentInfo('Техпис')"><div class="agent-info"><h4>✍️ Техпис</h4><p>Документация</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3;" onclick="showAgentInfo('Фронтенд')"><div class="agent-info"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3;" onclick="showAgentInfo('Бэкенд')"><div class="agent-info"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3;" onclick="showAgentInfo('Мобильный')"><div class="agent-info"><h4>📱 Мобильный</h4><p>Приложения</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3;" onclick="showAgentInfo('DevOps')"><div class="agent-info"><h4>🚀 DevOps</h4><p>Деплой</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800;" onclick="showAgentInfo('Универсал')"><div class="agent-info"><h4>🧠 Универсал</h4><p>Знает всё</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800;" onclick="showAgentInfo('Приемная')"><div class="agent-info"><h4>🏛️ Приемная</h4><p>Проверка</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
         </div>
+    </div>
     </div>
         <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
@@ -318,8 +320,38 @@
                 }
                 text = text.replace(statusRegex, '').trim();
                 div.innerHTML = marked.parse(text);
+
+                const codeRegex = /```html([\s\S]*?)```/;
+                const codeMatch = codeRegex.exec(text);
+                if (codeMatch) {
+                    const codeToApply = codeMatch[1];
+                    const applyBtn = document.createElement('button');
+                    applyBtn.className = 'apply-code-btn';
+                    applyBtn.innerText = '⚡ Внедрить код';
+                    applyBtn.onclick = () => applyCodeToGitHub(codeToApply);
+                    div.appendChild(applyBtn);
+                }
             } else { div.innerText = text; }
             chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function applyCodeToGitHub(newCode) {
+            addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
+            try {
+                const response = await fetch(PROXY + "/update-code", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: newCode })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    addMessage("✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.", 'director');
+                } else {
+                    addMessage("❌ DevOps: Ошибка обновления. " + JSON.stringify(data.error), 'director');
+                }
+            } catch (e) {
+                addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
+            }
         }
 
         function updateAgentStatus(agentName, status) {
