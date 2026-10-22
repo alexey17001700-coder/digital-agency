@@ -605,28 +605,67 @@
             </div>
             <div class="modal-body" id="widgets-container">
 
+
 <!-- AI_INJECT_START -->
 
-<div id="smart-safe-widget">
-  <div class="pin-display">••••</div>
-  <div class="buttons">
-    <button class="btn" data-value="1">1</button>
-    <button class="btn" data-value="2">2</button>
-    <button class="btn" data-value="3">3</button>
-    <button class="btn" data-value="4">4</button>
-    <button class="btn" data-value="5">5</button>
-    <button class="btn" data-value="6">6</button>
-    <button class="btn" data-value="7">7</button>
-    <button class="btn" data-value="8">8</button>
-    <button class="btn" data-value="9">9</button>
-    <button class="btn" data-value="0">0</button>
-    <button class="btn reset">C</button>
-    <button class="btn open">ОТКРЫТЬ</button>
+<div id="smart-safe-widget" style="background:#1e1e1e;padding:15px;border-radius:10px;display:inline-block;font-family:sans-serif;user-select:none;">
+  <!-- Дисплей -->
+  <div id="safe-display" style="font-family:monospace;color:#00e5ff;font-size:24px;height:32px;margin-bottom:12px;background:#0d0d0d;padding:5px 10px;border-radius:5px;text-align:right;letter-spacing:4px;overflow:hidden;">____</div>
+
+  <!-- Кнопки -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('1')">1</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('2')">2</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('3')">3</button>
+
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('4')">4</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('5')">5</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('6')">6</button>
+
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('7')">7</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('8')">8</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('9')">9</button>
+
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeClear()">C</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeInput('0')">0</button>
+    <button style="background:#333;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:18px;cursor:pointer;" onclick="safeCheck()">ОТКРЫТЬ</button>
   </div>
-  <div class="status"></div>
+
+  <script>
+    const display = document.getElementById('safe-display');
+    let code = '';
+
+    function updateDisplay(text, color) {
+      display.textContent = text;
+      display.style.color = color || '#00e5ff';
+    }
+
+    function safeInput(digit) {
+      if (code.length < 4 && !/^OK$|^ERR$/.test(code)) {
+        code += digit;
+        updateDisplay(code.padEnd(4, '_'));
+      }
+    }
+
+    function safeClear() {
+      code = '';
+      updateDisplay('____');
+    }
+
+    function safeCheck() {
+      if (code === '1234') {
+        code = 'OK';
+        updateDisplay('OK', '#00ff00');
+      } else {
+        code = 'ERR';
+        updateDisplay('ERR', '#ff0000');
+      }
+    }
+  </script>
 </div>
 
 <!-- AI_INJECT_END -->
+
 
                 <!-- Виджеты ИИ будут появляться здесь -->
                 <p style="color: #888; text-align: center;">Пока здесь пусто...</p>
