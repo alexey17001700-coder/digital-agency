@@ -21,7 +21,7 @@
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
         
         .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100vh; }
-        .top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: relative; }
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
         .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         
@@ -33,6 +33,13 @@
         .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
         .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
         @keyframes pulse { to { opacity: 0.3; } }
+
+        /* СТИЛИ ДЛЯ ТЕСТЕРА */
+        .tester-dropdown { display: none; position: absolute; top: 100%; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 150; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; margin-top: 5px; }
+        .tester-dropdown.open { display: block; }
+        .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
+        .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
+        .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
 
         .radio-container { position: relative; flex-shrink: 0; }
         .radio-btn { background: #333; border: none; color: #fff; font-size: 16px; padding: 4px 8px; border-radius: 5px; cursor: pointer; display: block; }
@@ -132,6 +139,7 @@
                 <div class="status-item" id="status-ai" title="Нейросеть"><span class="dot"></span> <span class="text">AI</span></div>
                 <div class="status-item" id="status-ping" title="Задержка"><span class="text">-- ms</span></div>
                 <div class="status-item" id="status-alarm" title="Тревога"><span class="dot"></span> <span class="text">ALARM</span></div>
+                <div class="status-item" id="btn-tester" style="cursor:pointer; border-color:#ffd700;" onclick="toggleTester()">📡 ТЕСТ</div>
             </div>
 
             <div class="radio-container">
@@ -146,6 +154,18 @@
                     <audio id="radioAudio" controls></audio>
                 </div>
             </div>
+        </div>
+
+        <!-- ВЫПАДАЮЩЕЕ МЕНЮ ТЕСТЕРА -->
+        <div class="tester-dropdown" id="testerMenu">
+            <div class="tester-title">🛠️ Статус соединений</div>
+            <div class="tester-item"><span>📶 Сеть:</span> <span id="t-wifi-type">--</span></div>
+            <div class="tester-item"><span>🌐 Интернет:</span> <span id="t-inet-status">--</span></div>
+            <div class="tester-item"><span>⚡ Пинг:</span> <span id="t-ping">--</span></div>
+            <div class="tester-item"><span>🐙 GitHub:</span> <span id="t-github">--</span></div>
+            <div class="tester-item"><span>🤖 ИИ Модель:</span> <span id="t-ai-model">--</span></div>
+            
+            <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
         </div>
 
         <div class="mode-switch">
@@ -285,6 +305,7 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
         }
 
+        // --- ЛОГИКА СТАТУС-БАРА ---
         function updateNetStatus() {
             if (navigator.onLine) {
                 elNet.className = 'status-item online';
@@ -319,6 +340,67 @@
         window.addEventListener('offline', updateNetStatus);
         setInterval(checkPing, 10000);
 
+        // --- ЛОГИКА ТЕСТЕРА ---
+        function toggleTester() {
+            const menu = document.getElementById('testerMenu');
+            menu.classList.toggle('open');
+            if (menu.classList.contains('open')) {
+                runConnectionTest();
+            }
+        }
+
+        async function runConnectionTest() {
+            // 1. Тип сети
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            let netType = "Неизвестно";
+            if (conn) {
+                netType = conn.effectiveType ? conn.effectiveType.toUpperCase() : conn.type;
+                if (conn.type === 'wifi') netType = 'Wi-Fi';
+            } else {
+                netType = navigator.onLine ? "Онлайн" : "Офлайн";
+            }
+            document.getElementById('t-wifi-type').innerText = netType;
+
+            // 2. Интернет и Пинг
+            const inetEl = document.getElementById('t-inet-status');
+            const pingEl = document.getElementById('t-ping');
+            inetEl.innerText = "Проверка...";
+            pingEl.innerText = "--";
+            
+            const start = Date.now();
+            try {
+                await fetch('https://www.google.com/favicon.ico?t=' + start, { mode: 'no-cors', cache: 'no-store' });
+                const ping = Date.now() - start;
+                inetEl.innerText = "✅ Есть";
+                inetEl.style.color = "#00ff00";
+                pingEl.innerText = ping + " ms";
+                pingEl.style.color = ping < 300 ? "#00ff00" : "#ffaa00";
+            } catch (e) {
+                inetEl.innerText = "❌ Нет";
+                inetEl.style.color = "#ff0000";
+                pingEl.innerText = "ERR";
+                pingEl.style.color = "#ff0000";
+            }
+
+            // 3. GitHub
+            const ghEl = document.getElementById('t-github');
+            ghEl.innerText = "Проверка...";
+            try {
+                const ghStart = Date.now();
+                await fetch('https://api.github.com', { method: 'HEAD', cache: 'no-store' });
+                const ghPing = Date.now() - ghStart;
+                ghEl.innerText = "✅ Доступен (" + ghPing + " ms)";
+                ghEl.style.color = "#00ff00";
+            } catch (e) {
+                ghEl.innerText = "❌ Блокирован";
+                ghEl.style.color = "#ff0000";
+            }
+
+            // 4. ИИ Модель
+            document.getElementById('t-ai-model').innerText = "deepseek-chat";
+        }
+
+        // --- ОСТАЛЬНАЯ ЛОГИКА (UI) ---
         function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
         function changeRadio() {
             const select = document.getElementById('radioSelect');
@@ -633,4 +715,4 @@
         init();
     </script>
 </body>
-    </html>
+</html>
