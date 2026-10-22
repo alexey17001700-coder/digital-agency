@@ -35,8 +35,22 @@
         @keyframes pulse { to { opacity: 0.3; } }
 
         /* СТИЛИ ДЛЯ ТЕСТЕРА */
-        .tester-dropdown { display: none; position: absolute; top: 100%; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 150; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; margin-top: 5px; }
-        .tester-dropdown.open { display: block; }
+        /* ИСПРАВЛЕННЫЕ СТИЛИ ДЛЯ ТЕСТЕРА (FIXED) */
+.tester-dropdown { 
+    display: none; 
+    position: fixed; /* Жестко привязываем к экрану */
+    top: 60px; /* Высота шапки */
+    right: 10px; 
+    background: #1e1e1e; 
+    border: 1px solid #ffd700; 
+    border-radius: 8px; 
+    padding: 15px; 
+    width: 250px; 
+    z-index: 9999; /* Поверх всего */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+    font-size: 12px; 
+}
+.tester-dropdown.open { display: block; }
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
         .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
