@@ -858,5 +858,29 @@
 </div>
 
 <!-- AI_INJECT_END -->
+
+<!-- AI_INJECT_START -->
+
+<div id="remove-hq-focus-widget">
+  <script>
+    (() => {
+      const widget = document.getElementById("hq-focus-widget");
+
+      if (widget) {
+        widget.remove();
+      }
+
+      try {
+        localStorage.removeItem("hq-focus-widget");
+      } catch (error) {
+        console.warn("Не удалось удалить сохранение виджета:", error);
+      }
+
+      document.getElementById("remove-hq-focus-widget")?.remove();
+    })();
+  </script>
+</div>
+
+<!-- AI_INJECT_END -->
 </body>
 </html>
