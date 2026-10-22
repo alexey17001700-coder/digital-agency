@@ -195,6 +195,7 @@
         </div>
     </div>
         <script>
+        // ВАЖНО: Убедись, что здесь твой правильный адрес воркера!
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
@@ -274,7 +275,7 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
         }
 
-        // --- СТАТУС-БАР ---
+        // --- ЛОГИКА СТАТУС-БАРА ---
         function updateNetStatus() {
             if (navigator.onLine) {
                 elNet.className = 'status-item online';
@@ -309,7 +310,7 @@
         window.addEventListener('offline', updateNetStatus);
         setInterval(checkPing, 10000);
 
-        // --- РЕНДЕРИНГ И UI ---
+        // --- ОСТАЛЬНАЯ ЛОГИКА (UI) ---
         function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
         function changeRadio() {
             const select = document.getElementById('radioSelect');
@@ -340,7 +341,14 @@
             document.getElementById('overlay').classList.toggle('active');
         }
         
-        function saveAll() { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); }
+        // ВАЖНО: Защита от переполнения памяти!
+        function saveAll() { 
+            try {
+                localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); 
+            } catch (e) {
+                console.warn("Память браузера переполнена! Скрипт продолжает работу, но чаты не сохраняются.");
+            }
+        }
         
         function renderChatList() {
             chatListEl.innerHTML = '';
@@ -433,14 +441,16 @@
         function addMessage(text, sender) {
             renderMessage(text, sender);
             const role = sender === 'boss' ? 'user' : 'assistant';
-            allChats[currentChatId].messages.push({ role, content: text });
-            if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
-                allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
-                chatTitleEl.innerText = allChats[currentChatId].title;
+            if (allChats[currentChatId]) {
+                allChats[currentChatId].messages.push({ role, content: text });
+                if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
+                    allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
+                    chatTitleEl.innerText = allChats[currentChatId].title;
+                }
             }
             saveAll(); renderChatList();
         }
-
+        
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
@@ -478,7 +488,7 @@
 
         function runOfflineAgents(userText) {
             setAlarm(true); 
-            addMessage("🛡️ **Охранник:** Босс, потеряна связь с внешним миром! Проверь сеть или включи VPN, иначе я не смогу передать задачу нейросети.", 'director');
+            addMessage("🛡️ **Охранник:** Босс, потеряна связь с внешним миром! Проверь сеть, иначе я не смогу передать задачу нейросети.", 'director');
             updateAgentStatus('Охранник', 'error'); 
             
             setTimeout(() => {
@@ -494,9 +504,18 @@
             const text = input.value.trim();
             if (!text) return;
             
+            // СНАЧАЛА очищаем поле и блокируем кнопку (чтобы не было визуальных багов)
+            input.value = ''; 
+            sendBtn.disabled = true; 
+            sendBtn.innerText = "...";
             playSound('send'); 
-            addMessage(text, 'boss');
-            input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
+            
+            // Безопасное добавление сообщения
+            try {
+                addMessage(text, 'boss');
+            } catch (e) {
+                console.error("Ошибка добавления сообщения:", e);
+            }
             
             resetAllStatuses();
             updateAgentStatus('Оркестратор', 'busy');
@@ -516,18 +535,19 @@
             const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
             try {
-                // --- ОТПРАВКА ЗАПРОСА К GIGACHAT ---
                 let success = false;
                 let aiText = "";
                 let lastError = "";
 
                 try {
+                    const messagesToSend = allChats[currentChatId] ? allChats[currentChatId].messages : [{role: "user", content: text}];
+
                     const response = await fetch(PROXY + "/api/v1/chat/completions", {
                         method: "POST", 
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ 
-                            model: "GigaChat", 
-                            messages: allChats[currentChatId].messages,
+                            model: "deepseek-chat", 
+                            messages: messagesToSend,
                             temperature: 0.7 
                         }),
                         signal: controller.signal
@@ -535,7 +555,7 @@
                     
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
-                        lastError = `GigaChat упал. Статус: ${response.status}. ${JSON.stringify(errorData)}`;
+                        lastError = `DeepSeek упал. Статус: ${response.status}. ${JSON.stringify(errorData)}`;
                     } else {
                         const data = await response.json();
                         if (data.choices && data.choices.length > 0) {
@@ -545,7 +565,7 @@
                     }
                 } catch (e) {
                     if (e.name === 'AbortError') throw e; 
-                    lastError = `Сбой сети GigaChat: ${e.message}`;
+                    lastError = `Сбой сети DeepSeek: ${e.message}`;
                 }
 
                 clearTimeout(timeoutId);
