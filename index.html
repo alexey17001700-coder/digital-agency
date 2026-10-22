@@ -110,7 +110,7 @@
                 <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
             </div>
             <div class="modal-body" id="widgets-container">
-                <!-- Сюда ИИ будет вставлять виджеты. Не удаляй этот div! -->
+                <!-- Сюда ИИ будет вставлять виджеты -->
             </div>
         </div>
     </div>
@@ -194,8 +194,8 @@
             </div>
         </div>
     </div>
-        <script>
-        // ВАЖНО: Убедись, что здесь твой правильный адрес воркера!
+
+    <script>
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
@@ -341,12 +341,12 @@
             document.getElementById('overlay').classList.toggle('active');
         }
         
-        // ВАЖНО: Защита от переполнения памяти!
+        // ВАЖНО: Защита от переполнения памяти
         function saveAll() { 
             try {
                 localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); 
             } catch (e) {
-                console.warn("Память браузера переполнена! Скрипт продолжает работу, но чаты не сохраняются.");
+                console.warn("Память браузера переполнена! Скрипт продолжает работу без сохранения.");
             }
         }
         
@@ -368,13 +368,27 @@
                 const pinBtn = document.createElement('span'); pinBtn.innerText = chat.pinned ? '📌' : '📍';
                 pinBtn.onclick = (e) => { e.stopPropagation(); allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); };
                 const delBtn = document.createElement('span'); delBtn.innerText = '🗑️';
-                delBtn.onclick = (e) => { e.stopPropagation(); if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(); } else { saveAll(); renderChatList(); } } };
+                delBtn.onclick = (e) => { e.stopPropagation(); if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(true); } else { saveAll(); renderChatList(); } } };
                 actions.appendChild(pinBtn); actions.appendChild(delBtn);
                 div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
             });
         }
 
-        function createNewChat() {
+        function createNewChat(force = false) {
+            const chatCount = Object.keys(allChats).length;
+
+            if (chatCount >= 10 && !force) {
+                const confirmMsg = "⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?";
+                if (confirm(confirmMsg)) {
+                    toggleSidebar();
+                }
+                return;
+            }
+
+            if (chatCount === 9 && !force) {
+                alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит. Следующий раз потребует удаления старого.");
+            }
+
             const id = 'chat_' + Date.now();
             allChats[id] = { id: id, title: "Новый чат", pinned: false, messages: [{ role: "system", content: SYSTEM_PROMPT }] };
             currentChatId = id; saveAll();
@@ -464,7 +478,8 @@
             }
             saveAll();
         }
-                    async function applyCodeToGitHub(newCode) {
+
+        async function applyCodeToGitHub(newCode) {
             addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
             setAlarm(true); 
             try {
@@ -504,13 +519,11 @@
             const text = input.value.trim();
             if (!text) return;
             
-            // СНАЧАЛА очищаем поле и блокируем кнопку (чтобы не было визуальных багов)
             input.value = ''; 
             sendBtn.disabled = true; 
             sendBtn.innerText = "...";
             playSound('send'); 
             
-            // Безопасное добавление сообщения
             try {
                 addMessage(text, 'boss');
             } catch (e) {
@@ -602,7 +615,14 @@
             }
         }
         
+        function init() {
+            if (!currentChatId || !allChats[currentChatId]) { createNewChat(true); } else { loadChat(currentChatId); }
+            renderChatList();
+            updateNetStatus();
+        }
+        
         init();
     </script>
 </body>
-</html>
+                                                                                                                                     </html>
+                                                                                                                                     
