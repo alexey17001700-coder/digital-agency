@@ -25,7 +25,6 @@
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
         .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         
-        /* СТАТУС-БАР */
         .status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
         .status-item { display: flex; align-items: center; gap: 3px; background: #1e1e1e; padding: 3px 6px; border-radius: 10px; border: 1px solid #333; transition: all 0.3s; }
         .status-item .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
@@ -42,7 +41,7 @@
         .radio-player select { width: 100%; padding: 8px; margin-bottom: 10px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 5px; }
         .radio-player audio { width: 100%; }
 
-        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; }
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
@@ -92,6 +91,7 @@
     </style>
 </head>
 <body>
+    <!-- Модалка агентов -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -99,6 +99,19 @@
                 <button class="modal-close" onclick="closeModal()">✖</button>
             </div>
             <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Окно Контента (Виджеты) -->
+    <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
+        <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
+            <div class="modal-header">
+                <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
+                <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
+            </div>
+            <div class="modal-body" id="widgets-container">
+                <!-- Сюда ИИ будет вставлять виджеты. Не удаляй этот div! -->
+            </div>
         </div>
     </div>
 
@@ -261,7 +274,7 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
         }
 
-        // --- ЛОГИКА СТАТУС-БАРА ---
+        // --- СТАТУС-БАР ---
         function updateNetStatus() {
             if (navigator.onLine) {
                 elNet.className = 'status-item online';
@@ -288,24 +301,20 @@
         }
 
         function setAlarm(state) {
-            if (state) {
-                elAlarm.className = 'status-item alarm-active';
-            } else {
-                elAlarm.className = 'status-item online';
-            }
+            if (state) { elAlarm.className = 'status-item alarm-active'; } 
+            else { elAlarm.className = 'status-item online'; }
         }
 
         window.addEventListener('online', updateNetStatus);
         window.addEventListener('offline', updateNetStatus);
         setInterval(checkPing, 10000);
 
-        // --- ОСТАЛЬНАЯ ЛОГИКА ---
+        // --- РЕНДЕРИНГ И UI ---
         function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
         function changeRadio() {
             const select = document.getElementById('radioSelect');
             const audio = document.getElementById('radioAudio');
-            audio.src = select.value;
-            audio.load();
+            audio.src = select.value; audio.load();
             audio.play().catch(e => console.log("Автовоспроизведение заблокировано"));
         }
 
@@ -321,42 +330,16 @@
 
         function resetAllStatuses() {
             document.querySelectorAll('.status-dot').forEach(dot => {
-                dot.classList.remove('busy');
-                dot.classList.remove('error');
-                dot.closest('.agent-card').classList.remove('working');
-                dot.closest('.agent-card').classList.remove('error');
+                dot.classList.remove('busy', 'error');
+                dot.closest('.agent-card').classList.remove('working', 'error');
             });
         }
 
-        function init() {
-            if (!currentChatId || !allChats[currentChatId]) { createNewChat(); } else { loadChat(currentChatId); }
-            renderChatList();
-            updateNetStatus();
-        }
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('active');
         }
-        function createNewChat() {
-            const id = 'chat_' + Date.now();
-            allChats[id] = {
-                id: id, title: "Новый чат", pinned: false,
-                messages: [{ role: "system", content: SYSTEM_PROMPT }]
-            };
-            currentChatId = id; saveAll();
-            chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
-            allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT }); saveAll();
-            typeMessage(WELCOME_TEXT, 'director'); 
-            resetAllStatuses();
-            renderChatList(); toggleSidebar(); 
-        }
-        function loadChat(id) {
-            currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
-            chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
-            const msgs = allChats[id].messages;
-            for (let i = 1; i < msgs.length; i++) { renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director'); }
-            chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
-        }
+        
         function saveAll() { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); }
         
         function renderChatList() {
@@ -375,26 +358,39 @@
                 titleSpan.onclick = () => { loadChat(id); toggleSidebar(); };
                 const actions = document.createElement('div'); actions.className = 'chat-item-actions';
                 const pinBtn = document.createElement('span'); pinBtn.innerText = chat.pinned ? '📌' : '📍';
-                pinBtn.onclick = (e) => { e.stopPropagation(); togglePin(id); };
+                pinBtn.onclick = (e) => { e.stopPropagation(); allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); };
                 const delBtn = document.createElement('span'); delBtn.innerText = '🗑️';
-                delBtn.onclick = (e) => { e.stopPropagation(); deleteChat(id); };
+                delBtn.onclick = (e) => { e.stopPropagation(); if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(); } else { saveAll(); renderChatList(); } } };
                 actions.appendChild(pinBtn); actions.appendChild(delBtn);
                 div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
             });
         }
-        
-        function togglePin(id) { allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); }
-        function deleteChat(id) { if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(); } else { saveAll(); renderChatList(); } } }
-        
+
+        function createNewChat() {
+            const id = 'chat_' + Date.now();
+            allChats[id] = { id: id, title: "Новый чат", pinned: false, messages: [{ role: "system", content: SYSTEM_PROMPT }] };
+            currentChatId = id; saveAll();
+            chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
+            allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT }); saveAll();
+            typeMessage(WELCOME_TEXT, 'director'); 
+            resetAllStatuses(); renderChatList(); toggleSidebar(); 
+        }
+
+        function loadChat(id) {
+            currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
+            chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
+            const msgs = allChats[id].messages;
+            for (let i = 1; i < msgs.length; i++) { renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director'); }
+            chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
+        }
+
         function renderMessage(text, sender) {
             const div = document.createElement('div');
             div.className = 'chat-msg msg-' + sender;
             if (sender === 'director') {
                 const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
                 let match;
-                while ((match = statusRegex.exec(text)) !== null) {
-                    updateAgentStatus(match[1].trim(), match[2]);
-                }
+                while ((match = statusRegex.exec(text)) !== null) { updateAgentStatus(match[1].trim(), match[2]); }
                 text = text.replace(statusRegex, '').trim();
                 div.innerHTML = marked.parse(text);
                 const codeRegex = /```html([\s\S]*?)```/;
@@ -402,8 +398,7 @@
                 if (codeMatch) {
                     const codeToApply = codeMatch[1];
                     const applyBtn = document.createElement('button');
-                    applyBtn.className = 'apply-code-btn';
-                    applyBtn.innerText = '⚡ Внедрить код';
+                    applyBtn.className = 'apply-code-btn'; applyBtn.innerText = '⚡ Внедрить код';
                     applyBtn.onclick = () => applyCodeToGitHub(codeToApply);
                     div.appendChild(applyBtn);
                 }
@@ -417,10 +412,11 @@
                 const dot = card.querySelector('.status-dot');
                 if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); }
                 else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); }
-                else { dot.classList.remove('busy'); dot.classList.remove('error'); card.classList.remove('working'); card.classList.remove('error'); }
+                else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); }
             }
         }
-                    function typeMessage(fullText, sender) {
+
+        function typeMessage(fullText, sender) {
             const div = document.createElement('div');
             div.className = 'chat-msg msg-' + sender;
             chatContainer.appendChild(div);
@@ -428,8 +424,7 @@
             function type() {
                 if (i < fullText.length) {
                     div.innerText = fullText.substring(0, i + 1);
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                    i++; setTimeout(type, speed);
+                    chatContainer.scrollTop = chatContainer.scrollHeight; i++; setTimeout(type, speed);
                 } else { div.innerHTML = marked.parse(fullText); }
             }
             type();
@@ -445,7 +440,7 @@
             }
             saveAll(); renderChatList();
         }
-        
+
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
@@ -459,8 +454,7 @@
             }
             saveAll();
         }
-
-        async function applyCodeToGitHub(newCode) {
+                    async function applyCodeToGitHub(newCode) {
             addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
             setAlarm(true); 
             try {
@@ -482,11 +476,9 @@
             }
         }
 
-        // --- УМНЫЙ ОФЛАЙН-РЕЖИМ (ТОЛЬКО ОХРАННИК) ---
         function runOfflineAgents(userText) {
-            setAlarm(true); // Тревога в статус-баре
-            
-            addMessage("🛡️ **Охранник:** Босс, потеряна связь с внешним миром! Скорее всего, пропал интернет или провайдер блокирует запрос. Проверь сеть или включи VPN, иначе я не смогу передать задачу нейросети.", 'director');
+            setAlarm(true); 
+            addMessage("🛡️ **Охранник:** Босс, потеряна связь с внешним миром! Проверь сеть или включи VPN, иначе я не смогу передать задачу нейросети.", 'director');
             updateAgentStatus('Охранник', 'error'); 
             
             setTimeout(() => {
@@ -510,15 +502,13 @@
             updateAgentStatus('Оркестратор', 'busy');
             elAi.className = 'status-item loading';
 
-            const startTime = Date.now();
             const TIMEOUT_MS = 90000; 
 
-            // Если интернета нет вообще
             if (!navigator.onLine) {
                 setTimeout(() => {
                     elAi.className = 'status-item offline';
                     runOfflineAgents(text);
-                }, 1000); // Небольшая задержка для визуала
+                }, 1000);
                 return;
             }
 
@@ -526,41 +516,36 @@
             const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
             try {
-                // СПИСОК МОДЕЛЕЙ ДЛЯ АВТОСМЕНЫ
-                const modelsToTry = [
-                    "openrouter/free", 
-                    "meta-llama/llama-3.3-70b-instruct:free", 
-                    "google/gemma-2-9b-it:free", 
-                    "qwen/qwen-2.5-72b-instruct:free"
-                ];
+                // --- ОТПРАВКА ЗАПРОСА К GIGACHAT ---
                 let success = false;
                 let aiText = "";
                 let lastError = "";
 
-                for (let i = 0; i < modelsToTry.length; i++) {
-                    try {
-                        const response = await fetch(PROXY + "/api/v1/chat/completions", {
-                            method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ model: modelsToTry[i], messages: allChats[currentChatId].messages }),
-                            signal: controller.signal
-                        });
-                        
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            lastError = `Модель ${modelsToTry[i]} упала. Статус: ${response.status}. ${JSON.stringify(errorData)}`;
-                            continue; 
-                        }
-
+                try {
+                    const response = await fetch(PROXY + "/api/v1/chat/completions", {
+                        method: "POST", 
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            model: "GigaChat", 
+                            messages: allChats[currentChatId].messages,
+                            temperature: 0.7 
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        lastError = `GigaChat упал. Статус: ${response.status}. ${JSON.stringify(errorData)}`;
+                    } else {
                         const data = await response.json();
                         if (data.choices && data.choices.length > 0) {
                             aiText = data.choices[0].message.content;
                             success = true;
-                            break; 
                         }
-                    } catch (e) {
-                        if (e.name === 'AbortError') throw e; 
-                        lastError = `Сбой сети для ${modelsToTry[i]}: ${e.message}`;
                     }
+                } catch (e) {
+                    if (e.name === 'AbortError') throw e; 
+                    lastError = `Сбой сети GigaChat: ${e.message}`;
                 }
 
                 clearTimeout(timeoutId);
@@ -581,7 +566,6 @@
                     sendBtn.disabled = false; sendBtn.innerText = "➤";
                     updateAgentStatus('Оркестратор', 'free');
                 } else {
-                    // Если все 4 модели упали, выводим ошибку
                     addMessage(`❌ **Системная ошибка AI:**\n${lastError}`, 'director');
                     elAi.className = 'status-item offline';
                     runOfflineAgents(text);
@@ -589,160 +573,16 @@
             } catch (e) { 
                 clearTimeout(timeoutId);
                 elAi.className = 'status-item offline';
-                addMessage(`❌ **Критическая ошибка:** ${e.message}`, 'director');
+                if (e.name === 'AbortError') {
+                    addMessage(`❌ **Критическая ошибка:** ИИ думал слишком долго (таймаут).`, 'director');
+                } else {
+                    addMessage(`❌ **Критическая ошибка:** ${e.message}`, 'director');
+                }
                 runOfflineAgents(text);
             }
         }
         
         init();
-   </script>
-        <!-- Окно для виджетов (Контент) -->
-    <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
-        <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
-            <div class="modal-header">
-                <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
-                <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
-            </div>
-            <div class="modal-body" id="widgets-container">
-              <!-- БЛОК СЕЙФА (НАЧАЛО) -->
-<div id="smart-safe-widget">
-    <style>
-        #smart-safe-widget {
-            background: #1e1e1e; border: 1px solid #333; border-radius: 15px;
-            padding: 20px; max-width: 300px; margin: 0 auto; box-sizing: border-box;
-            display: flex; flex-direction: column; align-items: center; font-family: 'Segoe UI', sans-serif;
-        }
-        #smart-safe-widget .safe-box {
-            width: 140px; height: 140px; background: #0a0a0a; border: 4px solid #222;
-            border-radius: 10px; position: relative; overflow: hidden; margin-bottom: 20px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-        }
-        #smart-safe-widget .safe-door {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #444, #222); border-right: 2px solid #111;
-            z-index: 2; display: flex; align-items: center; justify-content: flex-end;
-            padding-right: 15px; box-sizing: border-box;
-            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #smart-safe-widget .handle {
-            width: 15px; height: 40px; background: #00e5ff; border-radius: 5px;
-            box-shadow: 0 0 10px #00e5ff;
-        }
-        #smart-safe-widget .safe-inside {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #111; display: flex; align-items: center; justify-content: center; z-index: 1;
-        }
-        #smart-safe-widget .success-text {
-            color: #00ff00; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px #00ff00;
-            opacity: 0; transition: opacity 0.5s;
-        }
-        /* Анимация открытия */
-        #smart-safe-widget .safe-door.open { transform: translateX(-100%); }
-        #smart-safe-widget .safe-door.open + .safe-inside .success-text { opacity: 1; }
-        
-        /* Анимация ошибки (тряска) */
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-        }
-        #smart-safe-widget .safe-door.error { animation: shake 0.4s; border-right: 2px solid #ff0000; }
-
-        #smart-safe-widget .display {
-            width: 100%; background: #000; color: #00e5ff; font-size: 24px;
-            text-align: right; padding: 10px; border-radius: 8px; margin-bottom: 15px;
-            letter-spacing: 5px; box-sizing: border-box; font-family: monospace; border: 1px solid #333;
-        }
-        #smart-safe-widget .keypad {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%;
-        }
-        #smart-safe-widget button {
-            background: #333; border: none; color: #fff; padding: 15px 0;
-            border-radius: 8px; font-size: 18px; cursor: pointer; transition: background 0.2s;
-        }
-        #smart-safe-widget button:active { background: #555; }
-        #smart-safe-widget .btn-ok { background: #005662; color: #00e5ff; font-weight: bold; font-size: 14px;}
-        #smart-safe-widget .btn-c { background: #662222; color: #ff8888; }
-    </style>
-
-    <div class="safe-box">
-        <div class="safe-door" id="safe-door">
-            <div class="handle"></div>
-        </div>
-        <div class="safe-inside">
-            <span class="success-text">ОТКРЫТО</span>
-        </div>
-    </div>
-
-    <div class="display" id="safe-display">____</div>
-
-    <div class="keypad">
-        <button onclick="safeInput('1')">1</button>
-        <button onclick="safeInput('2')">2</button>
-        <button onclick="safeInput('3')">3</button>
-        <button onclick="safeInput('4')">4</button>
-        <button onclick="safeInput('5')">5</button>
-        <button onclick="safeInput('6')">6</button>
-        <button onclick="safeInput('7')">7</button>
-        <button onclick="safeInput('8')">8</button>
-        <button onclick="safeInput('9')">9</button>
-        <button class="btn-c" onclick="safeClear()">C</button>
-        <button onclick="safeInput('0')">0</button>
-        <button class="btn-ok" onclick="safeCheck()">OK</button>
-    </div>
-
-    <script>
-        (function() {
-            let pin = "";
-            const display = document.getElementById('safe-display');
-            const door = document.getElementById('safe-door');
-            
-            window.safeInput = function(num) {
-                if (pin.length < 4 && !door.classList.contains('open')) {
-                    pin += num;
-                    display.innerText = pin.padEnd(4, '_');
-                }
-            };
-
-            window.safeClear = function() {
-                pin = "";
-                display.innerText = "____";
-                display.style.color = "#00e5ff";
-                door.classList.remove('error');
-            };
-
-            window.safeCheck = function() {
-                if (pin === "1234") {
-                    display.innerText = "OK";
-                    display.style.color = "#00ff00";
-                    door.classList.add('open');
-                } else {
-                    display.innerText = "ERR";
-                    display.style.color = "#ff0000";
-                    door.classList.add('error');
-                    setTimeout(() => {
-                        door.classList.remove('error');
-                        safeClear();
-                    }, 1000);
-                }
-            };
-        })();
     </script>
-</div>
-<!-- БЛОК СЕЙФА (КОНЕЦ) -->  
-  </script>
-</div>
-
-<!-- AI_INJECT_END -->
-
-
-                <!-- Виджеты ИИ будут появляться здесь -->
-            </div>
-        </div>
-    </div>
-
 </body>
-</html>
- </body>
 </html>
