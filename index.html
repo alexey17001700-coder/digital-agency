@@ -91,7 +91,6 @@
     </style>
 </head>
 <body>
-    <!-- Модалка агентов -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -102,16 +101,13 @@
         </div>
     </div>
 
-    <!-- Окно Контента (Виджеты) -->
     <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
         <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
             <div class="modal-header">
                 <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
                 <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
             </div>
-            <div class="modal-body" id="widgets-container">
-                <!-- Сюда ИИ будет вставлять виджеты -->
-            </div>
+            <div class="modal-body" id="widgets-container"></div>
         </div>
     </div>
 
@@ -196,10 +192,25 @@
     </div>
 
     <script>
+        // Защита от падения, если библиотека marked не загрузилась
+        if (typeof marked === 'undefined') {
+            console.warn("Библиотека marked не загружена. Используем базовый вывод.");
+            window.marked = { parse: function(text) { return text.replace(/\n/g, '<br>'); } };
+        }
+
         const PROXY = "https://openrouter-proxy.alexey17001700.workers.dev";
         let currentMode = 'normal';
         
-        let allChats = JSON.parse(localStorage.getItem('shtabAllChats')) || {};
+        // Защита от битого JSON в памяти
+        let allChats = {};
+        try {
+            const saved = localStorage.getItem('shtabAllChats');
+            if (saved) allChats = JSON.parse(saved);
+        } catch (e) {
+            console.warn("Память повреждена. Создаем новую.");
+            allChats = {};
+        }
+        
         let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 
         const chatContainer = document.getElementById('chatContainer');
@@ -207,7 +218,6 @@
         const sendBtn = document.getElementById('sendBtn');
         const chatTitleEl = document.getElementById('currentChatTitle');
 
-        // Элементы статус-бара
         const elNet = document.getElementById('status-internet');
         const elAi = document.getElementById('status-ai');
         const elPing = document.getElementById('status-ping');
@@ -275,7 +285,6 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
         }
 
-        // --- ЛОГИКА СТАТУС-БАРА ---
         function updateNetStatus() {
             if (navigator.onLine) {
                 elNet.className = 'status-item online';
@@ -310,7 +319,6 @@
         window.addEventListener('offline', updateNetStatus);
         setInterval(checkPing, 10000);
 
-        // --- ОСТАЛЬНАЯ ЛОГИКА (UI) ---
         function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
         function changeRadio() {
             const select = document.getElementById('radioSelect');
@@ -341,12 +349,11 @@
             document.getElementById('overlay').classList.toggle('active');
         }
         
-        // ВАЖНО: Защита от переполнения памяти
         function saveAll() { 
             try {
                 localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); 
             } catch (e) {
-                console.warn("Память браузера переполнена! Скрипт продолжает работу без сохранения.");
+                console.warn("Память браузера переполнена!");
             }
         }
         
@@ -378,8 +385,7 @@
             const chatCount = Object.keys(allChats).length;
 
             if (chatCount >= 10 && !force) {
-                const confirmMsg = "⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?";
-                if (confirm(confirmMsg)) {
+                if (confirm("⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?")) {
                     toggleSidebar();
                 }
                 return;
@@ -414,7 +420,8 @@
                 let match;
                 while ((match = statusRegex.exec(text)) !== null) { updateAgentStatus(match[1].trim(), match[2]); }
                 text = text.replace(statusRegex, '').trim();
-                div.innerHTML = marked.parse(text);
+                try { div.innerHTML = marked.parse(text); } catch(e) { div.innerText = text; }
+                
                 const codeRegex = /```html([\s\S]*?)```/;
                 const codeMatch = codeRegex.exec(text);
                 if (codeMatch) {
@@ -447,7 +454,9 @@
                 if (i < fullText.length) {
                     div.innerText = fullText.substring(0, i + 1);
                     chatContainer.scrollTop = chatContainer.scrollHeight; i++; setTimeout(type, speed);
-                } else { div.innerHTML = marked.parse(fullText); }
+                } else { 
+                    try { div.innerHTML = marked.parse(fullText); } catch(e) { div.innerText = fullText; }
+                }
             }
             type();
         }
@@ -527,7 +536,7 @@
             try {
                 addMessage(text, 'boss');
             } catch (e) {
-                console.error("Ошибка добавления сообщения:", e);
+                console.error("Ошибка добавления:", e);
             }
             
             resetAllStatuses();
@@ -624,5 +633,4 @@
         init();
     </script>
 </body>
-                                                                                                                                     </html>
-                                                                                                                                     
+    </html>
