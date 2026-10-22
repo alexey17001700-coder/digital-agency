@@ -692,5 +692,23 @@
   </script>
 </div>
 
+
+<!-- AI UPDATE -->
+
+<div id="remove-clock-widget">
+  <script>
+    (() => {
+      const widgetId = "hq-clock-widget";
+      const widget = document.getElementById(widgetId);
+
+      if (widget) {
+        widget.remove();
+      }
+
+      console.log("Часы в штабе удалены.");
+    })();
+  </script>
+</div>
+
 </body>
 </html>
