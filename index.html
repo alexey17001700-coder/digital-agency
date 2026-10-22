@@ -595,5 +595,151 @@
         
         init();
     </script>
+
+<!-- AI_INJECT_START -->
+
+<div id="smart-safe-widget">
+  <div class="display" aria-live="polite">Enter PIN</div>
+  <div class="buttons">
+    <button class="btn" data-digit="1">1</button>
+    <button class="btn" data-digit="2">2</button>
+    <button class="btn" data-digit="3">3</button>
+    <button class="btn" data-digit="4">4</button>
+    <button class="btn" data-digit="5">5</button>
+    <button class="btn" data-digit="6">6</button>
+    <button class="btn" data-digit="7">7</button>
+    <button class="btn" data-digit="8">8</button>
+    <button class="btn" data-digit="9">9</button>
+    <button class="btn" data-digit="0">0</button>
+    <button class="btn" data-clear="C">C</button>
+    <button class="btn" id="openBtn">Open</button>
+  </div>
+  <div class="result"></div>
+  <div class="safe-door"></div>
+</div>
+
+<style>
+#smart-safe-widget {
+  width: 100%;
+  max-width: 350px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background: #1e1e1e;
+  color: #fff;
+  font-family: system-ui, sans-serif;
+  padding: 24px;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+#smart-safe-widget .display {
+  width: 100%;
+  height: 40px;
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+  text-align: right;
+  color: #00e5ff;
+  background: #0d0d0d;
+  padding: 0 8px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+#smart-safe-widget .buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+#smart-safe-widget .btn {
+  height: 48px;
+  font-size: 1rem;
+  background: #0a0a0a;
+  color: #00e5ff;
+  border: 1px solid #00e5ff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+#smart-safe-widget .btn:hover:not(:disabled) {
+  background: #00e5ff;
+  color: #1e1e1e;
+}
+#smart-safe-widget #openBtn {
+  width: 100%;
+  margin-top: 8px;
+  background: #00e5ff;
+  color: #1e1e1e;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+#smart-safe-widget .result {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+#smart-safe-widget .safe-door {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0a0a0a;
+  transform: translateX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#smart-safe-widget.access-granted .safe-door {
+  transform: translateX(-100%);
+}
+</style>
+
+<script>
+(() => {
+  const widget = document.getElementById('smart-safe-widget');
+  let pin = '';
+  const display = widget.querySelector('.display');
+  const result = widget.querySelector('.result');
+  const buttons = widget.querySelectorAll('.btn');
+  const openBtn = widget.querySelector('#openBtn');
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.getAttribute('data-clear') === 'C') {
+        pin = '';
+        display.textContent = 'Enter PIN';
+        result.textContent = '';
+        widget.classList.remove('access-granted', 'access-denied');
+      } else if (btn.getAttribute('data-digit')) {
+        pin += btn.getAttribute('data-digit');
+        display.textContent = pin.length < 4 ? pin : pin.replace(/./g, '*');
+        if (pin.length === 4) {
+          // hold for open press
+        }
+      }
+    });
+  });
+
+  openBtn.addEventListener('click', () => {
+    if (pin === '1234') {
+      widget.classList.add('access-granted');
+      widget.classList.remove('access-denied');
+      result.textContent = 'ACCESS GRANTED';
+      pin = '';
+      display.textContent = 'Enter PIN';
+      setTimeout(() => widget.classList.remove('access-granted'), 600);
+    } else {
+      widget.classList.add('access-denied');
+      widget.classList.remove('access-granted');
+      result.textContent = 'ACCESS DENIED';
+      pin = '';
+      display.textContent = 'Enter PIN';
+      setTimeout(() => widget.classList.remove('access-denied'), 1500);
+    }
+  });
+})();
+</script>
+
+<!-- AI_INJECT_END -->
 </body>
 </html>
