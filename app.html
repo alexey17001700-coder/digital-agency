@@ -118,14 +118,13 @@
         <div class="modal-body" id="widgets-container">
 
 <!-- AI_INJECT_START -->
-
-<div id="currency-widget" class="bg-gray-900 p-4 rounded-2xl shadow-xl">
-    <div class="text-cyan-400 border-cyan-500 border-2 rounded-2xl p-4">
-        <h2 class="text-lg font-bold">Курсы валют</h2>
-        <ul class="list-none m-0 p-0">
-            <li class="mb-2">USD: <span id="usd-rate"></span> руб.</li>
-            <li class="mb-2">EUR: <span id="eur-rate"></span> руб.</li>
-            <li>GBP: <span id="gbp-rate"></span> руб.</li>
+<div id="currency-widget" class="bg-gray-900 p-4 rounded-2xl shadow-xl" style="background-color: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 15px; padding: 15px; margin-bottom: 10px;">
+    <div class="text-cyan-400 border-cyan-500 border-2 rounded-2xl p-4" style="border: 1px solid #00e5ff; border-radius: 10px;">
+        <h2 class="text-lg font-bold" style="color: #ffd700; margin-top: 0; margin-bottom: 10px;">Курсы валют</h2>
+        <ul class="list-none m-0 p-0" style="list-style: none; padding: 0; margin: 0;">
+            <li class="mb-2" style="margin-bottom: 8px; display: flex; justify-content: space-between;">USD: <span id="usd-rate" style="font-weight: bold;">Загрузка...</span></li>
+            <li class="mb-2" style="margin-bottom: 8px; display: flex; justify-content: space-between;">EUR: <span id="eur-rate" style="font-weight: bold;">Загрузка...</span></li>
+            <li class="mb-2" style="margin-bottom: 8px; display: flex; justify-content: space-between;">GBP: <span id="gbp-rate" style="font-weight: bold;">Загрузка...</span></li>
         </ul>
     </div>
 </div>
@@ -137,14 +136,19 @@
             const eurRate = data.Valute.EUR.Value;
             const gbpRate = data.Valute.GBP.Value;
 
-            document.getElementById('usd-rate').textContent = usdRate.toFixed(2);
-            document.getElementById('eur-rate').textContent = eurRate.toFixed(2);
-            document.getElementById('gbp-rate').textContent = gbpRate.toFixed(2);
+            document.getElementById('usd-rate').textContent = usdRate.toFixed(2) + ' руб.';
+            document.getElementById('eur-rate').textContent = eurRate.toFixed(2) + ' руб.';
+            document.getElementById('gbp-rate').textContent = gbpRate.toFixed(2) + ' руб.';
         })
-        .catch(error => console.error('Ошибка при загрузке данных:', error));
+        .catch(error => {
+            document.getElementById('usd-rate').textContent = "Ошибка";
+            document.getElementById('eur-rate').textContent = "Ошибка";
+            document.getElementById('gbp-rate').textContent = "Ошибка";
+            console.error('Ошибка при загрузке данных:', error);
+        });
 </script>
-
 <!-- AI_INJECT_END -->
+
 </div>
     </div>
 </div>
