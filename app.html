@@ -106,7 +106,52 @@
             <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
             <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
         </div>
-        <div class="modal-body" id="widgets-container"></div>
+        <div class="modal-body" id="widgets-container">
+
+<!-- AI_INJECT_START -->
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Расчёт ПВХ окон</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input[type=number] {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>Расчёт стоимости ПВХ окна</h1>
+    <form>
+        <label for="width">Ширина окна (см):</label><br>
+        <input type="number" id="width" name="width" required><br>
+        <label for="height">Высота окна (см):</label><br>
+        <input type="number" id="height" name="height" required><br>
+        <button type="button" onclick="calculateCost()">Рассчитать</button>
+        <p id="result"></p>
+    </form>
+    <script>
+        function calculateCost() {
+            const width = parseFloat(document.getElementById('width').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const costPerSquareMeter = 10000; // Примерная стоимость за кв.м
+            const area = (width * height) / 10000; // Переводим в кв.м
+            const totalCost = area * costPerSquareMeter;
+            document.getElementById('result').textContent = `Стоимость окна: ${totalCost.toFixed(2)} рублей`;
+        }
+    </script>
+</body>
+</html>
+
+<!-- AI_INJECT_END -->
+</div>
     </div>
 </div>
 
