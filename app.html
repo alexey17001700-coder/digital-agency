@@ -33,8 +33,21 @@
         .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
         .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
         @keyframes pulse { to { opacity: 0.3; } }
-
-        .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
+                /* СТИЛИ ДЛЯ ТЕСТЕРА */
+        .tester-dropdown { 
+            display: none; 
+            position: fixed; 
+            top: 60px; 
+            right: 10px; 
+            background: #1e1e1e; 
+            border: 1px solid #ffd700; 
+            border-radius: 8px; 
+            padding: 15px; 
+            width: 250px; 
+            z-index: 9999; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+            font-size: 12px; 
+        }
         .tester-dropdown.open { display: block; }
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
@@ -90,7 +103,7 @@
     </style>
 </head>
 <body>
-    <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
+<div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div class="modal-header">
             <h2 id="modalTitle">Агент</h2>
@@ -106,85 +119,7 @@
             <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
             <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
         </div>
-        <div class="modal-body" id="widgets-container">
-
-<!-- AI_INJECT_START -->
-
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 0;
-    }
-    .header {
-        background-color: #333;
-        color: #fff;
-        padding: 10px;
-        text-align: center;
-    }
-    .content {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 20px;
-        background-color: #fff;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-</style>
-<div class="header">
-    <h1>Штаб Цифрового Агентства</h1>
-</div>
-<div class="content">
-    <p>Добро пожаловать в штаб Цифрового Агентства! Здесь мы разрабатываем и внедряем инновационные решения для вашего бизнеса.</p>
-</div>
-
-<!-- AI_INJECT_END -->
-
-
-<!-- AI_INJECT_START -->
-
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Расчёт ПВХ окон</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        input[type=number] {
-            width: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-    </style>
-</head>
-<body>
-    <h1>Расчёт стоимости ПВХ окна</h1>
-    <form>
-        <label for="width">Ширина окна (см):</label><br>
-        <input type="number" id="width" name="width" required><br>
-        <label for="height">Высота окна (см):</label><br>
-        <input type="number" id="height" name="height" required><br>
-        <button type="button" onclick="calculateCost()">Рассчитать</button>
-        <p id="result"></p>
-    </form>
-    <script>
-        function calculateCost() {
-            const width = parseFloat(document.getElementById('width').value);
-            const height = parseFloat(document.getElementById('height').value);
-            const costPerSquareMeter = 10000; // Примерная стоимость за кв.м
-            const area = (width * height) / 10000; // Переводим в кв.м
-            const totalCost = area * costPerSquareMeter;
-            document.getElementById('result').textContent = `Стоимость окна: ${totalCost.toFixed(2)} рублей`;
-        }
-    </script>
-</body>
-</html>
-
-<!-- AI_INJECT_END -->
-</div>
+        <div class="modal-body" id="widgets-container"></div>
     </div>
 </div>
 
@@ -213,7 +148,6 @@
         </div>
     </div>
 
-    <!-- ВАЖНО: Вот здесь был пропущен <div>, теперь он на месте -->
     <div class="tester-dropdown" id="testerMenu">
         <div class="tester-title">🛠️ Статус соединений</div>
         <div class="tester-item"><span>📶 Сеть:</span> <span id="t-wifi-type">--</span></div>
@@ -266,8 +200,8 @@
             <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
         </div>
     </div>
-</div>
-    <script>
+    </div>
+        <script>
         // Защита от падения, если библиотека marked не загрузилась
         if (typeof marked === 'undefined') {
             console.warn("Библиотека marked не загружена. Используем базовый вывод.");
@@ -331,16 +265,8 @@
             "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект и передает Боссу."
         };
 
-                const SYSTEM_PROMPT = `Ты - Управляющий ИИ Цифрового Агентства. Ты умный ассистент Босса.
-ТВОИ ВОЗМОЖНОСТИ:
-1. Писать код (HTML/CSS/JS) в блоке \`\`\`html.
-2. Отвечать на любые вопросы.
-
-ВАЖНО (КРИТИЧЕСКИ): У тебя ЕСТЬ доступ к интернету через инструмент "search_web"! 
-Если Босс спрашивает про погоду, курсы валют, новости или любые другие АКТУАЛЬНЫЕ данные, ты ОБЯЗАН использовать инструмент "search_web". 
-Не говори, что у тебя нет доступа! Просто вызови функцию, получи данные и ответь Боссу.
-
-Если Босс просит НАПИСАТЬ КОД:
+        const SYSTEM_PROMPT = `Ты - Управляющий ИИ Цифрового Агентства. Твоя задача - выполнять задачи Босса.
+Если Босс просит НАПИСАТЬ КОД (кнопку, скрипт, стили):
 1. Оркестратор: принять задачу и передать.
 2. Архитектор: продумать структуру.
 3. Фронтенд: написать HTML-код в блоке \`\`\`html ... \`\`\`.
@@ -348,7 +274,6 @@
 5. Результат: доложить.
 ВАЖНО: Пиши ТОЛЬКО фрагмент (без <!DOCTYPE html>, <html>, <body>), чтобы Босс мог внедрить его.
 
-СИСТЕМНЫЕ КОМАНДЫ (КРИТИЧЕСКИ ВАЖНО):
 Если Босс просит "очистить историю чатов" или "удалить все чаты", напиши короткий ответ и добавь в конец скрытую команду: [CMD:CLEAR_CHATS]
 Если Босс просит "очистить контент", "удалить виджеты" или "убрать мусор", напиши ответ и добавь: [CMD:CLEAR_CONTENT]
 
@@ -493,7 +418,7 @@
                 console.warn("Память браузера переполнена!");
             }
         }
-                function renderChatList() {
+                    function renderChatList() {
             chatListEl.innerHTML = '';
             const sortedIds = Object.keys(allChats).sort((a, b) => {
                 if (allChats[a].pinned && !allChats[b].pinned) return -1;
@@ -554,7 +479,7 @@
                 
                 const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
                 const codeMatch = codeRegex.exec(text);
-                if (codeMatch && !isAutoMode) {
+                if (codeMatch && !isAutoMode) { // Если авто-режим выключен, показываем кнопку
                     const codeToApply = codeMatch[1];
                     const applyBtn = document.createElement('button');
                     applyBtn.className = 'apply-code-btn'; applyBtn.innerText = '⚡ Внедрить код';
@@ -618,6 +543,7 @@
             saveAll();
         }
 
+        // --- АВТО-РЕЖИМ ---
         function toggleAutoMode() {
             isAutoMode = !isAutoMode;
             const btn = document.getElementById('btnAuto');
@@ -655,6 +581,7 @@
             }
         }
 
+        // --- СИСТЕМНЫЕ КОМАНДЫ ---
         function clearAllChats() {
             const pinnedIds = [];
             for (let id in allChats) {
@@ -748,6 +675,7 @@
                     sendBtn.disabled = false; sendBtn.innerText = "➤";
                     updateAgentStatus('Оркестратор', 'free');
 
+                    // АВТО-ВНЕДРЕНИЕ
                     if (!isCommand && isAutoMode) {
                         const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
                         const codeMatch = codeRegex.exec(aiText);
@@ -766,25 +694,8 @@
         }
         
         function init() {
-            const chatIds = Object.keys(allChats);
-            
-            if (!currentChatId || !allChats[currentChatId]) {
-                if (chatIds.length > 0) {
-                    const sortedIds = chatIds.sort((a, b) => {
-                        if (allChats[a].pinned && !allChats[b].pinned) return -1;
-                        if (!allChats[a].pinned && allChats[b].pinned) return 1;
-                        return b.localeCompare(a);
-                    });
-                    currentChatId = sortedIds[0];
-                    loadChat(currentChatId);
-                } else {
-                    createNewChat(true);
-                }
-            } else {
-                loadChat(currentChatId);
-            }
-            renderChatList(); 
-            updateNetStatus();
+            if (!currentChatId || !allChats[currentChatId]) { createNewChat(true); } else { loadChat(currentChatId); }
+            renderChatList(); updateNetStatus();
         }
         
         init();
