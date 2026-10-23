@@ -14,30 +14,31 @@
             border: none;
             display: block;
         }
+      /* Неубиваемая кнопка отката (уменьшенная и аккуратная) */
+#rollback-btn {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    z-index: 99999;
+    background: rgba(255, 0, 85, 0.85); /* Полупрозрачный красный */
+    color: #fff;
+    border: 1px solid #ff88aa;
+    padding: 6px 14px; /* Уменьшили отступы */
+    border-radius: 20px;
+    font-weight: bold;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 11px; /* Уменьшили шрифт */
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(255, 0, 85, 0.4);
+    transition: all 0.3s;
+    backdrop-filter: blur(5px); /* Эффект матового стекла */
+}
 
-        /* Неубиваемая кнопка отката */
-        #rollback-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 99999;
-            background: #ff0055;
-            color: #fff;
-            border: 2px solid #ff88aa;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-family: 'Segoe UI', sans-serif;
-            font-size: 14px;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(255, 0, 85, 0.6);
-            transition: all 0.3s;
-        }
-
-        #rollback-btn:active {
-            transform: scale(0.95);
-            background: #cc0044;
-        }
+#rollback-btn:active {
+    transform: scale(0.9);
+    background: #cc0044;
+}
+        
     </style>
 </head>
 <body>
