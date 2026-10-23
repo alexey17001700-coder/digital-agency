@@ -34,8 +34,7 @@
         .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
         .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
         @keyframes pulse { to { opacity: 0.3; } }
-                /* СТИЛИ ДЛЯ ТЕСТЕРА */
-        .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
+                .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
         .tester-dropdown.open { display: block; }
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
@@ -57,42 +56,13 @@
         .chat-msg pre { background: #1a1a1a; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px; }
         .chat-msg code { font-family: monospace; color: #00e5ff; }
         
-        /* СТИЛИ ДЛЯ ПОЛЯ ВВОДА (ТЕКСТАРЕА) */
         .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+        #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; resize: none; max-height: 120px; overflow-y: auto; font-family: inherit; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
         
-        #chatInput { 
-            flex-grow: 1; 
-            padding: 10px 15px; 
-            border-radius: 20px; 
-            border: 1px solid #333; 
-            background: #1e1e1e; 
-            color: white; 
-            outline: none; 
-            resize: none; /* Запрещаем растягивать вручную */
-            max-height: 120px; /* Максимальная высота */
-            overflow-y: auto; 
-            font-family: inherit;
-            font-size: 14px;
-            line-height: 1.4;
-            box-sizing: border-box;
-        }
-
         .send-btn-container { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        
-        /* ЯРКИЙ ЗЕЛЕНЫЙ БЕЙДЖ С ВРЕМЕНЕМ */
-        .time-badge {
-            position: absolute; top: -50px; right: 0; width: 38px; height: 38px;
-            background: #000; color: #00ff00; border: 2px solid #00ff00;
-            border-radius: 50%; display: flex; justify-content: center; align-items: center;
-            font-size: 10px; font-weight: bold; font-family: monospace;
-            opacity: 0; visibility: hidden; transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); z-index: 10;
-        }
+        .time-badge { position: absolute; top: -50px; right: 0; width: 38px; height: 38px; background: #000; color: #00ff00; border: 2px solid #00ff00; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; font-family: monospace; opacity: 0; visibility: hidden; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); z-index: 10; }
         .time-badge.show { opacity: 1; visibility: visible; animation: pulse-badge 1s infinite alternate; }
-        @keyframes pulse-badge {
-            0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); transform: scale(0.95); }
-            100% { box-shadow: 0 0 15px rgba(0, 255, 0, 1); transform: scale(1.05); }
-        }
+        @keyframes pulse-badge { 0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); transform: scale(0.95); } 100% { box-shadow: 0 0 15px rgba(0, 255, 0, 1); transform: scale(1.05); } }
 
         button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; }
         button.send-btn:disabled { background: #555; }
@@ -139,13 +109,13 @@
 <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
     <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
         <div class="modal-header">
-            <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
-            <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
+            <h2 style="color: #ffd700;">📁 Контент</h2>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="clearContentFromButton()" style="background: #662222; color: #ff8888; border: 1px solid #ff8888; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">🗑️ Очистить</button>
+                <button class="modal-close" style="color: #ff0055; font-size: 24px; border: none; background: none; cursor: pointer; padding: 0;" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
+            </div>
         </div>
-        <div class="modal-body" id="widgets-container">
-
-
-</div>
+        <div class="modal-body" id="widgets-container"></div>
     </div>
 </div>
 
@@ -181,7 +151,6 @@
         <div class="tester-item"><span>⚡ Пинг:</span> <span id="t-ping">--</span></div>
         <div class="tester-item"><span>🐙 GitHub:</span> <span id="t-github">--</span></div>
         <div class="tester-item"><span>🤖 ИИ Модель:</span> <span id="t-ai-model">--</span></div>
-        
         <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
     </div>
 
@@ -195,7 +164,6 @@
     <div class="chat-container" id="chatContainer"></div>
 
     <div class="input-area">
-        <!-- ПОЛЕ ВВОДА БЕЗ ONKEYDOWN (Enter = перенос строки) -->
         <textarea id="chatInput" placeholder="Написать задачу..." rows="1"></textarea>
         
         <div class="send-btn-container">
@@ -260,7 +228,7 @@
         const chatListEl = document.getElementById('chatList');
         const sendBtn = document.getElementById('sendBtn');
         const chatTitleEl = document.getElementById('currentChatTitle');
-        const chatInputEl = document.getElementById('chatInput'); // Наше новое поле textarea
+        const chatInputEl = document.getElementById('chatInput');
 
         const elNet = document.getElementById('status-internet');
         const elAi = document.getElementById('status-ai');
@@ -297,8 +265,8 @@
             "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект и передает Боссу."
         };
 
-        // НОВЫЙ УМНЫЙ ПРОМПТ С РОЛЯМИ
-                const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
+        // НОВЫЙ УМНЫЙ ПРОМПТ С РОЛЯМИ И TAILWIND
+        const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
 
 ПРАВИЛА КОМАНДЫ:
 1. 🎨 Дизайнер (UI/UX Pro): Отвечает за эстетику. Ты ненавидишь дефолтные HTML-стили. Для создания красивых виджетов ты ОБЯЗАН использовать фреймворк Tailwind CSS (он уже подключен к сайту).
@@ -463,204 +431,220 @@
             this.style.height = (this.scrollHeight) + 'px';
             if(this.value === '') this.style.height = 'auto';
         });
-                function renderChatList() {
-            chatListEl.innerHTML = '';
-            const sortedIds = Object.keys(allChats).sort((a, b) => {
-                if (allChats[a].pinned && !allChats[b].pinned) return -1;
-                if (!allChats[a].pinned && allChats[b].pinned) return 1;
-                return b.localeCompare(a);
-            });
-            sortedIds.forEach(id => {
-                const chat = allChats[id];
-                const div = document.createElement('div');
-                div.className = `chat-item ${chat.pinned ? 'pinned' : ''}`;
-                const titleSpan = document.createElement('span');
-                titleSpan.className = 'chat-title'; titleSpan.innerText = chat.title;
-                titleSpan.onclick = () => { loadChat(id); toggleSidebar(); };
-                const actions = document.createElement('div'); actions.className = 'chat-item-actions';
-                const pinBtn = document.createElement('span'); pinBtn.innerText = chat.pinned ? '📌' : '📍';
-                pinBtn.onclick = (e) => { e.stopPropagation(); allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); };
-                const delBtn = document.createElement('span'); delBtn.innerText = '🗑️';
-                delBtn.onclick = (e) => { e.stopPropagation(); if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(true); } else { saveAll(); renderChatList(); } } };
-                actions.appendChild(pinBtn); actions.appendChild(delBtn);
-                div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
-            });
-        }
+        function renderChatList() {
+    chatListEl.innerHTML = '';
+    const sortedIds = Object.keys(allChats).sort((a, b) => {
+        if (allChats[a].pinned && !allChats[b].pinned) return -1;
+        if (!allChats[a].pinned && allChats[b].pinned) return 1;
+        return b.localeCompare(a);
+    });
+    sortedIds.forEach(id => {
+        const chat = allChats[id];
+        const div = document.createElement('div');
+        div.className = `chat-item ${chat.pinned ? 'pinned' : ''}`;
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'chat-title'; titleSpan.innerText = chat.title;
+        titleSpan.onclick = () => { loadChat(id); toggleSidebar(); };
+        const actions = document.createElement('div'); actions.className = 'chat-item-actions';
+        const pinBtn = document.createElement('span'); pinBtn.innerText = chat.pinned ? '📌' : '📍';
+        pinBtn.onclick = (e) => { e.stopPropagation(); allChats[id].pinned = !allChats[id].pinned; saveAll(); renderChatList(); };
+        const delBtn = document.createElement('span'); delBtn.innerText = '🗑️';
+        delBtn.onclick = (e) => { e.stopPropagation(); if (confirm("Удалить этот чат?")) { delete allChats[id]; if (currentChatId === id) { createNewChat(true); } else { saveAll(); renderChatList(); } } };
+        actions.appendChild(pinBtn); actions.appendChild(delBtn);
+        div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
+    });
+}
 
-        function createNewChat(force = false) {
-            const chatCount = Object.keys(allChats).length;
-            if (chatCount >= 10 && !force) {
-                if (confirm("⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?")) { toggleSidebar(); }
-                return;
-            }
-            if (chatCount === 9 && !force) { alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит."); }
+function createNewChat(force = false) {
+    const chatCount = Object.keys(allChats).length;
+    if (chatCount >= 10 && !force) {
+        if (confirm("⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?")) { toggleSidebar(); }
+        return;
+    }
+    if (chatCount === 9 && !force) { alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит."); }
 
-            const id = 'chat_' + Date.now();
-            allChats[id] = { id: id, title: "Новый чат", pinned: false, messages: [{ role: "system", content: SYSTEM_PROMPT }] };
-            currentChatId = id; saveAll();
-            chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
-            allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT }); saveAll();
-            typeMessage(WELCOME_TEXT, 'director'); 
-            resetAllStatuses(); renderChatList(); toggleSidebar(); 
-        }
+    const id = 'chat_' + Date.now();
+    allChats[id] = { id: id, title: "Новый чат", pinned: false, messages: [{ role: "system", content: SYSTEM_PROMPT }] };
+    currentChatId = id; saveAll();
+    chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
+    allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT }); saveAll();
+    typeMessage(WELCOME_TEXT, 'director'); 
+    resetAllStatuses(); renderChatList(); toggleSidebar(); 
+}
 
-        function loadChat(id) {
-            currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
-            chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
-            const msgs = allChats[id].messages;
-            for (let i = 1; i < msgs.length; i++) { renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director'); }
-            chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
-        }
+function loadChat(id) {
+    currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
+    chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
+    const msgs = allChats[id].messages;
+    for (let i = 1; i < msgs.length; i++) { renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director'); }
+    chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
+}
 
-        function renderMessage(text, sender) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg msg-' + sender;
-            if (sender === 'director') {
-                const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
-                let match;
-                while ((match = statusRegex.exec(text)) !== null) { updateAgentStatus(match[1].trim(), match[2]); }
-                text = text.replace(statusRegex, '').trim();
-                try { div.innerHTML = marked.parse(text); } catch(e) { div.innerText = text; }
-                
-                const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
-                const codeMatch = codeRegex.exec(text);
-                if (codeMatch && !isAutoMode) {
-                    const codeToApply = codeMatch[1];
-                    const applyBtn = document.createElement('button');
-                    applyBtn.className = 'apply-code-btn'; applyBtn.innerText = '⚡ Внедрить код';
-                    applyBtn.onclick = () => applyCodeToGitHub(codeToApply, false);
-                    div.appendChild(applyBtn);
-                }
-            } else { div.innerText = text; }
-            chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function updateAgentStatus(agentName, status) {
-            const card = document.getElementById('agent-' + agentName);
-            if (card) {
-                const dot = card.querySelector('.status-dot');
-                if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); }
-                else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); }
-                else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); }
-            }
-        }
-
-        function typeMessage(fullText, sender) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg msg-' + sender;
-            chatContainer.appendChild(div);
-            let i = 0; const speed = 10;
-            function type() {
-                if (i < fullText.length) {
-                    div.innerText = fullText.substring(0, i + 1);
-                    chatContainer.scrollTop = chatContainer.scrollHeight; i++; setTimeout(type, speed);
-                } else { 
-                    try { div.innerHTML = marked.parse(fullText); } catch(e) { div.innerText = fullText; }
-                }
-            }
-            type();
-        }
+function renderMessage(text, sender) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg msg-' + sender;
+    if (sender === 'director') {
+        const statusRegex = /\[Статус:\s*([^:]+):\s*(busy|free)\]/g;
+        let match;
+        while ((match = statusRegex.exec(text)) !== null) { updateAgentStatus(match[1].trim(), match[2]); }
+        text = text.replace(statusRegex, '').trim();
+        try { div.innerHTML = marked.parse(text); } catch(e) { div.innerText = text; }
         
-        function addMessage(text, sender) {
-            renderMessage(text, sender);
-            const role = sender === 'boss' ? 'user' : 'assistant';
-            if (allChats[currentChatId]) {
-                allChats[currentChatId].messages.push({ role, content: text });
-                if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
-                    allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
-                    chatTitleEl.innerText = allChats[currentChatId].title;
-                }
-            }
-            saveAll(); renderChatList();
+        const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
+        const codeMatch = codeRegex.exec(text);
+        if (codeMatch && !isAutoMode) {
+            const codeToApply = codeMatch[1];
+            const applyBtn = document.createElement('button');
+            applyBtn.className = 'apply-code-btn'; applyBtn.innerText = '⚡ Внедрить код';
+            applyBtn.onclick = () => applyCodeToGitHub(codeToApply, false);
+            div.appendChild(applyBtn);
         }
+    } else { div.innerText = text; }
+    chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function updateAgentStatus(agentName, status) {
+    const card = document.getElementById('agent-' + agentName);
+    if (card) {
+        const dot = card.querySelector('.status-dot');
+        if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); }
+        else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); }
+        else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); }
+    }
+}
+
+function typeMessage(fullText, sender) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg msg-' + sender;
+    chatContainer.appendChild(div);
+    let i = 0; const speed = 10;
+    function type() {
+        if (i < fullText.length) {
+            div.innerText = fullText.substring(0, i + 1);
+            chatContainer.scrollTop = chatContainer.scrollHeight; i++; setTimeout(type, speed);
+        } else { 
+            try { div.innerHTML = marked.parse(fullText); } catch(e) { div.innerText = fullText; }
+        }
+    }
+    type();
+}
+
+function addMessage(text, sender) {
+    renderMessage(text, sender);
+    const role = sender === 'boss' ? 'user' : 'assistant';
+    if (allChats[currentChatId]) {
+        allChats[currentChatId].messages.push({ role, content: text });
+        if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
+            allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
+            chatTitleEl.innerText = allChats[currentChatId].title;
+        }
+    }
+    saveAll(); renderChatList();
+}
+
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
+    document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
+    if (mode === 'hacker') {
+        allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости. В КОНЦЕ ответа пиши [Статус: Хакер: busy].";
+        addMessage("🕵️ Хакер активирован.", 'director');
+    } else {
+        allChats[currentChatId].messages[0].content = SYSTEM_PROMPT;
+        addMessage("👑 Оркестратор вернулся к управлению.", 'director');
+    }
+    saveAll();
+}
+
+function toggleAutoMode() {
+    isAutoMode = !isAutoMode;
+    const btn = document.getElementById('btnAuto');
+    if (isAutoMode) {
+        btn.innerText = "⚡ Авто: ВКЛ";
+        btn.style.background = "#00ff00";
+        btn.style.color = "#000";
+    } else {
+        btn.innerText = "⚡ Авто: ВЫКЛ";
+        btn.style.background = "#333";
+        btn.style.color = "#aaa";
+    }
+}
+
+async function applyCodeToGitHub(newCode, isRollback = false) {
+    addMessage(`🛠️ DevOps: ${isRollback ? 'Откатываю' : 'Внедряю'} код в GitHub...`, 'director');
+    setAlarm(true); 
+    try {
+        const payload = isRollback ? { isRollback: true } : { code: newCode };
+        const response = await fetch(PROXY, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            addMessage(`✅ DevOps: Успешно! Перезагрузите страницу.`, 'director');
+        } else {
+            addMessage("❌ DevOps: Ошибка. " + JSON.stringify(data.error), 'director');
+        }
+    } catch (e) {
+        addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
+    } finally {
+        setTimeout(() => setAlarm(false), 3000); 
+    }
+}
+
+function clearAllChats() {
+    const pinnedIds = [];
+    for (let id in allChats) {
+        if (allChats[id].pinned) pinnedIds.push(allChats[id]);
+    }
+    allChats = {};
+    pinnedIds.forEach(chat => { allChats[chat.id] = chat; });
+    if (!allChats[currentChatId]) createNewChat(true);
+    else { saveAll(); renderChatList(); }
+    addMessage("🧹 История чатов очищена (кроме закрепленных).", 'director');
+}
+
+async function clearAllContent() {
+    addMessage("🧹 Очищаю добавленный контент...", 'director');
+    try {
+        const response = await fetch(PROXY, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isClearContent: true })
+        });
+        const data = await response.json();
+        if (data.success) addMessage("✅ Контент успешно очищен! Обновите страницу.", 'director');
+    } catch (e) { addMessage("❌ Ошибка очистки: " + e.message, 'director'); }
+}
+
+// --- НОВАЯ ФУНКЦИЯ ДЛЯ КНОПКИ ОЧИСТКИ КОНТЕНТА ---
+async function clearContentFromButton() {
+    if (confirm("⚠️ Вы уверены, что хотите полностью очистить папку Контент? Все виджеты будут удалены.")) {
+        document.getElementById('contentModal').classList.remove('active'); // Закрываем окно
+        await clearAllContent(); // Вызываем нашу старую функцию очистки
         
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
-            document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
-            if (mode === 'hacker') {
-                allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер (Red Team). Анализируй код, ищи уязвимости. В КОНЦЕ ответа пиши [Статус: Хакер: busy].";
-                addMessage("🕵️ Хакер активирован.", 'director');
+        // Даем время Яндексу переписать файл и перезагружаем страницу
+        setTimeout(() => {
+            if (window.parent) {
+                window.parent.location.reload(); // Перезагружаем Броню снаружи
             } else {
-                allChats[currentChatId].messages[0].content = SYSTEM_PROMPT;
-                addMessage("👑 Оркестратор вернулся к управлению.", 'director');
+                location.reload();
             }
-            saveAll();
-        }
+        }, 2000);
+    }
+}
 
-        function toggleAutoMode() {
-            isAutoMode = !isAutoMode;
-            const btn = document.getElementById('btnAuto');
-            if (isAutoMode) {
-                btn.innerText = "⚡ Авто: ВКЛ";
-                btn.style.background = "#00ff00";
-                btn.style.color = "#000";
-            } else {
-                btn.innerText = "⚡ Авто: ВЫКЛ";
-                btn.style.background = "#333";
-                btn.style.color = "#aaa";
-            }
+function runOfflineAgents(userText) {
+    setAlarm(true); 
+    addMessage("🛡️ **Охранник:** Босс, потеряна связь с внешним миром! Проверь сеть, иначе я не смогу передать задачу нейросети.", 'director');
+    updateAgentStatus('Охранник', 'error'); 
+    setTimeout(() => {
+        updateAgentStatus('Охранник', 'free'); setAlarm(false);
+        sendBtn.disabled = false; sendBtn.innerText = "➤";
+        sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
+    }, 3000); 
         }
-
-        async function applyCodeToGitHub(newCode, isRollback = false) {
-            addMessage(`🛠️ DevOps: ${isRollback ? 'Откатываю' : 'Внедряю'} код в GitHub...`, 'director');
-            setAlarm(true); 
-            try {
-                const payload = isRollback ? { isRollback: true } : { code: newCode };
-                const response = await fetch(PROXY, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                if (data.success) {
-                    addMessage(`✅ DevOps: Успешно! Перезагрузите страницу.`, 'director');
-                } else {
-                    addMessage("❌ DevOps: Ошибка. " + JSON.stringify(data.error), 'director');
-                }
-            } catch (e) {
-                addMessage("❌ DevOps: Ошибка связи: " + e.message, 'director');
-            } finally {
-                setTimeout(() => setAlarm(false), 3000); 
-            }
-        }
-
-        function clearAllChats() {
-            const pinnedIds = [];
-            for (let id in allChats) {
-                if (allChats[id].pinned) pinnedIds.push(allChats[id]);
-            }
-            allChats = {};
-            pinnedIds.forEach(chat => { allChats[chat.id] = chat; });
-            if (!allChats[currentChatId]) createNewChat(true);
-            else { saveAll(); renderChatList(); }
-            addMessage("🧹 История чатов очищена (кроме закрепленных).", 'director');
-        }
-
-        async function clearAllContent() {
-            addMessage("🧹 Очищаю добавленный контент...", 'director');
-            try {
-                const response = await fetch(PROXY, {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ isClearContent: true })
-                });
-                const data = await response.json();
-                if (data.success) addMessage("✅ Контент успешно очищен! Обновите страницу.", 'director');
-            } catch (e) { addMessage("❌ Ошибка очистки: " + e.message, 'director'); }
-        }
-
-        function runOfflineAgents(userText) {
-            setAlarm(true); 
-            addMessage("🛡️ **Охранник:** Босс, потеряна связь с внешним миром! Проверь сеть, иначе я не смогу передать задачу нейросети.", 'director');
-            updateAgentStatus('Охранник', 'error'); 
-            setTimeout(() => {
-                updateAgentStatus('Охранник', 'free'); setAlarm(false);
-                sendBtn.disabled = false; sendBtn.innerText = "➤";
-                sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
-            }, 3000); 
-        }
-
-        async function sendMessage() {
+                async function sendMessage() {
             const text = chatInputEl.value.trim();
             if (!text) return;
             
