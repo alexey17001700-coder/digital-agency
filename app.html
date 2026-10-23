@@ -115,7 +115,37 @@
                 <button class="modal-close" style="color: #ff0055; font-size: 24px; border: none; background: none; cursor: pointer; padding: 0;" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
             </div>
         </div>
-        <div class="modal-body" id="widgets-container"></div>
+        <div class="modal-body" id="widgets-container">
+
+<!-- AI_INJECT_START -->
+
+<div id="currency-widget" class="bg-gray-900 p-4 rounded-2xl shadow-xl">
+    <div class="text-cyan-400 border-cyan-500 border-2 rounded-2xl p-4">
+        <h2 class="text-lg font-bold">Курсы валют</h2>
+        <ul class="list-none m-0 p-0">
+            <li class="mb-2">USD: <span id="usd-rate"></span> руб.</li>
+            <li class="mb-2">EUR: <span id="eur-rate"></span> руб.</li>
+            <li>GBP: <span id="gbp-rate"></span> руб.</li>
+        </ul>
+    </div>
+</div>
+<script>
+    fetch('https://www.cbr-xml-daily.ru/daily_json.js')
+        .then(response => response.json())
+        .then(data => {
+            const usdRate = data.Valute.USD.Value;
+            const eurRate = data.Valute.EUR.Value;
+            const gbpRate = data.Valute.GBP.Value;
+
+            document.getElementById('usd-rate').textContent = usdRate.toFixed(2);
+            document.getElementById('eur-rate').textContent = eurRate.toFixed(2);
+            document.getElementById('gbp-rate').textContent = gbpRate.toFixed(2);
+        })
+        .catch(error => console.error('Ошибка при загрузке данных:', error));
+</script>
+
+<!-- AI_INJECT_END -->
+</div>
     </div>
 </div>
 
