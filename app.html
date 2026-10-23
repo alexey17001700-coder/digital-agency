@@ -115,47 +115,7 @@
                 <button class="modal-close" style="color: #ff0055; font-size: 24px; border: none; background: none; cursor: pointer; padding: 0;" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
             </div>
         </div>
-        <div class="modal-body" id="widgets-container">
-
-
-<!-- AI_INJECT_START -->
-
-<div id="currency-widget" class="p-4 bg-gray-900 rounded-2xl shadow-xl">
-  <h1 class="text-center text-xl font-bold text-neon-blue">Курсы валют</h1>
-  <div class="grid grid-cols-1 gap-4 mt-4">
-    <div class="p-4 bg-gray-800 rounded-2xl shadow-md">
-      <p class="text-lg font-bold text-neon-yellow">Доллар</p>
-      <p id="usd-rate" class="text-lg text-white"></p>
-    </div>
-    <div class="p-4 bg-gray-800 rounded-2xl shadow-md">
-      <p class="text-lg font-bold text-neon-yellow">Евро</p>
-      <p id="eur-rate" class="text-lg text-white"></p>
-    </div>
-    <div class="p-4 bg-gray-800 rounded-2xl shadow-md">
-      <p class="text-lg font-bold text-neon-yellow">Юань</p>
-      <p id="cny-rate" class="text-lg text-white"></p>
-    </div>
-  </div>
-</div>
-
-<script>
-  fetch('https://www.cbr-xml-daily.ru/daily_json.js')
-    .then(response => response.json())
-    .then(data => {
-      const usdRate = data.Valute.USD.Value.toFixed(2);
-      const eurRate = data.Valute.EUR.Value.toFixed(2);
-      const cnyRate = data.Valute.CNY.Value.toFixed(2);
-
-      document.getElementById('usd-rate').textContent = `₽${usdRate}`;
-      document.getElementById('eur-rate').textContent = `₽${eurRate}`;
-      document.getElementById('cny-rate').textContent = `₽${cnyRate}`;
-    })
-    .catch(error => console.error('Ошибка при загрузке данных:', error));
-</script>
-
-<!-- AI_INJECT_END -->
-
-</div>
+        <div class="modal-body" id="widgets-container"></div>
     </div>
 </div>
 
