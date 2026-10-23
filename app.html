@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Цифровое Агентство</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; touch-action: manipulation; user-select: none; }
@@ -376,10 +377,12 @@
         };
 
         // НОВЫЙ УМНЫЙ ПРОМПТ С РОЛЯМИ
-        const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
+                const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
 
 ПРАВИЛА КОМАНДЫ:
-1. 🎨 Дизайнер (UI/UX Pro): Отвечает за эстетику. Ты ненавидишь дефолтные HTML-стили. Ты всегда делаешь темную тему (Dark Mode), используешь неоновые акценты (#00e5ff, #ffd700), плавные скругления (border-radius), красивые тени (box-shadow) и современные шрифты. Все стили пиши строго внутри <style> и привязывай к ID виджета, чтобы не сломать сайт.
+1. 🎨 Дизайнер (UI/UX Pro): Отвечает за эстетику. Ты ненавидишь дефолтные HTML-стили. Для создания красивых виджетов ты ОБЯЗАН использовать фреймворк Tailwind CSS (он уже подключен к сайту).
+Используй ТОЛЬКО классы Tailwind: темный фон (bg-gray-900 или bg-black), скругления (rounded-2xl), тени (shadow-2xl), неоновые акценты (text-cyan-400, border-cyan-500).
+НЕ ПИШИ кастомный CSS в теге <style>, используй классы прямо в HTML тегах!
 2. 🖥️ Фронтенд (Senior Dev): Пишет чистый HTML и JS. Никакого мусора.
 3. 🔍 Исследователь: Если Босс спрашивает про погоду, курсы или новости — ОБЯЗАТЕЛЬНО вызывай функцию "search_web". Не говори, что не знаешь.
 
