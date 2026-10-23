@@ -123,6 +123,33 @@
 
 <!-- AI_INJECT_START -->
 
+<button>Отправить</button>
+<p>Время: <span id="timer">00:00</span></p>
+<script>
+    let startTime;
+    let timerInterval;
+
+    document.querySelector('button').addEventListener('click', function() {
+        if (!startTime) {
+            startTime = new Date().getTime();
+            timerInterval = setInterval(updateTimer, 10);
+        }
+    });
+
+    function updateTimer() {
+        const currentTime = new Date().getTime();
+        const elapsedTime = currentTime - startTime;
+        const minutes = Math.floor(elapsedTime / 60000);
+        const seconds = Math.floor((elapsedTime % 60000) / 1000);
+        document.getElementById('timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+</script>
+
+<!-- AI_INJECT_END -->
+
+
+<!-- AI_INJECT_START -->
+
 <div id="gameContainer">
     <h1>Welcome to Шаранутый космос: Wake-up</h1>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
