@@ -141,7 +141,89 @@
             <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
             <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
         </div>
-        <div class="modal-body" id="widgets-container"></div>
+        <div class="modal-body" id="widgets-container">
+
+<!-- AI_INJECT_START -->
+
+<div id="currency-widget">
+  <div class="card">
+    <div class="card-header">
+      <h2>Курсы валют</h2>
+    </div>
+    <div class="card-body">
+      <div class="currency-item">
+        <span class="currency-symbol">💵</span>
+        <span class="currency-code">USD</span>
+        <span class="currency-rate">...</span>
+      </div>
+      <div class="currency-item">
+        <span class="currency-symbol">💶</span>
+        <span class="currency-code">EUR</span>
+        <span class="currency-rate">...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #currency-widget {
+    background-color: #222;
+    color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .card-header {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+  }
+
+  .card-header h2 {
+    color: #ffd700;
+    margin: 0;
+  }
+
+  .currency-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .currency-symbol {
+    font-size: 30px;
+    color: #00e5ff;
+    margin-right: 10px;
+  }
+
+  .currency-code {
+    font-weight: bold;
+    margin-right: 5px;
+  }
+
+  .currency-rate {
+    color: #ffd700;
+  }
+</style>
+
+<script>
+  fetch('https://www.cbr-xml-daily.ru/daily_json.js')
+    .then(response => response.json())
+    .then(data => {
+      const usdRate = data.Valute.USD.Value;
+      const eurRate = data.Valute.EUR.Value;
+
+      document.querySelector('.currency-item:nth-child(1) .currency-rate').textContent = usdRate;
+      document.querySelector('.currency-item:nth-child(2) .currency-rate').textContent = eurRate;
+    })
+    .catch(error => console.error('Ошибка при загрузке данных:', error));
+</script>
+
+<!-- AI_INJECT_END -->
+</div>
     </div>
 </div>
 
