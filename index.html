@@ -11,19 +11,33 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0a0a'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='60'>👑</text></svg>">
 
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; }
+        /* ЖЕСТКАЯ ФИКСАЦИЯ ЭКРАНА (чтобы ничего не съезжало) */
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: #050505; 
+            font-family: 'Segoe UI', sans-serif;
+            position: fixed; /* Блокирует скролл и свайпы */
+            top: 0; left: 0;
+        }
         
+        #app-frame {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            border: none; display: block;
+        }
+
         /* --- СТИЛИ ЗАСТАВКИ (SPLASH SCREEN) --- */
         #splash-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: #0a0a0a;
-            z-index: 9999999; /* Поверх всего */
+            z-index: 9999999;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: opacity 0.6s ease-out, visibility 0.6s;
+            transition: opacity 0.8s ease-out, visibility 0.8s;
         }
         
         #splash-screen.hidden {
@@ -88,13 +102,6 @@
         }
 
         /* --- СТИЛИ ПРИЛОЖЕНИЯ --- */
-        #app-frame {
-            width: 100vw;
-            height: 100vh;
-            border: none;
-            display: block;
-        }
-
         #control-panel {
             position: fixed;
             top: 10px;
@@ -107,20 +114,11 @@
         }
 
         #fab-trigger {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #1e1e1e;
-            border: 2px solid #ffd700;
-            color: #ffd700;
-            font-size: 18px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);
-            animation: pulse-ring 2s infinite;
-            transition: transform 0.2s;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #1e1e1e; border: 2px solid #ffd700; color: #ffd700;
+            font-size: 18px; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);
+            animation: pulse-ring 2s infinite; transition: transform 0.2s;
         }
 
         #fab-trigger:active { transform: scale(0.9); }
@@ -132,20 +130,11 @@
         }
 
         #fab-menu {
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            background: rgba(30, 30, 30, 0.95);
-            border: 1px solid #444;
-            border-radius: 16px;
-            padding: 15px;
-            width: 240px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            position: absolute;
-            top: 50px;
-            right: 0;
-            animation: slide-down 0.3s ease;
+            display: none; flex-direction: column; gap: 10px;
+            background: rgba(30, 30, 30, 0.95); border: 1px solid #444;
+            border-radius: 16px; padding: 15px; width: 240px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            position: absolute; top: 50px; right: 0; animation: slide-down 0.3s ease;
         }
 
         #fab-menu.open { display: flex; }
@@ -156,104 +145,40 @@
         }
 
         .fab-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 12px;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: flex-start;
+            padding: 12px; border-radius: 10px; border: none; cursor: pointer;
+            text-align: left; transition: all 0.2s;
         }
 
         .fab-btn:active { transform: scale(0.96); }
         .fab-btn .title { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
         .fab-btn .desc { font-size: 10px; opacity: 0.8; line-height: 1.3; }
 
-        .btn-backup {
-            background: rgba(0, 200, 100, 0.15);
-            color: #00ff88;
-            border: 1px solid rgba(0, 200, 100, 0.3);
-        }
+        .btn-backup { background: rgba(0, 200, 100, 0.15); color: #00ff88; border: 1px solid rgba(0, 200, 100, 0.3); }
+        .btn-rollback { background: rgba(255, 0, 85, 0.15); color: #ff4477; border: 1px solid rgba(255, 0, 85, 0.3); margin-top: 5px; }
 
-        .btn-rollback {
-            background: rgba(255, 0, 85, 0.15);
-            color: #ff4477;
-            border: 1px solid rgba(255, 0, 85, 0.3);
-            margin-top: 5px;
-        }
-
-        /* СТИЛИ ДЛЯ СЕЙФА */
-        #safe-lock-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #121212;
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 10px;
-        }
-
-        #safe-display {
-            width: 100%;
-            background: #000;
-            color: #00e5ff;
-            font-family: monospace;
-            font-size: 20px;
-            text-align: center;
-            padding: 8px 0;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            letter-spacing: 5px;
-            border: 1px solid #333;
-        }
-
-        .safe-keypad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-            width: 100%;
-        }
-
-        .safe-key {
-            background: #2a2a2a;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 0;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
+        #safe-lock-container { display: flex; flex-direction: column; align-items: center; background: #121212; border: 1px solid #333; border-radius: 12px; padding: 10px; }
+        #safe-display { width: 100%; background: #000; color: #00e5ff; font-family: monospace; font-size: 20px; text-align: center; padding: 8px 0; border-radius: 5px; margin-bottom: 10px; letter-spacing: 5px; border: 1px solid #333; }
+        .safe-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 100%; }
+        .safe-key { background: #2a2a2a; color: #fff; border: none; border-radius: 5px; padding: 10px 0; font-size: 16px; cursor: pointer; transition: background 0.2s; }
         .safe-key:active { background: #444; }
-        .safe-key.ok { background: #005662; color: #00e5ff; font-weight: bold; font-size: 12px;}
+        .safe-key.ok { background: #005662; color: #00e5ff; font-weight: bold; font-size: 12px; }
         .safe-key.clear { background: #662222; color: #ff8888; }
 
-        #save-action-container {
-            display: none;
-            animation: slide-down 0.3s ease;
-        }
-
-        #fab-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 99998;
-        }
+        #save-action-container { display: none; animation: slide-down 0.3s ease; }
+        #fab-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99998; }
         #fab-overlay.open { display: block; }
     </style>
 </head>
 <body>
-    <!-- ЗАСТАВКА ПРИ ЗАПУСКЕ -->
+    <!-- ЗАСТАВКА -->
     <div id="splash-screen">
         <div class="splash-logo">👑</div>
         <div class="splash-title">Цифровое Агентство</div>
         <div class="splash-loader-bar"></div>
     </div>
 
-    <!-- САМ ШТАБ -->
+    <!-- ШТАБ -->
     <iframe id="app-frame" src="app.html"></iframe>
 
     <div id="fab-overlay" onclick="toggleMenu()"></div>
@@ -302,17 +227,15 @@
         const appFrame = document.getElementById('app-frame');
         const splashScreen = document.getElementById('splash-screen');
         
-        // Логика скрытия заставки
         let appLoaded = false;
         let minTimePassed = false;
 
-        // Гарантируем, что заставка провисит хотя бы 1.5 секунды (для красоты)
+        // УВЕЛИЧИЛИ ВРЕМЯ ЗАСТАВКИ ДО 3000 МС (3 СЕКУНДЫ)
         setTimeout(() => {
             minTimePassed = true;
             hideSplashIfReady();
-        }, 1500);
+        }, 3000);
 
-        // Когда iframe (Штаб) загрузился
         appFrame.onload = () => {
             appLoaded = true;
             hideSplashIfReady();
@@ -324,16 +247,14 @@
             }
         }
 
-        // --- ЛОГИКА СЕЙФА ---
+        // --- СЕЙФ ---
         let safePin = "";
         const CORRECT_PIN = "8452"; 
 
         function toggleMenu() {
             fabMenu.classList.toggle('open');
             fabOverlay.classList.toggle('open');
-            if (fabMenu.classList.contains('open')) {
-                resetSafe();
-            }
+            if (fabMenu.classList.contains('open')) resetSafe();
         }
 
         function resetSafe() {
@@ -372,61 +293,40 @@
             }
         }
 
-        // --- ЛОГИКА БЭКАПА И ОТКАТА ---
+        // --- БЭКАП И ОТКАТ ---
         async function triggerBackup() {
             toggleMenu();
-            if (!confirm("💾 Сделать текущую версию Штаба новым эталоном? (Это перезапишет старый бэкап)")) return;
-
+            if (!confirm("💾 Сделать текущую версию Штаба новым эталоном?")) return;
             const btn = document.querySelector('.btn-backup');
             btn.innerHTML = '<span class="title">⏳ Сохранение...</span>';
-
             try {
-                const response = await fetch(PROXY, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ isBackup: true })
-                });
+                const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) });
                 const data = await response.json();
-                if (data.success) alert("✅ Текущая версия успешно сохранена как эталон!");
-                else throw new Error(data.error || "Неизвестная ошибка");
-            } catch (e) {
-                alert("❌ Ошибка сохранения: " + e.message);
-            } finally {
-                btn.innerHTML = '<span class="title">💾 Сохранить эталон</span><span class="desc">Сделать текущую версию Штаба базовой для отката.</span>';
-            }
+                if (data.success) alert("✅ Сохранено!");
+                else throw new Error(data.error);
+            } catch (e) { alert("❌ Ошибка: " + e.message); } 
+            finally { btn.innerHTML = '<span class="title">💾 Сохранить эталон</span><span class="desc">Сделать текущую версию базовой.</span>'; }
         }
 
         async function triggerRollback() {
             toggleMenu();
-            if (!confirm("⚠️ Вы уверены, что хотите откатить Штаб до предыдущей рабочей версии?")) return;
-
+            if (!confirm("⚠️ Откатить Штаб?")) return;
             const btn = document.querySelector('.btn-rollback');
             btn.innerHTML = '<span class="title">⏳ Откат...</span>';
-
             try {
-                const response = await fetch(PROXY, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ isRollback: true })
-                });
+                const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) });
                 const data = await response.json();
                 if (data.success) {
-                    alert("✅ Откат выполнен! Сайт сейчас перезагрузится.");
+                    alert("✅ Откат выполнен!");
                     appFrame.src = "app.html?v=" + Date.now(); 
-                } else {
-                    throw new Error(data.error || "Неизвестная ошибка");
-                }
-            } catch (e) {
-                alert("❌ Ошибка отката: " + e.message);
-            } finally {
-                btn.innerHTML = '<span class="title">⏪ Откатить Штаб</span><span class="desc">Вернуть Штаб к последней сохраненной версии.</span>';
-            }
+                } else throw new Error(data.error);
+            } catch (e) { alert("❌ Ошибка: " + e.message); } 
+            finally { btn.innerHTML = '<span class="title">⏪ Откатить Штаб</span><span class="desc">Вернуть к последней версии.</span>'; }
         }
 
-        // Регистрация PWA
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
         }
     </script>
 </body>
-    </html>
+</html>
