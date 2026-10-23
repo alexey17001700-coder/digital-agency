@@ -119,76 +119,7 @@
             <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
             <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
         </div>
-        <div class="modal-body" id="widgets-container">
-
-<!-- AI_INJECT_START -->
-
-<div id="currency-widget">
-  <p>Курс доллара: <span id="usd-rate"></span> руб.</p>
-  <p>Курс евро: <span id="eur-rate"></span> руб.</p>
-</div>
-
-<script>
-  fetch('https://www.cbr-xml-daily.ru/daily_json.js')
-    .then(response => response.json())
-    .then(data => {
-      const usdRate = data.Valute.USD.Value;
-      const eurRate = data.Valute.EUR.Value;
-
-      document.getElementById('usd-rate').textContent = usdRate.toFixed(2);
-      document.getElementById('eur-rate').textContent = eurRate.toFixed(2);
-    })
-    .catch(error => console.error('Ошибка при загрузке данных:', error));
-</script>
-
-<style>
-  #currency-widget {
-    background-color: #333;
-    color: #fff;
-    padding: 10px;
-    border-radius: 5px;
-  }
-</style>
-
-<!-- AI_INJECT_END -->
-
-
-<!-- AI_INJECT_START -->
-
-<button>Отправить</button>
-<p>Время: <span id="timer">00:00</span></p>
-<script>
-    let startTime;
-    let timerInterval;
-
-    document.querySelector('button').addEventListener('click', function() {
-        if (!startTime) {
-            startTime = new Date().getTime();
-            timerInterval = setInterval(updateTimer, 10);
-        }
-    });
-
-    function updateTimer() {
-        const currentTime = new Date().getTime();
-        const elapsedTime = currentTime - startTime;
-        const minutes = Math.floor(elapsedTime / 60000);
-        const seconds = Math.floor((elapsedTime % 60000) / 1000);
-        document.getElementById('timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-</script>
-
-<!-- AI_INJECT_END -->
-
-
-<!-- AI_INJECT_START -->
-
-<div id="gameContainer">
-    <h1>Welcome to Шаранутый космос: Wake-up</h1>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-</div>
-
-<!-- AI_INJECT_END -->
-</div>
+        <div class="modal-body" id="widgets-container"></div>
     </div>
 </div>
 
