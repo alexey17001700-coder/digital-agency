@@ -33,24 +33,22 @@
         .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
         .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
         @keyframes pulse { to { opacity: 0.3; } }
-
-        /* СТИЛИ ДЛЯ ТЕСТЕРА */
-        /* ИСПРАВЛЕННЫЕ СТИЛИ ДЛЯ ТЕСТЕРА (FIXED) */
-.tester-dropdown { 
-    display: none; 
-    position: fixed; /* Жестко привязываем к экрану */
-    top: 60px; /* Высота шапки */
-    right: 10px; 
-    background: #1e1e1e; 
-    border: 1px solid #ffd700; 
-    border-radius: 8px; 
-    padding: 15px; 
-    width: 250px; 
-    z-index: 9999; /* Поверх всего */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
-    font-size: 12px; 
-}
-.tester-dropdown.open { display: block; }
+                /* СТИЛИ ДЛЯ ТЕСТЕРА */
+        .tester-dropdown { 
+            display: none; 
+            position: fixed; 
+            top: 60px; 
+            right: 10px; 
+            background: #1e1e1e; 
+            border: 1px solid #ffd700; 
+            border-radius: 8px; 
+            padding: 15px; 
+            width: 250px; 
+            z-index: 9999; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+            font-size: 12px; 
+        }
+        .tester-dropdown.open { display: block; }
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
         .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
@@ -113,118 +111,115 @@
 </head>
 <body>
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h2 id="modalTitle">Агент</h2>
-                <button class="modal-close" onclick="closeModal()">✖</button>
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 id="modalTitle">Агент</h2>
+            <button class="modal-close" onclick="closeModal()">✖</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
+    <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
+        <div class="modal-header">
+            <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
+            <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
+        </div>
+        <div class="modal-body" id="widgets-container"></div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h2>📂 История чатов</h2>
+        <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
+    </div>
+    <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
+    <div class="chat-list" id="chatList"></div>
+</div>
+
+<div class="main-content">
+    <div class="top-bar">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <h1 id="currentChatTitle">Новый чат</h1>
+        
+        <div class="status-bar">
+            <div class="status-item" id="status-internet" title="Интернет"><span class="dot"></span> <span class="text">NET</span></div>
+            <div class="status-item" id="status-ai" title="Нейросеть"><span class="dot"></span> <span class="text">AI</span></div>
+            <div class="status-item" id="status-ping" title="Задержка"><span class="text">-- ms</span></div>
+            <div class="status-item" id="status-alarm" title="Тревога"><span class="dot"></span> <span class="text">ALARM</span></div>
+            <div class="status-item" id="btn-tester" style="cursor:pointer; border-color:#ffd700;" onclick="toggleTester()">📡 ТЕСТ</div>
+        </div>
+
+        <div class="radio-container">
+            <button class="radio-btn" onclick="toggleRadio()">📻</button>
+            <div class="radio-player" id="radioPlayer">
+                <select id="radioSelect" onchange="changeRadio()">
+                    <option value="https://ice1.somafm.com/groovesalad-128-mp3">SomaFM Groove Salad</option>
+                    <option value="https://ice1.somafm.com/dronezone-128-mp3">SomaFM Drone Zone</option>
+                    <option value="https://ice1.somafm.com/lush-128-mp3">SomaFM Lush</option>
+                    <option value="https://online.radiorecord.ru:8102/rr_128">Radio Record</option>
+                </select>
+                <audio id="radioAudio" controls></audio>
             </div>
-            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
-        <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
-            <div class="modal-header">
-                <h2 style="color: #ffd700;">📁 Добавленный Контент</h2>
-                <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
-            </div>
-            <div class="modal-body" id="widgets-container"></div>
-        </div>
+    <div class="tester-dropdown" id="testerMenu">
+        <div class="tester-title">🛠️ Статус соединений</div>
+        <div class="tester-item"><span>📶 Сеть:</span> <span id="t-wifi-type">--</span></div>
+        <div class="tester-item"><span>🌐 Интернет:</span> <span id="t-inet-status">--</span></div>
+        <div class="tester-item"><span>⚡ Пинг:</span> <span id="t-ping">--</span></div>
+        <div class="tester-item"><span>🐙 GitHub:</span> <span id="t-github">--</span></div>
+        <div class="tester-item"><span>🤖 ИИ Модель:</span> <span id="t-ai-model">--</span></div>
+        
+        <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
     </div>
 
-    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>📂 История чатов</h2>
-            <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
-        </div>
-        <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
-        <div class="chat-list" id="chatList"></div>
+    <div class="mode-switch">
+        <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
+        <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
+        <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
     </div>
 
-    <div class="main-content">
-        <div class="top-bar">
-            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-            <h1 id="currentChatTitle">Новый чат</h1>
-            
-            <div class="status-bar">
-                <div class="status-item" id="status-internet" title="Интернет"><span class="dot"></span> <span class="text">NET</span></div>
-                <div class="status-item" id="status-ai" title="Нейросеть"><span class="dot"></span> <span class="text">AI</span></div>
-                <div class="status-item" id="status-ping" title="Задержка"><span class="text">-- ms</span></div>
-                <div class="status-item" id="status-alarm" title="Тревога"><span class="dot"></span> <span class="text">ALARM</span></div>
-                <div class="status-item" id="btn-tester" style="cursor:pointer; border-color:#ffd700;" onclick="toggleTester()">📡 ТЕСТ</div>
-            </div>
+    <div class="chat-container" id="chatContainer"></div>
 
-            <div class="radio-container">
-                <button class="radio-btn" onclick="toggleRadio()">📻</button>
-                <div class="radio-player" id="radioPlayer">
-                    <select id="radioSelect" onchange="changeRadio()">
-                        <option value="https://ice1.somafm.com/groovesalad-128-mp3">SomaFM Groove Salad</option>
-                        <option value="https://ice1.somafm.com/dronezone-128-mp3">SomaFM Drone Zone</option>
-                        <option value="https://ice1.somafm.com/lush-128-mp3">SomaFM Lush</option>
-                        <option value="https://online.radiorecord.ru:8102/rr_128">Radio Record</option>
-                    </select>
-                    <audio id="radioAudio" controls></audio>
-                </div>
-            </div>
-        </div>
-
-        <!-- ВЫПАДАЮЩЕЕ МЕНЮ ТЕСТЕРА -->
-        <div class="tester-dropdown" id="testerMenu">
-            <div class="tester-title">🛠️ Статус соединений</div>
-            <div class="tester-item"><span>📶 Сеть:</span> <span id="t-wifi-type">--</span></div>
-            <div class="tester-item"><span>🌐 Интернет:</span> <span id="t-inet-status">--</span></div>
-            <div class="tester-item"><span>⚡ Пинг:</span> <span id="t-ping">--</span></div>
-            <div class="tester-item"><span>🐙 GitHub:</span> <span id="t-github">--</span></div>
-            <div class="tester-item"><span>🤖 ИИ Модель:</span> <span id="t-ai-model">--</span></div>
-            
-            <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
-        </div>
-
-        <div class="mode-switch">
-            <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
-            <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
-            <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
-        </div>
-
-        <div class="chat-container" id="chatContainer"></div>
-
-        <div class="input-area">
-            <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
-        </div>
-
+    <div class="input-area">
+        <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
         <div class="agents-wrapper">
-            <div class="agents-grid">
-                <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055;" onclick="showAgentInfo('Хакер')"><div class="agent-info"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Охранник" style="border-color: #f44336;" onclick="showAgentInfo('Охранник')"><div class="agent-info"><h4>🛡️ Охранник</h4><p>Закрывает</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff;" onclick="showAgentInfo('Исследователь')"><div class="agent-info"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff;" onclick="showAgentInfo('Планировщик')"><div class="agent-info"><h4>📅 Планировщик</h4><p>Планы</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff;" onclick="showAgentInfo('Аналитик')"><div class="agent-info"><h4>📊 Аналитик</h4><p>Цифры</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff;" onclick="showAgentInfo('Исполнитель')"><div class="agent-info"><h4>⚙️ Исполнитель</h4><p>Делает</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0;" onclick="showAgentInfo('Архитектор')"><div class="agent-info"><h4>📐 Архитектор</h4><p>Проект</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0;" onclick="showAgentInfo('Дизайнер')"><div class="agent-info"><h4>🎨 Дизайнер</h4><p>Визуал</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0;" onclick="showAgentInfo('Креативщик')"><div class="agent-info"><h4>💡 Креативщик</h4><p>Идеи</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Критик" style="border-color: #f44336;" onclick="showAgentInfo('Критик')"><div class="agent-info"><h4>🧐 Критик</h4><p>Качество</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336;" onclick="showAgentInfo('Тестировщик')"><div class="agent-info"><h4>🧪 Тестировщик</h4><p>Баги</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50;" onclick="showAgentInfo('Переводчик')"><div class="agent-info"><h4>🌐 Переводчик</h4><p>Языки</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50;" onclick="showAgentInfo('Методолог')"><div class="agent-info"><h4>📚 Методолог</h4><p>Инструкции</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50;" onclick="showAgentInfo('Юрист')"><div class="agent-info"><h4>⚖️ Юрист</h4><p>Законы</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50;" onclick="showAgentInfo('Маркетолог')"><div class="agent-info"><h4>📢 Маркетолог</h4><p>Продвижение</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50;" onclick="showAgentInfo('Техпис')"><div class="agent-info"><h4>✍️ Техпис</h4><p>Документация</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3;" onclick="showAgentInfo('Фронтенд')"><div class="agent-info"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3;" onclick="showAgentInfo('Бэкенд')"><div class="agent-info"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3;" onclick="showAgentInfo('Мобильный')"><div class="agent-info"><h4>📱 Мобильный</h4><p>Приложения</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3;" onclick="showAgentInfo('DevOps')"><div class="agent-info"><h4>🚀 DevOps</h4><p>Деплой</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800;" onclick="showAgentInfo('Универсал')"><div class="agent-info"><h4>🧠 Универсал</h4><p>Знает всё</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800;" onclick="showAgentInfo('Приемная')"><div class="agent-info"><h4>🏛️ Приемная</h4><p>Проверка</p></div><div class="status-dot"></div></div>
-                <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
-            </div>
+        <div class="agents-grid">
+            <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700;" onclick="showAgentInfo('Оркестратор')"><div class="agent-info"><h4>👑 Оркестратор</h4><p>Управляет</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055;" onclick="showAgentInfo('Хакер')"><div class="agent-info"><h4>🕵️ Хакер</h4><p>Ищет дыры</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Охранник" style="border-color: #f44336;" onclick="showAgentInfo('Охранник')"><div class="agent-info"><h4>🛡️ Охранник</h4><p>Закрывает</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff;" onclick="showAgentInfo('Исследователь')"><div class="agent-info"><h4>🔍 Исследователь</h4><p>Ищет инфо</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff;" onclick="showAgentInfo('Планировщик')"><div class="agent-info"><h4>📅 Планировщик</h4><p>Планы</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff;" onclick="showAgentInfo('Аналитик')"><div class="agent-info"><h4>📊 Аналитик</h4><p>Цифры</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff;" onclick="showAgentInfo('Исполнитель')"><div class="agent-info"><h4>⚙️ Исполнитель</h4><p>Делает</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0;" onclick="showAgentInfo('Архитектор')"><div class="agent-info"><h4>📐 Архитектор</h4><p>Проект</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0;" onclick="showAgentInfo('Дизайнер')"><div class="agent-info"><h4>🎨 Дизайнер</h4><p>Визуал</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0;" onclick="showAgentInfo('Креативщик')"><div class="agent-info"><h4>💡 Креативщик</h4><p>Идеи</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Критик" style="border-color: #f44336;" onclick="showAgentInfo('Критик')"><div class="agent-info"><h4>🧐 Критик</h4><p>Качество</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336;" onclick="showAgentInfo('Тестировщик')"><div class="agent-info"><h4>🧪 Тестировщик</h4><p>Баги</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50;" onclick="showAgentInfo('Переводчик')"><div class="agent-info"><h4>🌐 Переводчик</h4><p>Языки</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50;" onclick="showAgentInfo('Методолог')"><div class="agent-info"><h4>📚 Методолог</h4><p>Инструкции</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50;" onclick="showAgentInfo('Юрист')"><div class="agent-info"><h4>⚖️ Юрист</h4><p>Законы</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50;" onclick="showAgentInfo('Маркетолог')"><div class="agent-info"><h4>📢 Маркетолог</h4><p>Продвижение</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50;" onclick="showAgentInfo('Техпис')"><div class="agent-info"><h4>✍️ Техпис</h4><p>Документация</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3;" onclick="showAgentInfo('Фронтенд')"><div class="agent-info"><h4>🖥️ Фронтенд</h4><p>Интерфейс</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3;" onclick="showAgentInfo('Бэкенд')"><div class="agent-info"><h4>🗄️ Бэкенд</h4><p>Сервер</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3;" onclick="showAgentInfo('Мобильный')"><div class="agent-info"><h4>📱 Мобильный</h4><p>Приложения</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3;" onclick="showAgentInfo('DevOps')"><div class="agent-info"><h4>🚀 DevOps</h4><p>Деплой</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800;" onclick="showAgentInfo('Универсал')"><div class="agent-info"><h4>🧠 Универсал</h4><p>Знает всё</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800;" onclick="showAgentInfo('Приемная')"><div class="agent-info"><h4>🏛️ Приемная</h4><p>Проверка</p></div><div class="status-dot"></div></div>
+            <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
         </div>
     </div>
-
+</div>
     <script>
         // Защита от падения, если библиотека marked не загрузилась
         if (typeof marked === 'undefined') {
@@ -232,6 +227,7 @@
             window.marked = { parse: function(text) { return text.replace(/\n/g, '<br>'); } };
         }
 
+        // ТВОЯ ССЫЛКА НА ЯНДЕКС:
         const PROXY = "https://functions.yandexcloud.net/d4e23q4ie5a8ubg4rn8d";
         let currentMode = 'normal';
         
@@ -364,7 +360,6 @@
         }
 
         async function runConnectionTest() {
-            // 1. Тип сети
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             let netType = "Неизвестно";
             if (conn) {
@@ -375,7 +370,6 @@
             }
             document.getElementById('t-wifi-type').innerText = netType;
 
-            // 2. Интернет и Пинг
             const inetEl = document.getElementById('t-inet-status');
             const pingEl = document.getElementById('t-ping');
             inetEl.innerText = "Проверка...";
@@ -396,7 +390,6 @@
                 pingEl.style.color = "#ff0000";
             }
 
-            // 3. GitHub
             const ghEl = document.getElementById('t-github');
             ghEl.innerText = "Проверка...";
             try {
@@ -410,7 +403,6 @@
                 ghEl.style.color = "#ff0000";
             }
 
-            // 4. ИИ Модель
             document.getElementById('t-ai-model').innerText = "deepseek-chat";
         }
 
@@ -452,8 +444,7 @@
                 console.warn("Память браузера переполнена!");
             }
         }
-        
-        function renderChatList() {
+                function renderChatList() {
             chatListEl.innerHTML = '';
             const sortedIds = Object.keys(allChats).sort((a, b) => {
                 if (allChats[a].pinned && !allChats[b].pinned) return -1;
@@ -588,7 +579,7 @@
             addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
             setAlarm(true); 
             try {
-                const response = await fetch(PROXY + "/update-code", {
+                const response = await fetch(PROXY, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ code: newCode })
@@ -660,7 +651,7 @@
                 try {
                     const messagesToSend = allChats[currentChatId] ? allChats[currentChatId].messages : [{role: "user", content: text}];
 
-                    const response = await fetch(PROXY + "/api/v1/chat/completions", {
+                    const response = await fetch(PROXY, { 
                         method: "POST", 
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ 
