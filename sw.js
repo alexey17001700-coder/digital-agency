@@ -1,3 +1,11 @@
-self.addEventListener('fetch', function(event) {
-    // Заглушка, которая разрешает установку PWA
+self.addEventListener('install', (e) => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (e) => {
+    return self.clients.claim();
+});
+
+self.addEventListener('fetch', (e) => {
+    // Заглушка для PWA
 });
