@@ -694,8 +694,29 @@
         }
         
         function init() {
-            if (!currentChatId || !allChats[currentChatId]) { createNewChat(true); } else { loadChat(currentChatId); }
-            renderChatList(); updateNetStatus();
+    const chatIds = Object.keys(allChats);
+    
+    if (!currentChatId || !allChats[currentChatId]) {
+        // Если текущего чата нет, но есть другие чаты в памяти
+        if (chatIds.length > 0) {
+            // Берем самый первый (или закрепленный) чат из списка
+            const sortedIds = chatIds.sort((a, b) => {
+                if (allChats[a].pinned && !allChats[b].pinned) return -1;
+                if (!allChats[a].pinned && allChats[b].pinned) return 1;
+                return b.localeCompare(a);
+            });
+            currentChatId = sortedIds[0];
+            loadChat(currentChatId);
+        } else {
+            // Если чатов вообще нет, создаем один (первый запуск)
+            createNewChat(true);
+        }
+    } else {
+        // Если текущий чат есть, просто загружаем его
+        loadChat(currentChatId);
+    }
+    renderChatList(); 
+    updateNetStatus();
         }
         
         init();
