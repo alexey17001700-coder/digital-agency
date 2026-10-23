@@ -53,6 +53,13 @@
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
         .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
 
+        .radio-container { position: relative; flex-shrink: 0; }
+        .radio-btn { background: #333; border: none; color: #fff; font-size: 16px; padding: 4px 8px; border-radius: 5px; cursor: pointer; display: block; }
+        .radio-player { display: none; position: absolute; right: 0; top: 35px; background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 220px; z-index: 101; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .radio-player.open { display: block; }
+        .radio-player select { width: 100%; padding: 8px; margin-bottom: 10px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 5px; }
+        .radio-player audio { width: 100%; }
+
         .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
@@ -146,6 +153,19 @@
             <div class="status-item" id="status-alarm" title="Тревога"><span class="dot"></span> <span class="text">ALARM</span></div>
             <div class="status-item" id="btn-tester" style="cursor:pointer; border-color:#ffd700;" onclick="toggleTester()">📡 ТЕСТ</div>
         </div>
+
+        <div class="radio-container">
+            <button class="radio-btn" onclick="toggleRadio()">📻</button>
+            <div class="radio-player" id="radioPlayer">
+                <select id="radioSelect" onchange="changeRadio()">
+                    <option value="https://ice1.somafm.com/groovesalad-128-mp3">SomaFM Groove Salad</option>
+                    <option value="https://ice1.somafm.com/dronezone-128-mp3">SomaFM Drone Zone</option>
+                    <option value="https://ice1.somafm.com/lush-128-mp3">SomaFM Lush</option>
+                    <option value="https://online.radiorecord.ru:8102/rr_128">Radio Record</option>
+                </select>
+                <audio id="radioAudio" controls></audio>
+            </div>
+        </div>
     </div>
 
     <div class="tester-dropdown" id="testerMenu">
@@ -164,6 +184,7 @@
         <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
         <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
         <button class="mode-btn" id="btnAuto" onclick="toggleAutoMode()">⚡ Авто: ВЫКЛ</button>
+        <button class="mode-btn" style="background: #662222; color: #ff8888;" onclick="rollbackCode()">⏪ Откат</button>
     </div>
 
     <div class="chat-container" id="chatContainer"></div>
@@ -389,6 +410,14 @@
         }
 
         // --- ОСТАЛЬНАЯ ЛОГИКА (UI) ---
+        function toggleRadio() { document.getElementById('radioPlayer').classList.toggle('open'); }
+        function changeRadio() {
+            const select = document.getElementById('radioSelect');
+            const audio = document.getElementById('radioAudio');
+            audio.src = select.value; audio.load();
+            audio.play().catch(e => console.log("Автовоспроизведение заблокировано"));
+        }
+
         function showAgentInfo(name) {
             document.getElementById('modalTitle').innerText = name;
             document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
@@ -543,7 +572,7 @@
             saveAll();
         }
 
-        // --- АВТО-РЕЖИМ ---
+        // --- АВТО-РЕЖИМ И ОТКАТ ---
         function toggleAutoMode() {
             isAutoMode = !isAutoMode;
             const btn = document.getElementById('btnAuto');
@@ -555,6 +584,12 @@
                 btn.innerText = "⚡ Авто: ВЫКЛ";
                 btn.style.background = "#333";
                 btn.style.color = "#aaa";
+            }
+        }
+
+        async function rollbackCode() {
+            if (confirm("⚠️ Вы уверены, что хотите откатить Штаб до предыдущей рабочей версии?")) {
+                await applyCodeToGitHub(null, true);
             }
         }
 
@@ -571,6 +606,9 @@
                 const data = await response.json();
                 if (data.success) {
                     addMessage(`✅ DevOps: Успешно! Перезагрузите страницу.`, 'director');
+                    if (isRollback && window.parent) {
+                        window.parent.location.reload(); // Перезагружаем всю страницу, если это откат
+                    }
                 } else {
                     addMessage("❌ DevOps: Ошибка. " + JSON.stringify(data.error), 'director');
                 }
