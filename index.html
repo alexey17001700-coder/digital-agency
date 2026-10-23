@@ -126,14 +126,7 @@
             <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
             <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
         </div>
-        <div class="modal-body" id="widgets-container">
-
-<!-- AI_INJECT_START -->
-
-<button id="test-button">Нажми меня</button>
-
-<!-- AI_INJECT_END -->
-</div>
+        <div class="modal-body" id="widgets-container"></div>
     </div>
 </div>
 
@@ -190,6 +183,8 @@
         <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
         <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
         <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
+        <!-- НОВАЯ КНОПКА ОТКАТА -->
+        <button class="mode-btn" style="background: #662222; color: #ff8888;" onclick="rollbackCode()">⏪ Откат</button>
     </div>
 
     <div class="chat-container" id="chatContainer"></div>
@@ -234,7 +229,7 @@
             window.marked = { parse: function(text) { return text.replace(/\n/g, '<br>'); } };
         }
 
-        // ТВОЯ ССЫЛКА НА ЯНДЕКС:
+        // ССЫЛКА НА ФУНКЦИЮ ЯНДЕКСА (ID функции d4e...)
         const PROXY = "https://functions.yandexcloud.net/d4e23q4ie5a8ubg4rn8d";
         let currentMode = 'normal';
         
@@ -410,7 +405,7 @@
                 ghEl.style.color = "#ff0000";
             }
 
-            document.getElementById('t-ai-model').innerText = "deepseek-chat";
+            document.getElementById('t-ai-model').innerText = "yandexgpt";
         }
 
         // --- ОСТАЛЬНАЯ ЛОГИКА (UI) ---
@@ -477,17 +472,11 @@
 
         function createNewChat(force = false) {
             const chatCount = Object.keys(allChats).length;
-
             if (chatCount >= 10 && !force) {
-                if (confirm("⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?")) {
-                    toggleSidebar();
-                }
+                if (confirm("⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?")) { toggleSidebar(); }
                 return;
             }
-
-            if (chatCount === 9 && !force) {
-                alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит. Следующий раз потребует удаления старого.");
-            }
+            if (chatCount === 9 && !force) { alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит. Следующий раз потребует удаления старого."); }
 
             const id = 'chat_' + Date.now();
             allChats[id] = { id: id, title: "Новый чат", pinned: false, messages: [{ role: "system", content: SYSTEM_PROMPT }] };
@@ -516,13 +505,14 @@
                 text = text.replace(statusRegex, '').trim();
                 try { div.innerHTML = marked.parse(text); } catch(e) { div.innerText = text; }
                 
-                const codeRegex = /```html([\s\S]*?)```/;
+                // Универсальный поиск кода (в том числе без слова html)
+                const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
                 const codeMatch = codeRegex.exec(text);
                 if (codeMatch) {
                     const codeToApply = codeMatch[1];
                     const applyBtn = document.createElement('button');
                     applyBtn.className = 'apply-code-btn'; applyBtn.innerText = '⚡ Внедрить код';
-                    applyBtn.onclick = () => applyCodeToGitHub(codeToApply);
+                    applyBtn.onclick = () => applyCodeToGitHub(codeToApply, false);
                     div.appendChild(applyBtn);
                 }
             } else { div.innerText = text; }
@@ -582,8 +572,20 @@
             saveAll();
         }
 
-        async function applyCodeToGitHub(newCode) {
-            addMessage("🛠️ DevOps: Внедряю новый код в GitHub...", 'director');
+        // --- МАШИНА ВРЕМЕНИ (ОТКАТ) ---
+        async function rollbackCode() {
+            const backup = localStorage.getItem('shtab_backup_code');
+            if (!backup) {
+                alert("Нет сохраненной версии для отката!");
+                return;
+            }
+            if (confirm("⚠️ Вы уверены, что хотите откатить Штаб до предыдущей рабочей версии?")) {
+                await applyCodeToGitHub(backup, true);
+            }
+        }
+
+        async function applyCodeToGitHub(newCode, isRollback = false) {
+            addMessage(`🛠️ DevOps: ${isRollback ? 'Откатываю' : 'Внедряю'} код в GitHub...`, 'director');
             setAlarm(true); 
             try {
                 const response = await fetch(PROXY, {
@@ -593,7 +595,11 @@
                 });
                 const data = await response.json();
                 if (data.success) {
-                    addMessage("✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.", 'director');
+                    if (!isRollback && data.oldCode) {
+                        // Сохраняем текущий код в бэкап ПЕРЕД тем, как Яндекс его перезапишет
+                        localStorage.setItem('shtab_backup_code', data.oldCode);
+                    }
+                    addMessage(`✅ DevOps: Код успешно обновлен! Перезагрузите страницу через 10 секунд.`, 'director');
                 } else {
                     addMessage("❌ DevOps: Ошибка обновления. " + JSON.stringify(data.error), 'director');
                 }
@@ -622,16 +628,10 @@
             const text = input.value.trim();
             if (!text) return;
             
-            input.value = ''; 
-            sendBtn.disabled = true; 
-            sendBtn.innerText = "...";
+            input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
             playSound('send'); 
             
-            try {
-                addMessage(text, 'boss');
-            } catch (e) {
-                console.error("Ошибка добавления:", e);
-            }
+            try { addMessage(text, 'boss'); } catch (e) { console.error("Ошибка добавления:", e); }
             
             resetAllStatuses();
             updateAgentStatus('Оркестратор', 'busy');
@@ -640,10 +640,7 @@
             const TIMEOUT_MS = 90000; 
 
             if (!navigator.onLine) {
-                setTimeout(() => {
-                    elAi.className = 'status-item offline';
-                    runOfflineAgents(text);
-                }, 1000);
+                setTimeout(() => { elAi.className = 'status-item offline'; runOfflineAgents(text); }, 1000);
                 return;
             }
 
@@ -662,7 +659,6 @@
                         method: "POST", 
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ 
-                            model: "gpt://d4e23q4ie5a8ubg4rn8d/yandexgpt/latest",
                             messages: messagesToSend,
                             temperature: 0.7 
                         }),
@@ -671,7 +667,7 @@
                     
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
-                        lastError = `DeepSeek упал. Статус: ${response.status}. ${JSON.stringify(errorData)}`;
+                        lastError = `Яндекс упал. Статус: ${response.status}. ${JSON.stringify(errorData)}`;
                     } else {
                         const data = await response.json();
                         if (data.choices && data.choices.length > 0) {
@@ -681,7 +677,7 @@
                     }
                 } catch (e) {
                     if (e.name === 'AbortError') throw e; 
-                    lastError = `Сбой сети DeepSeek: ${e.message}`;
+                    lastError = `Сбой сети: ${e.message}`;
                 }
 
                 clearTimeout(timeoutId);
@@ -709,11 +705,8 @@
             } catch (e) { 
                 clearTimeout(timeoutId);
                 elAi.className = 'status-item offline';
-                if (e.name === 'AbortError') {
-                    addMessage(`❌ **Критическая ошибка:** ИИ думал слишком долго (таймаут).`, 'director');
-                } else {
-                    addMessage(`❌ **Критическая ошибка:** ${e.message}`, 'director');
-                }
+                if (e.name === 'AbortError') { addMessage(`❌ **Критическая ошибка:** ИИ думал слишком долго (таймаут).`, 'director'); }
+                else { addMessage(`❌ **Критическая ошибка:** ${e.message}`, 'director'); }
                 runOfflineAgents(text);
             }
         }
