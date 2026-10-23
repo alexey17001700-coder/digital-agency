@@ -141,7 +141,66 @@
             <h2 style="color: #ffd700;">📁 Добавленный контент</h2>
             <button class="modal-close" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
         </div>
-        <div class="modal-body" id="widgets-container"></div>
+        <div class="modal-body" id="widgets-container">
+
+<!-- AI_INJECT_START -->
+
+<div id="currency-widget">
+  <div class="header">
+    <h1>Курсы валют</h1>
+  </div>
+  <div class="content">
+    <ul>
+      <li>USD: <span id="usd-rate"></span></li>
+      <li>EUR: <span id="eur-rate"></span></li>
+      <li>BTC: <span id="btc-rate"></span></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  async function getCurrencyRates() {
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await response.json();
+    document.getElementById('usd-rate').textContent = data.rates.USD;
+    document.getElementById('eur-rate').textContent = data.rates.EUR;
+    // Пример для BTC, может потребоваться другая API для криптовалют
+    document.getElementById('btc-rate').textContent = 'N/A';
+  }
+  getCurrencyRates();
+</script>
+
+<style>
+  #currency-widget {
+    background-color: #222;
+    color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  .header {
+    padding: 20px;
+    background-color: #00e5ff;
+    color: #fff;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: 10px;
+  }
+</style>
+
+<!-- AI_INJECT_END -->
+</div>
     </div>
 </div>
 
