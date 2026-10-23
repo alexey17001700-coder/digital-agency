@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Штаб: Броня</title>
+    
+    <!-- ДОБАВИЛИ ДЛЯ PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00e5ff">
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/192/1f451.png">
+    <!-- КОНЕЦ БЛОКА PWA -->
+
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; }
         
-        /* Окно, в котором живет наш Штаб (app.html) */
         #app-frame {
             width: 100vw;
             height: 100vh;
@@ -15,7 +21,6 @@
             display: block;
         }
 
-        /* Контейнер для пульта управления (СВЕРХУ СПРАВА) */
         #control-panel {
             position: fixed;
             top: 10px;
@@ -27,7 +32,6 @@
             gap: 10px;
         }
 
-        /* Сама пульсирующая круглая кнопка (УМЕНЬШЕННАЯ) */
         #fab-trigger {
             width: 40px;
             height: 40px;
@@ -45,18 +49,14 @@
             transition: transform 0.2s;
         }
 
-        #fab-trigger:active {
-            transform: scale(0.9);
-        }
+        #fab-trigger:active { transform: scale(0.9); }
 
-        /* Анимация пульсации */
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
-        /* Выпадающее окно (ВЫПАДАЕТ ВНИЗ) */
         #fab-menu {
             display: none;
             flex-direction: column;
@@ -74,16 +74,13 @@
             animation: slide-down 0.3s ease;
         }
 
-        #fab-menu.open {
-            display: flex;
-        }
+        #fab-menu.open { display: flex; }
 
         @keyframes slide-down {
             from { transform: translateY(-10px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
 
-        /* Кнопки внутри меню */
         .fab-btn {
             display: flex;
             flex-direction: column;
@@ -96,56 +93,36 @@
             transition: all 0.2s;
         }
 
-        .fab-btn:active {
-            transform: scale(0.96);
-        }
+        .fab-btn:active { transform: scale(0.96); }
+        .fab-btn .title { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+        .fab-btn .desc { font-size: 10px; opacity: 0.8; line-height: 1.3; }
 
-        .fab-btn .title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .fab-btn .desc {
-            font-size: 10px;
-            opacity: 0.8;
-            line-height: 1.3;
-        }
-
-        /* Стили для кнопки Бэкапа */
         .btn-backup {
             background: rgba(0, 200, 100, 0.15);
             color: #00ff88;
             border: 1px solid rgba(0, 200, 100, 0.3);
         }
 
-        /* Стили для кнопки Отката */
         .btn-rollback {
             background: rgba(255, 0, 85, 0.15);
             color: #ff4477;
             border: 1px solid rgba(255, 0, 85, 0.3);
         }
 
-        /* Оверлей для закрытия меню по клику вне его */
         #fab-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 99998;
         }
-        #fab-overlay.open {
-            display: block;
-        }
+        #fab-overlay.open { display: block; }
     </style>
 </head>
 <body>
-    <!-- Загружаем сам Штаб внутрь этого окна -->
     <iframe id="app-frame" src="app.html"></iframe>
 
-    <!-- Затемняющий фон для закрытия меню -->
     <div id="fab-overlay" onclick="toggleMenu()"></div>
 
-    <!-- Пульт управления -->
     <div id="control-panel">
         <div id="fab-menu">
             <button class="fab-btn btn-backup" onclick="triggerBackup()">
@@ -173,10 +150,8 @@
         }
 
         async function triggerBackup() {
-            toggleMenu(); // Закрываем меню
-            if (!confirm("💾 Сделать текущую версию Штаба новым эталоном? (Это перезапишет старый бэкап)")) {
-                return;
-            }
+            toggleMenu();
+            if (!confirm("💾 Сделать текущую версию Штаба новым эталоном? (Это перезапишет старый бэкап)")) return;
 
             const btn = document.querySelector('.btn-backup');
             btn.innerHTML = '<span class="title">⏳ Сохранение...</span>';
@@ -188,12 +163,8 @@
                     body: JSON.stringify({ isBackup: true })
                 });
                 const data = await response.json();
-                
-                if (data.success) {
-                    alert("✅ Текущая версия успешно сохранена как эталон!");
-                } else {
-                    throw new Error(data.error || "Неизвестная ошибка");
-                }
+                if (data.success) alert("✅ Текущая версия успешно сохранена как эталон!");
+                else throw new Error(data.error || "Неизвестная ошибка");
             } catch (e) {
                 alert("❌ Ошибка сохранения: " + e.message);
             } finally {
@@ -202,10 +173,8 @@
         }
 
         async function triggerRollback() {
-            toggleMenu(); // Закрываем меню
-            if (!confirm("⚠️ Вы уверены, что хотите откатить Штаб до предыдущей рабочей версии?")) {
-                return;
-            }
+            toggleMenu();
+            if (!confirm("⚠️ Вы уверены, что хотите откатить Штаб до предыдущей рабочей версии?")) return;
 
             const btn = document.querySelector('.btn-rollback');
             btn.innerHTML = '<span class="title">⏳ Откат...</span>';
@@ -217,10 +186,9 @@
                     body: JSON.stringify({ isRollback: true })
                 });
                 const data = await response.json();
-                
                 if (data.success) {
                     alert("✅ Откат выполнен! Сайт сейчас перезагрузится.");
-                    appFrame.src = "app.html?v=" + Date.now(); // Принудительная перезагрузка iframe
+                    appFrame.src = "app.html?v=" + Date.now(); 
                 } else {
                     throw new Error(data.error || "Неизвестная ошибка");
                 }
@@ -229,6 +197,11 @@
             } finally {
                 btn.innerHTML = '<span class="title">⏪ Откатить Штаб</span><span class="desc">Вернуть Штаб к последней сохраненной версии.</span>';
             }
+        }
+
+        // РЕГИСТРАЦИЯ PWA (Service Worker)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
         }
     </script>
 </body>
