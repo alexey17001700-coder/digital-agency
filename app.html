@@ -34,20 +34,7 @@
         .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
         @keyframes pulse { to { opacity: 0.3; } }
                 /* СТИЛИ ДЛЯ ТЕСТЕРА */
-        .tester-dropdown { 
-            display: none; 
-            position: fixed; 
-            top: 60px; 
-            right: 10px; 
-            background: #1e1e1e; 
-            border: 1px solid #ffd700; 
-            border-radius: 8px; 
-            padding: 15px; 
-            width: 250px; 
-            z-index: 9999; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
-            font-size: 12px; 
-        }
+        .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
         .tester-dropdown.open { display: block; }
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
@@ -69,9 +56,44 @@
         .chat-msg pre { background: #1a1a1a; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px; }
         .chat-msg code { font-family: monospace; color: #00e5ff; }
         
-        .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; flex-shrink: 0; }
-        input[type="text"] { flex-grow: 1; padding: 10px; border-radius: 25px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; }
-        button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
+        /* СТИЛИ ДЛЯ ПОЛЯ ВВОДА (ТЕКСТАРЕА) */
+        .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+        
+        #chatInput { 
+            flex-grow: 1; 
+            padding: 10px 15px; 
+            border-radius: 20px; 
+            border: 1px solid #333; 
+            background: #1e1e1e; 
+            color: white; 
+            outline: none; 
+            resize: none; /* Запрещаем растягивать вручную */
+            max-height: 120px; /* Максимальная высота */
+            overflow-y: auto; 
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+
+        .send-btn-container { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        
+        /* Круглый моргающий бейдж с временем */
+        .time-badge {
+            position: absolute; top: -50px; right: 0; width: 38px; height: 38px;
+            background: #1e1e1e; color: #00e5ff; border: 2px solid #00e5ff;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 10px; font-weight: bold; font-family: monospace;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.5); z-index: 10;
+        }
+        .time-badge.show { opacity: 1; visibility: visible; animation: pulse-badge 1s infinite alternate; }
+        @keyframes pulse-badge {
+            0% { box-shadow: 0 0 5px rgba(0, 229, 255, 0.5); transform: scale(0.95); }
+            100% { box-shadow: 0 0 15px rgba(0, 229, 255, 1); transform: scale(1.05); }
+        }
+
+        button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; }
         button.send-btn:disabled { background: #555; }
 
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
@@ -103,7 +125,7 @@
     </style>
 </head>
 <body>
-<div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
+    <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div class="modal-header">
             <h2 id="modalTitle">Агент</h2>
@@ -169,8 +191,14 @@
     <div class="chat-container" id="chatContainer"></div>
 
     <div class="input-area">
-        <input type="text" id="chatInput" placeholder="Написать задачу..." onkeypress="if(event.key==='Enter')sendMessage()">
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        <!-- НОВОЕ ПОЛЕ ВВОДА (TEXTAREA) -->
+        <textarea id="chatInput" placeholder="Написать задачу..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+        
+        <!-- КОНТЕЙНЕР ДЛЯ КНОПКИ И БЕЙДЖА ВРЕМЕНИ -->
+        <div class="send-btn-container">
+            <div id="final-time-badge" class="time-badge">0.0s</div>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
     </div>
         <div class="agents-wrapper">
         <div class="agents-grid">
@@ -200,8 +228,8 @@
             <div class="agent-card" id="agent-Результат" style="border-color: #ff9800;" onclick="showAgentInfo('Результат')"><div class="agent-info"><h4>🏆 Результат</h4><p>Финал</p></div><div class="status-dot"></div></div>
         </div>
     </div>
-    </div>
-        <script>
+</div>
+    <script>
         // Защита от падения, если библиотека marked не загрузилась
         if (typeof marked === 'undefined') {
             console.warn("Библиотека marked не загружена. Используем базовый вывод.");
@@ -229,6 +257,7 @@
         const chatListEl = document.getElementById('chatList');
         const sendBtn = document.getElementById('sendBtn');
         const chatTitleEl = document.getElementById('currentChatTitle');
+        const chatInputEl = document.getElementById('chatInput'); // Наше новое поле textarea
 
         const elNet = document.getElementById('status-internet');
         const elAi = document.getElementById('status-ai');
@@ -265,19 +294,23 @@
             "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект и передает Боссу."
         };
 
-        const SYSTEM_PROMPT = `Ты - Управляющий ИИ Цифрового Агентства. Твоя задача - выполнять задачи Босса.
-Если Босс просит НАПИСАТЬ КОД (кнопку, скрипт, стили):
-1. Оркестратор: принять задачу и передать.
-2. Архитектор: продумать структуру.
-3. Фронтенд: написать HTML-код в блоке \`\`\`html ... \`\`\`.
-4. Тестировщик: проверить код.
-5. Результат: доложить.
-ВАЖНО: Пиши ТОЛЬКО фрагмент (без <!DOCTYPE html>, <html>, <body>), чтобы Босс мог внедрить его.
+        // НОВЫЙ УМНЫЙ ПРОМПТ С РОЛЯМИ
+        const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
 
-Если Босс просит "очистить историю чатов" или "удалить все чаты", напиши короткий ответ и добавь в конец скрытую команду: [CMD:CLEAR_CHATS]
-Если Босс просит "очистить контент", "удалить виджеты" или "убрать мусор", напиши ответ и добавь: [CMD:CLEAR_CONTENT]
+ПРАВИЛА КОМАНДЫ:
+1. 🎨 Дизайнер (UI/UX Pro): Отвечает за эстетику. Ты ненавидишь дефолтные HTML-стили. Ты всегда делаешь темную тему (Dark Mode), используешь неоновые акценты (#00e5ff, #ffd700), плавные скругления (border-radius), красивые тени (box-shadow) и современные шрифты. Все стили пиши строго внутри <style> и привязывай к ID виджета, чтобы не сломать сайт.
+2. 🖥️ Фронтенд (Senior Dev): Пишет чистый HTML и JS. Никакого мусора.
+3. 🔍 Исследователь: Если Босс спрашивает про погоду, курсы или новости — ОБЯЗАТЕЛЬНО вызывай функцию "search_web". Не говори, что не знаешь.
 
-В конце каждого сообщения пиши [Статус: ИмяАгента: busy].`;
+ФОРМАТ ОТВЕТА:
+- Если просят код: выдавай только блок \`\`\`html ... \`\`\` (без <!DOCTYPE html>, <html>, <body>). Код должен сразу выглядеть как готовый премиум-виджет.
+- Если задают вопрос: отвечай вежливо и по делу.
+
+СИСТЕМНЫЕ КОМАНДЫ:
+- "очистить чаты" -> добавь [CMD:CLEAR_CHATS]
+- "очистить контент" -> добавь [CMD:CLEAR_CONTENT]
+
+В конце сообщения пиши [Статус: ИмяАгента: busy].`;
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
@@ -418,7 +451,14 @@
                 console.warn("Память браузера переполнена!");
             }
         }
-                    function renderChatList() {
+
+        // --- АВТО-УВЕЛИЧЕНИЕ TEXTAREA ---
+        chatInputEl.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') this.style.height = 'auto';
+        });
+                function renderChatList() {
             chatListEl.innerHTML = '';
             const sortedIds = Object.keys(allChats).sort((a, b) => {
                 if (allChats[a].pinned && !allChats[b].pinned) return -1;
@@ -448,7 +488,7 @@
                 if (confirm("⚠️ Босс, достигнут лимит в 10 чатов!\n\nЧтобы создать новый, нужно удалить старые. Открыть историю для удаления?")) { toggleSidebar(); }
                 return;
             }
-            if (chatCount === 9 && !force) { alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит. Следующий раз потребует удаления старого."); }
+            if (chatCount === 9 && !force) { alert("⚠️ Внимание! Вы создаете 10-й чат. Это максимальный лимит."); }
 
             const id = 'chat_' + Date.now();
             allChats[id] = { id: id, title: "Новый чат", pinned: false, messages: [{ role: "system", content: SYSTEM_PROMPT }] };
@@ -479,7 +519,7 @@
                 
                 const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
                 const codeMatch = codeRegex.exec(text);
-                if (codeMatch && !isAutoMode) { // Если авто-режим выключен, показываем кнопку
+                if (codeMatch && !isAutoMode) {
                     const codeToApply = codeMatch[1];
                     const applyBtn = document.createElement('button');
                     applyBtn.className = 'apply-code-btn'; applyBtn.innerText = '⚡ Внедрить код';
@@ -543,7 +583,6 @@
             saveAll();
         }
 
-        // --- АВТО-РЕЖИМ ---
         function toggleAutoMode() {
             isAutoMode = !isAutoMode;
             const btn = document.getElementById('btnAuto');
@@ -581,7 +620,6 @@
             }
         }
 
-        // --- СИСТЕМНЫЕ КОМАНДЫ ---
         function clearAllChats() {
             const pinnedIds = [];
             for (let id in allChats) {
@@ -613,15 +651,36 @@
             setTimeout(() => {
                 updateAgentStatus('Охранник', 'free'); setAlarm(false);
                 sendBtn.disabled = false; sendBtn.innerText = "➤";
+                sendBtn.style.fontSize = "";
             }, 3000); 
         }
 
+        // Обработка нажатия Enter (Отправка) и Shift+Enter (Перенос строки)
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
         async function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
+            const text = chatInputEl.value.trim();
             if (!text) return;
             
-            input.value = ''; sendBtn.disabled = true; sendBtn.innerText = "...";
+            chatInputEl.value = ''; 
+            chatInputEl.style.height = 'auto'; // Сброс высоты textarea
+            sendBtn.disabled = true; 
+            
+            const timeBadge = document.getElementById('final-time-badge');
+            timeBadge.classList.remove('show'); 
+
+            let startTime = Date.now();
+            let timerInterval = setInterval(() => {
+                let elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                sendBtn.innerText = elapsed + "s";
+                sendBtn.style.fontSize = "12px"; 
+            }, 100);
+
             playSound('send'); 
             try { addMessage(text, 'boss'); } catch (e) {}
             
@@ -629,7 +688,7 @@
             elAi.className = 'status-item loading';
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000);
+            const timeoutId = setTimeout(() => controller.abort(), 90000); 
 
             try {
                 let success = false;
@@ -672,10 +731,8 @@
                     while ((match = statusRegex.exec(aiText)) !== null) { if (match[2] === 'busy') foundBusy = true; }
                     if (!foundBusy) resetAllStatuses();
                     
-                    sendBtn.disabled = false; sendBtn.innerText = "➤";
                     updateAgentStatus('Оркестратор', 'free');
 
-                    // АВТО-ВНЕДРЕНИЕ
                     if (!isCommand && isAutoMode) {
                         const codeRegex = /```(?:html|css|javascript|js)?([\s\S]*?)```/;
                         const codeMatch = codeRegex.exec(aiText);
@@ -690,12 +747,43 @@
                 if (e.name === 'AbortError') { addMessage(`❌ **Критическая ошибка:** ИИ думал слишком долго.`, 'director'); }
                 else { addMessage(`❌ **Критическая ошибка:** ${e.message}`, 'director'); }
                 runOfflineAgents(text);
+            } finally {
+                clearInterval(timerInterval); 
+                
+                let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                timeBadge.innerText = finalElapsed + "s";
+                timeBadge.classList.add('show'); 
+
+                setTimeout(() => {
+                    timeBadge.classList.remove('show');
+                }, 5000);
+
+                sendBtn.disabled = false; 
+                sendBtn.innerText = "➤";
+                sendBtn.style.fontSize = ""; 
             }
         }
         
         function init() {
-            if (!currentChatId || !allChats[currentChatId]) { createNewChat(true); } else { loadChat(currentChatId); }
-            renderChatList(); updateNetStatus();
+            const chatIds = Object.keys(allChats);
+            
+            if (!currentChatId || !allChats[currentChatId]) {
+                if (chatIds.length > 0) {
+                    const sortedIds = chatIds.sort((a, b) => {
+                        if (allChats[a].pinned && !allChats[b].pinned) return -1;
+                        if (!allChats[a].pinned && allChats[b].pinned) return 1;
+                        return b.localeCompare(a);
+                    });
+                    currentChatId = sortedIds[0];
+                    loadChat(currentChatId);
+                } else {
+                    createNewChat(true);
+                }
+            } else {
+                loadChat(currentChatId);
+            }
+            renderChatList(); 
+            updateNetStatus();
         }
         
         init();
