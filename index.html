@@ -175,10 +175,7 @@
 
         /* СТИЛИ ДЛЯ СЕЙФА */
         #safe-lock-container { display: flex; flex-direction: column; align-items: center; background: #121212; border: 1px solid #333; border-radius: 12px; padding: 10px; }
-        
-        /* Убрали (8452), оставили просто "Введите пин-код" */
         .safe-hint { font-size: 12px; color: #aaa; margin-bottom: 5px; }
-        
         #safe-display { width: 100%; background: #000; color: #00e5ff; font-family: monospace; font-size: 20px; text-align: center; padding: 8px 0; border-radius: 5px; margin-bottom: 10px; letter-spacing: 5px; border: 1px solid #333; }
         .safe-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 100%; }
         .safe-key { background: #2a2a2a; color: #fff; border: none; border-radius: 5px; padding: 10px 0; font-size: 16px; cursor: pointer; transition: background 0.2s; }
@@ -293,10 +290,11 @@
         let appLoaded = false;
         let minTimePassed = false;
 
+        // УВЕЛИЧИЛИ ВРЕМЯ ЗАСТАВКИ ДО 6000 МС (6 СЕКУНД)
         setTimeout(() => {
             minTimePassed = true;
             hideSplashIfReady();
-        }, 3000); // 3 секунды заставки
+        }, 6000); 
 
         appFrame.onload = () => {
             appLoaded = true;
@@ -306,13 +304,13 @@
         function hideSplashIfReady() {
             if (appLoaded && minTimePassed) {
                 splashScreen.classList.add('hidden');
-                clearInterval(matrixInterval); // Останавливаем Матрицу, чтобы не жрала батарейку
+                clearInterval(matrixInterval); // Останавливаем Матрицу
             }
         }
 
         // --- СЕЙФ ---
         let safePin = "";
-        const CORRECT_PIN = "8452"; // Код спрятан только здесь, в коде
+        const CORRECT_PIN = "8452"; 
 
         function toggleMenu() {
             fabMenu.classList.toggle('open');
@@ -392,4 +390,4 @@
         }
     </script>
 </body>
-        </html>
+</html>
