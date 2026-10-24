@@ -40,8 +40,7 @@
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
         .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
-        
-        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
+                .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px; }
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
@@ -63,22 +62,25 @@
         
         .share-btn { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; padding: 2px 6px; border-radius: 5px; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 5; }
         .chat-msg:hover .share-btn { opacity: 1; }
-                .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+        
+        .danger-link-badge { display: block; background: #440000; color: #ff0000; border: 1px solid #ff0000; padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px; font-weight: bold; animation: blink-red 1.5s infinite; }
+        @keyframes blink-red { 0%, 100% { background: #440000; } 50% { background: #880000; } }
+
+        .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
         #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; resize: none; max-height: 120px; overflow-y: auto; font-family: inherit; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
         
         .send-btn-container { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .time-badge { position: absolute; top: -50px; right: 0; width: 38px; height: 38px; background: #000; color: #00ff00; border: 2px solid #00ff00; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; font-family: monospace; opacity: 0; visibility: hidden; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); z-index: 10; }
         .time-badge.show { opacity: 1; visibility: visible; animation: pulse-badge 1s infinite alternate; }
         @keyframes pulse-badge { 0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); transform: scale(0.95); } 100% { box-shadow: 0 0 15px rgba(0, 255, 0, 1); transform: scale(1.05); } }
-        
         button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; color: #000; cursor: pointer; display: flex; justify-content: center; align-items: center; }
         button.send-btn:disabled { background: #555; }
         
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
         .overlay.active { display: block; }
         
-        /* ПУНКТ 3: Уменьшена видимость агентов (до ~4 штук) */
-        .agents-wrapper { background: #0a0a0a; padding: 10px 10px 40px 10px; border-top: 1px solid #333; flex-shrink: 0; max-height: 22vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        /* ИСПРАВЛЕННАЯ ВЫСОТА ДЛЯ 4 АГЕНТОВ */
+        .agents-wrapper { background: #0a0a0a; padding: 10px 10px 15px 10px; border-top: 1px solid #333; flex-shrink: 0; max-height: 135px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; cursor: pointer; position: relative; }
         .agent-card:active { transform: scale(0.98); }
@@ -90,7 +92,6 @@
         .status-dot.busy { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; }
         .status-dot.error { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
         
-        /* МУЛЬТИАГЕНТНАЯ СИСТЕМА (ПУНКТ 4) */
         .agent-card.selected { border-color: #00ff00 !important; background-color: #1a3a1a !important; box-shadow: 0 0 10px rgba(0, 255, 0, 0.4) !important; }
         .agent-status-text { font-size: 9px; font-weight: bold; text-transform: uppercase; margin-top: 2px; letter-spacing: 0.5px; transition: color 0.3s; }
         .status-thinking { color: #ffaa00; animation: pulse 1s infinite; }
@@ -98,17 +99,11 @@
         .status-busy { color: #ff0055; }
         .status-idle { color: #888; }
 
-        /* ЛАМПОЧКА ИДЕИ */
         .idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
         .agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
         .agent-card.has-idea { border-color: #ffd700 !important; background-color: #2a2a1a !important; }
         @keyframes blink-yellow { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
 
-        /* ПУНКТ 8: Плашка опасной ссылки */
-        .danger-link-badge { display: block; background: #440000; color: #ff0000; border: 1px solid #ff0000; padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px; font-weight: bold; animation: blink-red 1.5s infinite; }
-        @keyframes blink-red { 0%, 100% { background: #440000; } 50% { background: #880000; } }
-
-        /* МОДАЛКИ */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: #1e1e1e; border: 2px solid #00e5ff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); position: relative; animation: slideUp 0.3s ease; }
@@ -349,7 +344,7 @@
         const PROXY = "https://functions.yandexcloud.net/d4e23q4ie5a8ubg4rn8d";
         let currentMode = 'normal';
         let isAutoMode = false;
-        let selectedAgents = []; // ТЕПЕРЬ МАССИВ (Пункт 4)
+        let selectedAgents = []; // Массив выбранных агентов
         let isGenerating = false;
         let currentAbortController = null;
 
@@ -372,7 +367,7 @@
 
         const WELCOME_TEXT = "Здравствуй, Босс! 👑\n\nЯ — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
 
-        // Иконки для каждого агента (Пункт 5)
+        // Иконки для агентов
         const AGENT_ICONS = {
             "Оператор": "👑", "Хакер": "💀", "Охранник": "🛡️", "Исследователь": "🔍", "Планировщик": "📅",
             "Аналитик": "📊", "Исполнитель": "⚙️", "Архитектор": "📐", "Дизайнер": "🎨", "Креативщик": "💡",
@@ -408,7 +403,6 @@
             "Результат": "Упаковывает проект."
         };
 
-                // УМНЫЙ ПРОМПТ (Пункты 6, 7, 8)
         const SYSTEM_PROMPT = `Ты — Цифровое Агентство, управляемое Боссом.
 ПРАВИЛА ДИАЛОГА:
 1. Если в чате несколько агентов (Совет), КАЖДЫЙ агент пишет ответ С НОВОЙ СТРОКИ в строгом формате: [ИмяАгента]: Текст. 
@@ -466,7 +460,7 @@ function handleAgentClick(name) {
         return;
     }
 
-    // Мультивыбор (Пункт 4)
+    // Мультивыбор
     if (selectedAgents.includes(name)) {
         selectedAgents = selectedAgents.filter(a => a !== name);
         card.classList.remove('selected');
@@ -477,7 +471,7 @@ function handleAgentClick(name) {
     }
 }
 
-// Кнопка "Совет" (Пункт 4)
+// Кнопка "Совет"
 function toggleCouncil() {
     const btn = document.getElementById('btnCouncil');
     if (selectedAgents.length > 0) {
@@ -536,7 +530,7 @@ function createNewChat(force = false) {
     currentChatId = id; saveAll();
     chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
     allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT, agentName: 'Оператор' });
-    selectedAgents = []; // Сброс
+    selectedAgents = []; // Сброс выбора
     document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
     resetAllStatuses(); renderChatList(); toggleSidebar();
     loadChat(id);
@@ -577,20 +571,28 @@ function processDangerTags(text) {
         dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу в ссылке: ${match[1]}</div>`;
     }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
+    }
+            // ПУНКТ 2: Кнопка поделиться
+function shareMessage(text) {
+    if (navigator.share) {
+        navigator.share({ title: 'Цифровое Агентство', text: text }).catch(e => console.log(e));
+    } else {
+        navigator.clipboard.writeText(text).then(() => alert("Сообщение скопировано в буфер!"));
+    }
 }
 
 function renderMessage(text, sender, agentName = 'Оператор') {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
     
-    // Кнопка поделиться (ПУНКТ 2)
+    // Кнопка поделиться
     const shareBtn = document.createElement('button');
     shareBtn.className = 'share-btn';
     shareBtn.innerText = '📤';
     shareBtn.onclick = () => shareMessage(text);
     div.appendChild(shareBtn);
 
-    // Иконка и Имя агента (ПУНКТ 5)
+    // Иконка и Имя агента
     if (sender === 'director') {
         const header = document.createElement('div');
         header.className = 'msg-name';
@@ -603,7 +605,7 @@ function renderMessage(text, sender, agentName = 'Оператор') {
 
     try { 
         contentDiv.innerHTML = marked.parse(cleanText); 
-        contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); // ПУНКТ 8: Ссылки в новом окне
+        contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
     } catch(e) { contentDiv.innerText = cleanText; }
     
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
@@ -613,7 +615,7 @@ function renderMessage(text, sender, agentName = 'Оператор') {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// ПУНКТ 1 и 7: Печать без дублирования + диалог
+// ПУНКТ 1 и 5: Печать без дублирования и с иконкой
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
@@ -638,7 +640,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     const { cleanText, dangerBadges } = processDangerTags(fullText);
 
     let i = 0;
-    const totalTimeMs = Math.max(2000, cleanText.length * 25); // Скорость печати
+    const totalTimeMs = Math.max(2500, cleanText.length * 25); // Скорость печати
     const speed = totalTimeMs / cleanText.length;
 
     function type() {
@@ -658,16 +660,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     type();
             }
-            // ПУНКТ 2: Кнопка поделиться
-function shareMessage(text) {
-    if (navigator.share) {
-        navigator.share({ title: 'Цифровое Агентство', text: text }).catch(e => console.log(e));
-    } else {
-        navigator.clipboard.writeText(text).then(() => alert("Сообщение скопировано в буфер!"));
-    }
-}
-
-// ПУНКТ 7: Улучшенный парсер ответов агентов
+            // ПУНКТ 7: Улучшенный парсер ответов агентов
 function parseAgentReplies(text) {
     const lines = text.split('\n');
     let replies = [];
@@ -694,7 +687,7 @@ function parseAgentReplies(text) {
                 replies.push({ agent: currentAgent, text: currentText.join('\n').trim() });
             }
             currentAgent = foundAgent;
-            currentText = [match[2]]; // Начинаем собирать текст для нового агента
+            currentText = [match[2] || '']; // Начинаем собирать текст для нового агента
         } else {
             // Если это продолжение текста предыдущего агента
             if (currentAgent) {
@@ -719,12 +712,6 @@ function parseAgentReplies(text) {
     // Фильтруем пустые сообщения
     return replies.filter(r => r.text.length > 0);
 }
-    // Если формат не соблюден, значит отвечает один агент
-    if (matches.length === 0 && text.trim()) {
-        matches.push({ agent: selectedAgents.length === 1 ? selectedAgents[0] : 'Оператор', text: text.trim() });
-    }
-    return matches;
-}
 
 // ПУНКТ 5,7: Очередная печать агентов с паузами
 async function playAgentReplies(replies) {
@@ -732,18 +719,17 @@ async function playAgentReplies(replies) {
         setAgentStatus(reply.agent, 'typing');
         updateAgentStatus(reply.agent, 'busy');
         
-        // Ждем, пока текст напечатается полностью
+        // Ждем, пока текст напечатается полностью (Promise)
         await new Promise(resolve => {
             typeMessage(reply.text, 'director', reply.agent, resolve);
         });
         
         setAgentStatus(reply.agent, 'idle');
         updateAgentStatus(reply.agent, 'free');
-        await new Promise(r => setTimeout(r, 800)); // Пауза между агентами
+        await new Promise(r => setTimeout(r, 800)); // Пауза 0.8 сек между репликами агентов
     }
 }
-
-// ОТПРАВКА СООБЩЕНИЙ (ПУНКТ 1 - без дублирования)
+            // ОТПРАВКА СООБЩЕНИЙ (ПУНКТ 1 - без дублирования)
 async function sendMessage(overrideText = null) {
     if (isGenerating) {
         if (currentAbortController) currentAbortController.abort();
@@ -830,8 +816,10 @@ async function sendMessage(overrideText = null) {
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); clearAllChats(); isCommand = true; }
             if (aiText.includes('[CMD:CLEAR_CONTENT]')) { aiText = aiText.replace('[CMD:CLEAR_CONTENT]', '').trim(); clearAllContent(); isCommand = true; }
             
+            // Сохраняем в историю ДО печати, чтобы не было дублей
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оператор'));
             
+            // Запускаем печать с разбивкой по агентам
             const replies = parseAgentReplies(aiText);
             await playAgentReplies(replies);
 
@@ -853,74 +841,80 @@ async function sendMessage(overrideText = null) {
         sendBtn.style.background = "#00e5ff";
         sendBtn.style.color = "#000";
     }
-                    }
-                    function playSound(type) {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                if (type === 'send') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); }
-                else if (type === 'receive') { osc.type = 'triangle'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2); }
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-            } catch(e) {}
-        }
-
-        function updateNetStatus() {
-            if (navigator.onLine) { elNET.className = 'status-item online'; }
-            else { elNET.className = 'status-item offline'; pingText.innerText = 'OFFLINE'; }
-        }
-
-        window.addEventListener('online', updateNetStatus);
-        window.addEventListener('offline', updateNetStatus);
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
-            document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
-            if (mode === 'hacker') { 
-                if(allChats[currentChatId]) allChats[currentChatId].messages[0].content = "Ты — Этичный Хакер. Анализируй код, ищи уязвимости."; 
-            } else { 
-                if(allChats[currentChatId]) allChats[currentChatId].messages[0].content = SYSTEM_PROMPT; 
             }
-            saveAll();
-        }
+            function playSound(type) {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        if (type === 'send') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); }
+        else if (type === 'receive') { osc.type = 'triangle'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2); }
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } catch(e) {}
+}
 
-        function toggleAutoMode() {
-            isAutoMode = !isAutoMode;
-            const btn = document.getElementById('btnAuto');
-            if (isAutoMode) { btn.innerText = "⚡ Авто: ВКЛ"; btn.style.background = "#00FF00"; btn.style.color = "#000"; }
-            else { btn.innerText = "⚡ Авто: ВЫКЛ"; btn.style.background = "#333"; btn.style.color = "#aaa"; }
-        }
+function updateNetStatus() {
+    if (navigator.onLine) { elNET.className = 'status-item online'; }
+    else { elNET.className = 'status-item offline'; pingText.innerText = 'OFFLINE'; }
+}
 
-        function toggleTester() { document.getElementById('testerMenu').classList.toggle('open'); }
-        
-        async function runConnectionTest() {
-            const inetEl = document.getElementById('t-inet-status');
-            inetEl.innerText = "Проверка...";
-            try { await fetch('https://www.google.com/favicon.ico?' + Date.now(), { mode: 'no-cors' }); inetEl.innerText = "✅ Есть"; inetEl.style.color = "#00ff00"; } 
-            catch (e) { inetEl.innerText = "❌ Нет"; inetEl.style.color = "#ff0000"; }
-        }
+window.addEventListener('online', updateNetStatus);
+window.addEventListener('offline', updateNetStatus);
 
-        function clearAllChats() {
-            allChats = {};
-            createNewChat(true);
-            renderMessage("✅ История чатов очищена.", 'director', 'Оператор');
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
+    document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
+    
+    if (allChats[currentChatId] && allChats[currentChatId].messages[0]) {
+        if (mode === 'hacker') { 
+            allChats[currentChatId].messages[0].content = "Ты — Этичный Хакер. Анализируй код, ищи уязвимости."; 
+        } else { 
+            allChats[currentChatId].messages[0].content = SYSTEM_PROMPT; 
         }
+    }
+    saveAll();
+}
 
-        function clearAllContent() {
-            renderMessage("✅ Контент очищен.", 'director', 'Оператор');
-        }
+function toggleAutoMode() {
+    isAutoMode = !isAutoMode;
+    const btn = document.getElementById('btnAuto');
+    if (isAutoMode) { btn.innerText = "⚡ Авто: ВКЛ"; btn.style.background = "#00FF00"; btn.style.color = "#000"; }
+    else { btn.innerText = "⚡ Авто: ВЫКЛ"; btn.style.background = "#333"; btn.style.color = "#aaa"; }
+}
 
-        function clearContentFromButton() {
-            document.getElementById('contentModal').classList.remove('active');
-            clearAllContent();
-            setTimeout(() => { location.reload(); }, 1000);
-        }
+function toggleTester() { document.getElementById('testerMenu').classList.toggle('open'); }
 
-        function init() {
+async function runConnectionTest() {
+    const inetEl = document.getElementById('t-inet-status');
+    inetEl.innerText = "Проверка...";
+    try { 
+        await fetch('https://www.google.com/favicon.ico?' + Date.now(), { mode: 'no-cors' }); 
+        inetEl.innerText = "✅ Есть"; inetEl.style.color = "#00ff00"; 
+    } catch (e) { 
+        inetEl.innerText = "❌ Нет"; inetEl.style.color = "#ff0000"; 
+    }
+}
+
+function clearAllChats() {
+    allChats = {};
+    createNewChat(true);
+    renderMessage("✅ История чатов очищена.", 'director', 'Оператор');
+}
+
+function clearAllContent() {
+    renderMessage("✅ Контент очищен.", 'director', 'Оператор');
+}
+
+function clearContentFromButton() {
+    document.getElementById('contentModal').classList.remove('active');
+    clearAllContent();
+    setTimeout(() => { location.reload(); }, 1000);
+}
+                    function init() {
             const chatIds = Object.keys(allChats);
             if (!currentChatId || !allChats[currentChatId]) {
                 if (chatIds.length > 0) {
@@ -931,10 +925,21 @@ async function sendMessage(overrideText = null) {
                     });
                     currentChatId = sortedIds[0];
                     loadChat(currentChatId);
-                } else { createNewChat(true); }
-            } else { loadChat(currentChatId); }
+                } else { 
+                    createNewChat(true); 
+                }
+            } else { 
+                loadChat(currentChatId); 
+            }
             renderChatList();
             updateNetStatus();
+            
+            // Автоматическая настройка высоты textarea при вводе
+            chatInputEl.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if(this.value === '') this.style.height = 'auto';
+            });
         }
         
         init();
