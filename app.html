@@ -849,11 +849,21 @@ function parseAgentReplies(text) {
 
 async function playAgentReplies(replies) {
     for (let reply of replies) {
-        setAgentStatus(reply.agent, 'typing');
-        updateAgentStatus(reply.agent, 'busy');
-        await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
-        setAgentStatus(reply.agent, 'idle');
-        updateAgentStatus(reply.agent, 'free');
+        const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('working');
+        
+        if (!isTaskAgent) {
+            setAgentStatus(reply.agent, 'typing');
+            updateAgentStatus(reply.agent, 'busy');
+        }
+
+        await new Promise(resolve => { 
+            typeMessage(reply.text, 'director', reply.agent, resolve); 
+        });
+
+        if (!isTaskAgent) {
+            setAgentStatus(reply.agent, 'idle');
+            updateAgentStatus(reply.agent, 'free');
+        }
         await new Promise(r => setTimeout(r, 800)); 
     }
 }
@@ -966,7 +976,10 @@ async function runBackgroundTask(agentName, taskDescription) {
                     }
                     aiText = aiText.replace(taskRegex, '').trim();
                     
-                    tasksToRun.forEach(t => { runBackgroundTask(t.agent, t.task); });
+                    tasksToRun.forEach(t => { 
+    updateAgentStatus(t.agent, 'working'); 
+    runBackgroundTask(t.agent, t.task); 
+});
                     
                     addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
                     elAi.className = 'status-item online';
