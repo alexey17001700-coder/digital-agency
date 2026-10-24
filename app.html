@@ -408,14 +408,16 @@
             "Результат": "Упаковывает проект."
         };
 
-        // УМНЫЙ ПРОМПТ (Пункты 6, 7, 8)
+                // УМНЫЙ ПРОМПТ (Пункты 6, 7, 8)
         const SYSTEM_PROMPT = `Ты — Цифровое Агентство, управляемое Боссом.
 ПРАВИЛА ДИАЛОГА:
-1. Если Босс обращается к конкретному агенту или говорит "Всем привет", каждый агент должен ОТВЕТИТЬ САМОСТОЯТЕЛЬНО.
-2. ФОРМАТ ОТВЕТА: Если в чате несколько агентов (Совет), каждый агент пишет ответ С НОВОЙ СТРОКИ в формате [ИмяАгента]: Текст. Например:
+1. Если в чате несколько агентов (Совет), КАЖДЫЙ агент пишет ответ С НОВОЙ СТРОКИ в строгом формате: [ИмяАгента]: Текст. 
+ПРИМЕР:
 [Хакер]: Привет, Босс. Проверил систему, всё чисто.
 [Охранник]: Здравия желаю! Защита на уровне.
-3. ССЫЛКИ: Все ссылки должны быть кликабельными. Если агент находит опасную ссылку, он добавляет тег [DANGER:сама_ссылка] в конец своего сообщения. Это вызовет мигающую красную плашку.
+НИКОГДА не пиши ответ без указания имени в скобках, если это Совет. Не пиши за всех сразу — пиши отдельных персонажей.
+2. Если Босс обращается к конкретному агенту, отвечай строго от его лица.
+3. ССЫЛКИ: Все ссылки должны быть кликабельными. Если агент находит опасную ссылку, он добавляет тег [DANGER:сама_ссылка] в конец своего сообщения.
 4. Ты подчиняешься Боссу.`;
 
         function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
@@ -665,15 +667,58 @@ function shareMessage(text) {
     }
 }
 
-// ПУНКТ 7: Парсер ответов агентов (разбивает текст на реплики)
+// ПУНКТ 7: Улучшенный парсер ответов агентов
 function parseAgentReplies(text) {
-    // Ищем паттерн [ИмяАгента]: Текст
-    const regex = /(?:^|\n)\s*\[([^\]]+)\]:\s*([\s\S]*?)(?=(?:\n\s*\[[^\]]+\]:)|$)/g;
-    let matches = [];
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-        matches.push({ agent: match[1].trim(), text: match[2].trim() });
+    const lines = text.split('\n');
+    let replies = [];
+    let currentAgent = null;
+    let currentText = [];
+    const agentNames = Object.keys(AGENT_ICONS);
+
+    for (let line of lines) {
+        // Убираем markdown-звездочки для проверки
+        let cleanLine = line.replace(/\*\*/g, '').trim();
+        // Ищем паттерн: [Имя]: или Имя:
+        let match = cleanLine.match(/^\[?([А-Яа-яA-Za-z\s]+)\]?:\s*(.*)/);
+        
+        let foundAgent = null;
+        if (match) {
+            let possibleName = match[1].trim();
+            // Ищем совпадение в списке агентов (без учета регистра)
+            foundAgent = agentNames.find(a => a.toLowerCase() === possibleName.toLowerCase());
+        }
+
+        if (foundAgent) {
+            // Если нашли нового агента, сохраняем предыдущего
+            if (currentAgent && currentText.length > 0) {
+                replies.push({ agent: currentAgent, text: currentText.join('\n').trim() });
+            }
+            currentAgent = foundAgent;
+            currentText = [match[2]]; // Начинаем собирать текст для нового агента
+        } else {
+            // Если это продолжение текста предыдущего агента
+            if (currentAgent) {
+                currentText.push(line);
+            } else {
+                // Если это текст без заголовка вообще (в начале)
+                currentText.push(line);
+            }
+        }
     }
+    // Сохраняем последнего
+    if (currentAgent && currentText.length > 0) {
+        replies.push({ agent: currentAgent, text: currentText.join('\n').trim() });
+    }
+
+    // Если никого не нашли, отдаем ответ тому, кто выбран, или Оператору
+    if (replies.length === 0 && text.trim()) {
+        const fallbackAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оператор';
+        replies.push({ agent: fallbackAgent, text: text.trim() });
+    }
+    
+    // Фильтруем пустые сообщения
+    return replies.filter(r => r.text.length > 0);
+}
     // Если формат не соблюден, значит отвечает один агент
     if (matches.length === 0 && text.trim()) {
         matches.push({ agent: selectedAgents.length === 1 ? selectedAgents[0] : 'Оператор', text: text.trim() });
