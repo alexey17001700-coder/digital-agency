@@ -860,9 +860,9 @@ async function playAgentReplies(replies) {
             typeMessage(reply.text, 'director', reply.agent, resolve); 
         });
 
-        if (!isTaskAgent) {
-            setAgentStatus(reply.agent, 'idle');
-            updateAgentStatus(reply.agent, 'free');
+        if (!isTaskAgent && !document.getElementById('agent-' + reply.agent)?.classList.contains('working')) {
+    setAgentStatus(reply.agent, 'idle');
+    updateAgentStatus(reply.agent, 'free');
         }
         await new Promise(r => setTimeout(r, 800)); 
     }
