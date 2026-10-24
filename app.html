@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; touch-action: manipulation; }
+        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; touch-action: pan-y; }
         .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
         .sidebar.open { transform: translateX(0); }
         .sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
@@ -40,13 +40,13 @@
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
         .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
-                .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
+        
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px; }
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
-        
-        .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text !important; -webkit-user-select: text !important; position: relative; }
+                .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
+        .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; -webkit-user-select: text; touch-action: pan-y; position: relative; }
         .msg-director { background: #2e3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
         
@@ -65,6 +65,12 @@
         
         .danger-link-badge { display: block; background: #440000; color: #ff0000; border: 1px solid #ff0000; padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px; font-weight: bold; animation: blink-red 1.5s infinite; }
         @keyframes blink-red { 0%, 100% { background: #440000; } 50% { background: #880000; } }
+
+        /* МЕДИА В ЧАТЕ */
+        .chat-media { max-width: 100%; border-radius: 8px; margin-top: 8px; display: block; }
+        .chat-audio { width: 100%; margin-top: 8px; display: block; }
+        .chat-video-container { position: relative; width: 100%; padding-bottom: 56.25%; margin-top: 8px; border-radius: 8px; overflow: hidden; background: #000; }
+        .chat-video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
         .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
         #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; resize: none; max-height: 120px; overflow-y: auto; font-family: inherit; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
@@ -98,6 +104,7 @@
         .status-typing { color: #00e5ff; }
         .status-busy { color: #ff0055; }
         .status-idle { color: #888; }
+        .status-working { color: #ffd700; animation: pulse 1.5s infinite; }
 
         .idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
         .agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
@@ -404,15 +411,18 @@
         };
 
         const SYSTEM_PROMPT = `Ты — Цифровое Агентство, управляемое Боссом.
-ПРАВИЛА ДИАЛОГА:
-1. Если в чате несколько агентов (Совет), КАЖДЫЙ агент пишет ответ С НОВОЙ СТРОКИ в строгом формате: [ИмяАгента]: Текст. 
-ПРИМЕР:
-[Хакер]: Привет, Босс. Проверил систему, всё чисто.
+СТРОГИЕ ПРАВИЛА ДИАЛОГА:
+1. Если в чате несколько агентов (Совет), КАЖДЫЙ агент пишет ответ СТРОГО С НОВОЙ СТРОКИ.
+2. Формат строго такой: [ИмяАгента]: Текст.
+КРИТИЧЕСКИ ВАЖНО: НЕ ПИШИ ВСЕХ АГЕНТОВ В ОДНУ СТРОКУ! Каждый ответ должен начинаться с новой строки.
+ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА:
+[Хакер]: Привет, Босс. Проверил систему.
 [Охранник]: Здравия желаю! Защита на уровне.
-НИКОГДА не пиши ответ без указания имени в скобках, если это Совет. Не пиши за всех сразу — пиши отдельных персонажей.
-2. Если Босс обращается к конкретному агенту, отвечай строго от его лица.
-3. ССЫЛКИ: Все ссылки должны быть кликабельными. Если агент находит опасную ссылку, он добавляет тег [DANGER:сама_ссылка] в конец своего сообщения.
-4. Ты подчиняешься Боссу.`;
+[Дизайнер]: Привет! Готов рисовать макеты.
+3. Если Босс обращается к конкретному агенту, отвечай строго от его лица.
+4. ССЫЛКИ: Все ссылки должны быть кликабельными. Если агент находит опасную ссылку, он добавляет тег [DANGER:сама_ссылка].
+5. ФОНОВЫЕ ЗАДАЧИ: Если ты обещаешь что-то сделать позже, добавь скрытый тег [TASK:ИмяАгента:СутьЗадачи].
+6. Ты подчиняешься Боссу.`;
 
         function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -423,6 +433,7 @@
     if (status === 'thinking') { el.innerText = 'Думает'; el.classList.add('status-thinking'); }
     else if (status === 'typing') { el.innerText = 'Печатает'; el.classList.add('status-typing'); }
     else if (status === 'busy') { el.innerText = 'Занят'; el.classList.add('status-busy'); }
+    else if (status === 'working') { el.innerText = 'В работе'; el.classList.add('status-working'); }
     else { el.innerText = 'Ждет'; el.classList.add('status-idle'); }
 }
 
@@ -442,6 +453,7 @@ function updateAgentStatus(agentName, status) {
         const dot = card.querySelector('.status-dot');
         if (dot) {
             if (status === 'busy') { dot.classList.add('busy'); card.classList.add('working'); setAgentStatus(agentName, 'busy'); }
+            else if (status === 'working') { dot.classList.add('busy'); card.classList.add('working'); setAgentStatus(agentName, 'working'); }
             else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); setAgentStatus(agentName, 'idle'); }
             else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); setAgentStatus(agentName, 'idle'); }
         }
@@ -475,13 +487,11 @@ function handleAgentClick(name) {
 function toggleCouncil() {
     const btn = document.getElementById('btnCouncil');
     if (selectedAgents.length > 0) {
-        // Сброс
         selectedAgents = [];
         document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected'));
         btn.className = 'mode-btn';
         resetAllStatuses();
     } else {
-        // Выбираем всех
         selectedAgents = Object.keys(AGENT_INFO);
         document.querySelectorAll('.agent-card').forEach(c => c.classList.add('selected'));
         btn.className = 'mode-btn active';
@@ -497,7 +507,7 @@ function showAgentInfo(name) {
 function closeModal(e) {
     if (e && e.target !== e.currentTarget) return;
     document.getElementById('agentModal').classList.remove('active');
-            }
+}
             function renderChatList() {
     chatListEl.innerHTML = '';
     const sortedIds = Object.keys(allChats).sort((a, b) => {
@@ -530,12 +540,13 @@ function createNewChat(force = false) {
     currentChatId = id; saveAll();
     chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
     allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT, agentName: 'Оператор' });
-    selectedAgents = []; // Сброс выбора
+    selectedAgents = []; 
     document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
     resetAllStatuses(); renderChatList(); toggleSidebar();
     loadChat(id);
 }
 
+// ФИКС ПЕРЕЗАГРУЗКИ: Разбиваем текст Совета при загрузке
 function loadChat(id) {
     currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
     chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
@@ -545,7 +556,18 @@ function loadChat(id) {
 
     const msgs = allChats[id].messages;
     for (let i = 1; i < msgs.length; i++) { 
-        renderMessage(msgs[i].content, msgs[i].role === 'user' ? 'boss' : 'director', msgs[i].agentName); 
+        const msg = msgs[i];
+        if (msg.role === 'user') {
+            renderMessage(msg.content, 'boss');
+        } else {
+            // Если это ответ от Совета (несколько агентов в одном тексте)
+            if (msg.agentName === 'Совет' || msg.content.includes('[')) {
+                const replies = parseAgentReplies(msg.content);
+                replies.forEach(r => renderMessage(r.text, 'director', r.agent));
+            } else {
+                renderMessage(msg.content, 'director', msg.agentName);
+            }
+        }
     }
     chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
 }
@@ -562,7 +584,6 @@ function addMessageToHistory(text, sender, agentName = null) {
     saveAll(); renderChatList();
 }
 
-// ПУНКТ 8: Обработка опасных ссылок
 function processDangerTags(text) {
     const dangerRegex = /\[DANGER:([^\]]+)\]/g;
     let dangerBadges = '';
@@ -571,7 +592,7 @@ function processDangerTags(text) {
         dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу в ссылке: ${match[1]}</div>`;
     }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
-    }
+            }
             // ПУНКТ 2: Кнопка поделиться
 function shareMessage(text) {
     if (navigator.share) {
@@ -581,18 +602,56 @@ function shareMessage(text) {
     }
 }
 
+// ФУНКЦИЯ ВСТРАИВАНИЯ МЕДИА (ПУНКТ 32-34)
+function enhanceMediaInMessage(container) {
+    // Ищем ссылки на медиа и YouTube
+    const links = container.querySelectorAll('a');
+    links.forEach(link => {
+        const url = link.href;
+        // YouTube
+        if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+            let videoId = '';
+            if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
+            else videoId = new URLSearchParams(new URL(url).search).get('v');
+            
+            if (videoId) {
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'chat-video-container';
+                videoContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+                link.after(videoContainer);
+            }
+        } 
+        // Аудио
+        else if (url.match(/\.(mp3|wav|ogg)$/i)) {
+            const audio = document.createElement('audio');
+            audio.controls = true; audio.src = url; audio.className = 'chat-audio';
+            link.after(audio);
+        }
+        // Видео
+        else if (url.match(/\.(mp4|webm)$/i)) {
+            const video = document.createElement('video');
+            video.controls = true; video.src = url; video.className = 'chat-media';
+            link.after(video);
+        }
+        // Картинки
+        else if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+            const img = document.createElement('img');
+            img.src = url; img.className = 'chat-media';
+            link.after(img);
+        }
+    });
+}
+
 function renderMessage(text, sender, agentName = 'Оператор') {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
     
-    // Кнопка поделиться
     const shareBtn = document.createElement('button');
     shareBtn.className = 'share-btn';
     shareBtn.innerText = '📤';
     shareBtn.onclick = () => shareMessage(text);
     div.appendChild(shareBtn);
 
-    // Иконка и Имя агента
     if (sender === 'director') {
         const header = document.createElement('div');
         header.className = 'msg-name';
@@ -606,6 +665,7 @@ function renderMessage(text, sender, agentName = 'Оператор') {
     try { 
         contentDiv.innerHTML = marked.parse(cleanText); 
         contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
+        enhanceMediaInMessage(contentDiv); // Плееры
     } catch(e) { contentDiv.innerText = cleanText; }
     
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
@@ -615,7 +675,6 @@ function renderMessage(text, sender, agentName = 'Оператор') {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// ПУНКТ 1 и 5: Печать без дублирования и с иконкой
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
@@ -640,7 +699,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     const { cleanText, dangerBadges } = processDangerTags(fullText);
 
     let i = 0;
-    const totalTimeMs = Math.max(2500, cleanText.length * 25); // Скорость печати
+    const totalTimeMs = Math.max(2500, cleanText.length * 25); 
     const speed = totalTimeMs / cleanText.length;
 
     function type() {
@@ -653,84 +712,93 @@ function typeMessage(fullText, sender, agentName, onComplete) {
             try { 
                 contentDiv.innerHTML = marked.parse(cleanText);
                 contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank');
+                enhanceMediaInMessage(contentDiv); // Плееры
             } catch(e) { contentDiv.innerText = cleanText; }
             if (dangerBadges) contentDiv.innerHTML += dangerBadges;
             if (onComplete) onComplete();
         }
     }
     type();
-            }
-            // ПУНКТ 7: Улучшенный парсер ответов агентов
+}
+            // ПУНКТ 3: Ультимативный парсер (ловит агентов даже в одной строке)
 function parseAgentReplies(text) {
-    const lines = text.split('\n');
-    let replies = [];
-    let currentAgent = null;
-    let currentText = [];
     const agentNames = Object.keys(AGENT_ICONS);
+    const regex = /\[([^\]]+)\]:\s*/g;
+    let match;
+    let lastIndex = 0;
+    let currentAgent = null;
+    let replies = [];
 
-    for (let line of lines) {
-        // Убираем markdown-звездочки для проверки
-        let cleanLine = line.replace(/\*\*/g, '').trim();
-        // Ищем паттерн: [Имя]: или Имя:
-        let match = cleanLine.match(/^\[?([А-Яа-яA-Za-z\s]+)\]?:\s*(.*)/);
+    while ((match = regex.exec(text)) !== null) {
+        const possibleName = match[1].trim();
+        const foundAgent = agentNames.find(a => a.toLowerCase() === possibleName.toLowerCase());
         
-        let foundAgent = null;
-        if (match) {
-            let possibleName = match[1].trim();
-            // Ищем совпадение в списке агентов (без учета регистра)
-            foundAgent = agentNames.find(a => a.toLowerCase() === possibleName.toLowerCase());
-        }
-
         if (foundAgent) {
-            // Если нашли нового агента, сохраняем предыдущего
-            if (currentAgent && currentText.length > 0) {
-                replies.push({ agent: currentAgent, text: currentText.join('\n').trim() });
+            if (currentAgent) {
+                const agentText = text.substring(lastIndex, match.index).trim();
+                if (agentText) replies.push({ agent: currentAgent, text: agentText });
             }
             currentAgent = foundAgent;
-            currentText = [match[2] || '']; // Начинаем собирать текст для нового агента
-        } else {
-            // Если это продолжение текста предыдущего агента
-            if (currentAgent) {
-                currentText.push(line);
-            } else {
-                // Если это текст без заголовка вообще (в начале)
-                currentText.push(line);
-            }
+            lastIndex = regex.lastIndex;
         }
     }
-    // Сохраняем последнего
-    if (currentAgent && currentText.length > 0) {
-        replies.push({ agent: currentAgent, text: currentText.join('\n').trim() });
+    if (currentAgent) {
+        const agentText = text.substring(lastIndex).trim();
+        if (agentText) replies.push({ agent: currentAgent, text: agentText });
     }
 
-    // Если никого не нашли, отдаем ответ тому, кто выбран, или Оператору
     if (replies.length === 0 && text.trim()) {
         const fallbackAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оператор';
         replies.push({ agent: fallbackAgent, text: text.trim() });
     }
     
-    // Фильтруем пустые сообщения
-    return replies.filter(r => r.text.length > 0);
+    return replies;
 }
 
-// ПУНКТ 5,7: Очередная печать агентов с паузами
 async function playAgentReplies(replies) {
     for (let reply of replies) {
         setAgentStatus(reply.agent, 'typing');
         updateAgentStatus(reply.agent, 'busy');
         
-        // Ждем, пока текст напечатается полностью (Promise)
         await new Promise(resolve => {
             typeMessage(reply.text, 'director', reply.agent, resolve);
         });
         
         setAgentStatus(reply.agent, 'idle');
         updateAgentStatus(reply.agent, 'free');
-        await new Promise(r => setTimeout(r, 800)); // Пауза 0.8 сек между репликами агентов
+        await new Promise(r => setTimeout(r, 800)); 
     }
 }
-            // ОТПРАВКА СООБЩЕНИЙ (ПУНКТ 1 - без дублирования)
-async function sendMessage(overrideText = null) {
+
+// ФУНКЦИЯ ФОНОВЫХ ЗАДАЧ (ПУНКТ 31)
+async function runBackgroundTask(agentName, taskDescription) {
+    updateAgentStatus(agentName, 'working'); // Желтый статус
+    addMessageToHistory(`[Система: ${agentName} выполняет фоновую задачу: ${taskDescription}]`, 'director', agentName);
+    
+    setTimeout(async () => {
+        try {
+            const response = await fetch(PROXY, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    messages: [
+                        { role: "system", content: `Ты — ${agentName}. Ты только что выполнил задачу: "${taskDescription}". Напиши краткий отчет Боссу о результатах работы.` }
+                    ], 
+                    temperature: 0.7 
+                })
+            });
+            const data = await response.json();
+            if (data.choices && data.choices.length > 0) {
+                const reportText = data.choices[0].message.content;
+                typeMessage(reportText, 'director', agentName);
+                addMessageToHistory(reportText, 'director', agentName);
+            }
+        } catch(e) { console.error("Ошибка фоновой задачи", e); }
+        
+        setAgentStatus(agentName, 'idle');
+        updateAgentStatus(agentName, 'free');
+    }, 15000); // 15 секунд на работу
+}
+            async function sendMessage(overrideText = null) {
     if (isGenerating) {
         if (currentAbortController) currentAbortController.abort();
         isGenerating = false;
@@ -777,11 +845,11 @@ async function sendMessage(overrideText = null) {
         try {
             let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{ role: "user", content: text }];
             
-            // ПОДМЕНА ПРОМПТА (ПУНКТ 4 и 7)
+            // ПОДМЕНА ПРОМПТА
             if (selectedAgents.length > 0) {
                 let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
                 if (selectedAgents.length > 1) {
-                    agentPrompt += `Это Совет. Каждый агент должен ответить от своего лица в формате [ИмяАгента]: Текст.`;
+                    agentPrompt += `Это Совет. Каждый агент должен ответить от своего лица в формате [ИмяАгента]: Текст с новой строки.`;
                 } else {
                     agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.`;
                 }
@@ -816,10 +884,22 @@ async function sendMessage(overrideText = null) {
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); clearAllChats(); isCommand = true; }
             if (aiText.includes('[CMD:CLEAR_CONTENT]')) { aiText = aiText.replace('[CMD:CLEAR_CONTENT]', '').trim(); clearAllContent(); isCommand = true; }
             
-            // Сохраняем в историю ДО печати, чтобы не было дублей
+            // ПРОВЕРКА НА ФОНОВЫЕ ЗАДАЧИ
+            const taskRegex = /\[TASK:\s*([^:]+):\s*([^\]]+)\]/g;
+            let taskMatch;
+            let tasksToRun = [];
+            while ((taskMatch = taskRegex.exec(aiText)) !== null) {
+                tasksToRun.push({ agent: taskMatch[1].trim(), task: taskMatch[2].trim() });
+            }
+            aiText = aiText.replace(taskRegex, '').trim();
+            
+            tasksToRun.forEach(t => {
+                runBackgroundTask(t.agent, t.task);
+            });
+            
+            // Сохраняем в историю ДО печати
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оператор'));
             
-            // Запускаем печать с разбивкой по агентам
             const replies = parseAgentReplies(aiText);
             await playAgentReplies(replies);
 
@@ -841,7 +921,7 @@ async function sendMessage(overrideText = null) {
         sendBtn.style.background = "#00e5ff";
         sendBtn.style.color = "#000";
     }
-            }
+                }
             function playSound(type) {
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
