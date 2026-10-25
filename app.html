@@ -903,7 +903,13 @@ async function runBackgroundTask(agentName, taskDescription) {
         updateAgentStatus(agentName, 'free');
     }, 15000);
             }
-                    async function sendMessage(overrideText = null) {
+            function kickAI(agentName) {
+    renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
+    const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
+    sendMessage(kickPrompt, true);
+            }
+            
+     async function sendMessage(overrideText = null, isKick = false) {
             if (isGenerating) {
                 if (currentAbortController) currentAbortController.abort();
                 isGenerating = false;
@@ -912,11 +918,11 @@ async function runBackgroundTask(agentName, taskDescription) {
             const text = overrideText || chatInputEl.value.trim();
             if (!text) return;
             
-            if (!overrideText) {
-                chatInputEl.value = ''; chatInputEl.style.height = 'auto';
-                playSound('send'); 
-                renderMessage(text, 'boss');
-                addMessageToHistory(text, 'boss');
+            if (!overrideText && !isKick) {
+    chatInputEl.value = ''; chatInputEl.style.height = 'auto';
+    playSound('send'); 
+    renderMessage(text, 'boss');
+    addMessageToHistory(text, 'boss');
             }
 
             isGenerating = true; sendBtn.disabled = true;
@@ -1007,6 +1013,13 @@ async function runBackgroundTask(agentName, taskDescription) {
                     
                     const replies = parseAgentReplies(aiText);
                     await playAgentReplies(replies);
+                    // ДЕТЕКТОР ЗАВИСАНИЯ (ПИНОК)
+const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите/i;
+if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
+    setTimeout(() => {
+        kickAI(selectedAgents[0]);
+    }, 16000); // Ждем 16 секунд и пинаем
+    }
 
                 } else {
                     renderMessage(`❌ **Системная ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
