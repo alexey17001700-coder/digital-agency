@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* Исправлен 100vh на 100dvh для мобильной клавиатуры */
         body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100dvh; overflow: hidden; touch-action: pan-y; }
         .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
         .sidebar.open { transform: translateX(0); }
@@ -46,8 +45,7 @@
         .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
         .mode-btn.active { background: #00e5ff; color: #000; }
         .mode-btn.hacker-active { background: #ff0055; color: #fff; }
-
-        .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
+                .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
         .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; -webkit-user-select: text; position: relative; touch-action: pan-y; }
         .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
@@ -60,7 +58,7 @@
         .chat-msg a { color: #00e5ff; text-decoration: underline; word-break: break-all; }
         
         .msg-avatar { display: inline-block; margin-right: 5px; font-size: 16px; vertical-align: middle; }
-        .msg-name { font-weight: bold; font-size: 11px; margin-bottom: 4px; display: block; color: #aaa; }
+        .msg-name { font-weight: bold; font-size: 11px; margin-bottom: 4px; display: block; color: #aaa; cursor: pointer; }
         
         .share-btn { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; padding: 2px 6px; border-radius: 5px; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 5; }
         .chat-msg:hover .share-btn { opacity: 1; }
@@ -72,7 +70,8 @@
         .chat-audio { width: 100%; margin-top: 8px; display: block; }
         .chat-video-container { position: relative; width: 100%; padding-bottom: 56.25%; margin-top: 8px; border-radius: 8px; overflow: hidden; background: #000; }
         .chat-video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
-                .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+
+        .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
         #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; resize: none; max-height: 120px; overflow-y: auto; font-family: inherit; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
         
         .send-btn-container { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -82,7 +81,7 @@
 
         button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; color: #000; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: all 0.2s; }
         button.send-btn:disabled { background: #555; }
-        button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse 1s infinite; } /* Стиль для кнопки СТОП */
+        button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse 1s infinite; }
 
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
         .overlay.active { display: block; }
@@ -123,16 +122,26 @@
         .modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
         .modal-body strong { color: #ffd700; }
         .apply-code-btn { background: #00ff00; color: #000; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; width: 100%; text-align: center; }
+        
+        /* НОВОЕ: Поле для редактора характера */
+        .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
     </style>
 </head>
 <body>
+    <!-- Модалка агента (с добавленным полем для характера) -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h2 id="modalTitle">Агент</h2>
                 <button class="modal-close" onclick="closeModal()">✖</button>
             </div>
-            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-body">
+                <div id="modalBody"></div>
+                <hr style="border-color: #333; margin: 15px 0;">
+                <p style="font-size: 12px; color: #aaa; margin-bottom: 5px;">⚙️ <b>Редактор характера (Промпт):</b></p>
+                <textarea id="agentPromptInput" class="modal-textarea" placeholder="Напиши, как агент должен себя вести..."></textarea>
+                <button onclick="saveAgentCharacter()" style="width: 100%; padding: 10px; background: #00e5ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💾 Сохранить характер</button>
+            </div>
         </div>
     </div>
 
@@ -204,145 +213,121 @@
         </div>
         <div class="agents-wrapper">
     <div class="agents-grid" id="agents-grid">
-        <!-- 1. Оркестратор -->
         <div class="agent-card" id="agent-Оркестратор" style="border-color: #ffd700; position: relative;" onclick="handleAgentClick('Оркестратор')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>👑 Оркестратор</h4><div class="agent-status-text status-idle" id="status-text-Оркестратор">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 2. Хакер -->
         <div class="agent-card" id="agent-Хакер" style="border-color: #ff0055; position: relative;" onclick="handleAgentClick('Хакер')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🕵️ Хакер</h4><div class="agent-status-text status-idle" id="status-text-Хакер">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 3. Охранник -->
         <div class="agent-card" id="agent-Охранник" style="border-color: #f44336; position: relative;" onclick="handleAgentClick('Охранник')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🛡️ Охранник</h4><div class="agent-status-text status-idle" id="status-text-Охранник">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 4. Исследователь -->
         <div class="agent-card" id="agent-Исследователь" style="border-color: #00e5ff; position: relative;" onclick="handleAgentClick('Исследователь')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🔍 Исследователь</h4><div class="agent-status-text status-idle" id="status-text-Исследователь">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 5. Планировщик -->
         <div class="agent-card" id="agent-Планировщик" style="border-color: #00e5ff; position: relative;" onclick="handleAgentClick('Планировщик')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>📅 Планировщик</h4><div class="agent-status-text status-idle" id="status-text-Планировщик">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 6. Аналитик -->
         <div class="agent-card" id="agent-Аналитик" style="border-color: #00e5ff; position: relative;" onclick="handleAgentClick('Аналитик')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>📊 Аналитик</h4><div class="agent-status-text status-idle" id="status-text-Аналитик">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 7. Исполнитель -->
         <div class="agent-card" id="agent-Исполнитель" style="border-color: #00e5ff; position: relative;" onclick="handleAgentClick('Исполнитель')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>⚙️ Исполнитель</h4><div class="agent-status-text status-idle" id="status-text-Исполнитель">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 8. Архитектор -->
         <div class="agent-card" id="agent-Архитектор" style="border-color: #9c27b0; position: relative;" onclick="handleAgentClick('Архитектор')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>📐 Архитектор</h4><div class="agent-status-text status-idle" id="status-text-Архитектор">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 9. Дизайнер -->
         <div class="agent-card" id="agent-Дизайнер" style="border-color: #9c27b0; position: relative;" onclick="handleAgentClick('Дизайнер')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🎨 Дизайнер</h4><div class="agent-status-text status-idle" id="status-text-Дизайнер">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 10. Креативщик -->
         <div class="agent-card" id="agent-Креативщик" style="border-color: #9c27b0; position: relative;" onclick="handleAgentClick('Креативщик')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>💡 Креативщик</h4><div class="agent-status-text status-idle" id="status-text-Креативщик">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 11. Критик -->
         <div class="agent-card" id="agent-Критик" style="border-color: #f44336; position: relative;" onclick="handleAgentClick('Критик')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🧐 Критик</h4><div class="agent-status-text status-idle" id="status-text-Критик">Ждет</div></div>
             <div class="status-dot"></div>
         </div>
-        <!-- 12. Тестировщик -->
         <div class="agent-card" id="agent-Тестировщик" style="border-color: #f44336; position: relative;" onclick="handleAgentClick('Тестировщик')">
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🧪 Тестировщик</h4><div class="agent-status-text status-idle" id="status-text-Тестировщик">Ждет</div></div>
             <div class="status-dot"></div>
-            </div>
-                        <!-- 13. Переводчик -->
-            <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Переводчик')">
+        </div>
+                    <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Переводчик')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🌐 Переводчик</h4><div class="agent-status-text status-idle" id="status-text-Переводчик">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 14. Методолог -->
             <div class="agent-card" id="agent-Методолог" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Методолог')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>📚 Методолог</h4><div class="agent-status-text status-idle" id="status-text-Методолог">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 15. Юрист -->
             <div class="agent-card" id="agent-Юрист" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Юрист')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>⚖️ Юрист</h4><div class="agent-status-text status-idle" id="status-text-Юрист">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 16. Маркетолог -->
             <div class="agent-card" id="agent-Маркетолог" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Маркетолог')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>📢 Маркетолог</h4><div class="agent-status-text status-idle" id="status-text-Маркетолог">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 17. Техпис -->
             <div class="agent-card" id="agent-Техпис" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Техпис')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>✍️ Техпис</h4><div class="agent-status-text status-idle" id="status-text-Техпис">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 18. Фронтенд -->
             <div class="agent-card" id="agent-Фронтенд" style="border-color: #2196f3; position: relative;" onclick="handleAgentClick('Фронтенд')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🖥️ Фронтенд</h4><div class="agent-status-text status-idle" id="status-text-Фронтенд">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 19. Бэкенд -->
             <div class="agent-card" id="agent-Бэкенд" style="border-color: #2196f3; position: relative;" onclick="handleAgentClick('Бэкенд')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🗄️ Бэкенд</h4><div class="agent-status-text status-idle" id="status-text-Бэкенд">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 20. Мобильный -->
             <div class="agent-card" id="agent-Мобильный" style="border-color: #2196f3; position: relative;" onclick="handleAgentClick('Мобильный')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>📱 Мобильный</h4><div class="agent-status-text status-idle" id="status-text-Мобильный">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 21. DevOps -->
             <div class="agent-card" id="agent-DevOps" style="border-color: #2196f3; position: relative;" onclick="handleAgentClick('DevOps')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🚀 DevOps</h4><div class="agent-status-text status-idle" id="status-text-DevOps">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 22. Универсал -->
             <div class="agent-card" id="agent-Универсал" style="border-color: #ff9800; position: relative;" onclick="handleAgentClick('Универсал')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🧠 Универсал</h4><div class="agent-status-text status-idle" id="status-text-Универсал">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 23. Приемная -->
             <div class="agent-card" id="agent-Приемная" style="border-color: #ff9800; position: relative;" onclick="handleAgentClick('Приемная')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🏛️ Приемная</h4><div class="agent-status-text status-idle" id="status-text-Приемная">Ждет</div></div>
                 <div class="status-dot"></div>
             </div>
-            <!-- 24. Результат -->
             <div class="agent-card" id="agent-Результат" style="border-color: #ff9800; position: relative;" onclick="handleAgentClick('Результат')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🏆 Результат</h4><div class="agent-status-text status-idle" id="status-text-Результат">Ждет</div></div>
@@ -365,6 +350,14 @@
         let currentAbortController = null;
         let watchdogTimer = null;
         
+        // ПАМЯТЬ БОССА И ХАРАКТЕРЫ АГЕНТОВ
+        let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс пока не давал особых указаний.";
+        let customPrompts = {};
+        try {
+            const savedPrompts = localStorage.getItem('shtabCustomPrompts');
+            if (savedPrompts) customPrompts = JSON.parse(savedPrompts);
+        } catch (e) { customPrompts = {}; }
+
         let allChats = {};
         try {
             const saved = localStorage.getItem('shtabAllChats');
@@ -554,9 +547,8 @@ function handleAgentClick(name) {
         return;
     }
     if (selectedAgents.includes(name)) {
-        selectedAgents = selectedAgents.filter(a => a !== name);
-        card.classList.remove('selected');
-        setAgentStatus(name, 'idle');
+        // Если уже выбран, открываем инфо и редактор
+        showAgentInfo(name);
     } else {
         selectedAgents.push(name);
         card.classList.add('selected');
@@ -577,10 +569,33 @@ function toggleCouncil() {
     }
 }
 
+// НОВОЕ: Показ инфо и загрузка кастомного промпта
 function showAgentInfo(name) {
     document.getElementById('modalTitle').innerText = name;
     document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
+    
+    // Подгружаем сохраненный характер или пустое поле
+    const promptInput = document.getElementById('agentPromptInput');
+    promptInput.value = customPrompts[name] || ''; 
+    promptInput.placeholder = `По умолчанию: ${AGENT_INFO[name] ? AGENT_INFO[name].replace(/<[^>]*>?/gm, '') : 'Нет описания'}`;
+    
     document.getElementById('agentModal').classList.add('active');
+}
+
+// НОВОЕ: Сохранение характера
+function saveAgentCharacter() {
+    const name = document.getElementById('modalTitle').innerText;
+    const promptText = document.getElementById('agentPromptInput').value.trim();
+    
+    if (promptText) {
+        customPrompts[name] = promptText;
+    } else {
+        delete customPrompts[name]; // Если пусто, удаляем кастомный промпт
+    }
+    
+    localStorage.setItem('shtabCustomPrompts', JSON.stringify(customPrompts));
+    document.getElementById('agentModal').classList.remove('active');
+    alert(`Характер агента ${name} обновлен!`);
 }
 
 function closeModal(e) {
@@ -641,7 +656,7 @@ async function runConnectionTest() {
     }
 
     document.getElementById('t-ai-model').innerText = "yandexgpt";
-                    }
+            }
             function renderChatList() {
     chatListEl.innerHTML = '';
     const sortedIds = Object.keys(allChats).sort((a, b) => {
@@ -686,7 +701,6 @@ function createNewChat(force = false) {
     loadChat(id);
 }
 
-// ФИКС ПЕРЕЗАГРУЗКИ: Разбиваем текст Совета при загрузке
 function loadChat(id) {
     currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
     chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
@@ -727,14 +741,12 @@ function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '');
     text = text.replace(/\[FUNCTION:[^\]]+\]/g, '');
     
-    // Вырезаем выдуманные имена (кроме служебных и реальных агентов)
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
         if (name.includes(':') || name.includes('CMD')) return match;
         if (Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === name.trim().toLowerCase())) return match;
         return '';
     });
 
-    // Вырезаем фейковые ссылки-заглушки
     text = text.replace(/\(https:\/\/yandex\.ru\/maps\/[^)]+AAAA[^)]+\)/g, '');
     text = text.replace(/\(https:\/\/example\.com[^)]*\)/g, '');
 
@@ -745,7 +757,7 @@ function processDangerTags(text) {
         dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу в ссылке: ${match[1]}</div>`;
     }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
-}
+            }
             function shareMessage(text) {
     if (navigator.share) {
         navigator.share({ title: 'Цифровое Агентство', text: text }).catch(e => console.log(e));
@@ -792,15 +804,27 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
     
+    // Кнопка поделиться
     const shareBtn = document.createElement('button');
     shareBtn.className = 'share-btn'; shareBtn.innerText = '📤';
     shareBtn.onclick = () => shareMessage(text);
     div.appendChild(shareBtn);
 
+    // Кнопка озвучки (для агентов)
+    if (sender === 'director') {
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'share-btn'; 
+        speakBtn.style.right = '35px'; // Сдвигаем левее кнопки поделиться
+        speakBtn.innerText = '🔊';
+        speakBtn.onclick = () => speakText(text, agentName);
+        div.appendChild(speakBtn);
+    }
+
     if (sender === 'director') {
         const header = document.createElement('div');
         header.className = 'msg-name';
         header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`;
+        header.onclick = () => speakText(text, agentName); // Клик по имени тоже озвучивает
         div.appendChild(header);
     }
 
@@ -828,6 +852,15 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     shareBtn.className = 'share-btn'; shareBtn.innerText = '📤';
     shareBtn.onclick = () => shareMessage(fullText);
     div.appendChild(shareBtn);
+
+    if (sender === 'director') {
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'share-btn'; 
+        speakBtn.style.right = '35px';
+        speakBtn.innerText = '🔊';
+        speakBtn.onclick = () => speakText(fullText, agentName);
+        div.appendChild(speakBtn);
+    }
 
     if (sender === 'director') {
         const header = document.createElement('div');
@@ -929,13 +962,33 @@ async function runBackgroundTask(agentName, taskDescription) {
         updateAgentStatus(agentName, 'free');
     }, 15000);
             }
-                    function kickAI(agentName) {
+                    // ОЗВУЧКА ТЕКСТА (TTS)
+        function speakText(text, agentName) {
+            if (!('speechSynthesis' in window)) {
+                alert("Ваш браузер не поддерживает озвучку.");
+                return;
+            }
+            window.speechSynthesis.cancel(); // Останавливаем предыдущую озвучку
+            
+            // Чистим текст от маркдауна
+            let cleanText = text.replace(/[*#_`]/g, '').replace(/\[.*?\]/g, ''); 
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'ru-RU';
+            
+            // Немного разных голосов для разных агентов (если браузер поддерживает)
+            if (agentName === 'Хакер') utterance.pitch = 0.8; 
+            else if (agentName === 'Дизайнер') utterance.pitch = 1.2;
+            else utterance.pitch = 1.0;
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function kickAI(agentName) {
             renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
             const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
             sendMessage(kickPrompt, true);
         }
 
-        // Кнопка отправки / Стоп
         function handleSendClick() {
             if (isGenerating) {
                 if (currentAbortController) currentAbortController.abort();
@@ -965,8 +1018,9 @@ async function runBackgroundTask(agentName, taskDescription) {
 
             isGenerating = true; 
             sendBtn.disabled = false; 
-            sendBtn.className = 'send-btn stop-active'; // Превращаем в СТОП
-            sendBtn.innerText = '⏹'; 
+            sendBtn.className = 'send-btn stop-active'; 
+            sendBtn.innerText = '0.0s'; 
+            sendBtn.style.fontSize = "12px";
 
             const timeBadge = document.getElementById('final-time-badge');
             timeBadge.classList.remove('show'); 
@@ -975,8 +1029,7 @@ async function runBackgroundTask(agentName, taskDescription) {
             let timerInterval = setInterval(() => {
                 let elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                 if(!isGenerating) return;
-                // Не меняем текст кнопки, просто обновляем бейдж времени
-                timeBadge.innerText = elapsed + "s"; 
+                sendBtn.innerText = elapsed + "s"; 
             }, 100);
 
             resetAllStatuses(); 
@@ -987,8 +1040,7 @@ async function runBackgroundTask(agentName, taskDescription) {
 
             currentAbortController = new AbortController();
             const timeoutId = setTimeout(() => currentAbortController.abort(), 90000); 
-
-            clearTimeout(watchdogTimer); // Сбрасываем предыдущий таймер
+            clearTimeout(watchdogTimer);
 
             try {
                 let success = false; let aiText = ""; let lastError = "";
@@ -996,6 +1048,11 @@ async function runBackgroundTask(agentName, taskDescription) {
                 try {
                     let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                     
+                    // СБОРКА ПРОМПТА (Память + Характер + Роль)
+                    let finalPrompt = SYSTEM_PROMPT;
+                    if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") {
+                        finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+                    }
                     if (selectedAgents.length > 0) {
                         let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
                         if (selectedAgents.length > 1) {
@@ -1007,11 +1064,15 @@ async function runBackgroundTask(agentName, taskDescription) {
                         selectedAgents.forEach(agentName => {
                             let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
                             agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                            if (customPrompts[agentName]) {
+                                agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                            }
                         });
+                        finalPrompt = agentPrompt + "\n" + finalPrompt;
+                    }
 
-                        if (messagesToSend[0] && messagesToSend[0].role === 'system') {
-                            messagesToSend[0].content = agentPrompt + "\n" + SYSTEM_PROMPT;
-                        }
+                    if (messagesToSend[0] && messagesToSend[0].role === 'system') {
+                        messagesToSend[0].content = finalPrompt;
                     }
 
                     const response = await fetch(PROXY, { 
@@ -1058,12 +1119,9 @@ async function runBackgroundTask(agentName, taskDescription) {
                     const replies = parseAgentReplies(aiText);
                     await playAgentReplies(replies);
 
-                    // ДЕТЕКТОР ЗАВИСАНИЯ (ПИНОК)
                     const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите/i;
                     if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
-                        watchdogTimer = setTimeout(() => {
-                            kickAI(selectedAgents[0]);
-                        }, 16000); 
+                        watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 16000); 
                     }
 
                 } else {
@@ -1079,9 +1137,9 @@ async function runBackgroundTask(agentName, taskDescription) {
                 timeBadge.innerText = finalElapsed + "s";
                 timeBadge.classList.add('show'); 
                 setTimeout(() => { timeBadge.classList.remove('show'); }, 5000);
-                
+
                 sendBtn.disabled = false; 
-                sendBtn.className = 'send-btn'; // Возвращаем в исходное состояние
+                sendBtn.className = 'send-btn'; 
                 sendBtn.innerText = "➤"; 
                 sendBtn.style.fontSize = ""; 
                 sendBtn.style.background = "#00e5ff"; 
