@@ -23,14 +23,16 @@
         
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                await loadScript('agents.js');
-                await loadScript('app.js');
+                await loadScript('agents.js'); 
+                await loadScript('network.js'); 
+                await loadScript('voice.js'); 
+                await loadScript('chat.js'); 
+                await loadScript('ui.js'); 
             } catch (e) { console.error('Ошибка загрузки скриптов', e); }
         });
     </script>
 </head>
 <body>
-    <!-- Модалка агента -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -51,7 +53,6 @@
         </div>
     </div>
 
-    <!-- Модалка контента -->
     <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
         <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
             <div class="modal-header">
@@ -118,7 +119,6 @@
             </div>
         </div>
 
-        <!-- Сетка агентов будет генерироваться скриптом agents.js -->
         <div class="agents-wrapper">
             <div class="agents-grid" id="agents-grid"></div>
         </div>
