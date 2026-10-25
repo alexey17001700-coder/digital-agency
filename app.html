@@ -123,12 +123,10 @@
         .modal-body strong { color: #ffd700; }
         .apply-code-btn { background: #00ff00; color: #000; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; width: 100%; text-align: center; }
         
-        /* НОВОЕ: Поле для редактора характера */
         .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
     </style>
 </head>
 <body>
-    <!-- Модалка агента (с добавленным полем для характера) -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -141,6 +139,11 @@
                 <p style="font-size: 12px; color: #aaa; margin-bottom: 5px;">⚙️ <b>Редактор характера (Промпт):</b></p>
                 <textarea id="agentPromptInput" class="modal-textarea" placeholder="Напиши, как агент должен себя вести..."></textarea>
                 <button onclick="saveAgentCharacter()" style="width: 100%; padding: 10px; background: #00e5ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💾 Сохранить характер</button>
+                
+                <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px; background: #121212; padding: 10px; border-radius: 8px;">
+                    <input type="checkbox" id="agentVoiceCheck" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="agentVoiceCheck" style="font-size: 14px; color: #ddd; cursor: pointer; margin: 0;">Озвучивать этого агента</label>
+                </div>
             </div>
         </div>
     </div>
@@ -197,6 +200,7 @@
             <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
             <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
             <button class="mode-btn" id="btnCouncil" onclick="toggleCouncil()">👥 Совет</button>
+            <button class="mode-btn" id="btnVoiceToggle" onclick="toggleVoice()">🗣️ Озвучка: ВЫКЛ</button>
             <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
             <button class="mode-btn" id="btnAuto" onclick="toggleAutoMode()">⚡ Авто: ВЫКЛ</button>
         </div>
@@ -343,6 +347,8 @@
         }
 
         const PROXY = "https://functions.yandexcloud.net/d4e23q4ie5a8ubg4rn8d";
+        const TTS_PROXY = "https://functions.yandexcloud.net/d4etaf7qtg7n1r7j6eka";
+        
         let currentMode = 'normal';
         let isAutoMode = false;
         let selectedAgents = [];
@@ -357,6 +363,14 @@
             const savedPrompts = localStorage.getItem('shtabCustomPrompts');
             if (savedPrompts) customPrompts = JSON.parse(savedPrompts);
         } catch (e) { customPrompts = {}; }
+
+        // НАСТРОЙКИ ГОЛОСА
+        let isVoiceEnabled = localStorage.getItem('shtabVoiceEnabled') === 'true';
+        let agentVoiceSettings = {};
+        try {
+            const savedVoice = localStorage.getItem('shtabAgentVoice');
+            if (savedVoice) agentVoiceSettings = JSON.parse(savedVoice);
+        } catch (e) { agentVoiceSettings = {}; }
 
         let allChats = {};
         try {
@@ -386,6 +400,19 @@
             "Критик": "🧐", "Тестировщик": "🧪", "Переводчик": "🌐", "Методолог": "📚", "Юрист": "⚖️",
             "Маркетолог": "📢", "Техпис": "✍️", "Фронтенд": "🖥️", "Бэкенд": "🗄️", "Мобильный": "📱",
             "DevOps": "🚀", "Универсал": "🧠", "Приемная": "🏛️", "Результат": "🏆"
+        };
+
+        const AGENT_VOICES = {
+            "Оркестратор": { voice: "filipp", emotion: "neutral" },
+            "Хакер": { voice: "zahar", emotion: "evil" },
+            "Охранник": { voice: "alexander", emotion: "strict" },
+            "Исследователь": { voice: "alena", emotion: "neutral" },
+            "Дизайнер": { voice: "jane", emotion: "good" },
+            "Критик": { voice: "ermil", emotion: "evil" },
+            "Фронтенд": { voice: "kirill", emotion: "neutral" },
+            "Бэкенд": { voice: "madirus", emotion: "neutral" },
+            "DevOps": { voice: "anton", emotion: "good" },
+            "По умолчанию": { voice: "alena", emotion: "neutral" }
         };
 
         const AGENT_INFO = {
@@ -547,7 +574,6 @@ function handleAgentClick(name) {
         return;
     }
     if (selectedAgents.includes(name)) {
-        // Если уже выбран, открываем инфо и редактор
         showAgentInfo(name);
     } else {
         selectedAgents.push(name);
@@ -569,33 +595,33 @@ function toggleCouncil() {
     }
 }
 
-// НОВОЕ: Показ инфо и загрузка кастомного промпта
 function showAgentInfo(name) {
     document.getElementById('modalTitle').innerText = name;
     document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
     
-    // Подгружаем сохраненный характер или пустое поле
     const promptInput = document.getElementById('agentPromptInput');
     promptInput.value = customPrompts[name] || ''; 
     promptInput.placeholder = `По умолчанию: ${AGENT_INFO[name] ? AGENT_INFO[name].replace(/<[^>]*>?/gm, '') : 'Нет описания'}`;
     
+    document.getElementById('agentVoiceCheck').checked = agentVoiceSettings[name] !== false;
+    
     document.getElementById('agentModal').classList.add('active');
 }
 
-// НОВОЕ: Сохранение характера
 function saveAgentCharacter() {
     const name = document.getElementById('modalTitle').innerText;
     const promptText = document.getElementById('agentPromptInput').value.trim();
     
-    if (promptText) {
-        customPrompts[name] = promptText;
-    } else {
-        delete customPrompts[name]; // Если пусто, удаляем кастомный промпт
-    }
-    
+    if (promptText) { customPrompts[name] = promptText; } 
+    else { delete customPrompts[name]; }
     localStorage.setItem('shtabCustomPrompts', JSON.stringify(customPrompts));
+    
+    const voiceCheck = document.getElementById('agentVoiceCheck').checked;
+    agentVoiceSettings[name] = voiceCheck;
+    localStorage.setItem('shtabAgentVoice', JSON.stringify(agentVoiceSettings));
+    
     document.getElementById('agentModal').classList.remove('active');
-    alert(`Характер агента ${name} обновлен!`);
+    alert(`Настройки агента ${name} сохранены!`);
 }
 
 function closeModal(e) {
@@ -606,9 +632,7 @@ function closeModal(e) {
 function toggleTester() {
     const menu = document.getElementById('testerMenu');
     menu.classList.toggle('open');
-    if (menu.classList.contains('open')) {
-        runConnectionTest();
-    }
+    if (menu.classList.contains('open')) { runConnectionTest(); }
 }
 
 async function runConnectionTest() {
@@ -624,22 +648,17 @@ async function runConnectionTest() {
 
     const inetEl = document.getElementById('t-inet-status');
     const pingEl = document.getElementById('t-ping');
-    inetEl.innerText = "Проверка...";
-    pingEl.innerText = "--";
+    inetEl.innerText = "Проверка..."; pingEl.innerText = "--";
     
     const start = Date.now();
     try {
         await fetch('https://www.google.com/favicon.ico?t=' + start, { mode: 'no-cors', cache: 'no-store' });
         const ping = Date.now() - start;
-        inetEl.innerText = "✅ Есть";
-        inetEl.style.color = "#00ff00";
-        pingEl.innerText = ping + " ms";
-        pingEl.style.color = ping < 300 ? "#00ff00" : "#ffaa00";
+        inetEl.innerText = "✅ Есть"; inetEl.style.color = "#00ff00";
+        pingEl.innerText = ping + " ms"; pingEl.style.color = ping < 300 ? "#00ff00" : "#ffaa00";
     } catch (e) {
-        inetEl.innerText = "❌ Нет";
-        inetEl.style.color = "#ff0000";
-        pingEl.innerText = "ERR";
-        pingEl.style.color = "#ff0000";
+        inetEl.innerText = "❌ Нет"; inetEl.style.color = "#ff0000";
+        pingEl.innerText = "ERR"; pingEl.style.color = "#ff0000";
     }
 
     const ghEl = document.getElementById('t-github');
@@ -647,14 +666,10 @@ async function runConnectionTest() {
     try {
         const ghStart = Date.now();
         await fetch('https://api.github.com', { method: 'HEAD', cache: 'no-store' });
-        const ghPing = Date.now() - ghStart;
-        ghEl.innerText = "✅ Доступен (" + ghPing + " ms)";
-        ghEl.style.color = "#00ff00";
+        ghEl.innerText = "✅ Доступен (" + (Date.now() - ghStart) + " ms)"; ghEl.style.color = "#00ff00";
     } catch (e) {
-        ghEl.innerText = "❌ Блокирован";
-        ghEl.style.color = "#ff0000";
+        ghEl.innerText = "❌ Блокирован"; ghEl.style.color = "#ff0000";
     }
-
     document.getElementById('t-ai-model').innerText = "yandexgpt";
             }
             function renderChatList() {
@@ -804,27 +819,23 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
     
-    // Кнопка поделиться
     const shareBtn = document.createElement('button');
     shareBtn.className = 'share-btn'; shareBtn.innerText = '📤';
     shareBtn.onclick = () => shareMessage(text);
     div.appendChild(shareBtn);
 
-    // Кнопка озвучки (для агентов)
     if (sender === 'director') {
         const speakBtn = document.createElement('button');
         speakBtn.className = 'share-btn'; 
-        speakBtn.style.right = '35px'; // Сдвигаем левее кнопки поделиться
+        speakBtn.style.right = '35px';
         speakBtn.innerText = '🔊';
         speakBtn.onclick = () => speakText(text, agentName);
         div.appendChild(speakBtn);
-    }
-
-    if (sender === 'director') {
+        
         const header = document.createElement('div');
         header.className = 'msg-name';
         header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`;
-        header.onclick = () => speakText(text, agentName); // Клик по имени тоже озвучивает
+        header.onclick = () => speakText(text, agentName);
         div.appendChild(header);
     }
 
@@ -860,9 +871,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         speakBtn.innerText = '🔊';
         speakBtn.onclick = () => speakText(fullText, agentName);
         div.appendChild(speakBtn);
-    }
-
-    if (sender === 'director') {
+        
         const header = document.createElement('div');
         header.className = 'msg-name';
         header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`;
@@ -961,28 +970,49 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle');
         updateAgentStatus(agentName, 'free');
     }, 15000);
+    }
+                    // --- ОЗВУЧКА ---
+        function toggleVoice() {
+            isVoiceEnabled = !isVoiceEnabled;
+            localStorage.setItem('shtabVoiceEnabled', isVoiceEnabled);
+            const btn = document.getElementById('btnVoiceToggle');
+            if (isVoiceEnabled) {
+                btn.innerText = '🗣️ Озвучка: ВКЛ';
+                btn.classList.add('active');
+            } else {
+                btn.innerText = '🗣️ Озвучка: ВЫКЛ';
+                btn.classList.remove('active');
             }
-                    // ОЗВУЧКА ТЕКСТА (TTS)
-        function speakText(text, agentName) {
-            if (!('speechSynthesis' in window)) {
-                alert("Ваш браузер не поддерживает озвучку.");
-                return;
-            }
-            window.speechSynthesis.cancel(); // Останавливаем предыдущую озвучку
-            
-            // Чистим текст от маркдауна
-            let cleanText = text.replace(/[*#_`]/g, '').replace(/\[.*?\]/g, ''); 
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'ru-RU';
-            
-            // Немного разных голосов для разных агентов (если браузер поддерживает)
-            if (agentName === 'Хакер') utterance.pitch = 0.8; 
-            else if (agentName === 'Дизайнер') utterance.pitch = 1.2;
-            else utterance.pitch = 1.0;
-            
-            window.speechSynthesis.speak(utterance);
         }
 
+        async function speakText(text, agentName) {
+            if (!isVoiceEnabled) return;
+            if (agentVoiceSettings[agentName] === false) return;
+
+            let cleanText = text.replace(/[*#_`]/g, '').replace(/\[.*?\]/g, '').trim();
+            if (!cleanText) return;
+
+            const v = AGENT_VOICES[agentName] || AGENT_VOICES["По умолчанию"];
+
+            try {
+                const res = await fetch(TTS_PROXY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: cleanText, voice: v.voice, emotion: v.emotion })
+                });
+                
+                const data = await res.json();
+                if (data.audio) {
+                    const audioUrl = "data:audio/mpeg;base64," + data.audio;
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                }
+            } catch (e) {
+                console.error('Ошибка озвучки:', e);
+            }
+        }
+
+        // --- ОТПРАВКА И ПИНОК ---
         function kickAI(agentName) {
             renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
             const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
@@ -1053,6 +1083,7 @@ async function runBackgroundTask(agentName, taskDescription) {
                     if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") {
                         finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                     }
+                    
                     if (selectedAgents.length > 0) {
                         let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
                         if (selectedAgents.length > 1) {
@@ -1224,6 +1255,10 @@ async function runBackgroundTask(agentName, taskDescription) {
             } else { loadChat(currentChatId); }
             renderChatList(); 
             updateNetStatus();
+
+            const btnVoice = document.getElementById('btnVoiceToggle');
+            if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
+            else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
         }
         
         init();
