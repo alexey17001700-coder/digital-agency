@@ -57,17 +57,26 @@ async function speakText(text, agentName) {
             body: JSON.stringify({ text: cleanText, voice: v.voice, emotion: v.emotion })
         });
         
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error("Сервер: " + res.status + " " + errText);
+        }
+
         const data = await res.json();
         
         if (data.audio) {
             const audioUrl = "data:audio/mpeg;base64," + data.audio;
             const audio = new Audio(audioUrl);
-            audio.play();
+            await audio.play();
         } else {
-            throw new Error("Нет аудио");
+            throw new Error("Нет аудио в ответе: " + JSON.stringify(data));
         }
     } catch (e) {
-        console.error('Ошибка Яндекса, встроенный голос:', e);
+        console.error('Ошибка Яндекса:', e);
+        // Показываем ошибку прямо в чате, чтобы понять причину
+        renderMessage(`⚠️ **Ошибка озвучки:** ${e.message}`, 'director', 'Оркестратор');
+        
+        // Запасной парашют (встроенный голос)
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -75,4 +84,4 @@ async function speakText(text, agentName) {
             window.speechSynthesis.speak(utterance);
         }
     }
-                                            }
+}
