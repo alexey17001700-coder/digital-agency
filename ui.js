@@ -170,6 +170,5 @@ function init() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(init, 500); // Небольшая задержка, чтобы все скрипты загрузились
-});
+// Запускаем сразу, так как скрипт уже загружается после DOM
+setTimeout(init, 100);
