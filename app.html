@@ -420,6 +420,14 @@
             "Приемная": "<strong>Роль:</strong> Комиссия.<br><br><strong>Задачи:</strong> Принимает результат и сверяет с ТЗ.",
             "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект и передает Боссу."
         };
+            const AGENT_DIRECTIVES = {
+    "Исследователь": "КРИТИЧЕСКИ ВАЖНО: Ты обязан использовать инструмент search_web для любого запроса. ЗАПРЕЩЕНО выдумывать ссылки. Только реальные результаты поиска.",
+    "Хакер": "Ты проводишь аудит безопасности. Если Босс просит ссылки, ты обязан использовать search_web, чтобы проверить их на безопасность.",
+    "Оркестратор": "Ты координируешь. Если Боссу нужны реальные данные, ты обязан использовать search_web.",
+    "Дизайнер": "Ты пишешь только на Tailwind CSS. Никакого чистого CSS.",
+    "Фронтенд": "Пиши только чистый HTML/JS без ошибок.",
+    "По умолчанию": "Если Босс спрашивает про погоду, цены или новости, ОБЯЗАТЕЛЬНО используй search_web. Не выдумывай данные."
+};
 
                 const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
 
@@ -938,15 +946,22 @@ async function runBackgroundTask(agentName, taskDescription) {
                     let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                     
                     if (selectedAgents.length > 0) {
-                        let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-                        if (selectedAgents.length > 1) {
-                            agentPrompt += `Это Совет. Каждый агент должен ответить от своего лица в формате [ИмяАгента]: Текст с новой строки.`;
-                        } else {
-                            agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.`;
-                        }
-                        if (messagesToSend[0] && messagesToSend[0].role === 'system') {
-                            messagesToSend[0].content = agentPrompt + "\n" + SYSTEM_PROMPT;
-                        }
+    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+    if (selectedAgents.length > 1) {
+        agentPrompt += `Это Совет. Каждый агент должен ответить от своего лица в формате [ИмяАгента]: Текст с новой строки.\n`;
+    } else {
+        agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+    }
+
+    // ПРИНУДИТЕЛЬНАЯ ИНЪЕКЦИЯ ПРАВИЛ (наш новый блок)
+    selectedAgents.forEach(agentName => {
+        let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
+        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+    });
+
+    if (messagesToSend[0] && messagesToSend[0].role === 'system') {
+        messagesToSend[0].content = agentPrompt + "\n" + SYSTEM_PROMPT;
+    }
                     }
 
                     const response = await fetch(PROXY, { 
