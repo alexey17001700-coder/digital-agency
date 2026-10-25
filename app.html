@@ -7,7 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; touch-action: manipulation; user-select: none; }
+        /* Исправлен 100vh на 100dvh для мобильной клавиатуры */
+        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100dvh; overflow: hidden; touch-action: pan-y; }
         .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
         .sidebar.open { transform: translateX(0); }
         .sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
@@ -21,7 +22,7 @@
         .chat-item-actions span { cursor: pointer; font-size: 14px; }
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
         
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100vh; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
         .top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: relative; }
         .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
         .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -34,7 +35,8 @@
         .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
         .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
         @keyframes pulse { to { opacity: 0.3; } }
-                .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
+        
+        .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
         .tester-dropdown.open { display: block; }
         .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
         .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
@@ -66,13 +68,11 @@
         .danger-link-badge { display: block; background: #440000; color: #ff0000; border: 1px solid #ff0000; padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px; font-weight: bold; animation: blink-red 1.5s infinite; }
         @keyframes blink-red { 0%, 100% { background: #440000; } 50% { background: #880000; } }
 
-        /* МЕДИА В ЧАТЕ */
         .chat-media { max-width: 100%; border-radius: 8px; margin-top: 8px; display: block; }
         .chat-audio { width: 100%; margin-top: 8px; display: block; }
         .chat-video-container { position: relative; width: 100%; padding-bottom: 56.25%; margin-top: 8px; border-radius: 8px; overflow: hidden; background: #000; }
         .chat-video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
-
-        .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+                .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
         #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; resize: none; max-height: 120px; overflow-y: auto; font-family: inherit; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
         
         .send-btn-container { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -80,13 +80,13 @@
         .time-badge.show { opacity: 1; visibility: visible; animation: pulse-badge 1s infinite alternate; }
         @keyframes pulse-badge { 0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); transform: scale(0.95); } 100% { box-shadow: 0 0 15px rgba(0, 255, 0, 1); transform: scale(1.05); } }
 
-        button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; color: #000; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: all 0.2s; }
         button.send-btn:disabled { background: #555; }
+        button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse 1s infinite; } /* Стиль для кнопки СТОП */
 
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
         .overlay.active { display: block; }
 
-        /* ИСПРАВЛЕННАЯ ВЫСОТА ДЛЯ 4 АГЕНТОВ */
         .agents-wrapper { background: #0a0a0a; padding: 10px 10px 15px 10px; border-top: 1px solid #333; flex-shrink: 0; max-height: 135px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .agent-card { background: #1e1e1e; border-left: 4px solid #00e5ff; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; cursor: pointer; position: relative; }
@@ -199,7 +199,7 @@
             
             <div class="send-btn-container">
                 <div id="final-time-badge" class="time-badge">0.0s</div>
-                <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+                <button class="send-btn" id="sendBtn" onclick="handleSendClick()">➤</button>
             </div>
         </div>
         <div class="agents-wrapper">
@@ -275,8 +275,8 @@
             <div class="idea-bulb">💡</div>
             <div class="agent-info"><h4>🧪 Тестировщик</h4><div class="agent-status-text status-idle" id="status-text-Тестировщик">Ждет</div></div>
             <div class="status-dot"></div>
-        </div>
-                    <!-- 13. Переводчик -->
+            </div>
+                        <!-- 13. Переводчик -->
             <div class="agent-card" id="agent-Переводчик" style="border-color: #4caf50; position: relative;" onclick="handleAgentClick('Переводчик')">
                 <div class="idea-bulb">💡</div>
                 <div class="agent-info"><h4>🌐 Переводчик</h4><div class="agent-status-text status-idle" id="status-text-Переводчик">Ждет</div></div>
@@ -360,9 +360,10 @@
         const PROXY = "https://functions.yandexcloud.net/d4e23q4ie5a8ubg4rn8d";
         let currentMode = 'normal';
         let isAutoMode = false;
-        let selectedAgents = []; // Массив выбранных агентов
+        let selectedAgents = [];
         let isGenerating = false;
         let currentAbortController = null;
+        let watchdogTimer = null;
         
         let allChats = {};
         try {
@@ -420,31 +421,56 @@
             "Приемная": "<strong>Роль:</strong> Комиссия.<br><br><strong>Задачи:</strong> Принимает результат и сверяет с ТЗ.",
             "Результат": "<strong>Роль:</strong> Финал.<br><br><strong>Задачи:</strong> Упаковывает проект и передает Боссу."
         };
-            const AGENT_DIRECTIVES = {
-    "Исследователь": "КРИТИЧЕСКИ ВАЖНО: Ты обязан использовать инструмент search_web для любого запроса. ЗАПРЕЩЕНО выдумывать ссылки. Только реальные результаты поиска.",
-    "Хакер": "Ты проводишь аудит безопасности. Если Босс просит ссылки, ты обязан использовать search_web, чтобы проверить их на безопасность.",
-    "Оркестратор": "Ты координируешь. Если Боссу нужны реальные данные, ты обязан использовать search_web.",
-    "Дизайнер": "Ты пишешь только на Tailwind CSS. Никакого чистого CSS.",
-    "Фронтенд": "Пиши только чистый HTML/JS без ошибок.",
-    "По умолчанию": "Если Босс спрашивает про погоду, цены или новости, ОБЯЗАТЕЛЬНО используй search_web. Не выдумывай данные."
-};
 
-                const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
+        const AGENT_DIRECTIVES = {
+            "Исследователь": "КРИТИЧЕСКИ ВАЖНО: Ты обязан использовать инструмент search_web для любого запроса. ЗАПРЕЩЕНО выдумывать ссылки. Только реальные результаты поиска.",
+            "Хакер": "Ты проводишь аудит безопасности. Если Босс просит ссылки, ты обязан использовать search_web, чтобы проверить их на безопасность.",
+            "Оркестратор": "Ты координируешь. Если Боссу нужны реальные данные, ты обязан использовать search_web.",
+            "Дизайнер": "Ты пишешь только на Tailwind CSS. Никакого чистого CSS.",
+            "Фронтенд": "Пиши только чистый HTML/JS без ошибок.",
+            "По умолчанию": "Если Босс спрашивает про погоду, цены или новости, ОБЯЗАТЕЛЬНО используй search_web. Не выдумывай данные."
+        };
 
-ПРАВИЛА КОМАНДЫ:
-1. 🎨 Дизайнер (UI/UX Pro): Отвечает за эстетику. Используй Tailwind CSS (bg-gray-900, rounded-2xl, text-cyan-400).
-2. 🖥️ Фронтенд (Senior Dev): Пишет чистый HTML и JS.
-3. 🔍 Исследователь: Если Босс спрашивает про погоду, курсы, цены или новости — ОБЯЗАТЕЛЬНО вызывай функцию "search_web". Не говори, что не знаешь. Выдавай РЕАЛЬНЫЕ ссылки, которые ты нашел. ЗАПРЕЩЕНО выдумывать ссылки-заглушки (типа example.com).
+        const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства. Твоя задача - выполнять задачи Босса на высшем уровне.
 
-ПРАВИЛА ДИАЛОГА:
-4. Если в чате несколько агентов (Совет), КАЖДЫЙ агент пишет ответ СТРОГО С НОВОЙ СТРОКИ в формате: [ИмяАгента]: Текст.
-КРИТИЧЕСКИ ВАЖНО: НЕ ПИШИ ВСЕХ АГЕНТОВ В ОДНУ СТРОКУ!
-5. ЗАПРЕЩЕНО ВЫДУМЫВАТЬ ИМЕНА! Используй ТОЛЬКО имена из списка: Оркестратор, Хакер, Охранник, Исследователь, Планировщик, Аналитик, Исполнитель, Архитектор, Дизайнер, Креативщик, Критик, Тестировщик, Переводчик, Методолог, Юрист, Маркетолог, Техпис, Фронтенд, Бэкенд, Мобильный, DevOps, Универсал, Приемная, Результат.
-6. ССЫЛКИ: Если агент находит опасную ссылку, он добавляет тег [DANGER:сама_ссылка].
-7. ФОНОВЫЕ ЗАДАЧИ: Если ты обещаешь что-то сделать позже, добавь скрытый тег [TASK:ИмяАгента:СутьЗадачи].
-8. Ты подчиняешься Боссу.`;
+ДОСТУП К ИНТЕРНЕТУ:
+У тебя есть инструмент "search_web". КАЖДЫЙ агент обязан использовать его, если нужны актуальные данные (погода, курсы, цены, новости, ссылки). КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО выдумывать ссылки (типа example.com) или писать "я не знаю". Ищи в интернете и давай РЕАЛЬНЫЕ ссылки.
 
-        // --- ЛОГИКА СТАТУС-БАРА (ВОССТАНОВЛЕНО) ---
+РОЛИ АГЕНТОВ (используй ТОЛЬКО эти имена):
+👑 Оркестратор: Управляет, распределяет задачи, координирует команду.
+🕵️ Хакер: Red Team. Аудит безопасности, поиск уязвимостей, проверка ссылок на вирусы.
+🛡️ Охранник: Blue Team. Защита, блокировка угроз.
+🔍 Исследователь: Главный по поиску информации в интернете.
+📅 Планировщик: Стратегия, разбивка на шаги, Roadmap.
+📊 Аналитик: Анализ данных, метрики, цифры.
+⚙️ Исполнитель: Делает рутинную работу.
+📐 Архитектор: Проектирует структуру, выбирает стек.
+🎨 Дизайнер: UI/UX. Используй Tailwind CSS (bg-gray-900, rounded-2xl, text-cyan-400).
+💡 Креативщик: Генератор нестандартных идей.
+🧐 Критик: Ищет слабые места в идеях и коде.
+🧪 Тестировщик: QA. Ломает код, ищет баги.
+🌐 Переводчик: Переводит тексты.
+📚 Методолог: Пишет регламенты и инструкции.
+⚖️ Юрист: Проверяет законы и лицензии.
+📢 Маркетолог: Реклама, продвижение, анализ ЦА.
+✍️ Техпис: Пишет документацию и README.
+🖥️ Фронтенд: Пишет чистый HTML/JS/React.
+🗄️ Бэкенд: Серверная логика, API, базы данных.
+📱 Мобильный: Разработка под iOS/Android.
+🚀 DevOps: Настройка CI/CD, деплой, серверы.
+🧠 Универсал: Fullstack, знает всё понемногу.
+🏛️ Приемная: Проверяет результат на соответствие ТЗ.
+🏆 Результат: Упаковывает финальный проект.
+
+СТРОГИЕ ПРАВИЛА ДИАЛОГА:
+1. Если в чате несколько агентов (Совет), КАЖДЫЙ агент пишет ответ СТРОГО С НОВОЙ СТРОКИ в формате: [ИмяАгента]: Текст.
+КРИТИЧЕСКИ ВАЖНО: НЕ ПИШИ ВСЕХ АГЕНТОВ В ОДНУ СТРОКУ! Каждый ответ начинается с новой строки.
+2. ЗАПРЕЩЕНО ВЫДУМЫВАТЬ ИМЕНА! Используй только роли из списка выше.
+3. Если Босс обращается к конкретному агенту, отвечай строго от его лица.
+4. ССЫЛКИ: Если агент находит опасную ссылку, он добавляет тег [DANGER:сама_ссылка].
+5. ФОНОВЫЕ ЗАДАЧИ: Если ты обещаешь что-то сделать позже, добавь скрытый тег [TASK:ИмяАгента:СутьЗадачи].
+6. Ты подчиняешься Боссу.`;
+
         function updateNetStatus() {
             if (navigator.onLine) {
                 elNet.className = 'status-item online';
@@ -562,7 +588,6 @@ function closeModal(e) {
     document.getElementById('agentModal').classList.remove('active');
 }
 
-// --- ЛОГИКА ТЕСТЕРА (ВОССТАНОВЛЕНО) ---
 function toggleTester() {
     const menu = document.getElementById('testerMenu');
     menu.classList.toggle('open');
@@ -616,7 +641,7 @@ async function runConnectionTest() {
     }
 
     document.getElementById('t-ai-model').innerText = "yandexgpt";
-            }
+                    }
             function renderChatList() {
     chatListEl.innerHTML = '';
     const sortedIds = Object.keys(allChats).sort((a, b) => {
@@ -675,7 +700,7 @@ function loadChat(id) {
         if (msg.role === 'user') {
             renderMessage(msg.content, 'boss');
         } else {
-            if (msg.agentName === 'Совет' || msg.content.includes('[')) {
+            if (msg.agentName === 'Совет') {
                 const replies = parseAgentReplies(msg.content);
                 replies.forEach(r => renderMessage(r.text, 'director', r.agent));
             } else {
@@ -702,12 +727,16 @@ function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '');
     text = text.replace(/\[FUNCTION:[^\]]+\]/g, '');
     
-    // Вырезаем выдуманные имена (любые [Текст], кроме служебных)
+    // Вырезаем выдуманные имена (кроме служебных и реальных агентов)
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
         if (name.includes(':') || name.includes('CMD')) return match;
         if (Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === name.trim().toLowerCase())) return match;
         return '';
     });
+
+    // Вырезаем фейковые ссылки-заглушки
+    text = text.replace(/\(https:\/\/yandex\.ru\/maps\/[^)]+AAAA[^)]+\)/g, '');
+    text = text.replace(/\(https:\/\/example\.com[^)]*\)/g, '');
 
     const dangerRegex = /\[DANGER:([^\]]+)\]/g;
     let dangerBadges = '';
@@ -716,7 +745,7 @@ function processDangerTags(text) {
         dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу в ссылке: ${match[1]}</div>`;
     }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
-            }
+}
             function shareMessage(text) {
     if (navigator.share) {
         navigator.share({ title: 'Цифровое Агентство', text: text }).catch(e => console.log(e));
@@ -869,14 +898,11 @@ async function playAgentReplies(replies) {
             setAgentStatus(reply.agent, 'typing');
             updateAgentStatus(reply.agent, 'busy');
         }
-
-        await new Promise(resolve => { 
-            typeMessage(reply.text, 'director', reply.agent, resolve); 
-        });
-
-        if (!isTaskAgent && !document.getElementById('agent-' + reply.agent)?.classList.contains('working')) {
-    setAgentStatus(reply.agent, 'idle');
-    updateAgentStatus(reply.agent, 'free');
+        await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
+        
+        if (!isTaskAgent) {
+            setAgentStatus(reply.agent, 'idle');
+            updateAgentStatus(reply.agent, 'free');
         }
         await new Promise(r => setTimeout(r, 800)); 
     }
@@ -903,14 +929,26 @@ async function runBackgroundTask(agentName, taskDescription) {
         updateAgentStatus(agentName, 'free');
     }, 15000);
             }
-            function kickAI(agentName) {
-    renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
-    const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
-    sendMessage(kickPrompt, true);
-            }
-            
-     async function sendMessage(overrideText = null, isKick = false) {
+                    function kickAI(agentName) {
+            renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
+            const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
+            sendMessage(kickPrompt, true);
+        }
+
+        // Кнопка отправки / Стоп
+        function handleSendClick() {
             if (isGenerating) {
+                if (currentAbortController) currentAbortController.abort();
+                isGenerating = false;
+                sendBtn.className = 'send-btn';
+                sendBtn.innerText = '➤';
+            } else {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage(overrideText = null, isKick = false) {
+            if (isGenerating && !isKick) {
                 if (currentAbortController) currentAbortController.abort();
                 isGenerating = false;
             }
@@ -919,21 +957,26 @@ async function runBackgroundTask(agentName, taskDescription) {
             if (!text) return;
             
             if (!overrideText && !isKick) {
-    chatInputEl.value = ''; chatInputEl.style.height = 'auto';
-    playSound('send'); 
-    renderMessage(text, 'boss');
-    addMessageToHistory(text, 'boss');
+                chatInputEl.value = ''; chatInputEl.style.height = 'auto';
+                playSound('send'); 
+                renderMessage(text, 'boss');
+                addMessageToHistory(text, 'boss');
             }
 
-            isGenerating = true; sendBtn.disabled = true;
+            isGenerating = true; 
+            sendBtn.disabled = false; 
+            sendBtn.className = 'send-btn stop-active'; // Превращаем в СТОП
+            sendBtn.innerText = '⏹'; 
+
             const timeBadge = document.getElementById('final-time-badge');
             timeBadge.classList.remove('show'); 
 
             let startTime = Date.now();
             let timerInterval = setInterval(() => {
                 let elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                sendBtn.innerText = elapsed + "s"; sendBtn.style.fontSize = "12px"; 
-                sendBtn.style.background = "#333"; sendBtn.style.color = "#00e5ff";   
+                if(!isGenerating) return;
+                // Не меняем текст кнопки, просто обновляем бейдж времени
+                timeBadge.innerText = elapsed + "s"; 
             }, 100);
 
             resetAllStatuses(); 
@@ -945,6 +988,8 @@ async function runBackgroundTask(agentName, taskDescription) {
             currentAbortController = new AbortController();
             const timeoutId = setTimeout(() => currentAbortController.abort(), 90000); 
 
+            clearTimeout(watchdogTimer); // Сбрасываем предыдущий таймер
+
             try {
                 let success = false; let aiText = ""; let lastError = "";
 
@@ -952,22 +997,21 @@ async function runBackgroundTask(agentName, taskDescription) {
                     let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                     
                     if (selectedAgents.length > 0) {
-    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-    if (selectedAgents.length > 1) {
-        agentPrompt += `Это Совет. Каждый агент должен ответить от своего лица в формате [ИмяАгента]: Текст с новой строки.\n`;
-    } else {
-        agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
-    }
+                        let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+                        if (selectedAgents.length > 1) {
+                            agentPrompt += `Это Совет. Каждый агент должен ответить от своего лица в формате [ИмяАгента]: Текст с новой строки.\n`;
+                        } else {
+                            agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+                        }
 
-    // ПРИНУДИТЕЛЬНАЯ ИНЪЕКЦИЯ ПРАВИЛ (наш новый блок)
-    selectedAgents.forEach(agentName => {
-        let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
-    });
+                        selectedAgents.forEach(agentName => {
+                            let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
+                            agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                        });
 
-    if (messagesToSend[0] && messagesToSend[0].role === 'system') {
-        messagesToSend[0].content = agentPrompt + "\n" + SYSTEM_PROMPT;
-    }
+                        if (messagesToSend[0] && messagesToSend[0].role === 'system') {
+                            messagesToSend[0].content = agentPrompt + "\n" + SYSTEM_PROMPT;
+                        }
                     }
 
                     const response = await fetch(PROXY, { 
@@ -984,7 +1028,7 @@ async function runBackgroundTask(agentName, taskDescription) {
                         if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; }
                     }
                 } catch (e) {
-                    if (e.name === 'AbortError') { isGenerating = false; return; } 
+                    if (e.name === 'AbortError') { return; } 
                     lastError = `Сбой сети: ${e.message}`;
                 }
                 clearTimeout(timeoutId);
@@ -1004,22 +1048,23 @@ async function runBackgroundTask(agentName, taskDescription) {
                     aiText = aiText.replace(taskRegex, '').trim();
                     
                     tasksToRun.forEach(t => { 
-    updateAgentStatus(t.agent, 'working'); 
-    runBackgroundTask(t.agent, t.task); 
-});
+                        updateAgentStatus(t.agent, 'working'); 
+                        runBackgroundTask(t.agent, t.task); 
+                    });
                     
                     addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
                     elAi.className = 'status-item online';
                     
                     const replies = parseAgentReplies(aiText);
                     await playAgentReplies(replies);
+
                     // ДЕТЕКТОР ЗАВИСАНИЯ (ПИНОК)
-const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите/i;
-if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
-    setTimeout(() => {
-        kickAI(selectedAgents[0]);
-    }, 16000); // Ждем 16 секунд и пинаем
-    }
+                    const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите/i;
+                    if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
+                        watchdogTimer = setTimeout(() => {
+                            kickAI(selectedAgents[0]);
+                        }, 16000); 
+                    }
 
                 } else {
                     renderMessage(`❌ **Системная ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
@@ -1034,8 +1079,13 @@ if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
                 timeBadge.innerText = finalElapsed + "s";
                 timeBadge.classList.add('show'); 
                 setTimeout(() => { timeBadge.classList.remove('show'); }, 5000);
-                sendBtn.disabled = false; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; 
-                sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
+                
+                sendBtn.disabled = false; 
+                sendBtn.className = 'send-btn'; // Возвращаем в исходное состояние
+                sendBtn.innerText = "➤"; 
+                sendBtn.style.fontSize = ""; 
+                sendBtn.style.background = "#00e5ff"; 
+                sendBtn.style.color = "#000";
             }
         }
 
