@@ -4,7 +4,6 @@ let officeDesks = [];
 let agentStatuses = {}; 
 let officeLoop = null;
 
-// Сетка столов (4 колонки x 6 рядов = 24 стола)
 const DESK_COLS = [10, 32, 54, 76];
 const DESK_ROWS = [12, 26, 40, 54, 68, 82];
 
@@ -46,7 +45,6 @@ function initOffice() {
     const wallLeft = document.createElement('div'); wallLeft.className = 'office-wall-left';
     room.appendChild(wallTop); room.appendChild(wallLeft);
 
-    // 1. Создаем 24 стола
     DESK_ROWS.forEach(top => {
         DESK_COLS.forEach(left => {
             const desk = document.createElement('div');
@@ -59,74 +57,47 @@ function initOffice() {
         });
     });
 
-    // 2. Декор
     const cooler1 = document.createElement('div'); cooler1.className = 'water-cooler'; cooler1.style.top = '90%'; cooler1.style.left = '5%'; room.appendChild(cooler1);
     const cooler2 = document.createElement('div'); cooler2.className = 'water-cooler'; cooler2.style.top = '90%'; cooler2.style.left = '95%'; room.appendChild(cooler2);
     const printerDesk = document.createElement('div'); printerDesk.className = 'printer-desk'; printerDesk.style.top = '5%'; printerDesk.style.left = '50%'; printerDesk.innerHTML = '<div class="printer"></div>'; room.appendChild(printerDesk);
     const plant1 = document.createElement('div'); plant1.className = 'plant'; plant1.style.top = '15%'; plant1.style.left = '5%'; room.appendChild(plant1);
     const plant2 = document.createElement('div'); plant2.className = 'plant'; plant2.style.top = '15%'; plant2.style.left = '95%'; room.appendChild(plant2);
 
-    // 3. Создаем агентов и закрепляем за ними столы
     const agentNames = Object.keys(AGENT_ICONS);
     
     agentNames.forEach((name, index) => {
         const deskData = officeDesks[index];
-        if (!deskData) return; // Если агентов больше, чем столов
+        if (!deskData) return;
 
         const sprite = document.createElement('div');
         sprite.className = 'agent-sprite';
-        
-        // Начальная позиция (за своим столом)
         sprite.style.left = deskData.x + '%';
         sprite.style.top = (deskData.y - 3) + '%';
 
-        // Табличка (скрыта по умолчанию)
-        const bubble = document.createElement('div'); 
-        bubble.className = 'agent-bubble'; 
-        bubble.id = 'bubble-' + name;
-        
-        // Имя
-        const nameTag = document.createElement('div'); 
-        nameTag.className = 'agent-name'; 
-        nameTag.innerText = name;
-        
-        // Голова с лицом
+        const bubble = document.createElement('div'); bubble.className = 'agent-bubble'; bubble.id = 'bubble-' + name;
+        const nameTag = document.createElement('div'); nameTag.className = 'agent-name'; nameTag.innerText = name;
         const head = document.createElement('div'); head.className = 'agent-head';
         head.innerHTML = '<div class="agent-face"><div class="eye"></div><div class="eye"></div></div>';
-        
-        // Тело
         const body = document.createElement('div'); body.className = 'agent-body';
         body.style.backgroundColor = AGENT_COLORS[name] || '#00e5ff'; 
         
-        // Руки и ноги
         const armL = document.createElement('div'); armL.className = 'agent-arm arm-left';
         const armR = document.createElement('div'); armR.className = 'agent-arm arm-right';
         const legL = document.createElement('div'); legL.className = 'agent-leg leg-left';
         const legR = document.createElement('div'); legR.className = 'agent-leg leg-right';
         
-        body.appendChild(armL); body.appendChild(armR);
-        body.appendChild(legL); body.appendChild(legR);
+        body.appendChild(armL); body.appendChild(armR); body.appendChild(legL); body.appendChild(legR);
 
-        sprite.appendChild(bubble);
-        sprite.appendChild(nameTag);
-        sprite.appendChild(head); 
-        sprite.appendChild(body);
-        
+        sprite.appendChild(bubble); sprite.appendChild(nameTag); sprite.appendChild(head); sprite.appendChild(body);
         room.appendChild(sprite);
         
-        officeSprites[name] = { 
-            el: sprite, 
-            deskX: deskData.x, 
-            deskY: deskData.y, 
-            isWorking: false,
-            isMoving: false
-        };
+        officeSprites[name] = { el: sprite, deskX: deskData.x, deskY: deskData.y, isWorking: false, isMoving: false };
     });
 
     container.appendChild(room);
 }
-// --- ДВИЖЕНИЕ И ПОВЕДЕНИЕ ---
-// --- ДВИЖЕНИЕ ПО ПРОХОДАМ (Сначала вбок, потом вверх/вниз) ---
+
+// --- НОВОЕ МЕДЛЕННОЕ ДВИЖЕНИЕ ПО ПРОХОДАМ ---
 function moveAgentTo(name, targetX, targetY, callback) {
     const agent = officeSprites[name];
     if (!agent || agent.isMoving) return;
@@ -137,16 +108,16 @@ function moveAgentTo(name, targetX, targetY, callback) {
     const currentX = parseFloat(agent.el.style.left) || 0;
     const currentY = parseFloat(agent.el.style.top) || 0;
     
-    // Вычисляем время в зависимости от расстояния (скорость 3% в секунду)
-    const timeX = Math.abs(targetX - currentX) / 3 * 1000;
-    const timeY = Math.abs(targetY - currentY) / 3 * 1000;
+    // Скорость: 3% в секунду (медленно и реалистично)
+    const timeX = (Math.abs(targetX - currentX) / 3) * 1000;
+    const timeY = (Math.abs(targetY - currentY) / 3) * 1000;
 
-    // ШАГ 1: Идем вбок (горизонтально) по текущему ряду
+    // Шаг 1: Идем вбок по текущему ряду
     agent.el.style.transition = `left ${timeX}ms linear`;
     agent.el.style.left = targetX + '%';
 
     setTimeout(() => {
-        // ШАГ 2: Идем вверх/вниз (вертикально) по целевому проходу
+        // Шаг 2: Идем вверх/вниз по целевому проходу
         agent.el.style.transition = `top ${timeY}ms linear`;
         agent.el.style.top = targetY + '%';
 
@@ -170,16 +141,14 @@ function updateAgentInOffice(name, status) {
     if (isWorking) {
         agent.isWorking = true;
         agent.el.classList.remove('walking');
-        agent.el.classList.add('sitting');
-        // Садим за свой стол
-        agent.el.style.left = (agent.deskX + 1) + '%'; 
-        agent.el.style.top = (agent.deskY + 2) + '%';
-        if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active');
+        moveAgentTo(name, agent.deskX + 1, agent.deskY + 2, () => {
+            agent.el.classList.add('sitting');
+            if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active');
+        });
     } else {
         agent.isWorking = false;
         agent.el.classList.remove('sitting');
         if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active');
-        // Встаем со стула и отходим
         moveAgentTo(name, agent.deskX + (Math.random() > 0.5 ? 6 : -6), agent.deskY + 6);
     }
 }
@@ -193,19 +162,15 @@ function showAgentReaction(name, text) {
     agent.isWorking = false;
     agent.el.classList.remove('sitting', 'walking');
     agent.el.classList.add('has-reaction');
-    
-    // Встаем рядом со столом
     agent.el.style.left = (agent.deskX + 6) + '%'; 
     agent.el.style.top = (agent.deskY - 2) + '%';
     
     bubble.innerText = text;
     bubble.classList.add('show');
 
-    // Прячем через 5 секунд
     setTimeout(() => {
         bubble.classList.remove('show');
         agent.el.classList.remove('has-reaction');
-        // Возвращаемся к обычной жизни
         if (agentStatuses[name] && ['busy', 'working', 'thinking', 'typing'].includes(agentStatuses[name])) {
             updateAgentInOffice(name, agentStatuses[name]);
         } else {
@@ -221,16 +186,15 @@ function officeTick() {
         const agent = officeSprites[name];
         if (agent.isWorking || agent.isMoving || agent.el.classList.contains('has-reaction')) return;
 
-        // 15% шанс пойти погулять / попить воды / к принтеру
         if (Math.random() < 0.15) {
             const action = Math.random();
             let tx, ty;
-            if (action < 0.3) { tx = 5; ty = 90; } // Кулер 1
-            else if (action < 0.6) { tx = 95; ty = 90; } // Кулер 2
-            else if (action < 0.8) { tx = 50; ty = 5; } // Принтер
-            else { tx = 15 + Math.random() * 70; ty = 20 + Math.random() * 60; } // Случайно
+            if (action < 0.3) { tx = 5; ty = 90; }
+            else if (action < 0.6) { tx = 95; ty = 90; }
+            else if (action < 0.8) { tx = 50; ty = 5; }
+            else { tx = 15 + Math.random() * 70; ty = 20 + Math.random() * 60; }
             
             moveAgentTo(name, tx, ty);
         }
     });
-            }
+}
