@@ -32,6 +32,9 @@ function updateAgentStatus(agentName, status) {
         }
     }
     if (typeof updateAgentInOffice === 'function') updateAgentInOffice(agentName, status);
+    if (status === 'error' && typeof showAgentReaction === 'function') {
+        showAgentReaction(agentName, 'Босс, проблема!');
+    }
 }
 
 // --- КЛИКИ И ВЫБОР ---
