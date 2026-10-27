@@ -150,3 +150,19 @@ function init() {
     }
     if (chatInputEl) chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
         }
+let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
+
+function toggleAIModel() {
+    selectedAIModel = (selectedAIModel === 'yandex') ? 'deepseek' : 'yandex';
+    localStorage.setItem('shtabAIModel', selectedAIModel);
+    const btn = document.getElementById('btnAIModel');
+    if (selectedAIModel === 'deepseek') {
+        btn.innerText = '🧠 ИИ: DeepSeek';
+        btn.style.background = '#4CAF50'; // Зеленый для DeepSeek
+        btn.style.color = '#fff';
+    } else {
+        btn.innerText = '🧠 ИИ: Yandex';
+        btn.style.background = '#333'; // Стандартный для Яндекса
+        btn.style.color = '#aaa';
+    }
+}
