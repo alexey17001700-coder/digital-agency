@@ -100,4 +100,4 @@ async function speakText(text, agentName) {
             window.speechSynthesis.speak(utterance);
         }
     }
-                }
+}
