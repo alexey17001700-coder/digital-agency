@@ -403,7 +403,13 @@ async function sendMessage(overrideText = null, isKick = false) {
             let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
             messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
-            const lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
+            let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
+
+// АВТО-ЧТЕНИЕ: Если просим проверить "весь код" или "код штаба", подгружаем все файлы
+if (/проверь (весь )?код|проверь код штаба/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
+    lastUserMsg = lastUserMsg + ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
+    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+}
             const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
             if (readMatch) {
                 const fileNames = readMatch[1].split(',').map(f => f.trim());
