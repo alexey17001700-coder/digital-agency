@@ -126,20 +126,36 @@ function initOffice() {
     container.appendChild(room);
 }
 // --- ДВИЖЕНИЕ И ПОВЕДЕНИЕ ---
-function moveAgentTo(name, targetX, targetY) {
+// --- ДВИЖЕНИЕ ПО ПРОХОДАМ (Сначала вбок, потом вверх/вниз) ---
+function moveAgentTo(name, targetX, targetY, callback) {
     const agent = officeSprites[name];
     if (!agent || agent.isMoving) return;
     
     agent.isMoving = true;
     agent.el.classList.add('walking');
-    agent.el.style.left = targetX + '%';
-    agent.el.style.top = targetY + '%';
 
-    // Ждем окончания CSS-перехода (2 секунды)
+    const currentX = parseFloat(agent.el.style.left) || 0;
+    const currentY = parseFloat(agent.el.style.top) || 0;
+    
+    // Вычисляем время в зависимости от расстояния (скорость 3% в секунду)
+    const timeX = Math.abs(targetX - currentX) / 3 * 1000;
+    const timeY = Math.abs(targetY - currentY) / 3 * 1000;
+
+    // ШАГ 1: Идем вбок (горизонтально) по текущему ряду
+    agent.el.style.transition = `left ${timeX}ms linear`;
+    agent.el.style.left = targetX + '%';
+
     setTimeout(() => {
-        if (!agent.isWorking) agent.el.classList.remove('walking');
-        agent.isMoving = false;
-    }, 2000);
+        // ШАГ 2: Идем вверх/вниз (вертикально) по целевому проходу
+        agent.el.style.transition = `top ${timeY}ms linear`;
+        agent.el.style.top = targetY + '%';
+
+        setTimeout(() => {
+            agent.isMoving = false;
+            agent.el.classList.remove('walking');
+            if (callback) callback();
+        }, timeY);
+    }, timeX);
 }
 
 function updateAgentInOffice(name, status) {
