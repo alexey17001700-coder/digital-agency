@@ -40,15 +40,11 @@ function handleAgentClick(name) {
         card.classList.remove('has-idea');
         if (!selectedAgents.includes(name)) selectedAgents.push(name);
         card.classList.add('selected');
-        sendMessage(`[Система: Агент ${name} вступает в диалог и озвучивает свою идею]`);
+        sendMessage(`[Система: Агент ${name} вступает в диалог]`);
         return;
     }
-    if (selectedAgents.includes(name)) {
-        showAgentInfo(name);
-    } else {
-        selectedAgents.push(name);
-        card.classList.add('selected');
-    }
+    if (selectedAgents.includes(name)) { showAgentInfo(name); } 
+    else { selectedAgents.push(name); card.classList.add('selected'); }
 }
 
 function toggleCouncil() {
@@ -96,17 +92,14 @@ function saveAgentCharacter() {
     alert(`Настройки агента ${name} сохранены!`);
 }
 
-function closeModal(e) {
-    if (e && e.target !== e.currentTarget) return;
-    document.getElementById('agentModal').classList.remove('active');
-}
+function closeModal(e) { if (e && e.target !== e.currentTarget) return; document.getElementById('agentModal').classList.remove('active'); }
 
 function setMode(mode) {
     currentMode = mode;
     document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
     document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
     if (allChats[currentChatId] && allChats[currentChatId].messages[0]) {
-        if (mode === 'hacker') { allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер. Анализируй код, ищи уязвимости."; }
+        if (mode === 'hacker') { allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер."; }
         else { allChats[currentChatId].messages[0].content = SYSTEM_PROMPT; }
     }
     saveAll();
@@ -120,26 +113,21 @@ function toggleAutoMode() {
 }
 
 function clearAllChats() {
-    const pinnedIds = [];
-    for (let id in allChats) { if (allChats[id].pinned) pinnedIds.push(allChats[id]); }
-    allChats = {};
-    pinnedIds.forEach(chat => { allChats[chat.id] = chat; });
-    if (!allChats[currentChatId]) createNewChat(true);
-    else { saveAll(); renderChatList(); }
-    renderMessage("🧹 История чатов очищена (кроме закрепленных).", 'director', 'Оркестратор');
+    allChats = {}; createNewChat(true);
+    renderMessage("🧹 История очищена.", 'director', 'Оркестратор');
 }
 
 async function clearAllContent() {
-    renderMessage("🧹 Очищаю добавленный контент...", 'director', 'Оркестратор');
+    renderMessage("🧹 Очищаю контент...", 'director', 'Оркестратор');
     try {
         const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isClearContent: true }) });
         const data = await response.json();
-        if (data.success) renderMessage("✅ Контент успешно очищен! Обновите страницу.", 'director', 'Оркестратор');
-    } catch (e) { renderMessage("❌ Ошибка очистки: " + e.message, 'director', 'Оркестратор'); }
+        if (data.success) renderMessage("✅ Контент очищен!", 'director', 'Оркестратор');
+    } catch (e) { renderMessage("❌ Ошибка очистки", 'director', 'Оркестратор'); }
 }
 
 async function clearContentFromButton() {
-    if (confirm("⚠️ Очистить всю папку Контент?")) {
+    if (confirm("⚠️ Очистить Контент?")) {
         document.getElementById('contentModal').classList.remove('active');
         await clearAllContent();
         setTimeout(() => { location.reload(); }, 2000);
@@ -148,30 +136,17 @@ async function clearContentFromButton() {
 
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
-    if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
-    
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {
-        if (chatIds.length > 0) {
-            const sortedIds = chatIds.sort((a, b) => b.localeCompare(a));
-            currentChatId = sortedIds[0];
-            loadChat(currentChatId);
-        } else { createNewChat(true); }
+        if (chatIds.length > 0) { currentChatId = chatIds.sort((a, b) => b.localeCompare(a))[0]; loadChat(currentChatId); }
+        else { createNewChat(true); }
     } else { loadChat(currentChatId); }
-    
     renderChatList(); 
-
     const btnVoice = document.getElementById('btnVoiceToggle');
     if (btnVoice && typeof isVoiceEnabled !== 'undefined') {
         if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
         else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
     }
-    
-    if (chatInputEl) {
-        chatInputEl.addEventListener('input', function() {
-            this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
-            if(this.value === '') this.style.height = 'auto';
-        });
-    }
-}
+    if (chatInputEl) chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
+        }
