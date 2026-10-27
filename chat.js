@@ -222,9 +222,15 @@ async function sendMessage(overrideText = null, isKick = false) {
             messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
             let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
-            if (/(проверь|проверьте|посмотри|посмотрите).*код|код штаба/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
-                lastUserMsg = lastUserMsg + ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
-                messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+            if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
+    const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
+    if (fileMatch) {
+        lastUserMsg += ` [READ: ${fileMatch[0]}]`;
+        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+    } else if (/код штаба/i.test(lastUserMsg)) {
+        lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
+        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+    }
             }
 
             let allCode = "";
