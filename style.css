@@ -1,3 +1,4 @@
+/* --- БАЗА --- */
 body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100dvh; overflow: hidden; touch-action: pan-y; }
 .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
 .sidebar.open { transform: translateX(0); }
@@ -12,11 +13,13 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .chat-item-actions span { cursor: pointer; font-size: 14px; }
 .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
 
+/* --- ОСНОВНАЯ ЗОНА --- */
 .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
 .top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: relative; }
 .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
 .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
+/* --- СТАТУС-БАР --- */
 .status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
 .status-item { display: flex; align-items: center; gap: 3px; background: #1e1e1e; padding: 3px 6px; border-radius: 10px; border: 1px solid #333; transition: all 0.3s; }
 .status-item .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
@@ -26,16 +29,20 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
 @keyframes pulse { to { opacity: 0.3; } }
 
+/* --- ТЕСТЕР --- */
 .tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
 .tester-dropdown.open { display: block; }
 .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
 .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
 .tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
 
+/* --- КНОПКИ РЕЖИМОВ --- */
 .mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
 .mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
 .mode-btn.active { background: #00e5ff; color: #000; }
 .mode-btn.hacker-active { background: #ff0055; color: #fff; }
+
+/* --- ЧАТ --- */
 .chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
 .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; -webkit-user-select: text; position: relative; touch-action: pan-y; }
 .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
@@ -49,17 +56,21 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .msg-avatar { display: inline-block; margin-right: 5px; font-size: 16px; vertical-align: middle; }
 .msg-name { font-weight: bold; font-size: 11px; margin-bottom: 4px; display: block; color: #aaa; cursor: pointer; }
 
+/* --- КНОПКИ В СООБЩЕНИЯХ --- */
 .share-btn { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; padding: 2px 6px; border-radius: 5px; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 5; }
 .chat-msg:hover .share-btn { opacity: 1; }
 
+/* --- ОПАСНЫЕ ССЫЛКИ --- */
 .danger-link-badge { display: block; background: #440000; color: #ff0000; border: 1px solid #ff0000; padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px; font-weight: bold; animation: blink-red 1.5s infinite; }
 @keyframes blink-red { 0%, 100% { background: #440000; } 50% { background: #880000; } }
 
+/* --- МЕДИА --- */
 .chat-media { max-width: 100%; border-radius: 8px; margin-top: 8px; display: block; }
 .chat-audio { width: 100%; margin-top: 8px; display: block; }
 .chat-video-container { position: relative; width: 100%; padding-bottom: 56.25%; margin-top: 8px; border-radius: 8px; overflow: hidden; background: #000; }
 .chat-video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
+/* --- ПОЛЕ ВВОДА --- */
 .input-area { padding: 10px; background: #121212; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
 #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #333; background: #1e1e1e; color: white; outline: none; resize: none; max-height: 120px; overflow-y: auto; font-family: inherit; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
 .send-btn-container { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -70,6 +81,7 @@ button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-
 button.send-btn:disabled { background: #555; }
 button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse 1s infinite; }
 
+/* --- ОВЕРЛЕЙ И АГЕНТЫ --- */
 .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
 .overlay.active { display: block; }
 .agents-wrapper { background: #0a0a0a; padding: 10px 10px 15px 10px; border-top: 1px solid #333; flex-shrink: 0; max-height: 135px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -91,11 +103,13 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .status-idle { color: #888; }
 .status-working { color: #ffd700; animation: pulse 1.5s infinite; }
 
+/* --- ЛАМПОЧКА ИДЕЙ --- */
 .idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
 .agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
 .agent-card.has-idea { border-color: #ffd700 !important; background-color: #2a2a1a !important; }
 @keyframes blink-yellow { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
 
+/* --- МОДАЛКИ --- */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
 .modal-overlay.active { display: flex; }
 .modal-content { background: #1e1e1e; border: 2px solid #00e5ff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); position: relative; animation: slideUp 0.3s ease; }
@@ -105,43 +119,43 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-close { background: none; border: none; color: #ff0055; font-size: 24px; cursor: pointer; }
 .modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
 .modal-body strong { color: #ffd700; }
-.apply-code-btn { background: #00ff00; color: #000; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; width: 100%; text-align: center; }
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
-/* --- ОФИС (Пол и стены) --- */
-#office-container { background: #2c3e50; }
-.office-room { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
-.office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 40px; background: #1a252f; border-bottom: 4px solid #0f171e; z-index: 100; }
-.office-wall-left { position: absolute; top: 0; left: 0; width: 40px; height: 100%; background: #1a252f; border-right: 4px solid #0f171e; z-index: 100; }
 
-/* --- СТОЛЫ --- */
-.desk { position: absolute; width: 60px; height: 40px; background: #8b5a2b; border-radius: 5px; border: 2px solid #5c3a21; z-index: 10; }
-.desk-monitor { width: 30px; height: 20px; background: #111; border: 2px solid #444; border-radius: 3px; position: absolute; top: -12px; left: 13px; }
-.desk-pc { width: 10px; height: 15px; background: #333; position: absolute; bottom: -15px; left: 23px; }
+/* --- ОФИС БЕЗ ПРОКРУТКИ --- */
+#office-container { overflow: hidden; background: #2c3e50; display: none; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
+.office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
+.office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 20px; background: #1a252f; border-bottom: 3px solid #0f171e; z-index: 100; }
+.office-wall-left { position: absolute; top: 0; left: 0; width: 20px; height: 100%; background: #1a252f; border-right: 3px solid #0f171e; z-index: 100; }
 
-/* --- ДЕКОР --- */
-.water-cooler { position: absolute; width: 20px; height: 30px; background: #e0e0e0; border-radius: 5px; z-index: 10; border: 2px solid #999; }
-.water-cooler::after { content: ''; position: absolute; top: -15px; left: 2px; width: 12px; height: 15px; background: #00e5ff; border-radius: 50% 50% 0 0; opacity: 0.8; }
-.plant { position: absolute; width: 25px; height: 25px; background: #4caf50; border-radius: 50%; z-index: 10; border: 2px solid #2e7d32; }
-/* --- АГЕНТЫ В ОФИСЕ --- */
-.agent-sprite { position: absolute; width: 24px; height: 30px; transition: left 2s linear, top 2s linear; z-index: 20; display: flex; flex-direction: column; align-items: center; }
-.agent-head { width: 14px; height: 14px; background: #ffccaa; border: 2px solid #000; border-radius: 50%; margin-bottom: -4px; z-index: 2; }
-.agent-body { width: 18px; height: 16px; border: 2px solid #000; border-radius: 4px; }
-.agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
-.agent-sprite.working-sprite { z-index: 15; }
-.agent-sprite.working-sprite::after { content: '💻'; position: absolute; top: -18px; font-size: 12px; animation: pulse 1s infinite; }
+/* Столы */
+.desk { position: absolute; width: 40px; height: 28px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
+.desk-monitor { width: 28px; height: 18px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -10px; left: 4px; }
+.desk-pc { width: 8px; height: 12px; background: #333; position: absolute; bottom: -10px; left: 14px; }
 
-@keyframes walkBob {
-    from { transform: translateY(0); }
-    to { transform: translateY(-3px); }
+/* Монитор с кодом */
+.desk-monitor.active { background: #001a00 !important; border-color: #00ff00 !important; box-shadow: 0 0 8px #00ff00; overflow: hidden; }
+.desk-monitor.active::after { 
+    content: '0101 1101 0010 1100 1110 0001 1010 0101'; 
+    color: #00ff00; font-size: 5px; font-family: monospace; line-height: 1.1; 
+    display: block; width: 100%; height: 100%; padding: 1px;
+    animation: scrollCode 1.5s linear infinite; 
 }
-/* --- НОВЫЙ ДЕКОР --- */
-.office-door { position: absolute; width: 40px; height: 45px; background: #5c3a21; border: 3px solid #3e2716; border-radius: 5px 5px 0 0; z-index: 101; top: 0; }
-.office-door::after { content: ''; position: absolute; right: 6px; top: 20px; width: 6px; height: 6px; background: #ffd700; border-radius: 50%; }
+@keyframes scrollCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 
-.printer-desk { position: absolute; width: 80px; height: 40px; background: #8b5a2b; border-radius: 5px; border: 2px solid #5c3a21; z-index: 10; }
-.printer { position: absolute; width: 40px; height: 30px; background: #333; border: 2px solid #111; border-radius: 4px; top: -15px; left: 18px; }
-.printer::after { content: ''; position: absolute; top: 5px; left: 5px; width: 26px; height: 2px; background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+/* Агенты */
+.agent-sprite { position: absolute; width: 16px; height: 22px; transition: left 2s linear, top 2s linear; z-index: 20; display: flex; flex-direction: column; align-items: center; }
+.agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
+.agent-sprite.sitting { z-index: 5 !important; }
+.agent-head { width: 10px; height: 10px; background: #ffccaa; border: 1px solid #000; border-radius: 50%; margin-bottom: -2px; z-index: 2; }
+.agent-body { width: 14px; height: 12px; border: 1px solid #000; border-radius: 3px; }
+@keyframes walkBob { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+.agent-name { position: absolute; top: -16px; font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; pointer-events: none; z-index: 30; border: 1px solid #555; }
 
-.water-cooler { z-index: 15; }
-.plant { z-index: 15; }
-.plant::before { content: '🌸'; position: absolute; top: -10px; left: 5px; font-size: 12px; }
+/* Декор */
+.water-cooler { position: absolute; width: 14px; height: 22px; background: #e0e0e0; border-radius: 3px; z-index: 15; border: 1px solid #999; }
+.water-cooler::after { content: ''; position: absolute; top: -10px; left: 1px; width: 8px; height: 10px; background: #00e5ff; border-radius: 50% 50% 0 0; opacity: 0.8; }
+.printer-desk { position: absolute; width: 50px; height: 28px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
+.printer { position: absolute; width: 28px; height: 20px; background: #333; border: 1px solid #111; border-radius: 3px; top: -10px; left: 9px; }
+.printer::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 2px; background: #00ff00; box-shadow: 0 0 4px #00ff00; }
+.plant { position: absolute; width: 16px; height: 16px; background: #4caf50; border-radius: 50%; z-index: 15; border: 1px solid #2e7d32; }
+.plant::before { content: '🌸'; position: absolute; top: -6px; left: 2px; font-size: 8px; }
