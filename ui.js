@@ -29,6 +29,7 @@ function updateAgentStatus(agentName, status) {
             else if (status === 'working') { dot.classList.add('busy'); card.classList.add('working'); setAgentStatus(agentName, 'working'); }
             else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); setAgentStatus(agentName, 'idle'); }
             else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); setAgentStatus(agentName, 'idle'); }
+            if (typeof updateAgentInOffice === 'function') updateAgentInOffice(agentName, status);
         }
     }
 }
