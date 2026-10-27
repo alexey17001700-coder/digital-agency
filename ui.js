@@ -158,7 +158,7 @@ async function clearContentFromButton() {
     }
 }
 
-// --- ЗАПУСК (Вызывается из app.html) ---
+// --- ЗАПУСК ---
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -187,4 +187,4 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-}
+    }
