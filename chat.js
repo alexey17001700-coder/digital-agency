@@ -30,7 +30,6 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 3. Ссылки на опасные сайты: [DANGER:сама_ссылка].
 4. Фоновые задачи: [TASK:ИмяАгента:СутьЗадачи].
 5. Ты подчиняешься Боссу.`;
-
 function saveAll() { 
     try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } 
     catch (e) { console.warn("Память переполнена!"); }
@@ -120,12 +119,12 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-            }
+}
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '');
     text = text.replace(/\[FUNCTION:[^\]]+\]/g, '');
     
-    // Вырезаем выдуманные имена (кроме служебных и реальных агентов)
+    // Вырезаем выдуманные имена
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
         if (name.includes(':') || name.includes('CMD')) return match;
         if (Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === name.trim().toLowerCase())) return match;
@@ -215,7 +214,6 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     chatContainer.appendChild(div);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
-
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
@@ -266,10 +264,10 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-                                                                                                                    }
+}
+
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS);
-    // Ищем [Имя]: или **Имя:** или просто Имя: с новой строки
     const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
 
@@ -341,7 +339,7 @@ function kickAI(agentName) {
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
     const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
     sendMessage(kickPrompt, true);
-}
+           }
 function handleSendClick() {
     if (isGenerating) {
         if (currentAbortController) currentAbortController.abort();
@@ -405,6 +403,9 @@ async function sendMessage(overrideText = null, isKick = false) {
         try {
             let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
             
+            // ОЧИСТКА: Удаляем пустые сообщения, чтобы Яндекс не падал с ошибкой 500
+            messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
+
             let finalPrompt = SYSTEM_PROMPT;
             if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") {
                 finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
