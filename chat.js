@@ -506,8 +506,7 @@ if (/проверь (весь )?код|проверь код штаба/i.test(l
             
             const replies = parseAgentReplies(aiText);
             await playAgentReplies(replies);
-
-            const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите/i;
+            const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу/i;
             if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
                 watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 16000); 
             }
