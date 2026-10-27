@@ -31,7 +31,6 @@ function updateAgentStatus(agentName, status) {
             else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); setAgentStatus(agentName, 'idle'); }
         }
     }
-    // Связь с офисом
     if (typeof updateAgentInOffice === 'function') updateAgentInOffice(agentName, status);
 }
 
@@ -46,7 +45,7 @@ function handleAgentClick(name) {
         return;
     }
     if (selectedAgents.includes(name)) {
-        showAgentInfo(name); // 2-й клик открывает настройки
+        showAgentInfo(name);
     } else {
         selectedAgents.push(name);
         card.classList.add('selected');
@@ -156,7 +155,7 @@ async function clearContentFromButton() {
     }
 }
 
-// --- ЗАПУСК ---
+// --- ЗАПУСК (Вызывается из app.html) ---
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -186,7 +185,3 @@ function init() {
         });
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(init, 100);
-});
