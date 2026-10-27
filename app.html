@@ -27,8 +27,10 @@
                 await loadScript('network.js'); 
                 await loadScript('voice.js'); 
                 await loadScript('chat.js'); 
-                await loadScript('ui.js'); 
                 await loadScript('office.js'); 
+                await loadScript('ui.js'); 
+                // Вызываем инициализацию, когда ВСЕ скрипты загружены
+                if (typeof init === 'function') init();
             } catch (e) { console.error('Ошибка загрузки скриптов', e); }
         });
     </script>
@@ -128,4 +130,4 @@
         </div>
     </div>
 </body>
-    </html>
+            </html>
