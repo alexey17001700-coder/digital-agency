@@ -142,6 +142,7 @@ function moveAgentTo(name, targetX, targetY, callback) {
 }
 
 function updateAgentInOffice(name, status) {
+function updateAgentInOffice(name, status) {
     agentStatuses[name] = status;
     if (!officeSprites[name] || !isOfficeOpen) return;
     
@@ -152,19 +153,21 @@ function updateAgentInOffice(name, status) {
 
     if (isWorking) {
         agent.isWorking = true;
-        agent.el.classList.remove('walking', 'sitting');
-        moveAgentTo(name, agent.deskX + 1, agent.deskY + 1, () => {
-            agent.el.classList.add('sitting');
-            if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active');
-        });
+        agent.isMoving = false; // Сбрасываем флаг движения
+        agent.el.classList.remove('walking');
+        agent.el.style.transition = 'none'; // Отключаем плавность, чтобы мгновенно сел
+        agent.el.style.left = (agent.deskX + 1) + '%';
+        agent.el.style.top = (agent.deskY + 2) + '%';
+        agent.el.classList.add('sitting');
+        if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active');
     } else {
         if (agent.isWorking) {
             agent.isWorking = false;
             agent.el.classList.remove('sitting');
             if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active');
             
-            // Отходим от стола по проходу
             const safeSpot = SAFE_SPOTS[Math.floor(Math.random() * SAFE_SPOTS.length)];
+            agent.el.style.transition = 'left 2s linear, top 2s linear'; // Включаем обратно
             moveAgentTo(name, safeSpot.x, safeSpot.y);
         }
     }
