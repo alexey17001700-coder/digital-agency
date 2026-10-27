@@ -82,7 +82,6 @@ function addMessageToHistory(text, sender, agentName = null) {
     }
     saveAll(); renderChatList();
 }
-
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -124,7 +123,8 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }
+}
+
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
@@ -146,7 +146,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     type();
 }
-
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -228,16 +227,16 @@ async function sendMessage(overrideText = null, isKick = false) {
                 messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
             }
 
+            let allCode = "";
             const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
             if (readMatch) {
-                const fileNames = readMatch[1].split(',').map(f => f.trim()); let allCode = "";
+                const fileNames = readMatch[1].split(',').map(f => f.trim());
                 for (const fileName of fileNames) {
                     try {
                         const fileRes = await fetch(fileName + '?t=' + Date.now());
                         if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
                     } catch (e) {}
                 }
-                if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content += allCode;
             }
 
             let finalPrompt = SYSTEM_PROMPT;
@@ -254,10 +253,11 @@ async function sendMessage(overrideText = null, isKick = false) {
                 });
                 finalPrompt = agentPrompt + "\n" + finalPrompt;
             }
+            if (allCode) finalPrompt += allCode; // Прикрепляем код
             if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
             const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: messagesToSend, temperature: 0.7 }), signal: currentAbortController.signal });
-            if (!response.ok) { const errorData = await response.json().catch(() => ({})); lastError = `Яндекс упал: ${response.status}.`; }
+            if (!response.ok) { lastError = `Яндекс упал: ${response.status}.`; }
             else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
         } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
         clearTimeout(timeoutId);
@@ -303,4 +303,4 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-        }
+}
