@@ -29,7 +29,8 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 2. ЗАПРЕЩЕНО ВЫДУМЫВАТЬ ИМЕНА!
 3. Ссылки на опасные сайты: [DANGER:сама_ссылка].
 4. Фоновые задачи: [TASK:ИмяАгента:СутьЗадачи].
-5. Ты подчиняешься Боссу.`;
+5. Ты подчиняешься Боссу.
+6. ДОСТУП К КОДУ: Если Босс просит посмотреть код проекта (например, "посмотри chat.js"), ты ОБЯЗАН добавить в свой ответ скрытый тег [READ:имя_файла]. Например: "Сейчас посмотрю... [READ:chat.js]". Наш скрипт подгрузит код, и ты сможешь его проанализировать.`;
 function saveAll() { 
     try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } 
     catch (e) { console.warn("Память переполнена!"); }
@@ -405,7 +406,25 @@ async function sendMessage(overrideText = null, isKick = false) {
             
             // ОЧИСТКА: Удаляем пустые сообщения, чтобы Яндекс не падал с ошибкой 500
             messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
-
+            // ЧТЕНИЕ ФАЙЛОВ ПРОЕКТА
+const lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
+const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
+if (readMatch) {
+    const fileName = readMatch[1].trim();
+    try {
+        // Пытаемся скачать файл с GitHub Pages
+        const fileRes = await fetch(fileName + '?t=' + Date.now());
+        if (fileRes.ok) {
+            const fileCode = await fileRes.text();
+            // Подмешиваем код в системный промпт
+            if (messagesToSend[0] && messagesToSend[0].role === 'system') {
+                messagesToSend[0].content += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``;
+            }
+        }
+    } catch (e) {
+        console.warn("Не удалось загрузить файл", e);
+    }
+}
             let finalPrompt = SYSTEM_PROMPT;
             if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") {
                 finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
