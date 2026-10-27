@@ -120,36 +120,58 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
 .modal-body strong { color: #ffd700; }
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
-
 /* --- ОФИС БЕЗ ПРОКРУТКИ --- */
-#office-container { overflow: hidden; background: #2c3e50; display: none; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
+#office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
 .office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 20px; background: #1a252f; border-bottom: 3px solid #0f171e; z-index: 100; }
 .office-wall-left { position: absolute; top: 0; left: 0; width: 20px; height: 100%; background: #1a252f; border-right: 3px solid #0f171e; z-index: 100; }
 
 /* Столы */
-.desk { position: absolute; width: 40px; height: 28px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
-.desk-monitor { width: 28px; height: 18px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -10px; left: 4px; }
-.desk-pc { width: 8px; height: 12px; background: #333; position: absolute; bottom: -10px; left: 14px; }
-
-/* Монитор с кодом */
-.desk-monitor.active { background: #001a00 !important; border-color: #00ff00 !important; box-shadow: 0 0 8px #00ff00; overflow: hidden; }
+.desk { position: absolute; width: 50px; height: 34px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
+.desk-monitor { width: 34px; height: 22px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -12px; left: 6px; }
+.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; }
+.desk-monitor.active { background: #001a00 !important; border-color: #00ff00 !important; box-shadow: 0 0 10px #00ff00; overflow: hidden; }
 .desk-monitor.active::after { 
-    content: '0101 1101 0010 1100 1110 0001 1010 0101'; 
-    color: #00ff00; font-size: 5px; font-family: monospace; line-height: 1.1; 
-    display: block; width: 100%; height: 100%; padding: 1px;
+    content: '01010 11010 00101 11001 11100 00011 10101 01010'; 
+    color: #00ff00; font-size: 6px; font-family: monospace; line-height: 1.1; 
+    display: block; width: 100%; height: 100%; padding: 2px;
     animation: scrollCode 1.5s linear infinite; 
 }
 @keyframes scrollCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 
-/* Агенты */
-.agent-sprite { position: absolute; width: 16px; height: 22px; transition: left 2s linear, top 2s linear; z-index: 20; display: flex; flex-direction: column; align-items: center; }
+/* Агенты (Руки, ноги, лицо) */
+.agent-sprite { position: absolute; width: 24px; height: 34px; transition: left 2s linear, top 2s linear; z-index: 20; display: flex; flex-direction: column; align-items: center; }
 .agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
 .agent-sprite.sitting { z-index: 5 !important; }
-.agent-head { width: 10px; height: 10px; background: #ffccaa; border: 1px solid #000; border-radius: 50%; margin-bottom: -2px; z-index: 2; }
-.agent-body { width: 14px; height: 12px; border: 1px solid #000; border-radius: 3px; }
-@keyframes walkBob { from { transform: translateY(0); } to { transform: translateY(-2px); } }
-.agent-name { position: absolute; top: -16px; font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; pointer-events: none; z-index: 30; border: 1px solid #555; }
+
+.agent-head { width: 16px; height: 16px; background: #ffccaa; border: 2px solid #000; border-radius: 50%; z-index: 3; display: flex; justify-content: center; align-items: center; }
+.agent-face { display: flex; gap: 3px; margin-top: 2px; }
+.eye { width: 3px; height: 3px; background: #000; border-radius: 50%; }
+
+.agent-body { width: 18px; height: 14px; border: 2px solid #000; border-radius: 4px; z-index: 2; position: relative; display: flex; justify-content: center; }
+.agent-body::after { content: ''; position: absolute; bottom: 2px; width: 8px; height: 2px; background: rgba(0,0,0,0.3); border-radius: 2px; } /* Пузо */
+
+.agent-arm { position: absolute; width: 4px; height: 12px; background: #ffccaa; border: 1px solid #000; top: 2px; z-index: 1; border-radius: 2px; }
+.arm-left { left: -6px; transform-origin: top center; }
+.arm-right { right: -6px; transform-origin: top center; }
+
+.agent-leg { position: absolute; width: 5px; height: 12px; background: #333; border: 1px solid #000; bottom: -12px; z-index: 1; border-radius: 0 0 2px 2px;}
+.leg-left { left: 2px; transform-origin: top center; }
+.leg-right { right: 2px; transform-origin: top center; }
+
+.agent-sprite.walking .arm-left { animation: swing 0.4s infinite alternate; }
+.agent-sprite.walking .arm-right { animation: swing 0.4s infinite alternate-reverse; }
+.agent-sprite.walking .leg-left { animation: swing 0.4s infinite alternate-reverse; }
+.agent-sprite.walking .leg-right { animation: swing 0.4s infinite alternate; }
+@keyframes swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+@keyframes walkBob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+/* Имена и Таблички */
+.agent-name { position: absolute; top: -18px; font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; }
+.agent-bubble { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; display: none; z-index: 50; border: 2px solid #000; }
+.agent-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #000 transparent transparent; }
+.agent-bubble.show { display: block; animation: blink 1s infinite alternate; }
+@keyframes blink { from { opacity: 1; } to { opacity: 0.4; } }
 
 /* Декор */
 .water-cooler { position: absolute; width: 14px; height: 22px; background: #e0e0e0; border-radius: 3px; z-index: 15; border: 1px solid #999; }
@@ -158,4 +180,4 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .printer { position: absolute; width: 28px; height: 20px; background: #333; border: 1px solid #111; border-radius: 3px; top: -10px; left: 9px; }
 .printer::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 2px; background: #00ff00; box-shadow: 0 0 4px #00ff00; }
 .plant { position: absolute; width: 16px; height: 16px; background: #4caf50; border-radius: 50%; z-index: 15; border: 1px solid #2e7d32; }
-.plant::before { content: '🌸'; position: absolute; top: -6px; left: 2px; font-size: 8px; }
+
