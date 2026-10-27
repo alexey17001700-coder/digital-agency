@@ -134,3 +134,14 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     from { transform: translateY(0); }
     to { transform: translateY(-3px); }
 }
+/* --- НОВЫЙ ДЕКОР --- */
+.office-door { position: absolute; width: 40px; height: 45px; background: #5c3a21; border: 3px solid #3e2716; border-radius: 5px 5px 0 0; z-index: 101; top: 0; }
+.office-door::after { content: ''; position: absolute; right: 6px; top: 20px; width: 6px; height: 6px; background: #ffd700; border-radius: 50%; }
+
+.printer-desk { position: absolute; width: 80px; height: 40px; background: #8b5a2b; border-radius: 5px; border: 2px solid #5c3a21; z-index: 10; }
+.printer { position: absolute; width: 40px; height: 30px; background: #333; border: 2px solid #111; border-radius: 4px; top: -15px; left: 18px; }
+.printer::after { content: ''; position: absolute; top: 5px; left: 5px; width: 26px; height: 2px; background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+
+.water-cooler { z-index: 15; }
+.plant { z-index: 15; }
+.plant::before { content: '🌸'; position: absolute; top: -10px; left: 5px; font-size: 12px; }
