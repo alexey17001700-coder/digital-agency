@@ -140,7 +140,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 @keyframes scrollCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 
 /* Агенты (Руки, ноги, лицо) */
-.agent-sprite { position: absolute; width: 24px; height: 34px; transition: left 2s linear, top 2s linear; z-index: 20; display: flex; flex-direction: column; align-items: center; }
+.agent-sprite { position: absolute; width: 24px; height: 34px; z-index: 20; display: flex; flex-direction: column; align-items: center; }
 .agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
 .agent-sprite.sitting { z-index: 5 !important; }
 
