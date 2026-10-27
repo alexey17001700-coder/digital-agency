@@ -1,6 +1,7 @@
 let isOfficeOpen = false;
 let officeSprites = {}; 
 let officeDesks = []; 
+let agentStatuses = {}; // Глобальная память статусов агентов
 
 function toggleOffice() {
     isOfficeOpen = !isOfficeOpen;
@@ -40,7 +41,7 @@ function initOffice() {
     const door1 = document.createElement('div'); door1.className = 'office-door'; door1.style.left = '25%'; room.appendChild(door1);
     const door2 = document.createElement('div'); door2.className = 'office-door'; door2.style.left = '75%'; room.appendChild(door2);
 
-    // Генерация 24 столов
+    // 24 стола (4 колонки х 6 рядов)
     const cols = [10, 30, 50, 70];
     const rows = [10, 24, 38, 52, 66, 80];
 
@@ -56,24 +57,17 @@ function initOffice() {
         });
     });
 
-    // Декор: Кулеры
+    // Декор
     const cooler1 = document.createElement('div'); cooler1.className = 'water-cooler'; cooler1.style.top = '85%'; cooler1.style.left = '5%'; room.appendChild(cooler1);
     const cooler2 = document.createElement('div'); cooler2.className = 'water-cooler'; cooler2.style.top = '5%'; cooler2.style.left = '90%'; room.appendChild(cooler2);
 
-    // Декор: Стол с принтером
-    const printerDesk = document.createElement('div'); 
-    printerDesk.className = 'printer-desk'; 
-    printerDesk.style.top = '85%'; 
-    printerDesk.style.left = '85%'; 
-    printerDesk.innerHTML = '<div class="printer"></div>';
-    room.appendChild(printerDesk);
+    const printerDesk = document.createElement('div'); printerDesk.className = 'printer-desk'; printerDesk.style.top = '85%'; printerDesk.style.left = '85%'; printerDesk.innerHTML = '<div class="printer"></div>'; room.appendChild(printerDesk);
 
-    // Декор: Цветы
     const plant1 = document.createElement('div'); plant1.className = 'plant'; plant1.style.top = '20%'; plant1.style.left = '5%'; room.appendChild(plant1);
     const plant2 = document.createElement('div'); plant2.className = 'plant'; plant2.style.top = '50%'; plant2.style.left = '90%'; room.appendChild(plant2);
     const plant3 = document.createElement('div'); plant3.className = 'plant'; plant3.style.top = '85%'; plant3.style.left = '50%'; room.appendChild(plant3);
 
-    // Создаем агентов
+    // Создаем человечков
     const agentNames = Object.keys(AGENT_ICONS);
     agentNames.forEach((name) => {
         const sprite = document.createElement('div');
@@ -90,25 +84,29 @@ function initOffice() {
         room.appendChild(sprite);
         
         officeSprites[name] = { el: sprite, deskId: null };
+        
+        // Если агент уже работает, сразу сажаем его за стол!
+        if (agentStatuses[name] && agentStatuses[name] !== 'idle' && agentStatuses[name] !== 'free') {
+            applyAgentStatusToSprite(name, agentStatuses[name]);
+        }
     });
 
     container.appendChild(room);
 }
 
+// Вызывается из ui.js при смене статуса
 function updateAgentInOffice(name, status) {
-    if (!officeSprites[name]) return;
+    agentStatuses[name] = status; // Запоминаем статус
+    if (!officeSprites[name]) return; // Если офис закрыт, просто сохранили
+    applyAgentStatusToSprite(name, status);
+}
+
+function applyAgentStatusToSprite(name, status) {
     const agent = officeSprites[name];
+    // Если статус busy, working, thinking или typing - агент работает
+    const isWorking = ['busy', 'working', 'thinking', 'typing'].includes(status);
     
-    if (status === 'idle') {
-        agent.el.classList.remove('sitting');
-        if (agent.deskId !== null) {
-            const desk = officeDesks[agent.deskId];
-            desk.occupied = false;
-            desk.el.querySelector('.desk-monitor').classList.remove('active');
-            agent.deskId = null;
-            agent.el.style.top = (agent.el.offsetTop / document.getElementById('office-container').offsetHeight * 100 + 10) + '%';
-        }
-    } else {
+    if (isWorking) {
         if (agent.deskId === null) {
             const freeDeskIndex = officeDesks.findIndex(d => !d.occupied);
             if (freeDeskIndex !== -1) {
@@ -122,9 +120,21 @@ function updateAgentInOffice(name, status) {
                 desk.el.querySelector('.desk-monitor').classList.add('active');
             }
         }
+    } else {
+        // Если idle или free - встает и идет гулять
+        agent.el.classList.remove('sitting');
+        if (agent.deskId !== null) {
+            const desk = officeDesks[agent.deskId];
+            desk.occupied = false;
+            desk.el.querySelector('.desk-monitor').classList.remove('active');
+            agent.deskId = null;
+            // Отходим вниз от стола
+            agent.el.style.top = (parseFloat(desk.el.style.top) + 10) + '%';
+        }
     }
 }
 
+// Логика ходьбы
 setInterval(() => {
     if (!isOfficeOpen) return;
     Object.keys(officeSprites).forEach(name => {
