@@ -4,15 +4,12 @@ let isAutoMode = false;
 let isGenerating = false;
 let currentAbortController = null;
 let watchdogTimer = null;
-
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс пока не давал особых указаний.";
 let customPrompts = {};
 try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
-
 let allChats = {};
 try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
-
 const chatContainer = document.getElementById('chatContainer');
 const chatListEl = document.getElementById('chatList');
 const sendBtn = document.getElementById('sendBtn');
@@ -30,9 +27,9 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 3. Ссылки на опасные сайты: [DANGER:сама_ссылка].
 4. Фоновые задачи: [TASK:ИмяАгента:СутьЗадачи].
 5. Ты подчиняешься Боссу.
-6. ДОСТУП К КОДУ: Если Босс просит посмотреть код проекта (например, "посмотри chat.js"), ты ОБЯЗАН добавить в свой ответ скрытый тег [READ:имя_файла]. Например: "Сейчас посмотрю... [READ:chat.js]". Наш скрипт подгрузит код, и ты сможешь его проанализировать.
-7. ЧТЕНИЕ КОДА: Если Босс просит посмотреть код, напиши [READ:файл1, файл2] (например: [READ: chat.js, ui.js]). Скрипт подгрузит их.
-8. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке \`\`\`javascript напиши ПОЛНЫЙ новый код файла. Скрипт автоматически перезапишет файл на GitHub. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО трогать папку backup.`;
+6. ЧТЕНИЕ КОДА: Если Босс просит посмотреть код, напиши [READ:файл1, файл2] (например: [READ: chat.js, ui.js]). Скрипт подгрузит их.
+7. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке кода напиши ПОЛНЫЙ новый код файла. Скрипт автоматически перезапишет файл на GitHub. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО трогать папку backup.`;
+
 function saveAll() { 
     try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } 
     catch (e) { console.warn("Память переполнена!"); }
@@ -122,19 +119,17 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-}
+        }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '');
     text = text.replace(/\[FUNCTION:[^\]]+\]/g, '');
     
-    // Вырезаем выдуманные имена
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
-        if (name.includes(':') || name.includes('CMD')) return match;
+        if (name.includes(':') || name.includes('CMD') || name.includes('READ') || name.includes('FILE') || name.includes('TASK') || name.includes('DANGER')) return match;
         if (Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === name.trim().toLowerCase())) return match;
         return '';
     });
 
-    // Вырезаем фейковые ссылки
     text = text.replace(/\(https:\/\/yandex\.ru\/maps\/[^)]+AAAA[^)]+\)/g, '');
     text = text.replace(/\(https:\/\/example\.com[^)]*\)/g, '');
 
@@ -217,6 +212,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     chatContainer.appendChild(div);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div');
     div.className = 'chat-msg msg-' + sender;
@@ -268,7 +264,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     type();
 }
-
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS);
     const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
@@ -342,7 +337,8 @@ function kickAI(agentName) {
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Отправляю пинок...]*`, 'director', 'Оркестратор');
     const kickPrompt = `[СИСТЕМНОЕ СООБЩЕНИЕ: Босс ждет. Время вышло. Ты ОБЯЗАН выдать финальный ответ и реальные данные прямо сейчас. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите" или "сейчас поищу". Если поиск не удался, честно признайся, но дай ответ.]`;
     sendMessage(kickPrompt, true);
-           }
+}
+
 function handleSendClick() {
     if (isGenerating) {
         if (currentAbortController) currentAbortController.abort();
@@ -405,32 +401,25 @@ async function sendMessage(overrideText = null, isKick = false) {
 
         try {
             let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
-            
-            // ОЧИСТКА: Удаляем пустые сообщения, чтобы Яндекс не падал с ошибкой 500
             messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
-            // ЧТЕНИЕ ФАЙЛОВ ПРОЕКТА (поддерживает несколько)
-const lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
-const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
-if (readMatch) {
-    const fileNames = readMatch[1].split(',').map(f => f.trim());
-    let allCode = "";
-    for (const fileName of fileNames) {
-        try {
-            const fileRes = await fetch(fileName + '?t=' + Date.now());
-            if (fileRes.ok) {
-                const fileCode = await fileRes.text();
-                allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``;
+
+            const lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
+            const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
+            if (readMatch) {
+                const fileNames = readMatch[1].split(',').map(f => f.trim());
+                let allCode = "";
+                for (const fileName of fileNames) {
+                    try {
+                        const fileRes = await fetch(fileName + '?t=' + Date.now());
+                        if (fileRes.ok) {
+                            const fileCode = await fileRes.text();
+                            allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``;
+                        }
+                    } catch (e) { console.warn("Не удалось загрузить файл", e); }
+                }
+                if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content += allCode;
             }
-        } catch (e) { console.warn("Не удалось загрузить файл", e); }
-    }
-    if (messagesToSend[0] && messagesToSend[0].role === 'system') {
-        messagesToSend[0].content += allCode;
-    }
-}
-    } catch (e) {
-        console.warn("Не удалось загрузить файл", e);
-    }
-}
+
             let finalPrompt = SYSTEM_PROMPT;
             if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") {
                 finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
@@ -443,20 +432,14 @@ if (readMatch) {
                 } else {
                     agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
                 }
-
                 selectedAgents.forEach(agentName => {
                     let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
                     agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
-                    if (customPrompts[agentName]) {
-                        agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
-                    }
+                    if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
                 });
                 finalPrompt = agentPrompt + "\n" + finalPrompt;
             }
-
-            if (messagesToSend[0] && messagesToSend[0].role === 'system') {
-                messagesToSend[0].content = finalPrompt;
-            }
+            if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
             const response = await fetch(PROXY, { 
                 method: "POST", headers: { "Content-Type": "application/json" },
@@ -483,6 +466,23 @@ if (readMatch) {
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
             if (aiText.includes('[CMD:CLEAR_CONTENT]')) { aiText = aiText.replace('[CMD:CLEAR_CONTENT]', '').trim(); if (typeof clearAllContent === 'function') clearAllContent(); }
             
+            const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
+            if (fileMatch) {
+                const targetFile = fileMatch[1].trim();
+                const codeBlockRegex = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/;
+                const codeMatch = codeBlockRegex.exec(aiText);
+                if (codeMatch) {
+                    const newCode = codeMatch[1];
+                    fetch(PROXY, {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ code: newCode, file: targetFile })
+                    }).then(res => res.json()).then(data => {
+                        if (data.success) renderMessage(`✅ **Файл ${targetFile} успешно обновлен на GitHub!**`, 'director', 'DevOps');
+                        else renderMessage(`❌ **Ошибка обновления:** ${data.error}`, 'director', 'DevOps');
+                    });
+                }
+            }
+
             const taskRegex = /\[TASK:\s*([^:]+):\s*([^\]]+)\]/g;
             let taskMatch; let tasksToRun = [];
             while ((taskMatch = taskRegex.exec(aiText)) !== null) {
@@ -494,23 +494,6 @@ if (readMatch) {
                 if (typeof updateAgentStatus === 'function') updateAgentStatus(t.agent, 'working'); 
                 runBackgroundTask(t.agent, t.task); 
             });
-            // ПЕРЕЗАПИСЬ ФАЙЛОВ ОТ ИИ
-const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
-if (fileMatch) {
-    const targetFile = fileMatch[1].trim();
-    const codeBlockRegex = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/;
-    const codeMatch = codeBlockRegex.exec(aiText);
-    if (codeMatch) {
-        const newCode = codeMatch[1];
-        fetch(PROXY, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code: newCode, file: targetFile })
-        }).then(res => res.json()).then(data => {
-            if (data.success) renderMessage(`✅ **Файл ${targetFile} успешно обновлен на GitHub!**`, 'director', 'DevOps');
-            else renderMessage(`❌ **Ошибка обновления:** ${data.error}`, 'director', 'DevOps');
-        });
-    }
-                }
             
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
             if (elAi) elAi.className = 'status-item online';
@@ -522,7 +505,6 @@ if (fileMatch) {
             if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) {
                 watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 16000); 
             }
-
         } else {
             renderMessage(`❌ **Системная ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
             addMessageToHistory(`❌ **Системная ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
@@ -533,13 +515,11 @@ if (fileMatch) {
         isGenerating = false;
         clearInterval(timerInterval); 
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        
         if (timeBadge) {
             timeBadge.innerText = finalElapsed + "s";
             timeBadge.classList.add('show'); 
             setTimeout(() => { timeBadge.classList.remove('show'); }, 5000);
         }
-
         sendBtn.disabled = false; 
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = "➤"; 
@@ -547,4 +527,4 @@ if (fileMatch) {
         sendBtn.style.background = "#00e5ff"; 
         sendBtn.style.color = "#000";
     }
-}
+            }
