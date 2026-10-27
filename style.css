@@ -122,4 +122,15 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .water-cooler { position: absolute; width: 20px; height: 30px; background: #e0e0e0; border-radius: 5px; z-index: 10; border: 2px solid #999; }
 .water-cooler::after { content: ''; position: absolute; top: -15px; left: 2px; width: 12px; height: 15px; background: #00e5ff; border-radius: 50% 50% 0 0; opacity: 0.8; }
 .plant { position: absolute; width: 25px; height: 25px; background: #4caf50; border-radius: 50%; z-index: 10; border: 2px solid #2e7d32; }
+/* --- АГЕНТЫ В ОФИСЕ --- */
+.agent-sprite { position: absolute; width: 24px; height: 30px; transition: left 2s linear, top 2s linear; z-index: 20; display: flex; flex-direction: column; align-items: center; }
+.agent-head { width: 14px; height: 14px; background: #ffccaa; border: 2px solid #000; border-radius: 50%; margin-bottom: -4px; z-index: 2; }
+.agent-body { width: 18px; height: 16px; border: 2px solid #000; border-radius: 4px; }
+.agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
+.agent-sprite.working-sprite { z-index: 15; }
+.agent-sprite.working-sprite::after { content: '💻'; position: absolute; top: -18px; font-size: 12px; animation: pulse 1s infinite; }
 
+@keyframes walkBob {
+    from { transform: translateY(0); }
+    to { transform: translateY(-3px); }
+}
