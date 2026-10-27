@@ -29,9 +29,10 @@ function updateAgentStatus(agentName, status) {
             else if (status === 'working') { dot.classList.add('busy'); card.classList.add('working'); setAgentStatus(agentName, 'working'); }
             else if (status === 'error') { dot.classList.add('error'); card.classList.add('error'); setAgentStatus(agentName, 'idle'); }
             else { dot.classList.remove('busy', 'error'); card.classList.remove('working', 'error'); setAgentStatus(agentName, 'idle'); }
-            if (typeof updateAgentInOffice === 'function') updateAgentInOffice(agentName, status);
         }
     }
+    // Связь с офисом
+    if (typeof updateAgentInOffice === 'function') updateAgentInOffice(agentName, status);
 }
 
 // --- КЛИКИ И ВЫБОР ---
@@ -45,7 +46,7 @@ function handleAgentClick(name) {
         return;
     }
     if (selectedAgents.includes(name)) {
-        showAgentInfo(name);
+        showAgentInfo(name); // 2-й клик открывает настройки
     } else {
         selectedAgents.push(name);
         card.classList.add('selected');
@@ -64,6 +65,15 @@ function toggleCouncil() {
         document.querySelectorAll('.agent-card').forEach(c => c.classList.add('selected'));
         btn.className = 'mode-btn active';
     }
+}
+
+function unselectAgentFromModal() {
+    const name = document.getElementById('modalTitle').innerText;
+    selectedAgents = selectedAgents.filter(a => a !== name);
+    const card = document.getElementById('agent-' + name);
+    if (card) card.classList.remove('selected');
+    if (typeof setAgentStatus === 'function') setAgentStatus(name, 'idle');
+    document.getElementById('agentModal').classList.remove('active');
 }
 
 // --- МОДАЛКА АГЕНТА ---
@@ -148,7 +158,10 @@ async function clearContentFromButton() {
 
 // --- ЗАПУСК ---
 function init() {
-    renderAgentsGrid(); // Из agents.js
+    if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
+    if (typeof checkPing === 'function') checkPing();
+    if (typeof updateNetStatus === 'function') updateNetStatus();
+    
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {
         if (chatIds.length > 0) {
@@ -159,17 +172,21 @@ function init() {
     } else { loadChat(currentChatId); }
     
     renderChatList(); 
-    updateNetStatus(); // Из network.js
 
     const btnVoice = document.getElementById('btnVoiceToggle');
-    if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
-    else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
+    if (btnVoice && typeof isVoiceEnabled !== 'undefined') {
+        if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
+        else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
+    }
     
-    chatInputEl.addEventListener('input', function() {
-        this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
-        if(this.value === '') this.style.height = 'auto';
-    });
+    if (chatInputEl) {
+        chatInputEl.addEventListener('input', function() {
+            this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') this.style.height = 'auto';
+        });
+    }
 }
 
-// Запускаем сразу, так как скрипт уже загружается после DOM
-setTimeout(init, 100);
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(init, 100);
+});
