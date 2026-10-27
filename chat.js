@@ -30,7 +30,9 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 3. Ссылки на опасные сайты: [DANGER:сама_ссылка].
 4. Фоновые задачи: [TASK:ИмяАгента:СутьЗадачи].
 5. Ты подчиняешься Боссу.
-6. ДОСТУП К КОДУ: Если Босс просит посмотреть код проекта (например, "посмотри chat.js"), ты ОБЯЗАН добавить в свой ответ скрытый тег [READ:имя_файла]. Например: "Сейчас посмотрю... [READ:chat.js]". Наш скрипт подгрузит код, и ты сможешь его проанализировать.`;
+6. ДОСТУП К КОДУ: Если Босс просит посмотреть код проекта (например, "посмотри chat.js"), ты ОБЯЗАН добавить в свой ответ скрытый тег [READ:имя_файла]. Например: "Сейчас посмотрю... [READ:chat.js]". Наш скрипт подгрузит код, и ты сможешь его проанализировать.
+7. ЧТЕНИЕ КОДА: Если Босс просит посмотреть код, напиши [READ:файл1, файл2] (например: [READ: chat.js, ui.js]). Скрипт подгрузит их.
+8. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке \`\`\`javascript напиши ПОЛНЫЙ новый код файла. Скрипт автоматически перезапишет файл на GitHub. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО трогать папку backup.`;
 function saveAll() { 
     try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } 
     catch (e) { console.warn("Память переполнена!"); }
@@ -406,21 +408,25 @@ async function sendMessage(overrideText = null, isKick = false) {
             
             // ОЧИСТКА: Удаляем пустые сообщения, чтобы Яндекс не падал с ошибкой 500
             messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
-            // ЧТЕНИЕ ФАЙЛОВ ПРОЕКТА
+            // ЧТЕНИЕ ФАЙЛОВ ПРОЕКТА (поддерживает несколько)
 const lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
 const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
 if (readMatch) {
-    const fileName = readMatch[1].trim();
-    try {
-        // Пытаемся скачать файл с GitHub Pages
-        const fileRes = await fetch(fileName + '?t=' + Date.now());
-        if (fileRes.ok) {
-            const fileCode = await fileRes.text();
-            // Подмешиваем код в системный промпт
-            if (messagesToSend[0] && messagesToSend[0].role === 'system') {
-                messagesToSend[0].content += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``;
+    const fileNames = readMatch[1].split(',').map(f => f.trim());
+    let allCode = "";
+    for (const fileName of fileNames) {
+        try {
+            const fileRes = await fetch(fileName + '?t=' + Date.now());
+            if (fileRes.ok) {
+                const fileCode = await fileRes.text();
+                allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``;
             }
-        }
+        } catch (e) { console.warn("Не удалось загрузить файл", e); }
+    }
+    if (messagesToSend[0] && messagesToSend[0].role === 'system') {
+        messagesToSend[0].content += allCode;
+    }
+}
     } catch (e) {
         console.warn("Не удалось загрузить файл", e);
     }
@@ -488,6 +494,23 @@ if (readMatch) {
                 if (typeof updateAgentStatus === 'function') updateAgentStatus(t.agent, 'working'); 
                 runBackgroundTask(t.agent, t.task); 
             });
+            // ПЕРЕЗАПИСЬ ФАЙЛОВ ОТ ИИ
+const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
+if (fileMatch) {
+    const targetFile = fileMatch[1].trim();
+    const codeBlockRegex = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/;
+    const codeMatch = codeBlockRegex.exec(aiText);
+    if (codeMatch) {
+        const newCode = codeMatch[1];
+        fetch(PROXY, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: newCode, file: targetFile })
+        }).then(res => res.json()).then(data => {
+            if (data.success) renderMessage(`✅ **Файл ${targetFile} успешно обновлен на GitHub!**`, 'director', 'DevOps');
+            else renderMessage(`❌ **Ошибка обновления:** ${data.error}`, 'director', 'DevOps');
+        });
+    }
+                }
             
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
             if (elAi) elAi.className = 'status-item online';
