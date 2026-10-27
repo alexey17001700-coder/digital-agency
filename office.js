@@ -7,6 +7,17 @@ let officeLoop = null;
 const DESK_COLS = [10, 32, 54, 76];
 const DESK_ROWS = [12, 26, 40, 54, 68, 82];
 
+// Безопасные точки (проходы между столами)
+const SAFE_SPOTS = [
+    {x: 21, y: 19}, {x: 43, y: 19}, {x: 65, y: 19}, {x: 87, y: 19},
+    {x: 21, y: 33}, {x: 43, y: 33}, {x: 65, y: 33}, {x: 87, y: 33},
+    {x: 21, y: 47}, {x: 43, y: 47}, {x: 65, y: 47}, {x: 87, y: 47},
+    {x: 21, y: 61}, {x: 43, y: 61}, {x: 65, y: 61}, {x: 87, y: 61},
+    {x: 21, y: 75}, {x: 43, y: 75}, {x: 65, y: 75}, {x: 87, y: 75},
+    {x: 5, y: 90}, {x: 95, y: 90}, // Кулеры
+    {x: 50, y: 5} // Принтер
+];
+
 function toggleOffice() {
     isOfficeOpen = !isOfficeOpen;
     const chat = document.getElementById('chatContainer');
@@ -22,7 +33,7 @@ function toggleOffice() {
         if (typeof resetAllStatuses === 'function') resetAllStatuses();
         
         if (!office.innerHTML.trim()) initOffice();
-        if (!officeLoop) officeLoop = setInterval(officeTick, 1000);
+        if (!officeLoop) officeLoop = setInterval(officeTick, 1500);
     } else {
         chat.style.display = 'flex';
         office.style.display = 'none';
@@ -72,12 +83,15 @@ function initOffice() {
         const sprite = document.createElement('div');
         sprite.className = 'agent-sprite';
         sprite.style.left = deskData.x + '%';
-        sprite.style.top = (deskData.y - 3) + '%';
+        sprite.style.top = (deskData.y - 2) + '%';
 
         const bubble = document.createElement('div'); bubble.className = 'agent-bubble'; bubble.id = 'bubble-' + name;
         const nameTag = document.createElement('div'); nameTag.className = 'agent-name'; nameTag.innerText = name;
+        
         const head = document.createElement('div'); head.className = 'agent-head';
         head.innerHTML = '<div class="agent-face"><div class="eye"></div><div class="eye"></div></div>';
+        
+        // Форма агента (Цвет зависит от роли)
         const body = document.createElement('div'); body.className = 'agent-body';
         body.style.backgroundColor = AGENT_COLORS[name] || '#00e5ff'; 
         
@@ -87,7 +101,6 @@ function initOffice() {
         const legR = document.createElement('div'); legR.className = 'agent-leg leg-right';
         
         body.appendChild(armL); body.appendChild(armR); body.appendChild(legL); body.appendChild(legR);
-
         sprite.appendChild(bubble); sprite.appendChild(nameTag); sprite.appendChild(head); sprite.appendChild(body);
         room.appendChild(sprite);
         
@@ -97,7 +110,6 @@ function initOffice() {
     container.appendChild(room);
 }
 
-// --- НОВОЕ МЕДЛЕННОЕ ДВИЖЕНИЕ ПО ПРОХОДАМ ---
 function moveAgentTo(name, targetX, targetY, callback) {
     const agent = officeSprites[name];
     if (!agent || agent.isMoving) return;
@@ -108,17 +120,17 @@ function moveAgentTo(name, targetX, targetY, callback) {
     const currentX = parseFloat(agent.el.style.left) || 0;
     const currentY = parseFloat(agent.el.style.top) || 0;
     
-    // Скорость: 3% в секунду (медленно и реалистично)
-    const timeX = (Math.abs(targetX - currentX) / 3) * 1000;
-    const timeY = (Math.abs(targetY - currentY) / 3) * 1000;
+    // Время на основе дистанции (скорость 4% в секунду)
+    const timeX = (Math.abs(targetX - currentX) / 4) * 1000;
+    const timeY = (Math.abs(targetY - currentY) / 4) * 1000;
 
-    // Шаг 1: Идем вбок по текущему ряду
-    agent.el.style.transition = `left ${timeX}ms linear`;
+    // Сначала идем по горизонтали
+    agent.el.style.transition = `left ${timeX}ms linear, top 0ms`;
     agent.el.style.left = targetX + '%';
 
     setTimeout(() => {
-        // Шаг 2: Идем вверх/вниз по целевому проходу
-        agent.el.style.transition = `top ${timeY}ms linear`;
+        // Потом по вертикали
+        agent.el.style.transition = `top ${timeY}ms linear, left 0ms`;
         agent.el.style.top = targetY + '%';
 
         setTimeout(() => {
@@ -140,16 +152,21 @@ function updateAgentInOffice(name, status) {
 
     if (isWorking) {
         agent.isWorking = true;
-        agent.el.classList.remove('walking');
-        moveAgentTo(name, agent.deskX + 1, agent.deskY + 2, () => {
+        agent.el.classList.remove('walking', 'sitting');
+        moveAgentTo(name, agent.deskX + 1, agent.deskY + 1, () => {
             agent.el.classList.add('sitting');
             if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active');
         });
     } else {
-        agent.isWorking = false;
-        agent.el.classList.remove('sitting');
-        if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active');
-        moveAgentTo(name, agent.deskX + (Math.random() > 0.5 ? 6 : -6), agent.deskY + 6);
+        if (agent.isWorking) {
+            agent.isWorking = false;
+            agent.el.classList.remove('sitting');
+            if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active');
+            
+            // Отходим от стола по проходу
+            const safeSpot = SAFE_SPOTS[Math.floor(Math.random() * SAFE_SPOTS.length)];
+            moveAgentTo(name, safeSpot.x, safeSpot.y);
+        }
     }
 }
 
@@ -162,8 +179,10 @@ function showAgentReaction(name, text) {
     agent.isWorking = false;
     agent.el.classList.remove('sitting', 'walking');
     agent.el.classList.add('has-reaction');
-    agent.el.style.left = (agent.deskX + 6) + '%'; 
-    agent.el.style.top = (agent.deskY - 2) + '%';
+    
+    // Встаем рядом со столом в проходе
+    agent.el.style.left = (agent.deskX + 10) + '%'; 
+    agent.el.style.top = (agent.deskY + 5) + '%';
     
     bubble.innerText = text;
     bubble.classList.add('show');
@@ -174,7 +193,7 @@ function showAgentReaction(name, text) {
         if (agentStatuses[name] && ['busy', 'working', 'thinking', 'typing'].includes(agentStatuses[name])) {
             updateAgentInOffice(name, agentStatuses[name]);
         } else {
-            moveAgentTo(name, agent.deskX, agent.deskY);
+            moveAgentTo(name, agent.deskX + 1, agent.deskY + 1);
         }
     }, 5000);
 }
@@ -186,15 +205,20 @@ function officeTick() {
         const agent = officeSprites[name];
         if (agent.isWorking || agent.isMoving || agent.el.classList.contains('has-reaction')) return;
 
-        if (Math.random() < 0.15) {
-            const action = Math.random();
-            let tx, ty;
-            if (action < 0.3) { tx = 5; ty = 90; }
-            else if (action < 0.6) { tx = 95; ty = 90; }
-            else if (action < 0.8) { tx = 50; ty = 5; }
-            else { tx = 15 + Math.random() * 70; ty = 20 + Math.random() * 60; }
-            
-            moveAgentTo(name, tx, ty);
+        // 20% шанс пойти погулять
+        if (Math.random() < 0.2) {
+            const spot = SAFE_SPOTS[Math.floor(Math.random() * SAFE_SPOTS.length)];
+            moveAgentTo(name, spot.x, spot.y, () => {
+                // Если дошли до кулера, можно попить
+                if (spot.x === 5 || spot.x === 95) {
+                    const bubble = document.getElementById('bubble-' + name);
+                    if(bubble) {
+                        bubble.innerText = '💧 Водичка';
+                        bubble.classList.add('show');
+                        setTimeout(() => bubble.classList.remove('show'), 2000);
+                    }
+                }
+            });
         }
     });
-}
+    }
