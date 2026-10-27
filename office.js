@@ -1,5 +1,6 @@
 let isOfficeOpen = false;
-let officeSprites = {}; // Хранилище для человечков
+let officeSprites = {}; 
+let officeDesks = []; 
 
 function toggleOffice() {
     isOfficeOpen = !isOfficeOpen;
@@ -25,7 +26,8 @@ function initOffice() {
     const container = document.getElementById('office-container');
     if (!container) return;
     container.innerHTML = '';
-    officeSprites = {}; // Сбрасываем при перезагрузке
+    officeSprites = {}; 
+    officeDesks = [];
 
     const room = document.createElement('div');
     room.className = 'office-room';
@@ -34,68 +36,105 @@ function initOffice() {
     const wallLeft = document.createElement('div'); wallLeft.className = 'office-wall-left';
     room.appendChild(wallTop); room.appendChild(wallLeft);
 
-    // Столы (9 штук сеткой)
-    const deskPositions = [
-        { top: '15%', left: '20%' }, { top: '15%', left: '45%' }, { top: '15%', left: '70%' },
-        { top: '45%', left: '20%' }, { top: '45%', left: '45%' }, { top: '45%', left: '70%' },
-        { top: '75%', left: '20%' }, { top: '75%', left: '45%' }, { top: '75%', left: '70%' }
-    ];
+    // Двери
+    const door1 = document.createElement('div'); door1.className = 'office-door'; door1.style.left = '25%'; room.appendChild(door1);
+    const door2 = document.createElement('div'); door2.className = 'office-door'; door2.style.left = '75%'; room.appendChild(door2);
 
-    deskPositions.forEach(pos => {
-        const desk = document.createElement('div');
-        desk.className = 'desk';
-        desk.style.top = pos.top; desk.style.left = pos.left;
-        desk.innerHTML = '<div class="desk-monitor"></div><div class="desk-pc"></div>';
-        room.appendChild(desk);
+    // Генерация 24 столов
+    const cols = [10, 30, 50, 70];
+    const rows = [10, 24, 38, 52, 66, 80];
+
+    rows.forEach(top => {
+        cols.forEach(left => {
+            const desk = document.createElement('div');
+            desk.className = 'desk';
+            desk.style.top = top + '%';
+            desk.style.left = left + '%';
+            desk.innerHTML = '<div class="desk-monitor"></div><div class="desk-pc"></div>';
+            room.appendChild(desk);
+            officeDesks.push({ el: desk, occupied: false });
+        });
     });
 
-    // Декор
-    const cooler = document.createElement('div'); cooler.className = 'water-cooler'; cooler.style.top = '85%'; cooler.style.left = '5%'; room.appendChild(cooler);
-    const plant = document.createElement('div'); plant.className = 'plant'; plant.style.top = '10%'; plant.style.left = '5%'; room.appendChild(plant);
+    // Декор: Кулеры
+    const cooler1 = document.createElement('div'); cooler1.className = 'water-cooler'; cooler1.style.top = '85%'; cooler1.style.left = '5%'; room.appendChild(cooler1);
+    const cooler2 = document.createElement('div'); cooler2.className = 'water-cooler'; cooler2.style.top = '5%'; cooler2.style.left = '90%'; room.appendChild(cooler2);
 
-    // Создаем человечков-агентов
+    // Декор: Стол с принтером
+    const printerDesk = document.createElement('div'); 
+    printerDesk.className = 'printer-desk'; 
+    printerDesk.style.top = '85%'; 
+    printerDesk.style.left = '85%'; 
+    printerDesk.innerHTML = '<div class="printer"></div>';
+    room.appendChild(printerDesk);
+
+    // Декор: Цветы
+    const plant1 = document.createElement('div'); plant1.className = 'plant'; plant1.style.top = '20%'; plant1.style.left = '5%'; room.appendChild(plant1);
+    const plant2 = document.createElement('div'); plant2.className = 'plant'; plant2.style.top = '50%'; plant2.style.left = '90%'; room.appendChild(plant2);
+    const plant3 = document.createElement('div'); plant3.className = 'plant'; plant3.style.top = '85%'; plant3.style.left = '50%'; room.appendChild(plant3);
+
+    // Создаем агентов
     const agentNames = Object.keys(AGENT_ICONS);
     agentNames.forEach((name) => {
         const sprite = document.createElement('div');
         sprite.className = 'agent-sprite';
-        
-        // Случайная стартовая позиция
-        sprite.style.left = (20 + Math.random() * 60) + '%';
-        sprite.style.top = (20 + Math.random() * 60) + '%';
-        sprite.title = name; // При наведении видно имя
+        sprite.style.left = (15 + Math.random() * 60) + '%';
+        sprite.style.top = (15 + Math.random() * 60) + '%';
+        sprite.title = name; 
 
         const head = document.createElement('div'); head.className = 'agent-head';
         const body = document.createElement('div'); body.className = 'agent-body';
-        body.style.backgroundColor = AGENT_COLORS[name] || '#00e5ff'; // Цвет из agents.js
+        body.style.backgroundColor = AGENT_COLORS[name] || '#00e5ff'; 
 
         sprite.appendChild(head); sprite.appendChild(body);
         room.appendChild(sprite);
         
-        officeSprites[name] = { el: sprite, isWorking: false };
+        officeSprites[name] = { el: sprite, deskId: null };
     });
 
     container.appendChild(room);
 }
 
-// Логика случайной ходьбы (запускается каждые 3 секунды)
+function updateAgentInOffice(name, status) {
+    if (!officeSprites[name]) return;
+    const agent = officeSprites[name];
+    
+    if (status === 'idle') {
+        agent.el.classList.remove('sitting');
+        if (agent.deskId !== null) {
+            const desk = officeDesks[agent.deskId];
+            desk.occupied = false;
+            desk.el.querySelector('.desk-monitor').classList.remove('active');
+            agent.deskId = null;
+            agent.el.style.top = (agent.el.offsetTop / document.getElementById('office-container').offsetHeight * 100 + 10) + '%';
+        }
+    } else {
+        if (agent.deskId === null) {
+            const freeDeskIndex = officeDesks.findIndex(d => !d.occupied);
+            if (freeDeskIndex !== -1) {
+                const desk = officeDesks[freeDeskIndex];
+                desk.occupied = true;
+                agent.deskId = freeDeskIndex;
+                
+                agent.el.style.left = desk.el.style.left;
+                agent.el.style.top = parseFloat(desk.el.style.top) - 3 + '%'; 
+                agent.el.classList.add('sitting');
+                desk.el.querySelector('.desk-monitor').classList.add('active');
+            }
+        }
+    }
+}
+
 setInterval(() => {
     if (!isOfficeOpen) return;
     Object.keys(officeSprites).forEach(name => {
-        const spriteData = officeSprites[name];
-        const sprite = spriteData.el;
-        
-        // Если агент не работает и не гуляет прямо сейчас, даем ему шанс пойти
-        if (!spriteData.isWorking && !sprite.classList.contains('walking')) {
-            if (Math.random() < 0.3) { // 30% шанс
-                const newX = (15 + Math.random() * 75) + '%';
-                const newY = (15 + Math.random() * 75) + '%';
-                
-                sprite.classList.add('walking');
-                sprite.style.left = newX;
-                sprite.style.top = newY;
-                
-                // Убираем анимацию через 2 секунды (пока он идет)
-                setTimeout(() => sprite.classList.remove('walking'), 2000); 
+        const agent = officeSprites[name];
+        if (agent.deskId === null && !agent.el.classList.contains('walking')) {
+            if (Math.random() < 0.3) {
+                agent.el.classList.add('walking');
+                agent.el.style.left = (15 + Math.random() * 75) + '%';
+                agent.el.style.top = (15 + Math.random() * 75) + '%';
+                setTimeout(() => agent.el.classList.remove('walking'), 2000); 
             }
         }
     });
