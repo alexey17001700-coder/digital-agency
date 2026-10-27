@@ -1,4 +1,3 @@
-// --- СТАТУСЫ АГЕНТОВ ---
 function setAgentStatus(name, status) {
     const el = document.getElementById(`status-text-${name}`);
     if (!el) return;
@@ -32,12 +31,9 @@ function updateAgentStatus(agentName, status) {
         }
     }
     if (typeof updateAgentInOffice === 'function') updateAgentInOffice(agentName, status);
-    if (status === 'error' && typeof showAgentReaction === 'function') {
-        showAgentReaction(agentName, 'Босс, проблема!');
-    }
+    if (status === 'error' && typeof showAgentReaction === 'function') showAgentReaction(agentName, 'Босс, проблема!');
 }
 
-// --- КЛИКИ И ВЫБОР ---
 function handleAgentClick(name) {
     const card = document.getElementById('agent-' + name);
     if (card.classList.contains('has-idea')) {
@@ -78,15 +74,12 @@ function unselectAgentFromModal() {
     document.getElementById('agentModal').classList.remove('active');
 }
 
-// --- МОДАЛКА АГЕНТА ---
 function showAgentInfo(name) {
     document.getElementById('modalTitle').innerText = name;
     document.getElementById('modalBody').innerHTML = AGENT_INFO[name] || "Информация отсутствует.";
-    
     const promptInput = document.getElementById('agentPromptInput');
     promptInput.value = customPrompts[name] || ''; 
     promptInput.placeholder = `По умолчанию: ${AGENT_INFO[name] || 'Нет описания'}`;
-    
     document.getElementById('agentVoiceCheck').checked = agentVoiceSettings[name] !== false;
     document.getElementById('agentModal').classList.add('active');
 }
@@ -94,15 +87,11 @@ function showAgentInfo(name) {
 function saveAgentCharacter() {
     const name = document.getElementById('modalTitle').innerText;
     const promptText = document.getElementById('agentPromptInput').value.trim();
-    
-    if (promptText) { customPrompts[name] = promptText; } 
-    else { delete customPrompts[name]; }
+    if (promptText) { customPrompts[name] = promptText; } else { delete customPrompts[name]; }
     localStorage.setItem('shtabCustomPrompts', JSON.stringify(customPrompts));
-    
     const voiceCheck = document.getElementById('agentVoiceCheck').checked;
     agentVoiceSettings[name] = voiceCheck;
     localStorage.setItem('shtabAgentVoice', JSON.stringify(agentVoiceSettings));
-    
     document.getElementById('agentModal').classList.remove('active');
     alert(`Настройки агента ${name} сохранены!`);
 }
@@ -112,7 +101,6 @@ function closeModal(e) {
     document.getElementById('agentModal').classList.remove('active');
 }
 
-// --- РЕЖИМЫ И ОЧИСТКА ---
 function setMode(mode) {
     currentMode = mode;
     document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
@@ -158,7 +146,6 @@ async function clearContentFromButton() {
     }
 }
 
-// --- ЗАПУСК ---
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -187,4 +174,4 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-    }
+}
