@@ -262,11 +262,16 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (allCode) finalPrompt += allCode; // Прикрепляем код
             if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
-            const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify( { messages: messagesToSend, temperature: 0.7, model: selectedAIModel } ), signal: currentAbortController.signal });
-            if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
-            else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
-        } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
-        clearTimeout(timeoutId);
+                let modelToUse = selectedAIModel;
+    if (selectedAgents.includes('GigaChat')) {
+        modelToUse = 'gigachat';
+    }
+
+    const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify( { messages: messagesToSend, temperature: 0.7, model: modelToUse } ), signal: currentAbortController.signal });
+    if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
+    else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
+} catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
+clearTimeout(timeoutId);
 
         if (success) {
             playSound('receive'); 
