@@ -58,7 +58,7 @@ function initOffice() {
         const deskData = officeDesks[index];
         if (!deskData) return;
 
-        const sprite = document.createElement('div'); sprite.className = 'agent-sprite';
+        const sprite = document.createElement('div'); sprite.className = 'agent-sprite';sprite.onclick = () => { if (typeof showAgentInfo === 'function') showAgentInfo(name); };
         sprite.style.left = deskData.x + '%'; sprite.style.top = (deskData.y - 2) + '%';
 
         const bubble = document.createElement('div'); bubble.className = 'agent-bubble'; bubble.id = 'bubble-' + name;
