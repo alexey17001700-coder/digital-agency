@@ -315,3 +315,52 @@ clearTimeout(timeoutId);
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
 }
+let recognition = null;
+let isListening = false;
+
+function toggleVoiceInput() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Ваш браузер не поддерживает голосовой ввод.");
+        return;
+    }
+
+    if (isListening) {
+        if (recognition) recognition.stop();
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    const micBtn = document.getElementById('micBtn');
+
+    recognition.onstart = function() {
+        isListening = true;
+        micBtn.style.background = '#ff0055';
+        micBtn.innerText = '⏹';
+    };
+
+    recognition.onresult = function(event) {
+        const speechResult = event.results[0][0].transcript;
+        const input = document.getElementById('chatInput');
+        input.value += (input.value ? ' ' : '') + speechResult;
+        input.style.height = 'auto';
+        input.style.height = (input.scrollHeight) + 'px';
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Ошибка распознавания:", event.error);
+        alert("Не удалось распознать речь. Попробуйте еще раз.");
+    };
+
+    recognition.onend = function() {
+        isListening = false;
+        micBtn.style.background = '#333';
+        micBtn.innerText = '🎤';
+    };
+
+    recognition.start();
+}
