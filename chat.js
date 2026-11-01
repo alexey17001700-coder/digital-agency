@@ -344,12 +344,19 @@ function toggleVoiceInput() {
     };
 
     recognition.onresult = function(event) {
-        const speechResult = event.results[0][0].transcript;
-        const input = document.getElementById('chatInput');
-        input.value += (input.value ? ' ' : '') + speechResult;
-        input.style.height = 'auto';
-        input.style.height = (input.scrollHeight) + 'px';
-    };
+    const speechResult = event.results[0][0].transcript;
+    const input = document.getElementById('chatInput');
+    input.value += (input.value ? ' ' : '') + speechResult;
+    input.style.height = 'auto';
+    input.style.height = (input.scrollHeight) + 'px';
+    
+    // АВТО-ОТПРАВКА: ждем полсекунды и отправляем
+    setTimeout(() => {
+        if (input.value.trim() !== '' && typeof sendMessage === 'function' && !isGenerating) {
+            sendMessage();
+        }
+    }, 500);
+};
 
     recognition.onerror = function(event) {
         console.error("Ошибка распознавания:", event.error);
