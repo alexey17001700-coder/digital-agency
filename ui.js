@@ -166,18 +166,3 @@ function toggleAIModel() {
         btn.style.color = '#aaa';
     }
 }
-let isAutoDeployEnabled = false;
-
-function toggleAutoDeploy() {
-    isAutoDeployEnabled = !isAutoDeployEnabled;
-    const btn = document.getElementById('btnAutoDeploy');
-    if (isAutoDeployEnabled) {
-        btn.innerText = '🚀 Авто-деплой: ВКЛ';
-        btn.style.background = '#00ff00';
-        btn.style.color = '#000';
-    } else {
-        btn.innerText = '🚀 Авто-деплой: ВЫКЛ';
-        btn.style.background = '#333';
-        btn.style.color = '#aaa';
-    }
-}
