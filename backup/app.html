@@ -112,6 +112,7 @@
             <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
             <button class="mode-btn" id="btnAuto" onclick="toggleAutoMode()">⚡ Авто: ВЫКЛ</button>
             <button class="mode-btn" id="btnOffice" onclick="toggleOffice()">🏢 Офис</button>
+            <button class="mode-btn" id="btnAIModel" onclick="toggleAIModel()">🧠 ИИ: Yandex</button>
         </div>
 
         <div class="chat-container" id="chatContainer"></div>
@@ -119,6 +120,7 @@
 
         <div class="input-area">
             <textarea id="chatInput" placeholder="Написать задачу..." rows="1"></textarea>
+            <button id="micBtn" onclick="toggleVoiceInput()" style="background: #333; color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; flex-shrink: 0; transition: all 0.2s;">🎤</button>
             <div class="send-btn-container">
                 <div id="final-time-badge" class="time-badge">0.0s</div>
                 <button class="send-btn" id="sendBtn" onclick="handleSendClick()">➤</button>
