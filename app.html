@@ -30,13 +30,13 @@
                 await loadScript('chat.js'); 
                 await loadScript('office.js'); 
                 await loadScript('ui.js'); 
-                // Вызываем инициализацию, когда ВСЕ скрипты загружены
                 if (typeof init === 'function') init();
             } catch (e) { console.error('Ошибка загрузки скриптов', e); }
         });
     </script>
 </head>
 <body>
+    <!-- Модалка Агента -->
     <div class="modal-overlay" id="agentModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -58,6 +58,7 @@
         </div>
     </div>
 
+    <!-- Модалка Контента -->
     <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
         <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
             <div class="modal-header">
@@ -71,7 +72,37 @@
         </div>
     </div>
 
-    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <!-- Модалка API Ключей -->
+    <div class="modal-overlay" id="apiModal" onclick="if(event.target===this) this.classList.remove('active')">
+        <div class="modal-content" style="border-color: #00e5ff;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 style="color: #00e5ff;">🔑 Мои ключи ИИ</h2>
+                <button class="modal-close" onclick="document.getElementById('apiModal').classList.remove('active')">✖</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12px; color: #aaa; margin-top:0;">Введи свои ключи, чтобы использовать свои лимиты и балансы.</p>
+                
+                <label style="font-size: 12px; color: #ffd700;">Yandex API Key:</label>
+                <div style="position: relative; margin-bottom: 10px;">
+                    <input type="password" id="userYandexKey" class="modal-textarea" style="height: 40px; margin-bottom: 0; padding-right: 40px;" placeholder="AQVN...">
+                    <button onclick="toggleKeyVisibility('userYandexKey', this)" style="position: absolute; right: 10px; top: 8px; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa;">👁</button>
+                </div>
+                
+                <label style="font-size: 12px; color: #ffd700;">Yandex Folder ID:</label>
+                <input type="password" id="userYandexFolder" class="modal-textarea" style="height: 40px; margin-bottom: 10px;" placeholder="b1g...">
+                
+                <label style="font-size: 12px; color: #00ff00;">DeepSeek API Key:</label>
+                <div style="position: relative; margin-bottom: 15px;">
+                    <input type="password" id="userDeepseekKey" class="modal-textarea" style="height: 40px; margin-bottom: 0; padding-right: 40px;" placeholder="sk-...">
+                    <button onclick="toggleKeyVisibility('userDeepseekKey', this)" style="position: absolute; right: 10px; top: 8px; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa;">👁</button>
+                </div>
+                
+                <button onclick="saveApiSettings()" style="width: 100%; padding: 12px; background: #00e5ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💾 Сохранить ключи</button>
+                <button onclick="clearApiSettings()" style="width: 100%; padding: 12px; margin-top: 10px; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🗑️ Удалить ключи с этого устройства</button>
+            </div>
+        </div>
+    </div>
+        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -133,29 +164,5 @@
             <div class="agents-grid" id="agents-grid"></div>
         </div>
     </div>
-    <!-- Модалка Настроек API -->
-<div class="modal-overlay" id="apiModal" onclick="if(event.target===this) this.classList.remove('active')">
-    <div class="modal-content" style="border-color: #00e5ff;" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h2 style="color: #00e5ff;">🔑 Мои ключи ИИ</h2>
-            <button class="modal-close" onclick="document.getElementById('apiModal').classList.remove('active')">✖</button>
-        </div>
-        <div class="modal-body">
-            <p style="font-size: 12px; color: #aaa; margin-top:0;">Введи свои ключи, чтобы использовать свои лимиты и балансы.</p>
-            
-            <label style="font-size: 12px; color: #ffd700;">Yandex API Key:</label>
-            <input type="password" id="userYandexKey" class="modal-textarea" style="height: 40px; margin-bottom: 10px;" placeholder="AQVN...">
-            
-            <label style="font-size: 12px; color: #ffd700;">Yandex Folder ID:</label>
-            <input type="password" id="userYandexFolder" class="modal-textarea" style="height: 40px; margin-bottom: 10px;" placeholder="b1g...">
-            
-            <label style="font-size: 12px; color: #00ff00;">DeepSeek API Key:</label>
-            <input type="password" id="userDeepseekKey" class="modal-textarea" style="height: 40px; margin-bottom: 15px;" placeholder="sk-...">
-            
-            <button onclick="saveApiSettings()" style="width: 100%; padding: 12px; background: #00e5ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💾 Сохранить ключи</button>
-            <button onclick="clearApiSettings()" style="width: 100%; padding: 12px; margin-top: 10px; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🗑️ Удалить ключи с этого устройства</button>
-        </div>
-    </div>
-</div>
 </body>
-            </html>
+</html>
