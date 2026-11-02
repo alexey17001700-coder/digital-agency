@@ -47,7 +47,44 @@ function initOffice() {
     const wallTop = document.createElement('div'); wallTop.className = 'office-wall-top';
     const wallLeft = document.createElement('div'); wallLeft.className = 'office-wall-left';
     room.appendChild(wallTop); room.appendChild(wallLeft);
+// --- НОВЫЙ ДЕКОР: Дверь, Окна, Зона воды ---
 
+// Входная дверь (слева внизу)
+const mainDoor = document.createElement('div');
+mainDoor.className = 'office-main-door';
+mainDoor.style.bottom = '0';
+mainDoor.style.left = '5%';
+room.appendChild(mainDoor);
+
+// Окна (по верхней стене)
+const windowPositions = [20, 40, 60, 80];
+windowPositions.forEach(pos => {
+    const win = document.createElement('div');
+    win.className = 'office-window';
+    win.style.top = '22px'; // Чуть ниже верхней стены
+    win.style.left = pos + '%';
+    room.appendChild(win);
+});
+
+// Коврик под кулер (зона воды)
+const waterMat = document.createElement('div');
+waterMat.className = 'water-zone-mat';
+waterMat.style.bottom = '5%';
+waterMat.style.left = 'calc(95% - 40px)'; // Под правым кулером
+room.appendChild(waterMat);
+
+// --- Перегородки (добавим по краям столов для уюта) ---
+const dividerPositions = [
+    { top: '25%', left: '10%' }, { top: '50%', left: '30%' },
+    { top: '25%', left: '70%' }, { top: '75%', left: '50%' }
+];
+dividerPositions.forEach(pos => {
+    const div = document.createElement('div');
+    div.className = 'office-divider';
+    div.style.top = pos.top;
+    div.style.left = pos.left;
+    room.appendChild(div);
+});
     // Генерация столов
     DESK_ROWS.forEach(top => {
         DESK_COLS.forEach(left => {
