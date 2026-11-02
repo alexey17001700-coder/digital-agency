@@ -184,3 +184,13 @@ function saveApiSettings() {
     alert("Ключи сохранены! Теперь Штаб использует их.");
     document.getElementById('apiModal').classList.remove('active');
 }
+function clearApiSettings() {
+    if (confirm("Удалить все сохраненные ключи с этого телефона?")) {
+        localStorage.removeItem('shtabUserKeys');
+        document.getElementById('userYandexKey').value = '';
+        document.getElementById('userYandexFolder').value = '';
+        document.getElementById('userDeepseekKey').value = '';
+        alert("Ключи успешно удалены из памяти.");
+        document.getElementById('apiModal').classList.remove('active');
+    }
+}
