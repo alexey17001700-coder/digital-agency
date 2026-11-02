@@ -47,30 +47,25 @@ function initOffice() {
     const wallTop = document.createElement('div'); wallTop.className = 'office-wall-top';
     const wallLeft = document.createElement('div'); wallLeft.className = 'office-wall-left';
     room.appendChild(wallTop); room.appendChild(wallLeft);
-// --- НОВЫЙ ДЕКОР: Дверь, Окна, Зона воды ---
+// --- НОВЫЙ ДЕКОР (ИСПРАВЛЕННЫЙ) ---
 
 // Входная дверь (слева внизу)
 const mainDoor = document.createElement('div');
 mainDoor.className = 'office-main-door';
-mainDoor.style.bottom = '0';
-mainDoor.style.left = '5%';
 room.appendChild(mainDoor);
 
-// Окна (по верхней стене)
+// Окна (на верхней стене, ЗА столами)
 const windowPositions = [20, 40, 60, 80];
 windowPositions.forEach(pos => {
     const win = document.createElement('div');
     win.className = 'office-window';
-    win.style.top = '22px'; // Чуть ниже верхней стены
     win.style.left = pos + '%';
     room.appendChild(win);
 });
 
-// Коврик под кулер (зона воды)
+// Коврик под кулер (правый нижний угол)
 const waterMat = document.createElement('div');
 waterMat.className = 'water-zone-mat';
-waterMat.style.bottom = '5%';
-waterMat.style.left = 'calc(95% - 40px)'; // Под правым кулером
 room.appendChild(waterMat);
 
 // --- Перегородки (добавим по краям столов для уюта) ---
