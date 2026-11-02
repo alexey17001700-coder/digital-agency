@@ -166,3 +166,21 @@ function toggleAIModel() {
         btn.style.color = '#aaa';
     }
 }
+function openApiSettings() {
+    const keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {};
+    document.getElementById('userYandexKey').value = keys.yandexKey || '';
+    document.getElementById('userYandexFolder').value = keys.yandexFolder || '';
+    document.getElementById('userDeepseekKey').value = keys.deepseekKey || '';
+    document.getElementById('apiModal').classList.add('active');
+}
+
+function saveApiSettings() {
+    const keys = {
+        yandexKey: document.getElementById('userYandexKey').value.trim(),
+        yandexFolder: document.getElementById('userYandexFolder').value.trim(),
+        deepseekKey: document.getElementById('userDeepseekKey').value.trim()
+    };
+    localStorage.setItem('shtabUserKeys', JSON.stringify(keys));
+    alert("Ключи сохранены! Теперь Штаб использует их.");
+    document.getElementById('apiModal').classList.remove('active');
+}
