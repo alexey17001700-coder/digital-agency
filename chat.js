@@ -123,6 +123,20 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+    // МГНОВЕННЫЙ ВЫВОД КОДА (без печатной машинки)
+if (fullText.includes('[FILE:') || fullText.includes('```')) {
+    const { cleanText, dangerBadges } = processDangerTags(fullText);
+    try { 
+        contentDiv.innerHTML = marked.parse(cleanText); 
+        contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
+        enhanceMediaInMessage(contentDiv);
+    } catch(e) { contentDiv.innerText = cleanText; }
+    if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
+    if (onComplete) onComplete();
+    return; // Выходим, чтобы не запускать печать
+}
 }
 
 function typeMessage(fullText, sender, agentName, onComplete) {
