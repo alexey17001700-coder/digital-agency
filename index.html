@@ -247,7 +247,8 @@
         const fabOverlay = document.getElementById('fab-overlay');
         const appFrame = document.getElementById('app-frame');
         const splashScreen = document.getElementById('splash-screen');
-        
+        // Грузим Штаб с защитой от кэша
+        appFrame.src = "app.html?v=" + Date.now();
         // --- ЭФФЕКТ МАТРИЦЫ ---
         let matrixInterval;
         function startMatrix() {
@@ -287,26 +288,40 @@
         startMatrix();
 
         // --- УПРАВЛЕНИЕ ЗАСТАВКОЙ ---
-        let appLoaded = false;
-        let minTimePassed = false;
+let appLoaded = false;
+let minTimePassed = false;
 
-        // УВЕЛИЧИЛИ ВРЕМЯ ЗАСТАВКИ ДО 6000 МС (6 СЕКУНД)
-        setTimeout(() => {
-            minTimePassed = true;
-            hideSplashIfReady();
-        }, 6000); 
+// Минимальное время показа заставки (6 секунд)
+setTimeout(() => {
+    minTimePassed = true;
+    hideSplashIfReady();
+}, 6000); 
 
-        appFrame.onload = () => {
-            appLoaded = true;
-            hideSplashIfReady();
-        };
+appFrame.onload = () => {
+    appLoaded = true;
+    hideSplashIfReady();
+};
 
-        function hideSplashIfReady() {
-            if (appLoaded && minTimePassed) {
-                splashScreen.classList.add('hidden');
-                clearInterval(matrixInterval); // Останавливаем Матрицу
-            }
-        }
+function hideSplashIfReady() {
+    if (appLoaded && minTimePassed) {
+        splashScreen.classList.add('hidden');
+        clearInterval(matrixInterval); 
+    } else if (minTimePassed && !appLoaded) {
+        // Если 6 секунд прошло, а Штаб не загрузился — пишем "Загрузка..."
+        const title = document.querySelector('.splash-title');
+        if (title) title.innerText = "Загрузка Штаба...";
+    }
+}
+
+// Если через 15 секунд Штаб так и не загрузился — показываем ошибку
+setTimeout(() => {
+    if (!appLoaded) {
+        const loader = document.querySelector('.splash-loader-bar');
+        if (loader) loader.style.display = 'none';
+        const title = document.querySelector('.splash-title');
+        if (title) title.innerHTML = "Сбой загрузки.<br><small style='font-size:12px; color:#ff0055;'>Проверьте интернет</small>";
+    }
+}, 15000);
 
         // --- СЕЙФ ---
         let safePin = "";
