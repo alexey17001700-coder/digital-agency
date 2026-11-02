@@ -148,9 +148,20 @@ function init() {
         if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
         else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
     }
-    if (chatInputEl) chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
+        if (chatInputEl) chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
+    const btnAI = document.getElementById('btnAIModel');
+    if (btnAI) {
+        if (selectedAIModel === 'deepseek') {
+            btnAI.innerText = '🧠 ИИ: DeepSeek';
+            btnAI.style.background = '#4CAF50';
+            btnAI.style.color = '#fff';
+        } else {
+            btnAI.innerText = '🧠 ИИ: Yandex';
+            btnAI.style.background = '#333';
+            btnAI.style.color = '#aaa';
         }
-let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
+    }
+}
 
 function toggleAIModel() {
     selectedAIModel = (selectedAIModel === 'yandex') ? 'deepseek' : 'yandex';
@@ -164,5 +175,43 @@ function toggleAIModel() {
         btn.innerText = '🧠 ИИ: Yandex';
         btn.style.background = '#333'; // Стандартный для Яндекса
         btn.style.color = '#aaa';
+    }
+}
+function openApiSettings() {
+    const keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {};
+    document.getElementById('userYandexKey').value = keys.yandexKey || '';
+    document.getElementById('userYandexFolder').value = keys.yandexFolder || '';
+    document.getElementById('userDeepseekKey').value = keys.deepseekKey || '';
+    document.getElementById('apiModal').classList.add('active');
+}
+
+function saveApiSettings() {
+    const keys = {
+        yandexKey: document.getElementById('userYandexKey').value.trim(),
+        yandexFolder: document.getElementById('userYandexFolder').value.trim(),
+        deepseekKey: document.getElementById('userDeepseekKey').value.trim()
+    };
+    localStorage.setItem('shtabUserKeys', JSON.stringify(keys));
+    alert("Ключи сохранены! Теперь Штаб использует их.");
+    document.getElementById('apiModal').classList.remove('active');
+}
+function clearApiSettings() {
+    if (confirm("Удалить все сохраненные ключи с этого телефона?")) {
+        localStorage.removeItem('shtabUserKeys');
+        document.getElementById('userYandexKey').value = '';
+        document.getElementById('userYandexFolder').value = '';
+        document.getElementById('userDeepseekKey').value = '';
+        alert("Ключи успешно удалены из памяти.");
+        document.getElementById('apiModal').classList.remove('active');
+    }
+}
+function toggleKeyVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerText = '🙈';
+    } else {
+        input.type = 'password';
+        btn.innerText = '👁';
     }
 }
