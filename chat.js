@@ -124,7 +124,18 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
-    // МГНОВЕННЫЙ ВЫВОД КОДА (без печатной машинки)
+    
+}
+
+function typeMessage(fullText, sender, agentName, onComplete) {
+    const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
+    const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
+    if (sender === 'director') {
+        const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(fullText, agentName); div.appendChild(speakBtn);
+        const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
+    }
+    const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
+    // МГНОВЕННЫЙ ВЫВОД КОДА
 if (fullText.includes('[FILE:') || fullText.includes('```')) {
     const { cleanText, dangerBadges } = processDangerTags(fullText);
     try { 
@@ -136,18 +147,8 @@ if (fullText.includes('[FILE:') || fullText.includes('```')) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
     if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
     if (onComplete) onComplete();
-    return; // Выходим, чтобы не запускать печать
+    return; 
 }
-}
-
-function typeMessage(fullText, sender, agentName, onComplete) {
-    const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
-    const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
-    if (sender === 'director') {
-        const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(fullText, agentName); div.appendChild(speakBtn);
-        const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
-    }
-    const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
     const { cleanText, dangerBadges } = processDangerTags(fullText); let i = 0;
     const totalTimeMs = Math.max(1500, cleanText.length * 20); const speed = totalTimeMs / cleanText.length;
     function type() {
