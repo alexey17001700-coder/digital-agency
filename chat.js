@@ -1,4 +1,4 @@
-const PROXY = "https://sturdy-seagull-1102.alexey17001700.deno.net";
+const PROXY = "https://early-amoeba-1705.alexey17001700.deno.net";
 let currentMode = 'normal'; let isAutoMode = false; let isGenerating = false;
 let currentAbortController = null; let watchdogTimer = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс пока не давал особых указаний.";
