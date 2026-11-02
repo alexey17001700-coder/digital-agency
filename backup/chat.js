@@ -5,6 +5,7 @@ let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс пока �
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
+let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
 const chatContainer = document.getElementById('chatContainer');
 const chatListEl = document.getElementById('chatList');
@@ -24,7 +25,8 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 4. Фоновые задачи: [TASK:ИмяАгента:СутьЗадачи].
 5. Ты подчиняешься Боссу.
 6. ЧТЕНИЕ КОДА: Файлы: app.html, style.css, agents.js, network.js, voice.js, chat.js, ui.js, office.js. Если Босс просит проверить код, напиши [READ: имя_файла1, имя_файла2]. НЕ ВЫДУМЫВАЙ названия!
-7. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке кода напиши ПОЛНЫЙ новый код файла. ЗАПРЕЩЕНО трогать папку backup.`;
+7. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке кода напиши ПОЛНЫЙ новый код файла. ЗАПРЕЩЕНО трогать папку backup.
+8. СТРОГИЙ ФОРМАТ: Если меняешь код файла, ОБЯЗАТЕЛЬНО начни ответ с тега [FILE: имя_файла] и выдай ВЕСЬ код целиком в блоке \`\`\`javascript ... \`\`\`. Без тега скрипт не сохранит файл!`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -81,7 +83,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-}
+    }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -133,8 +135,25 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
     }
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
+
+    // МГНОВЕННЫЙ ВЫВОД КОДА
+    if (fullText.includes('[FILE:') || fullText.includes('```')) {
+        const { cleanText, dangerBadges } = processDangerTags(fullText);
+        try { 
+            contentDiv.innerHTML = marked.parse(cleanText); 
+            contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
+            enhanceMediaInMessage(contentDiv);
+        } catch(e) { contentDiv.innerText = cleanText; }
+        if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
+        if (onComplete) onComplete();
+        return; 
+    }
+
     const { cleanText, dangerBadges } = processDangerTags(fullText); let i = 0;
     const totalTimeMs = Math.max(1500, cleanText.length * 20); const speed = totalTimeMs / cleanText.length;
+    
     function type() {
         if (i < cleanText.length) { contentDiv.innerText = cleanText.substring(0, i + 1); chatContainer.scrollTop = chatContainer.scrollHeight; i++; setTimeout(type, speed); }
         else {
@@ -145,7 +164,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-}
+        }
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -175,11 +194,24 @@ async function runBackgroundTask(agentName, taskDescription) {
     updateAgentStatus(agentName, 'working');
     setTimeout(async () => {
         try {
-            const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], temperature: 0.7 }) });
+            const response = await fetch(PROXY, { 
+                method: "POST", 
+                headers: { "Content-Type": "application/json" }, 
+                body: JSON.stringify({ 
+                    messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], 
+                    temperature: 0.7,
+                    userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {}
+                }) 
+            });
             const data = await response.json();
-            if (data.choices && data.choices.length > 0) { const r = data.choices[0].message.content; typeMessage(r, 'director', agentName); addMessageToHistory(r, 'director', agentName); }
+            if (data.choices && data.choices.length > 0) { 
+                const r = data.choices[0].message.content; 
+                typeMessage(r, 'director', agentName); 
+                addMessageToHistory(r, 'director', agentName); 
+            }
         } catch(e) { console.error(e); }
-        setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
+        setAgentStatus(agentName, 'idle'); 
+        updateAgentStatus(agentName, 'free');
     }, 15000);
 }
 
@@ -223,14 +255,14 @@ async function sendMessage(overrideText = null, isKick = false) {
 
             let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
             if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
-    const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
-    if (fileMatch) {
-        lastUserMsg += ` [READ: ${fileMatch[0]}]`;
-        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
-    } else if (/код штаба/i.test(lastUserMsg)) {
-        lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
-        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
-    }
+                const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
+                if (fileMatch) {
+                    lastUserMsg += ` [READ: ${fileMatch[0]}]`;
+                    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                } else if (/код штаба/i.test(lastUserMsg)) {
+                    lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
+                    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                }
             }
 
             let allCode = "";
@@ -259,19 +291,27 @@ async function sendMessage(overrideText = null, isKick = false) {
                 });
                 finalPrompt = agentPrompt + "\n" + finalPrompt;
             }
-            if (allCode) finalPrompt += allCode; // Прикрепляем код
+            if (allCode) finalPrompt += allCode; 
             if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
-                let modelToUse = selectedAIModel;
-    if (selectedAgents.includes('GigaChat')) {
-        modelToUse = 'gigachat';
-    }
+            let modelToUse = selectedAIModel;
+            if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
 
-    const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify( { messages: messagesToSend, temperature: 0.7, model: modelToUse } ), signal: currentAbortController.signal });
-    if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
-    else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
-} catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
-clearTimeout(timeoutId);
+            const response = await fetch(PROXY, { 
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    messages: messagesToSend, 
+                    temperature: 0.7, 
+                    model: modelToUse,
+                    userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {}
+                }),
+                signal: currentAbortController.signal
+            });
+            
+            if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
+            else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
+        } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
+        clearTimeout(timeoutId);
 
         if (success) {
             playSound('receive'); 
@@ -315,59 +355,33 @@ clearTimeout(timeoutId);
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
 }
-let recognition = null;
-let isListening = false;
 
-function toggleVoiceInput() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("Ваш браузер не поддерживает голосовой ввод.");
-        return;
-    }
-
-    if (isListening) {
-        if (recognition) recognition.stop();
-        return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.lang = 'ru-RU';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    const micBtn = document.getElementById('micBtn');
-
-    recognition.onstart = function() {
-        isListening = true;
-        micBtn.style.background = '#ff0055';
-        micBtn.innerText = '⏹';
-    };
-
-    recognition.onresult = function(event) {
-    const speechResult = event.results[0][0].transcript;
-    const input = document.getElementById('chatInput');
-    input.value += (input.value ? ' ' : '') + speechResult;
-    input.style.height = 'auto';
-    input.style.height = (input.scrollHeight) + 'px';
+function init() {
+    if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
+    if (typeof checkPing === 'function') checkPing();
+    if (typeof updateNetStatus === 'function') updateNetStatus();
     
-    // АВТО-ОТПРАВКА: ждем полсекунды и отправляем
-    setTimeout(() => {
-        if (input.value.trim() !== '' && typeof sendMessage === 'function' && !isGenerating) {
-            sendMessage();
-        }
-    }, 500);
-};
+    const chatIds = Object.keys(allChats);
+    if (!currentChatId || !allChats[currentChatId]) {
+        if (chatIds.length > 0) {
+            const sortedIds = chatIds.sort((a, b) => b.localeCompare(a));
+            currentChatId = sortedIds[0];
+            loadChat(currentChatId);
+        } else { createNewChat(true); }
+    } else { loadChat(currentChatId); }
+    
+    renderChatList(); 
 
-    recognition.onerror = function(event) {
-        console.error("Ошибка распознавания:", event.error);
-        alert("Не удалось распознать речь. Попробуйте еще раз.");
-    };
-
-    recognition.onend = function() {
-        isListening = false;
-        micBtn.style.background = '#333';
-        micBtn.innerText = '🎤';
-    };
-
-    recognition.start();
-}
+    const btnVoice = document.getElementById('btnVoiceToggle');
+    if (btnVoice && typeof isVoiceEnabled !== 'undefined') {
+        if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
+        else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
+    }
+    
+    if (chatInputEl) {
+        chatInputEl.addEventListener('input', function() {
+            this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') this.style.height = 'auto';
+        });
+    }
+                          }
