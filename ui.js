@@ -194,3 +194,13 @@ function clearApiSettings() {
         document.getElementById('apiModal').classList.remove('active');
     }
 }
+function toggleKeyVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerText = '🙈';
+    } else {
+        input.type = 'password';
+        btn.innerText = '👁';
+    }
+}
