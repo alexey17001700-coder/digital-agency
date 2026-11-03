@@ -237,7 +237,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
 
 /* =========================================
-   --- 2D ОФИС НА СПРАЙТАХ (ФИНАЛЬНЫЕ STEPS) --- 
+   --- 2D ОФИС НА СПРАЙТАХ (ИСПРАВЛЕННЫЙ CSS) --- 
    ========================================= */
 #office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
@@ -251,7 +251,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .office-main-door::before { content: ''; position: absolute; right: 5px; top: 30px; width: 5px; height: 5px; background: #ffd700; border-radius: 50%; }
 .water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
 
-/* КУЛЕР (Исправлен: 16x32, без растягивания) */
+/* КУЛЕР */
 .water-cooler { position: absolute; width: 16px; height: 32px; background-image: url('cooler.png'); background-size: 16px 32px; transform: translate(-50%, -50%); z-index: 8; image-rendering: pixelated; }
 
 /* СТОЛ */
@@ -271,10 +271,10 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .sprite-3 { background-image: url('char3.png'); }
 .sprite-4 { background-image: url('char4.png'); }
 
-/* СИДЯЩИЙ АГЕНТ (5-й ряд, y = 4 * 32 = 128px) */
+/* СИДЯЩИЙ АГЕНТ (5-й ряд, y = 128px) */
 .agent-sprite.sitting { z-index: 11 !important; background-position: 0px -128px !important; animation: none !important; }
 
-/* АНИМАЦИИ ХОДЬБЫ (steps(4, end) для жесткого переключения) */
+/* АНИМАЦИИ ХОДЬБЫ (Теперь им ничего не мешает!) */
 .agent-sprite.walking.face-down { animation: walkDown 0.8s steps(4, end) infinite; }
 @keyframes walkDown { from { background-position: 0px 0px; } to { background-position: -128px 0px; } }
 
@@ -287,13 +287,19 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .agent-sprite.walking.face-up { animation: walkUp 0.8s steps(4, end) infinite; }
 @keyframes walkUp { from { background-position: 0px -96px; } to { background-position: -128px -96px; } }
 
-/* СТОИТ НА МЕСТЕ */
-.agent-sprite.face-down { background-position: 0px 0px !important; animation: none !important; }
-.agent-sprite.face-up { background-position: 0px -96px !important; animation: none !important; }
-.agent-sprite.face-left { background-position: 0px -32px !important; animation: none !important; }
-.agent-sprite.face-right { background-position: 0px -64px !important; animation: none !important; }
+/* СТАТИЧНЫЕ ПОЗЫ (Убрал animation: none, чтобы не ломать ходьбу) */
+.agent-sprite.face-down:not(.walking) { background-position: 0px 0px; }
+.agent-sprite.face-up:not(.walking) { background-position: 0px -96px; }
+.agent-sprite.face-left:not(.walking) { background-position: 0px -32px; }
+.agent-sprite.face-right:not(.walking) { background-position: 0px -64px; }
 
 /* ИМЕНА */
 .agent-name { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; border: 1px solid #555; }
 .agent-bubble { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; display: none; z-index: 50; border: 2px solid #000; }
 .agent-bubble.show { display: block; animation: blink 1s infinite alternate; }
+.agent-sprite.sitting {
+    z-index: 11 !important;
+    background-position: 0px -128px !important;
+    animation: none !important;
+    transition: none !important;
+}
