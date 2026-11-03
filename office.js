@@ -4,13 +4,15 @@ let officeDesks = [];
 let agentStatuses = {}; 
 let officeLoop = null;
 
-const DESK_COLS = [10, 32, 54, 76];
-const DESK_ROWS = [12, 26, 40, 54, 68, 82];
+// Сдвигаем столы правее и ниже, чтобы они не прятались за стены
+const DESK_COLS = [15, 36, 57, 78];
+const DESK_ROWS = [15, 28, 41, 54, 67, 80];
 
+// Обновляем безопасные зоны под новые координаты
 const SAFE_SPOTS = [
-    {x: 5, y: 90, type: 'water'}, {x: 95, y: 90, type: 'water'}, // Кулеры
-    {x: 50, y: 5, type: 'print'}, // Принтер
-    {x: 21, y: 33}, {x: 43, y: 47}, {x: 65, y: 61}, {x: 87, y: 33} // Просто проходы
+    {x: 10, y: 85, type: 'water'}, {x: 90, y: 85, type: 'water'}, // Кулеры
+    {x: 50, y: 12, type: 'print'}, // Принтер
+    {x: 25, y: 35}, {x: 46, y: 60}, {x: 67, y: 35}, {x: 89, y: 60} // Проходы
 ];
 
 function toggleOffice() {
@@ -49,13 +51,13 @@ function initOffice() {
     const wallLeft = document.createElement('div'); wallLeft.className = 'office-wall-left';
     room.appendChild(wallTop); room.appendChild(wallLeft);
 
-    // Входная дверь (справа от левой стены, чтобы не перекрывать её)
+    // Входная дверь
     const mainDoor = document.createElement('div');
     mainDoor.className = 'office-main-door';
-    mainDoor.style.left = '50px'; 
+    mainDoor.style.left = '45px'; 
     room.appendChild(mainDoor);
 
-    // Окна (на верхней стене, ЗА столами)
+    // Окна
     const windowPositions = [20, 40, 60, 80];
     windowPositions.forEach(pos => {
         const win = document.createElement('div');
@@ -64,7 +66,7 @@ function initOffice() {
         room.appendChild(win);
     });
 
-    // Коврик под кулер (правый нижний угол)
+    // Коврик под кулер
     const waterMat = document.createElement('div');
     waterMat.className = 'water-zone-mat';
     room.appendChild(waterMat);
@@ -82,7 +84,7 @@ function initOffice() {
         });
     });
 
-    // Создаем агентов. ВСЕ СИДЯТ ЗА СТОЛАМИ ПО УМОЛЧАНИЮ.
+    // Создаем агентов.
     const agentNames = Object.keys(AGENT_ICONS);
     agentNames.forEach((name, index) => {
         const deskData = officeDesks[index];
@@ -90,8 +92,9 @@ function initOffice() {
 
         const sprite = document.createElement('div');
         sprite.className = 'agent-sprite sitting'; 
-        sprite.style.left = (deskData.x + 1) + '%';
-        sprite.style.top = (deskData.y + 2) + '%';
+        // Садим их ровно за стол
+        sprite.style.left = (deskData.x + 2) + '%';
+        sprite.style.top = (deskData.y + 5) + '%';
         sprite.title = name;
 
         const bubble = document.createElement('div'); bubble.className = 'agent-bubble'; bubble.id = 'bubble-' + name;
@@ -112,8 +115,8 @@ function initOffice() {
         
         officeSprites[name] = { 
             el: sprite, 
-            deskX: deskData.x, 
-            deskY: deskData.y, 
+            deskX: deskData.x + 2, 
+            deskY: deskData.y + 5, 
             isWorking: false, 
             isMoving: false,
             breakTimer: Math.random() * 30 + 10 
@@ -164,8 +167,8 @@ function updateAgentInOffice(name, status) {
         agent.isMoving = false; 
         agent.el.classList.remove('walking');
         agent.el.style.transition = 'none'; 
-        agent.el.style.left = (agent.deskX + 1) + '%';
-        agent.el.style.top = (agent.deskY + 2) + '%';
+        agent.el.style.left = agent.deskX + '%';
+        agent.el.style.top = agent.deskY + '%';
         agent.el.classList.add('sitting');
         if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active'); 
     } else {
@@ -173,7 +176,7 @@ function updateAgentInOffice(name, status) {
         if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active'); 
         
         if (!agent.el.classList.contains('sitting') && !agent.isMoving) {
-            moveAgentTo(name, agent.deskX + 1, agent.deskY + 2, () => {
+            moveAgentTo(name, agent.deskX, agent.deskY, () => {
                 agent.el.classList.add('sitting');
             });
         } else {
@@ -204,11 +207,11 @@ function officeTick() {
                 
                 setTimeout(() => {
                     if (bubble) bubble.classList.remove('show');
-                    moveAgentTo(name, agent.deskX + 1, agent.deskY + 2, () => {
+                    moveAgentTo(name, agent.deskX, agent.deskY, () => {
                         agent.el.classList.add('sitting');
                     });
                 }, 5000);
             });
         }
     });
-}
+                        }
