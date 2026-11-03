@@ -80,6 +80,7 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 button.send-btn { padding: 10px 16px; background: #00e5ff; border: none; border-radius: 50%; width: 44px; height: 44px; font-weight: bold; color: #000; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: all 0.2s; }
 button.send-btn:disabled { background: #555; }
 button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse 1s infinite; }
+
 /* --- ОВЕРЛЕЙ И АГЕНТЫ --- */
 .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
 .overlay.active { display: block; }
@@ -101,7 +102,6 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .status-busy { color: #ff0055; }
 .status-idle { color: #888; }
 .status-working { color: #ffd700; animation: pulse 1.5s infinite; }
-
 /* --- ЛАМПОЧКА ИДЕЙ --- */
 .idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
 .agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
@@ -121,12 +121,12 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
 
 /* =========================================
-   --- ОФИС (С НАПРАВЛЕНИЯМИ) --- 
+   --- ОФИС (ИДЕАЛЬНЫЕ СЛОИ: СТОЛ -> АГЕНТ -> МОНИТОР -> СПИНКА) --- 
    ========================================= */
 #office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
 
-/* Стены */
+/* Стены (задний план) */
 .office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 40px; background: #1a252f; border-bottom: 5px solid #0f171e; z-index: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
 .office-wall-left { position: absolute; top: 0; left: 0; width: 40px; height: 100%; background: #1a252f; border-right: 5px solid #0f171e; z-index: 1; box-shadow: 5px 0 15px rgba(0,0,0,0.6); }
 
@@ -141,28 +141,35 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 /* Коврик */
 .water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
 
-/* Столы */
+/* СТОЛ (z-index: 10) */
 .desk { position: absolute; width: 50px; height: 34px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
-.desk-monitor { width: 34px; height: 22px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -12px; left: 6px; }
-.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; }
 
-/* Стулья */
-.desk-chair { position: absolute; width: 26px; height: 26px; background-color: #444; border-radius: 50% 50% 10% 10%; border: 2px solid #222; transform: translate(-50%, -50%); z-index: 8; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+/* МОНИТОР (z-index: 12, перекрывает агента) */
+.desk-monitor { width: 34px; height: 22px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -12px; left: 6px; z-index: 12; }
+.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; z-index: 11; }
+
+/* СПИНКА СТУЛА (z-index: 13, перекрывает ноги агента) */
+.desk-chair { position: absolute; width: 28px; height: 16px; background-color: #333; border: 2px solid #111; border-radius: 8px 8px 0 0; transform: translate(-50%, -50%); z-index: 13; box-shadow: 0 -2px 5px rgba(0,0,0,0.5); }
 
 .desk-monitor.active { background: #001a00 !important; border-color: #00ff00 !important; box-shadow: 0 0 10px #00ff00; overflow: hidden; }
 .desk-monitor.active::after { content: '01010 11010 00101 11001 11100 00011 10101 01010'; color: #00ff00; font-size: 6px; font-family: monospace; line-height: 1.1; display: block; width: 100%; height: 100%; padding: 2px; animation: scrollCode 1.5s linear infinite; }
 @keyframes scrollCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 
-/* Агенты */
+/* АГЕНТЫ (Базовый z-index 20 для ходьбы) */
 .agent-sprite { position: absolute; width: 24px; height: 34px; z-index: 20; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); transition: none; }
-.agent-sprite.sitting { z-index: 9 !important; }
 
-/* Классы для направлений */
-.agent-sprite.sitting .agent-face, .agent-sprite.face-up .agent-face { display: none; } /* Спиной (к монитору или вверх) */
-.agent-sprite.face-down .agent-face { display: flex; } /* Лицом к нам */
+/* СИДЯЩИЙ АГЕНТ (z-index: 11, за монитором и спинкой) */
+.agent-sprite.sitting { z-index: 11 !important; }
+
+/* Скрываем лицо, когда сидит (смотрит в монитор) */
+.agent-sprite.sitting .agent-face, .agent-sprite.face-up .agent-face { display: none; }
+/* Показываем лицо, когда идет вниз */
+.agent-sprite.face-down .agent-face { display: flex; }
+
+/* Развороты */
 .agent-sprite.face-left { transform: translate(-50%, -100%) scaleX(-1); }
 .agent-sprite.face-right { transform: translate(-50%, -100%) scaleX(1); }
-.agent-sprite.face-left .agent-name { transform: translateX(-50%) scaleX(-1); } /* Чтобы имя не переворачивалось */
+.agent-sprite.face-left .agent-name { transform: translateX(-50%) scaleX(-1); }
 
 /* Анимации ходьбы */
 .agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
@@ -181,6 +188,19 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .agent-sprite.has-reaction .arm-left { animation: wave 0.2s infinite alternate; }
 .agent-sprite.has-reaction .arm-right { animation: wave 0.2s infinite alternate-reverse; }
 @keyframes wave { from { transform: rotate(-45deg); } to { transform: rotate(45deg); } }
+
+/* Детали агента */
+.agent-head { width: 16px; height: 16px; background: #ffccaa; border: 2px solid #000; border-radius: 50%; z-index: 3; display: flex; justify-content: center; align-items: center; }
+.agent-face { display: flex; gap: 3px; margin-top: 2px; }
+.eye { width: 3px; height: 3px; background: #000; border-radius: 50%; }
+.agent-body { width: 18px; height: 14px; border: 2px solid #000; border-radius: 4px; z-index: 2; position: relative; display: flex; justify-content: center; }
+.agent-body::after { content: ''; position: absolute; bottom: 2px; width: 8px; height: 2px; background: rgba(0,0,0,0.3); border-radius: 2px; }
+.agent-arm { position: absolute; width: 4px; height: 12px; background: #ffccaa; border: 1px solid #000; top: 2px; z-index: 1; border-radius: 2px; }
+.arm-left { left: -6px; transform-origin: top center; }
+.arm-right { right: -6px; transform-origin: top center; }
+.agent-leg { position: absolute; width: 5px; height: 12px; background: #333; border: 1px solid #000; bottom: -12px; z-index: 1; border-radius: 0 0 2px 2px;}
+.leg-left { left: 2px; transform-origin: top center; }
+.leg-right { right: 2px; transform-origin: top center; }
 
 /* Имена и Бабблы */
 .agent-name { position: absolute; top: -18px; font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; border: 1px solid #555; }
