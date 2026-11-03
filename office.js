@@ -15,6 +15,10 @@ const SAFE_SPOTS = [
 
 const AGENT_SPEED = 12; // % в секунду
 
+// КООРДИНАТЫ КОРИДОРОВ (Для умного обхода)
+const CORRIDOR_Y = [8, 22, 35, 48, 61, 74, 92]; 
+const CORRIDOR_X = [8, 25, 46, 67, 88];          
+
 function toggleOffice() {
     isOfficeOpen = !isOfficeOpen;
     const chat = document.getElementById('chatContainer');
@@ -117,6 +121,74 @@ function setAgentFacing(agent, dx, dy) {
     }
 }
 
+// === УМНЫЙ АЛГОРИТМ ХОДЬБЫ ПО КОРИДОРАМ ===
+
+function nearest(arr, val) {
+    return arr.reduce((a, b) => Math.abs(b - val) < Math.abs(a - val) ? b : a);
+}
+
+function buildPath(x0, y0, x1, y1) {
+    const pts = [{x: x0, y: y0}];
+
+    const cy0 = nearest(CORRIDOR_Y, y0);
+    const cy1 = nearest(CORRIDOR_Y, y1);
+    const cx = nearest(CORRIDOR_X, (x0 + x1) / 2);
+
+    // 1. Выход по вертикали в горизонтальный коридор
+    if (Math.abs(y0 - cy0) > 0.5) pts.push({x: x0, y: cy0});
+    // 2. Движение по вертикальному коридору (сдвиг по X)
+    if (Math.abs(x0 - cx) > 0.5) pts.push({x: cx, y: cy0});
+    // 3. Движение по горизонтальному коридору к колонке цели
+    const cx1 = nearest(CORRIDOR_X, x1);
+    if (Math.abs(cx - cx1) > 0.5) pts.push({x: cx1, y: cy0});
+    // 4. Спуск/подъём по коридору к целевому ряду
+    if (Math.abs(cy0 - cy1) > 0.5) pts.push({x: cx1, y: cy1});
+    // 5. Вход в целевой ряд по X
+    if (Math.abs(cx1 - x1) > 0.5) pts.push({x: x1, y: cy1});
+    // 6. Финальная точка
+    pts.push({x: x1, y: y1});
+
+    // Чистим дубли
+    return pts.filter((p, i) => {
+        if (i === 0) return true;
+        return Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5;
+    });
+}
+
+function moveAlongPath(agent, path, index, callback) {
+    if (index >= path.length - 1) {
+        agent.isMoving = false;
+        agent.moveTimeout = null;
+        agent.el.classList.remove('walking');
+        if (callback) callback();
+        return;
+    }
+
+    const from = path[index];
+    const to = path[index + 1];
+    const dX = to.x - from.x;
+    const dY = to.y - from.y;
+    const dist = Math.hypot(dX, dY);
+
+    if (dist < 0.5) {
+        moveAlongPath(agent, path, index + 1, callback);
+        return;
+    }
+
+    setAgentFacing(agent, dX, dY);
+
+    const duration = (dist / AGENT_SPEED) * 1000;
+    agent.el.style.transition = `left ${duration}ms linear, top ${duration}ms linear`;
+    void agent.el.offsetWidth;
+    agent.el.style.left = to.x + '%';
+    agent.el.style.top = to.y + '%';
+
+    agent.moveTimeout = setTimeout(() => {
+        agent.moveTimeout = null;
+        moveAlongPath(agent, path, index + 1, callback);
+    }, duration);
+}
+
 function moveAgentTo(name, targetX, targetY, callback) {
     const agent = officeSprites[name];
     if (!agent) return;
@@ -130,35 +202,14 @@ function moveAgentTo(name, targetX, targetY, callback) {
     agent.el.classList.remove('sitting');
     agent.el.classList.add('walking');
 
-    const currentX = parseFloat(agent.el.style.left) || 0;
-    const currentY = parseFloat(agent.el.style.top) || 0;
+    const startX = parseFloat(agent.el.style.left) || 0;
+    const startY = parseFloat(agent.el.style.top) || 0;
 
-    const dX = targetX - currentX;
-    const dY = targetY - currentY;
-    const dist = Math.hypot(dX, dY);
-
-    if (dist < 0.5) {
-        agent.isMoving = false;
-        agent.el.classList.remove('walking');
-        if (callback) callback();
-        return;
-    }
-
-    setAgentFacing(agent, dX, dY);
-
-    const duration = (dist / AGENT_SPEED) * 1000;
-    agent.el.style.transition = `left ${duration}ms linear, top ${duration}ms linear`;
-    void agent.el.offsetWidth;
-    agent.el.style.left = targetX + '%';
-    agent.el.style.top = targetY + '%';
-
-    agent.moveTimeout = setTimeout(() => {
-        agent.moveTimeout = null;
-        agent.isMoving = false;
-        agent.el.classList.remove('walking');
-        if (callback) callback();
-    }, duration);
+    const path = buildPath(startX, startY, targetX, targetY);
+    moveAlongPath(agent, path, 0, callback);
 }
+
+// === ЛОГИКА РАБОТЫ И ПЕРЕРЫВОВ ===
 
 function updateAgentInOffice(name, status) {
     agentStatuses[name] = status;
@@ -233,4 +284,4 @@ function officeTick() {
             }, 5000);
         });
     });
-}
+        }
