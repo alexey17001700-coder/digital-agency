@@ -4,13 +4,13 @@ let officeDesks = [];
 let agentStatuses = {}; 
 let officeLoop = null;
 
-// Сдвигаем столы правее и ниже, чтобы они не прятались за стены
+// Координаты столов (4 колонки, 6 рядов)
 const DESK_COLS = [15, 36, 57, 78];
 const DESK_ROWS = [15, 28, 41, 54, 67, 80];
 
-// Обновляем безопасные зоны под новые координаты
+// Безопасные зоны (кулеры, принтер, проходы)
 const SAFE_SPOTS = [
-    {x: 10, y: 85, type: 'water'}, {x: 90, y: 85, type: 'water'}, // Кулеры
+    {x: 10, y: 85, type: 'water'}, {x: 90, y: 85, type: 'water'}, // Кулеры (совпадает с визуалом)
     {x: 50, y: 12, type: 'print'}, // Принтер
     {x: 25, y: 35}, {x: 46, y: 60}, {x: 67, y: 35}, {x: 89, y: 60} // Проходы
 ];
@@ -71,9 +71,23 @@ function initOffice() {
     waterMat.className = 'water-zone-mat';
     room.appendChild(waterMat);
 
-    // Генерация столов
+    // ДОБАВЛЯЕМ КУЛЕРЫ (визуал)
+    const cooler1 = document.createElement('div');
+    cooler1.className = 'water-cooler';
+    cooler1.style.left = '10%';
+    cooler1.style.top = '85%';
+    room.appendChild(cooler1);
+
+    const cooler2 = document.createElement('div');
+    cooler2.className = 'water-cooler';
+    cooler2.style.left = '90%';
+    cooler2.style.top = '85%';
+    room.appendChild(cooler2);
+
+    // Генерация столов и стульев
     DESK_ROWS.forEach(top => {
         DESK_COLS.forEach(left => {
+            // 1. Создаем стол
             const desk = document.createElement('div');
             desk.className = 'desk';
             desk.style.top = top + '%';
@@ -81,10 +95,16 @@ function initOffice() {
             desk.innerHTML = '<div class="desk-monitor"></div><div class="desk-pc"></div>';
             room.appendChild(desk);
             officeDesks.push({ el: desk, x: left, y: top });
+
+            // 2. Создаем стул (ровно под агентом)
+            const chair = document.createElement('div');
+            chair.className = 'desk-chair';
+            chair.style.top = (top + 5) + '%'; 
+            chair.style.left = (left + 2) + '%';
+            room.appendChild(chair);
         });
     });
-
-    // Создаем агентов.
+        // Создаем агентов.
     const agentNames = Object.keys(AGENT_ICONS);
     agentNames.forEach((name, index) => {
         const deskData = officeDesks[index];
@@ -92,7 +112,7 @@ function initOffice() {
 
         const sprite = document.createElement('div');
         sprite.className = 'agent-sprite sitting'; 
-        // Садим их ровно за стол
+        // Садим их ровно за стол (координаты стула)
         sprite.style.left = (deskData.x + 2) + '%';
         sprite.style.top = (deskData.y + 5) + '%';
         sprite.title = name;
@@ -214,4 +234,4 @@ function officeTick() {
             });
         }
     });
-                        }
+            }
