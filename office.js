@@ -44,42 +44,31 @@ function initOffice() {
     const room = document.createElement('div');
     room.className = 'office-room';
     
+    // Стены
     const wallTop = document.createElement('div'); wallTop.className = 'office-wall-top';
     const wallLeft = document.createElement('div'); wallLeft.className = 'office-wall-left';
     room.appendChild(wallTop); room.appendChild(wallLeft);
-// --- НОВЫЙ ДЕКОР (ИСПРАВЛЕННЫЙ) ---
 
-// Входная дверь (слева внизу)
-const mainDoor = document.createElement('div');
-mainDoor.className = 'office-main-door';
-room.appendChild(mainDoor);
+    // Входная дверь (справа от левой стены, чтобы не перекрывать её)
+    const mainDoor = document.createElement('div');
+    mainDoor.className = 'office-main-door';
+    mainDoor.style.left = '50px'; 
+    room.appendChild(mainDoor);
 
-// Окна (на верхней стене, ЗА столами)
-const windowPositions = [20, 40, 60, 80];
-windowPositions.forEach(pos => {
-    const win = document.createElement('div');
-    win.className = 'office-window';
-    win.style.left = pos + '%';
-    room.appendChild(win);
-});
+    // Окна (на верхней стене, ЗА столами)
+    const windowPositions = [20, 40, 60, 80];
+    windowPositions.forEach(pos => {
+        const win = document.createElement('div');
+        win.className = 'office-window';
+        win.style.left = pos + '%';
+        room.appendChild(win);
+    });
 
-// Коврик под кулер (правый нижний угол)
-const waterMat = document.createElement('div');
-waterMat.className = 'water-zone-mat';
-room.appendChild(waterMat);
+    // Коврик под кулер (правый нижний угол)
+    const waterMat = document.createElement('div');
+    waterMat.className = 'water-zone-mat';
+    room.appendChild(waterMat);
 
-// --- Перегородки (добавим по краям столов для уюта) ---
-const dividerPositions = [
-    { top: '25%', left: '10%' }, { top: '50%', left: '30%' },
-    { top: '25%', left: '70%' }, { top: '75%', left: '50%' }
-];
-dividerPositions.forEach(pos => {
-    const div = document.createElement('div');
-    div.className = 'office-divider';
-    div.style.top = pos.top;
-    div.style.left = pos.left;
-    room.appendChild(div);
-});
     // Генерация столов
     DESK_ROWS.forEach(top => {
         DESK_COLS.forEach(left => {
@@ -100,7 +89,7 @@ dividerPositions.forEach(pos => {
         if (!deskData) return;
 
         const sprite = document.createElement('div');
-        sprite.className = 'agent-sprite sitting'; // Сразу класс "сидит"
+        sprite.className = 'agent-sprite sitting'; 
         sprite.style.left = (deskData.x + 1) + '%';
         sprite.style.top = (deskData.y + 2) + '%';
         sprite.title = name;
@@ -127,7 +116,7 @@ dividerPositions.forEach(pos => {
             deskY: deskData.y, 
             isWorking: false, 
             isMoving: false,
-            breakTimer: Math.random() * 30 + 10 // Время до перерыва (10-40 сек)
+            breakTimer: Math.random() * 30 + 10 
         };
     });
     container.appendChild(room);
@@ -139,7 +128,7 @@ function moveAgentTo(name, targetX, targetY, callback) {
     
     agent.isMoving = true;
     agent.el.classList.add('walking');
-    agent.el.classList.remove('sitting'); // Встаем
+    agent.el.classList.remove('sitting');
 
     const currentX = parseFloat(agent.el.style.left) || 0;
     const currentY = parseFloat(agent.el.style.top) || 0;
@@ -178,12 +167,11 @@ function updateAgentInOffice(name, status) {
         agent.el.style.left = (agent.deskX + 1) + '%';
         agent.el.style.top = (agent.deskY + 2) + '%';
         agent.el.classList.add('sitting');
-        if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active'); // Включаем код на мониторе
+        if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active'); 
     } else {
         agent.isWorking = false;
-        if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active'); // Выключаем код
+        if (deskEl) deskEl.querySelector('.desk-monitor').classList.remove('active'); 
         
-        // Если он не за столом (например, пил воду) — возвращаем за стол
         if (!agent.el.classList.contains('sitting') && !agent.isMoving) {
             moveAgentTo(name, agent.deskX + 1, agent.deskY + 2, () => {
                 agent.el.classList.add('sitting');
@@ -199,30 +187,23 @@ function officeTick() {
     
     Object.keys(officeSprites).forEach(name => {
         const agent = officeSprites[name];
-        
-        // Если работает или уже идет — не трогаем
         if (agent.isWorking || agent.isMoving) return;
 
-        // Уменьшаем таймер до перерыва
         agent.breakTimer--;
         
-        // Если таймер дошел до 0 — идем на перерыв
         if (agent.breakTimer <= 0) {
             const spot = SAFE_SPOTS[Math.floor(Math.random() * SAFE_SPOTS.length)];
-            agent.breakTimer = Math.random() * 40 + 20; // Следующий перерыв через 20-60 секунд
+            agent.breakTimer = Math.random() * 40 + 20; 
             
             moveAgentTo(name, spot.x, spot.y, () => {
-                // Пришли на место, показываем действие
                 const bubble = document.getElementById('bubble-' + name);
                 if (bubble && spot.type) {
                     bubble.innerText = spot.type === 'water' ? '💧 Пьет воду' : '🖨️ Печатает';
                     bubble.classList.add('show');
                 }
                 
-                // Стоим на перерыве 5 секунд
                 setTimeout(() => {
                     if (bubble) bubble.classList.remove('show');
-                    // Возвращаемся за свой стол
                     moveAgentTo(name, agent.deskX + 1, agent.deskY + 2, () => {
                         agent.el.classList.add('sitting');
                     });
