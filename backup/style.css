@@ -102,7 +102,6 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .status-busy { color: #ff0055; }
 .status-idle { color: #888; }
 .status-working { color: #ffd700; animation: pulse 1.5s infinite; }
-
 /* --- ЛАМПОЧКА ИДЕЙ --- */
 .idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
 .agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
@@ -120,66 +119,181 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
 .modal-body strong { color: #ffd700; }
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
-/* --- ОФИС БЕЗ ПРОКРУТКИ --- */
+
+/* =========================================
+   --- 2D ОФИС НА СПРАЙТАХ (БЕЗ ГЛЮКОВ) --- 
+   ========================================= */
 #office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
-.office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 20px; background: #1a252f; border-bottom: 3px solid #0f171e; z-index: 100; }
-.office-wall-left { position: absolute; top: 0; left: 0; width: 20px; height: 100%; background: #1a252f; border-right: 3px solid #0f171e; z-index: 100; }
 
+/* Стены и декор */
+.office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 40px; background: #1a252f; border-bottom: 5px solid #0f171e; z-index: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
+.office-wall-left { position: absolute; top: 0; left: 0; width: 40px; height: 100%; background: #1a252f; border-right: 5px solid #0f171e; z-index: 1; box-shadow: 5px 0 15px rgba(0,0,0,0.6); }
+.office-window { position: absolute; width: 50px; height: 28px; background: linear-gradient(180deg, #001f3f, #0074D9); border: 2px solid #555; border-radius: 4px; top: 6px; z-index: 2; box-shadow: inset 0 -5px 15px rgba(0, 229, 255, 0.5); }
+.office-main-door { position: absolute; width: 50px; height: 60px; background: #5c3a21; border: 3px solid #3e2716; border-radius: 4px 4px 0 0; bottom: 0; left: 45px; z-index: 15; }
+.office-main-door::after { content: 'ВЫХОД'; position: absolute; top: 15px; left: 50%; transform: translateX(-50%); color: #ff0055; font-size: 8px; font-weight: bold; }
+.office-main-door::before { content: ''; position: absolute; right: 5px; top: 30px; width: 5px; height: 5px; background: #ffd700; border-radius: 50%; }
+.water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
+
+/* КУЛЕР */
+.water-cooler { position: absolute; width: 16px; height: 32px; background-image: url('cooler.png'); background-size: 100% 100%; transform: translate(-50%, -50%); z-index: 8; image-rendering: pixelated; }
+
+/* СТОЛ */
 .desk { position: absolute; width: 50px; height: 34px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
-.desk-monitor { width: 34px; height: 22px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -12px; left: 6px; }
-.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; }
-.desk-monitor.active { background: #001a00 !important; border-color: #00ff00 !important; box-shadow: 0 0 10px #00ff00; overflow: hidden; }
-.desk-monitor.active::after { 
-    content: '01010 11010 00101 11001 11100 00011 10101 01010'; 
-    color: #00ff00; font-size: 6px; font-family: monospace; line-height: 1.1; 
-    display: block; width: 100%; height: 100%; padding: 2px;
-    animation: scrollCode 1.5s linear infinite; 
+
+/* МОНИТОР */
+.desk-monitor { width: 34px; height: 34px; background-image: url('pc.png'); background-size: 400% 1000%; position: absolute; top: -18px; left: 6px; z-index: 12; image-rendering: pixelated; background-position: 0% 0%; }
+.desk-monitor.active { animation: pcActive 0.8s linear infinite; }
+@keyframes pcActive { 0%, 100% { background-position: 0% 0%; } 25% { background-position: 33.33% 0%; } 50% { background-position: 66.66% 0%; } 75% { background-position: 100% 0%; } }
+.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; z-index: 11; }
+.desk-chair { position: absolute; width: 28px; height: 14px; background-color: #333; border: 2px solid #111; border-radius: 8px 8px 0 0; transform: translate(-50%, -50%); z-index: 13; box-shadow: 0 -2px 5px rgba(0,0,0,0.5); }
+/* --- ЛАМПОЧКА ИДЕЙ --- */
+.idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
+.agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
+.agent-card.has-idea { border-color: #ffd700 !important; background-color: #2a2a1a !important; }
+@keyframes blink-yellow { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
+
+/* --- МОДАЛКИ --- */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: #1e1e1e; border: 2px solid #00e5ff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); position: relative; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+.modal-header h2 { margin: 0; color: #00e5ff; font-size: 18px; }
+.modal-close { background: none; border: none; color: #ff0055; font-size: 24px; cursor: pointer; }
+.modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
+.modal-body strong { color: #ffd700; }
+.modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
+
+/* =========================================
+   --- 2D ОФИС НА СПРАЙТАХ (ЖЕСТКИЕ КАДРЫ) --- 
+   ========================================= */
+#office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
+.office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
+
+/* Стены и декор */
+.office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 40px; background: #1a252f; border-bottom: 5px solid #0f171e; z-index: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
+.office-wall-left { position: absolute; top: 0; left: 0; width: 40px; height: 100%; background: #1a252f; border-right: 5px solid #0f171e; z-index: 1; box-shadow: 5px 0 15px rgba(0,0,0,0.6); }
+.office-window { position: absolute; width: 50px; height: 28px; background: linear-gradient(180deg, #001f3f, #0074D9); border: 2px solid #555; border-radius: 4px; top: 6px; z-index: 2; box-shadow: inset 0 -5px 15px rgba(0, 229, 255, 0.5); }
+.office-main-door { position: absolute; width: 50px; height: 60px; background: #5c3a21; border: 3px solid #3e2716; border-radius: 4px 4px 0 0; bottom: 0; left: 45px; z-index: 15; }
+.office-main-door::after { content: 'ВЫХОД'; position: absolute; top: 15px; left: 50%; transform: translateX(-50%); color: #ff0055; font-size: 8px; font-weight: bold; }
+.office-main-door::before { content: ''; position: absolute; right: 5px; top: 30px; width: 5px; height: 5px; background: #ffd700; border-radius: 50%; }
+.water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
+
+/* КУЛЕР */
+.water-cooler { position: absolute; width: 16px; height: 32px; background-image: url('cooler.png'); background-size: 100% 100%; transform: translate(-50%, -50%); z-index: 8; image-rendering: pixelated; }
+
+/* СТОЛ */
+.desk { position: absolute; width: 50px; height: 34px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
+
+/* МОНИТОР */
+.desk-monitor { width: 34px; height: 34px; background-image: url('pc.png'); background-size: 400% 1000%; position: absolute; top: -18px; left: 6px; z-index: 12; image-rendering: pixelated; background-position: 0% 0%; }
+.desk-monitor.active { animation: pcActive 0.8s step-start infinite; }
+@keyframes pcActive { 
+    0% { background-position: 0% 0%; }
+    25% { background-position: 33.33% 0%; }
+    50% { background-position: 66.66% 0%; }
+    75% { background-position: 100% 0%; }
+    100% { background-position: 100% 0%; }
 }
-@keyframes scrollCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; z-index: 11; }
+.desk-chair { position: absolute; width: 28px; height: 14px; background-color: #333; border: 2px solid #111; border-radius: 8px 8px 0 0; transform: translate(-50%, -50%); z-index: 13; box-shadow: 0 -2px 5px rgba(0,0,0,0.5); }
 
-/* Агенты */
-.agent-sprite { position: absolute; width: 24px; height: 34px; z-index: 20; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
-.agent-sprite.sitting { z-index: 5 !important; }
+/* АГЕНТЫ */
+.agent-sprite { position: absolute; width: 32px; height: 32px; z-index: 20; transform: translate(-50%, -100%); image-rendering: pixelated; background-repeat: no-repeat; }
+.sprite-1 { background-image: url('char1.png'); background-size: 400% 1000%; }
+.sprite-2 { background-image: url('char2.png'); background-size: 400% 1000%; }
+.sprite-3 { background-image: url('char3.png'); background-size: 400% 1000%; }
+.sprite-4 { background-image: url('char4.png'); background-size: 400% 1000%; }
 
-.agent-head { width: 16px; height: 16px; background: #ffccaa; border: 2px solid #000; border-radius: 50%; z-index: 3; display: flex; justify-content: center; align-items: center; }
-.agent-face { display: flex; gap: 3px; margin-top: 2px; }
-.eye { width: 3px; height: 3px; background: #000; border-radius: 50%; }
+/* СИДЯЩИЙ АГЕНТ (5-й ряд сверху, это 44.44%) */
+.agent-sprite.sitting { z-index: 11 !important; background-position: 0% 44.44% !important; animation: none !important; }
 
-.agent-body { width: 18px; height: 14px; border: 2px solid #000; border-radius: 4px; z-index: 2; position: relative; display: flex; justify-content: center; }
-.agent-body::after { content: ''; position: absolute; bottom: 2px; width: 8px; height: 2px; background: rgba(0,0,0,0.3); border-radius: 2px; }
+/* АНИМАЦИИ ХОДЬБЫ (step-start отключает смазывание кадров) */
+.agent-sprite.walking.face-down { animation: walkDown 0.6s step-start infinite; }
+@keyframes walkDown {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 33.33% 0%; }
+    50% { background-position: 66.66% 0%; }
+    75% { background-position: 100% 0%; }
+    100% { background-position: 100% 0%; }
+}
+/* --- ЛАМПОЧКА ИДЕЙ --- */
+.idea-bulb { position: absolute; top: -8px; right: -8px; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; filter: drop-shadow(0 0 5px #ffd700); }
+.agent-card.has-idea .idea-bulb { opacity: 1; pointer-events: auto; animation: blink-yellow 1s infinite; }
+.agent-card.has-idea { border-color: #ffd700 !important; background-color: #2a2a1a !important; }
+@keyframes blink-yellow { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
 
-.agent-arm { position: absolute; width: 4px; height: 12px; background: #ffccaa; border: 1px solid #000; top: 2px; z-index: 1; border-radius: 2px; }
-.arm-left { left: -6px; transform-origin: top center; }
-.arm-right { right: -6px; transform-origin: top center; }
+/* --- МОДАЛКИ --- */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: #1e1e1e; border: 2px solid #00e5ff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); position: relative; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+.modal-header h2 { margin: 0; color: #00e5ff; font-size: 18px; }
+.modal-close { background: none; border: none; color: #ff0055; font-size: 24px; cursor: pointer; }
+.modal-body { font-size: 14px; line-height: 1.6; color: #ddd; }
+.modal-body strong { color: #ffd700; }
+.modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
 
-.agent-leg { position: absolute; width: 5px; height: 12px; background: #333; border: 1px solid #000; bottom: -12px; z-index: 1; border-radius: 0 0 2px 2px;}
-.leg-left { left: 2px; transform-origin: top center; }
-.leg-right { right: 2px; transform-origin: top center; }
+/* =========================================
+   --- 2D ОФИС НА СПРАЙТАХ (ФИНАЛЬНЫЕ STEPS) --- 
+   ========================================= */
+#office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
+.office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
 
-.agent-sprite.walking .arm-left { animation: swing 0.4s infinite alternate; }
-.agent-sprite.walking .arm-right { animation: swing 0.4s infinite alternate-reverse; }
-.agent-sprite.walking .leg-left { animation: swing 0.4s infinite alternate-reverse; }
-.agent-sprite.walking .leg-right { animation: swing 0.4s infinite alternate; }
-@keyframes swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+/* Стены и декор */
+.office-wall-top { position: absolute; top: 0; left: 0; width: 100%; height: 40px; background: #1a252f; border-bottom: 5px solid #0f171e; z-index: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
+.office-wall-left { position: absolute; top: 0; left: 0; width: 40px; height: 100%; background: #1a252f; border-right: 5px solid #0f171e; z-index: 1; box-shadow: 5px 0 15px rgba(0,0,0,0.6); }
+.office-window { position: absolute; width: 50px; height: 28px; background: linear-gradient(180deg, #001f3f, #0074D9); border: 2px solid #555; border-radius: 4px; top: 6px; z-index: 2; box-shadow: inset 0 -5px 15px rgba(0, 229, 255, 0.5); }
+.office-main-door { position: absolute; width: 50px; height: 60px; background: #5c3a21; border: 3px solid #3e2716; border-radius: 4px 4px 0 0; bottom: 0; left: 45px; z-index: 15; }
+.office-main-door::after { content: 'ВЫХОД'; position: absolute; top: 15px; left: 50%; transform: translateX(-50%); color: #ff0055; font-size: 8px; font-weight: bold; }
+.office-main-door::before { content: ''; position: absolute; right: 5px; top: 30px; width: 5px; height: 5px; background: #ffd700; border-radius: 50%; }
+.water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
 
-/* Реакции (Машет руками) */
-.agent-sprite.has-reaction .arm-left { animation: wave 0.2s infinite alternate; }
-.agent-sprite.has-reaction .arm-right { animation: wave 0.2s infinite alternate-reverse; }
-@keyframes wave { from { transform: rotate(-45deg); } to { transform: rotate(45deg); } }
+/* КУЛЕР (Исправлен: 16x32, без растягивания) */
+.water-cooler { position: absolute; width: 16px; height: 32px; background-image: url('cooler.png'); background-size: 16px 32px; transform: translate(-50%, -50%); z-index: 8; image-rendering: pixelated; }
 
-.agent-name { position: absolute; top: -18px; font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; }
+/* СТОЛ */
+.desk { position: absolute; width: 50px; height: 34px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
+
+/* МОНИТОР */
+.desk-monitor { width: 32px; height: 32px; background-image: url('pc.png'); background-size: 128px 320px; position: absolute; top: -18px; left: 7px; z-index: 12; image-rendering: pixelated; background-position: 0px 0px; }
+.desk-monitor.active { animation: pcActive 0.8s steps(4, end) infinite; }
+@keyframes pcActive { from { background-position: 0px 0px; } to { background-position: -128px 0px; } }
+.desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; z-index: 11; }
+.desk-chair { position: absolute; width: 28px; height: 14px; background-color: #333; border: 2px solid #111; border-radius: 8px 8px 0 0; transform: translate(-50%, -50%); z-index: 13; box-shadow: 0 -2px 5px rgba(0,0,0,0.5); }
+
+/* АГЕНТЫ */
+.agent-sprite { position: absolute; width: 32px; height: 32px; z-index: 20; transform: translate(-50%, -100%); image-rendering: pixelated; background-repeat: no-repeat; background-size: 128px 320px; }
+.sprite-1 { background-image: url('char1.png'); }
+.sprite-2 { background-image: url('char2.png'); }
+.sprite-3 { background-image: url('char3.png'); }
+.sprite-4 { background-image: url('char4.png'); }
+
+/* СИДЯЩИЙ АГЕНТ (5-й ряд, y = 4 * 32 = 128px) */
+.agent-sprite.sitting { z-index: 11 !important; background-position: 0px -128px !important; animation: none !important; }
+
+/* АНИМАЦИИ ХОДЬБЫ (steps(4, end) для жесткого переключения) */
+.agent-sprite.walking.face-down { animation: walkDown 0.8s steps(4, end) infinite; }
+@keyframes walkDown { from { background-position: 0px 0px; } to { background-position: -128px 0px; } }
+
+.agent-sprite.walking.face-left { animation: walkLeft 0.8s steps(4, end) infinite; }
+@keyframes walkLeft { from { background-position: 0px -32px; } to { background-position: -128px -32px; } }
+
+.agent-sprite.walking.face-right { animation: walkRight 0.8s steps(4, end) infinite; }
+@keyframes walkRight { from { background-position: 0px -64px; } to { background-position: -128px -64px; } }
+
+.agent-sprite.walking.face-up { animation: walkUp 0.8s steps(4, end) infinite; }
+@keyframes walkUp { from { background-position: 0px -96px; } to { background-position: -128px -96px; } }
+
+/* СТОИТ НА МЕСТЕ */
+.agent-sprite.face-down { background-position: 0px 0px !important; animation: none !important; }
+.agent-sprite.face-up { background-position: 0px -96px !important; animation: none !important; }
+.agent-sprite.face-left { background-position: 0px -32px !important; animation: none !important; }
+.agent-sprite.face-right { background-position: 0px -64px !important; animation: none !important; }
+
+/* ИМЕНА */
+.agent-name { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; border: 1px solid #555; }
 .agent-bubble { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; display: none; z-index: 50; border: 2px solid #000; }
-.agent-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #000 transparent transparent; }
 .agent-bubble.show { display: block; animation: blink 1s infinite alternate; }
-@keyframes blink { from { opacity: 1; } to { opacity: 0.4; } }
-
-/* Декор */
-.water-cooler { position: absolute; width: 14px; height: 22px; background: #e0e0e0; border-radius: 3px; z-index: 15; border: 1px solid #999; }
-.water-cooler::after { content: ''; position: absolute; top: -10px; left: 1px; width: 8px; height: 10px; background: #00e5ff; border-radius: 50% 50% 0 0; opacity: 0.8; }
-.printer-desk { position: absolute; width: 50px; height: 28px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
-.printer { position: absolute; width: 28px; height: 20px; background: #333; border: 1px solid #111; border-radius: 3px; top: -10px; left: 9px; }
-.printer::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 2px; background: #00ff00; box-shadow: 0 0 4px #00ff00; }
-.plant { position: absolute; width: 16px; height: 16px; background: #4caf50; border-radius: 50%; z-index: 15; border: 1px solid #2e7d32; }
-
-
