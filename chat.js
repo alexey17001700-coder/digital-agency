@@ -83,7 +83,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-    }
+                                                                                                  }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -164,7 +164,8 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-        }
+}
+
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -213,8 +214,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-}
-
+        }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -249,70 +249,93 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     try {
         let success = false; let aiText = ""; let lastError = "";
-        try {
-            let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
-            messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
+        
+        // ПРОВЕРКА КЛЮЧЕЙ
+        let userKeys = {};
+        try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+        const hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
-            let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
-            if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
-                const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
-                if (fileMatch) {
-                    lastUserMsg += ` [READ: ${fileMatch[0]}]`;
-                    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
-                } else if (/код штаба/i.test(lastUserMsg)) {
-                    lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
-                    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+        if (hasAnyKeys) {
+            // РЕЖИМ С КЛЮЧАМИ (СЕТЬ)
+            try {
+                let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
+                messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
+
+                let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
+                if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
+                    const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
+                    if (fileMatch) {
+                        lastUserMsg += ` [READ: ${fileMatch[0]}]`;
+                        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                    } else if (/код штаба/i.test(lastUserMsg)) {
+                        lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
+                        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                    }
                 }
-            }
 
-            let allCode = "";
-            const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
-            if (readMatch) {
-                const fileNames = readMatch[1].split(',').map(f => f.trim());
-                for (const fileName of fileNames) {
-                    try {
-                        const fileRes = await fetch(fileName + '?t=' + Date.now());
-                        if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
-                    } catch (e) {}
+                let allCode = "";
+                const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
+                if (readMatch) {
+                    const fileNames = readMatch[1].split(',').map(f => f.trim());
+                    for (const fileName of fileNames) {
+                        try {
+                            const fileRes = await fetch(fileName + '?t=' + Date.now());
+                            if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
+                        } catch (e) {}
+                    }
                 }
-            }
 
-            let finalPrompt = SYSTEM_PROMPT;
-            if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
-            
-            if (selectedAgents.length > 0) {
-                let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-                if (selectedAgents.length > 1) agentPrompt += `Это Совет. Каждый агент пишет с новой строки: [ИмяАгента]: Текст.\n`;
-                else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
-                selectedAgents.forEach(agentName => {
-                    let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-                    agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
-                    if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                let finalPrompt = SYSTEM_PROMPT;
+                if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+                
+                if (selectedAgents.length > 0) {
+                    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+                    if (selectedAgents.length > 1) agentPrompt += `Это Совет. Каждый агент пишет с новой строки: [ИмяАгента]: Текст.\n`;
+                    else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+                    selectedAgents.forEach(agentName => {
+                        let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
+                        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                        if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                    });
+                    finalPrompt = agentPrompt + "\n" + finalPrompt;
+                }
+                if (allCode) finalPrompt += allCode; 
+                if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
+
+                let modelToUse = selectedAIModel;
+                if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
+
+                const response = await fetch(PROXY, { 
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        messages: messagesToSend, 
+                        temperature: 0.7, 
+                        model: modelToUse,
+                        userKeys: userKeys
+                    }),
+                    signal: currentAbortController.signal
                 });
-                finalPrompt = agentPrompt + "\n" + finalPrompt;
-            }
-            if (allCode) finalPrompt += allCode; 
-            if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
-
-            let modelToUse = selectedAIModel;
-            if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-
-            const response = await fetch(PROXY, { 
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    messages: messagesToSend, 
-                    temperature: 0.7, 
-                    model: modelToUse,
-                    userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {}
-                }),
-                signal: currentAbortController.signal
-            });
+                
+                if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
+                else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
+            } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
+            clearTimeout(timeoutId);
+        } else {
+            // ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ)
+            renderMessage("⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим "Мини-ИИ"...]*", 'director', 'Оркестратор');
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Имитация "думанья"
             
-            if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
-            else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
-        } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
-        clearTimeout(timeoutId);
+            if (typeof generateLocalResponse === 'function') {
+                aiText = generateLocalResponse(activeAgent, text);
+                success = true;
+                clearTimeout(timeoutId);
+            } else {
+                lastError = "Локальный ИИ не загружен.";
+                clearTimeout(timeoutId);
+            }
+        }
 
+        // ОБРАБОТКА ОТВЕТА (ОБЩАЯ ДЛЯ ОБОИХ РЕЖИМОВ)
         if (success) {
             playSound('receive'); 
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
@@ -354,8 +377,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-}
-
+        }
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -384,4 +406,4 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-                          }
+}
