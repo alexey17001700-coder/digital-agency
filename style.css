@@ -121,7 +121,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
 
 /* =========================================
-   --- ОФИС (СИДЯЩИЕ АГЕНТЫ) --- 
+   --- ОФИС (С ШАРНИРНЫМИ КОНЕЧНОСТЯМИ) --- 
    ========================================= */
 #office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
@@ -158,10 +158,19 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 /* АГЕНТЫ */
 .agent-sprite { position: absolute; width: 24px; height: 34px; z-index: 20; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); transition: none; }
 
-/* СИДЯЩИЙ АГЕНТ */
+/* СИДЯЩИЙ АГЕНТ (z-index: 11, за столом и монитором) */
 .agent-sprite.sitting { z-index: 11 !important; }
-.agent-sprite.sitting .agent-leg { display: none; } /* ПРЯЧЕМ ПРЯМЫЕ НОГИ! */
-.agent-sprite.sitting .agent-face { display: none; } /* ПРЯЧЕМ ЛИЦО (спиной к нам) */
+.agent-sprite.sitting .agent-face { display: none; } /* Спиной к нам */
+
+/* НОГИ В СИДЯЧЕМ ПОЛОЖЕНИИ (СГИБАЕМ) */
+.agent-sprite.sitting .agent-leg {
+    height: 8px; /* Укорачиваем */
+    bottom: -4px; /* Поднимаем к туловищу */
+    transform: rotate(90deg); /* Сгибаем под прямым углом */
+    border-radius: 2px;
+}
+.agent-sprite.sitting .leg-left { left: -4px; }
+.agent-sprite.sitting .leg-right { right: -4px; }
 
 /* Направления */
 .agent-sprite.face-up .agent-face { display: none; }
@@ -170,20 +179,20 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .agent-sprite.face-right { transform: translate(-50%, -100%) scaleX(1); }
 .agent-sprite.face-left .agent-name { transform: translateX(-50%) scaleX(-1); }
 
-/* Анимации ходьбы */
+/* АНИМАЦИЯ ХОДЬБЫ (Перебирание ногами и руками) */
 .agent-sprite.walking { animation: walkBob 0.4s infinite alternate; }
+.agent-sprite.walking .leg-left { animation: legSwingLeft 0.4s infinite alternate; }
+.agent-sprite.walking .leg-right { animation: legSwingRight 0.4s infinite alternate; }
+.agent-sprite.walking .arm-left { animation: armSwingLeft 0.4s infinite alternate; }
+.agent-sprite.walking .arm-right { animation: armSwingRight 0.4s infinite alternate; }
+
 @keyframes walkBob { from { transform: translate(-50%, -100%); } to { transform: translate(-50%, calc(-100% - 3px)); } }
-.agent-sprite.walking.face-left { animation: walkBobLeft 0.4s infinite alternate; }
-@keyframes walkBobLeft { from { transform: translate(-50%, -100%) scaleX(-1); } to { transform: translate(-50%, calc(-100% - 3px)) scaleX(-1); } }
-.agent-sprite.walking.face-right { animation: walkBobRight 0.4s infinite alternate; }
-@keyframes walkBobRight { from { transform: translate(-50%, -100%) scaleX(1); } to { transform: translate(-50%, calc(-100% - 3px)) scaleX(1); } }
+@keyframes legSwingLeft { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+@keyframes legSwingRight { from { transform: rotate(20deg); } to { transform: rotate(-20deg); } }
+@keyframes armSwingLeft { from { transform: rotate(20deg); } to { transform: rotate(-20deg); } }
+@keyframes armSwingRight { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
 
-.agent-sprite.walking .arm-left { animation: swing 0.4s infinite alternate; }
-.agent-sprite.walking .arm-right { animation: swing 0.4s infinite alternate-reverse; }
-.agent-sprite.walking .leg-left { animation: swing 0.4s infinite alternate-reverse; }
-.agent-sprite.walking .leg-right { animation: swing 0.4s infinite alternate; }
-@keyframes swing { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
-
+/* Реакция (Машет руками) */
 .agent-sprite.has-reaction .arm-left { animation: wave 0.2s infinite alternate; }
 .agent-sprite.has-reaction .arm-right { animation: wave 0.2s infinite alternate-reverse; }
 @keyframes wave { from { transform: rotate(-45deg); } to { transform: rotate(45deg); } }
@@ -194,12 +203,12 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .eye { width: 3px; height: 3px; background: #000; border-radius: 50%; }
 .agent-body { width: 18px; height: 14px; border: 2px solid #000; border-radius: 4px; z-index: 2; position: relative; display: flex; justify-content: center; }
 .agent-body::after { content: ''; position: absolute; bottom: 2px; width: 8px; height: 2px; background: rgba(0,0,0,0.3); border-radius: 2px; }
-.agent-arm { position: absolute; width: 4px; height: 12px; background: #ffccaa; border: 1px solid #000; top: 2px; z-index: 1; border-radius: 2px; }
-.arm-left { left: -6px; transform-origin: top center; }
-.arm-right { right: -6px; transform-origin: top center; }
-.agent-leg { position: absolute; width: 5px; height: 12px; background: #333; border: 1px solid #000; bottom: -12px; z-index: 1; border-radius: 0 0 2px 2px;}
-.leg-left { left: 2px; transform-origin: top center; }
-.leg-right { right: 2px; transform-origin: top center; }
+.agent-arm { position: absolute; width: 4px; height: 12px; background: #ffccaa; border: 1px solid #000; top: 2px; z-index: 1; border-radius: 2px; transform-origin: top center; }
+.arm-left { left: -6px; }
+.arm-right { right: -6px; }
+.agent-leg { position: absolute; width: 5px; height: 12px; background: #333; border: 1px solid #000; bottom: -12px; z-index: 1; border-radius: 0 0 2px 2px; transform-origin: top center; }
+.leg-left { left: 2px; }
+.leg-right { right: 2px; }
 
 /* Имена и Бабблы */
 .agent-name { position: absolute; top: -18px; font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; border: 1px solid #555; }
