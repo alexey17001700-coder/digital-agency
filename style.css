@@ -121,7 +121,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
 
 /* =========================================
-   --- 2D ОФИС НА СПРАЙТАХ --- 
+   --- 2D ОФИС НА СПРАЙТАХ (БЕЗ ГЛЮКОВ) --- 
    ========================================= */
 #office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
@@ -143,8 +143,8 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 
 /* МОНИТОР */
 .desk-monitor { width: 34px; height: 34px; background-image: url('pc.png'); background-size: 400% 1000%; position: absolute; top: -18px; left: 6px; z-index: 12; image-rendering: pixelated; background-position: 0% 0%; }
-.desk-monitor.active { animation: pcActive 1s steps(4) infinite; }
-@keyframes pcActive { from { background-position: 0% 0%; } to { background-position: 100% 0%; } }
+.desk-monitor.active { animation: pcActive 0.8s linear infinite; }
+@keyframes pcActive { 0%, 100% { background-position: 0% 0%; } 25% { background-position: 33.33% 0%; } 50% { background-position: 66.66% 0%; } 75% { background-position: 100% 0%; } }
 .desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; z-index: 11; }
 .desk-chair { position: absolute; width: 28px; height: 14px; background-color: #333; border: 2px solid #111; border-radius: 8px 8px 0 0; transform: translate(-50%, -50%); z-index: 13; box-shadow: 0 -2px 5px rgba(0,0,0,0.5); }
 
@@ -155,19 +155,43 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .sprite-3 { background-image: url('char3.png'); background-size: 400% 1000%; }
 .sprite-4 { background-image: url('char4.png'); background-size: 400% 1000%; }
 
+/* СИДЯЩИЙ АГЕНТ (Ряд 5, кадр 1) */
 .agent-sprite.sitting { z-index: 11 !important; background-position: 0% 44.44% !important; animation: none !important; }
 
-.agent-sprite.walking.face-down { animation: walkDown 0.6s steps(4) infinite; }
-.agent-sprite.walking.face-up { animation: walkUp 0.6s steps(4) infinite; }
-.agent-sprite.walking.face-right { animation: walkRight 0.6s steps(4) infinite; }
-.agent-sprite.walking.face-left { animation: walkLeft 0.6s steps(4) infinite; }
-@keyframes walkDown { from { background-position: 0% 0%; } to { background-position: 100% 0%; } }
-@keyframes walkUp { from { background-position: 0% 33.33%; } to { background-position: 100% 33.33%; } }
-@keyframes walkRight { from { background-position: 0% 22.22%; } to { background-position: 100% 22.22%; } }
-@keyframes walkLeft { from { background-position: 0% 11.11%; } to { background-position: 100% 11.11%; } }
+/* ХОДЬБА (Используем четкие проценты 0, 25, 50, 75) */
+.agent-sprite.walking.face-down { animation: walkDown 0.6s linear infinite; }
+.agent-sprite.walking.face-up { animation: walkUp 0.6s linear infinite; }
+.agent-sprite.walking.face-right { animation: walkRight 0.6s linear infinite; }
+.agent-sprite.walking.face-left { animation: walkLeft 0.6s linear infinite; }
 
+@keyframes walkDown { 
+    0%, 100% { background-position: 0% 0%; } 
+    25% { background-position: 33.33% 0%; } 
+    50% { background-position: 66.66% 0%; } 
+    75% { background-position: 100% 0%; } 
+}
+@keyframes walkUp { 
+    0%, 100% { background-position: 0% 11.11%; } 
+    25% { background-position: 33.33% 11.11%; } 
+    50% { background-position: 66.66% 11.11%; } 
+    75% { background-position: 100% 11.11%; } 
+}
+@keyframes walkRight { 
+    0%, 100% { background-position: 0% 22.22%; } 
+    25% { background-position: 33.33% 22.22%; } 
+    50% { background-position: 66.66% 22.22%; } 
+    75% { background-position: 100% 22.22%; } 
+}
+@keyframes walkLeft { 
+    0%, 100% { background-position: 0% 33.33%; } 
+    25% { background-position: 33.33% 33.33%; } 
+    50% { background-position: 66.66% 33.33%; } 
+    75% { background-position: 100% 33.33%; } 
+}
+
+/* СТОИТ НА МЕСТЕ */
 .agent-sprite.face-down { background-position: 0% 0% !important; animation: none !important; }
-.agent-sprite.face-up { background-position: 0% 33.33% !important; animation: none !important; }
+.agent-sprite.face-up { background-position: 0% 11.11% !important; animation: none !important; }
 
 /* ИМЕНА */
 .agent-name { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 3px; border-radius: 3px; white-space: nowrap; z-index: 30; border: 1px solid #555; }
