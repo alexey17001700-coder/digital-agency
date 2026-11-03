@@ -83,7 +83,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-                                                                                                  }
+}
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -136,7 +136,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    // МГНОВЕННЫЙ ВЫВОД КОДА
     if (fullText.includes('[FILE:') || fullText.includes('```')) {
         const { cleanText, dangerBadges } = processDangerTags(fullText);
         try { 
@@ -214,7 +213,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-        }
+            }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -250,13 +249,11 @@ async function sendMessage(overrideText = null, isKick = false) {
     try {
         let success = false; let aiText = ""; let lastError = "";
         
-        // ПРОВЕРКА КЛЮЧЕЙ
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
         const hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
         if (hasAnyKeys) {
-            // РЕЖИМ С КЛЮЧАМИ (СЕТЬ)
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
@@ -321,9 +318,9 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            // ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ)
-            renderMessage("⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим "Мини-ИИ"...]*", 'director', 'Оркестратор');
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Имитация "думанья"
+            // ИСПРАВЛЕНА СТРОКА НИЖЕ (КАВЫЧКИ ЗАМЕНЕНЫ НА ЕЛОЧКИ)
+            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
+            await new Promise(resolve => setTimeout(resolve, 1500)); 
             
             if (typeof generateLocalResponse === 'function') {
                 aiText = generateLocalResponse(activeAgent, text);
@@ -335,7 +332,6 @@ async function sendMessage(overrideText = null, isKick = false) {
             }
         }
 
-        // ОБРАБОТКА ОТВЕТА (ОБЩАЯ ДЛЯ ОБОИХ РЕЖИМОВ)
         if (success) {
             playSound('receive'); 
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
@@ -377,7 +373,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-        }
+            }
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
