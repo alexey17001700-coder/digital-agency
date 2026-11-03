@@ -15,9 +15,9 @@ const SAFE_SPOTS = [
 
 const AGENT_SPEED = 12; // % в секунду
 
-// КООРДИНАТЫ КОРИДОРОВ (Для умного обхода)
-const CORRIDOR_Y = [8, 22, 35, 48, 61, 74, 92]; 
-const CORRIDOR_X = [8, 25, 46, 67, 88];          
+// Коридоры (свободные полосы между столами)
+const CORRIDOR_Y = [8, 22, 35, 48, 61, 74, 92];
+const CORRIDOR_X = [8, 25, 46, 67, 88];
 
 function toggleOffice() {
     isOfficeOpen = !isOfficeOpen;
@@ -106,7 +106,8 @@ function initOffice() {
 
         officeSprites[name] = {
             el: sprite, deskX: deskData.x + 2, deskY: deskData.y + 7,
-            isWorking: false, isMoving: false, breakTimer: Math.random() * 30 + 10
+            isWorking: false, isMoving: false, breakTimer: Math.random() * 30 + 10,
+            targetSpotKey: null
         };
     });
     container.appendChild(room);
@@ -121,8 +122,6 @@ function setAgentFacing(agent, dx, dy) {
     }
 }
 
-// === УМНЫЙ АЛГОРИТМ ХОДЬБЫ ПО КОРИДОРАМ ===
-
 function nearest(arr, val) {
     return arr.reduce((a, b) => Math.abs(b - val) < Math.abs(a - val) ? b : a);
 }
@@ -133,22 +132,15 @@ function buildPath(x0, y0, x1, y1) {
     const cy0 = nearest(CORRIDOR_Y, y0);
     const cy1 = nearest(CORRIDOR_Y, y1);
     const cx = nearest(CORRIDOR_X, (x0 + x1) / 2);
-
-    // 1. Выход по вертикали в горизонтальный коридор
-    if (Math.abs(y0 - cy0) > 0.5) pts.push({x: x0, y: cy0});
-    // 2. Движение по вертикальному коридору (сдвиг по X)
-    if (Math.abs(x0 - cx) > 0.5) pts.push({x: cx, y: cy0});
-    // 3. Движение по горизонтальному коридору к колонке цели
     const cx1 = nearest(CORRIDOR_X, x1);
+
+    if (Math.abs(y0 - cy0) > 0.5) pts.push({x: x0, y: cy0});
+    if (Math.abs(x0 - cx) > 0.5) pts.push({x: cx, y: cy0});
     if (Math.abs(cx - cx1) > 0.5) pts.push({x: cx1, y: cy0});
-    // 4. Спуск/подъём по коридору к целевому ряду
     if (Math.abs(cy0 - cy1) > 0.5) pts.push({x: cx1, y: cy1});
-    // 5. Вход в целевой ряд по X
     if (Math.abs(cx1 - x1) > 0.5) pts.push({x: x1, y: cy1});
-    // 6. Финальная точка
     pts.push({x: x1, y: y1});
 
-    // Чистим дубли
     return pts.filter((p, i) => {
         if (i === 0) return true;
         return Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5;
@@ -204,12 +196,14 @@ function moveAgentTo(name, targetX, targetY, callback) {
 
     const startX = parseFloat(agent.el.style.left) || 0;
     const startY = parseFloat(agent.el.style.top) || 0;
+    const endX = targetX;
+    const endY = targetY;
 
-    const path = buildPath(startX, startY, targetX, targetY);
+    const path = buildPath(startX, startY, endX, endY);
+    // заменяем последнюю точку на точную цель (коридоры могут чуть сместить)
+    path[path.length - 1] = {x: endX, y: endY};
     moveAlongPath(agent, path, 0, callback);
 }
-
-// === ЛОГИКА РАБОТЫ И ПЕРЕРЫВОВ ===
 
 function updateAgentInOffice(name, status) {
     agentStatuses[name] = status;
@@ -222,6 +216,7 @@ function updateAgentInOffice(name, status) {
 
     if (isWorking) {
         if (agent.moveTimeout) { clearTimeout(agent.moveTimeout); agent.moveTimeout = null; }
+        agent.targetSpotKey = null;
         agent.isWorking = true;
         agent.isMoving = false;
 
@@ -253,6 +248,12 @@ function updateAgentInOffice(name, status) {
 function officeTick() {
     if (!isOfficeOpen) return;
 
+    const occupied = new Set();
+    Object.keys(officeSprites).forEach(n => {
+        const a = officeSprites[n];
+        if (a.targetSpotKey) occupied.add(a.targetSpotKey);
+    });
+
     Object.keys(officeSprites).forEach(name => {
         const agent = officeSprites[name];
         if (agent.isWorking || agent.isMoving) return;
@@ -262,7 +263,16 @@ function officeTick() {
 
         if (['busy', 'working', 'thinking', 'typing'].includes(agentStatuses[name])) return;
 
-        const spot = SAFE_SPOTS[Math.floor(Math.random() * SAFE_SPOTS.length)];
+        const freeSpots = SAFE_SPOTS.filter(s => !occupied.has(s.x + ',' + s.y));
+        if (freeSpots.length === 0) {
+            agent.breakTimer = 5;
+            return;
+        }
+
+        const spot = freeSpots[Math.floor(Math.random() * freeSpots.length)];
+        const spotKey = spot.x + ',' + spot.y;
+        agent.targetSpotKey = spotKey;
+        occupied.add(spotKey);
         agent.breakTimer = Math.random() * 40 + 20;
 
         moveAgentTo(name, spot.x, spot.y, () => {
@@ -277,6 +287,8 @@ function officeTick() {
 
             setTimeout(() => {
                 if (bubble) bubble.classList.remove('show');
+                agent.targetSpotKey = null;
+
                 if (['busy', 'working', 'thinking', 'typing'].includes(agentStatuses[name])) return;
                 moveAgentTo(name, agent.deskX, agent.deskY, () => {
                     agent.el.classList.add('sitting');
@@ -284,4 +296,4 @@ function officeTick() {
             }, 5000);
         });
     });
-        }
+    }
