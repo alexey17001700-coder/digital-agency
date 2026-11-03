@@ -65,12 +65,12 @@ function initOffice() {
         room.appendChild(win);
     });
 
-    // Коврик под кулер
+    // Коврик
     const waterMat = document.createElement('div');
     waterMat.className = 'water-zone-mat';
     room.appendChild(waterMat);
 
-    // Кулеры (добавляем визуал)
+    // Кулеры
     const cooler1 = document.createElement('div');
     cooler1.className = 'water-cooler';
     cooler1.style.left = '10%';
@@ -83,10 +83,9 @@ function initOffice() {
     cooler2.style.top = '85%';
     room.appendChild(cooler2);
 
-    // Генерация столов и стульев
+    // Столы и стулья
     DESK_ROWS.forEach(top => {
         DESK_COLS.forEach(left => {
-            // Стол
             const desk = document.createElement('div');
             desk.className = 'desk';
             desk.style.top = top + '%';
@@ -95,7 +94,6 @@ function initOffice() {
             room.appendChild(desk);
             officeDesks.push({ el: desk, x: left, y: top });
 
-            // Стул (опускаем вниз на +8%)
             const chair = document.createElement('div');
             chair.className = 'desk-chair';
             chair.style.top = (top + 8) + '%'; 
@@ -111,7 +109,6 @@ function initOffice() {
 
         const sprite = document.createElement('div');
         sprite.className = 'agent-sprite sitting'; 
-        // Садим ровно на стул (+8%)
         sprite.style.left = (deskData.x + 2) + '%';
         sprite.style.top = (deskData.y + 8) + '%';
         sprite.title = name;
@@ -133,12 +130,8 @@ function initOffice() {
         room.appendChild(sprite);
         
         officeSprites[name] = { 
-            el: sprite, 
-            deskX: deskData.x + 2, 
-            deskY: deskData.y + 8, 
-            isWorking: false, 
-            isMoving: false,
-            breakTimer: Math.random() * 30 + 10 
+            el: sprite, deskX: deskData.x + 2, deskY: deskData.y + 8, 
+            isWorking: false, isMoving: false, breakTimer: Math.random() * 30 + 10 
         };
     });
     container.appendChild(room);
@@ -149,14 +142,26 @@ function moveAgentTo(name, targetX, targetY, callback) {
     if (!agent || agent.isMoving) return;
     
     agent.isMoving = true;
+    agent.el.classList.remove('sitting', 'face-up', 'face-down', 'face-left', 'face-right');
     agent.el.classList.add('walking');
-    agent.el.classList.remove('sitting'); // Убираем класс, чтобы появились глаза
 
     const currentX = parseFloat(agent.el.style.left) || 0;
     const currentY = parseFloat(agent.el.style.top) || 0;
     
-    const timeX = (Math.abs(targetX - currentX) / 4) * 1000;
-    const timeY = (Math.abs(targetY - currentY) / 4) * 1000;
+    const dX = targetX - currentX;
+    const dY = targetY - currentY;
+
+    // Определяем направление движения (куда смотрит)
+    if (Math.abs(dX) > Math.abs(dY)) {
+        if (dX > 0) agent.el.classList.add('face-right');
+        else agent.el.classList.add('face-left');
+    } else {
+        if (dY > 0) agent.el.classList.add('face-down'); // Идет вниз (к нам)
+        else agent.el.classList.add('face-up');         // Идет вверх (от нас)
+    }
+    
+    const timeX = (Math.abs(dX) / 4) * 1000;
+    const timeY = (Math.abs(dY) / 4) * 1000;
 
     agent.el.style.transition = `left ${timeX}ms linear, top 0ms`;
     agent.el.style.left = targetX + '%';
@@ -184,11 +189,11 @@ function updateAgentInOffice(name, status) {
     if (isWorking) {
         agent.isWorking = true;
         agent.isMoving = false; 
-        agent.el.classList.remove('walking');
+        agent.el.classList.remove('walking', 'face-up', 'face-down', 'face-left', 'face-right');
         agent.el.style.transition = 'none'; 
         agent.el.style.left = agent.deskX + '%';
         agent.el.style.top = agent.deskY + '%';
-        agent.el.classList.add('sitting'); // Добавляет класс (прячет глаза и уводит за стол)
+        agent.el.classList.add('sitting'); // Спиной к нам
         if (deskEl) deskEl.querySelector('.desk-monitor').classList.add('active'); 
     } else {
         agent.isWorking = false;
@@ -218,6 +223,10 @@ function officeTick() {
             agent.breakTimer = Math.random() * 40 + 20; 
             
             moveAgentTo(name, spot.x, spot.y, () => {
+                // Когда дошел - поворачивается лицом к нам
+                agent.el.classList.remove('face-up', 'face-left', 'face-right');
+                agent.el.classList.add('face-down');
+
                 const bubble = document.getElementById('bubble-' + name);
                 if (bubble && spot.type) {
                     bubble.innerText = spot.type === 'water' ? '💧 Пьет воду' : '🖨️ Печатает';
@@ -233,4 +242,4 @@ function officeTick() {
             });
         }
     });
-            }
+                       }
