@@ -237,7 +237,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .modal-textarea { width: 100%; height: 80px; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 10px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
 
 /* =========================================
-   --- 2D ОФИС НА СПРАЙТАХ (ПИКСЕЛЬНАЯ ТОЧНОСТЬ) --- 
+   --- 2D ОФИС НА СПРАЙТАХ (ФИНАЛЬНЫЕ STEPS) --- 
    ========================================= */
 #office-container { overflow: hidden; background: #2c3e50; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
 .office-room { width: 100%; height: 100%; position: relative; background: #d4a373; background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.1) 40px, rgba(0,0,0,0.1) 42px); }
@@ -251,40 +251,40 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .office-main-door::before { content: ''; position: absolute; right: 5px; top: 30px; width: 5px; height: 5px; background: #ffd700; border-radius: 50%; }
 .water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
 
-/* КУЛЕР (Твой файл) */
-.water-cooler { position: absolute; width: 16px; height: 32px; background-image: url('cooler.png'); background-size: 100% 100%; transform: translate(-50%, -50%); z-index: 8; image-rendering: pixelated; }
+/* КУЛЕР (Исправлен: 16x32, без растягивания) */
+.water-cooler { position: absolute; width: 16px; height: 32px; background-image: url('cooler.png'); background-size: 16px 32px; transform: translate(-50%, -50%); z-index: 8; image-rendering: pixelated; }
 
 /* СТОЛ */
 .desk { position: absolute; width: 50px; height: 34px; background: #8b5a2b; border-radius: 4px; border: 2px solid #5c3a21; z-index: 10; }
 
-/* МОНИТОР (Твой файл) */
+/* МОНИТОР */
 .desk-monitor { width: 32px; height: 32px; background-image: url('pc.png'); background-size: 128px 320px; position: absolute; top: -18px; left: 7px; z-index: 12; image-rendering: pixelated; background-position: 0px 0px; }
-.desk-monitor.active { animation: pcActive 0.8s steps(4) infinite; }
+.desk-monitor.active { animation: pcActive 0.8s steps(4, end) infinite; }
 @keyframes pcActive { from { background-position: 0px 0px; } to { background-position: -128px 0px; } }
 .desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; z-index: 11; }
 .desk-chair { position: absolute; width: 28px; height: 14px; background-color: #333; border: 2px solid #111; border-radius: 8px 8px 0 0; transform: translate(-50%, -50%); z-index: 13; box-shadow: 0 -2px 5px rgba(0,0,0,0.5); }
 
-/* АГЕНТЫ (Твои файлы char1-4) */
+/* АГЕНТЫ */
 .agent-sprite { position: absolute; width: 32px; height: 32px; z-index: 20; transform: translate(-50%, -100%); image-rendering: pixelated; background-repeat: no-repeat; background-size: 128px 320px; }
 .sprite-1 { background-image: url('char1.png'); }
 .sprite-2 { background-image: url('char2.png'); }
 .sprite-3 { background-image: url('char3.png'); }
 .sprite-4 { background-image: url('char4.png'); }
 
-/* СИДЯЩИЙ АГЕНТ (5-й ряд сверху, y = 4 * 32 = 128px) */
+/* СИДЯЩИЙ АГЕНТ (5-й ряд, y = 4 * 32 = 128px) */
 .agent-sprite.sitting { z-index: 11 !important; background-position: 0px -128px !important; animation: none !important; }
 
-/* АНИМАЦИИ ХОДЬБЫ (Шаг 32px, 4 кадра, steps(4)) */
-.agent-sprite.walking.face-down { animation: walkDown 0.6s steps(4) infinite; }
+/* АНИМАЦИИ ХОДЬБЫ (steps(4, end) для жесткого переключения) */
+.agent-sprite.walking.face-down { animation: walkDown 0.8s steps(4, end) infinite; }
 @keyframes walkDown { from { background-position: 0px 0px; } to { background-position: -128px 0px; } }
 
-.agent-sprite.walking.face-left { animation: walkLeft 0.6s steps(4) infinite; }
+.agent-sprite.walking.face-left { animation: walkLeft 0.8s steps(4, end) infinite; }
 @keyframes walkLeft { from { background-position: 0px -32px; } to { background-position: -128px -32px; } }
 
-.agent-sprite.walking.face-right { animation: walkRight 0.6s steps(4) infinite; }
+.agent-sprite.walking.face-right { animation: walkRight 0.8s steps(4, end) infinite; }
 @keyframes walkRight { from { background-position: 0px -64px; } to { background-position: -128px -64px; } }
 
-.agent-sprite.walking.face-up { animation: walkUp 0.6s steps(4) infinite; }
+.agent-sprite.walking.face-up { animation: walkUp 0.8s steps(4, end) infinite; }
 @keyframes walkUp { from { background-position: 0px -96px; } to { background-position: -128px -96px; } }
 
 /* СТОИТ НА МЕСТЕ */
