@@ -303,3 +303,9 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     animation: none !important;
     transition: none !important;
 }
+.agent-sprite.sitting {
+    z-index: 11 !important;
+    background-position: 0px -128px !important;
+    animation: none !important;
+    transition: none !important;
+}
