@@ -1,19 +1,16 @@
 // local_ai.js
 
-const BRAIN_VERSION = "5.0"; // Очистка старой памяти
+const BRAIN_VERSION = "6.0"; 
 
-// Базовая память (чему он уже "научен" с рождения)
 const DEFAULT_BRAIN = {
     "привет": { answers: ["Привет, Босс!", "Здравствуй! Чем займемся?", "На связи."], weights: [1, 1, 1] },
-    "как дела": { answers: ["Работаю в штатном режиме.", "Все системы в норме.", "Отлично, жду задач."], weights: [1, 1, 1] },
-    "спасибо": { answers: ["Всегда пожалуйста!", "Рад помочь.", "Обращайся."], weights: [1, 1, 1] },
-    "код": { answers: ["Давай посмотрим код.", "Где-то ошибка?", "Нужно проверить переменные."], weights: [1, 1, 1] }
+    "как дела": { answers: ["Работаю в штатном режиме.", "Все системы в норме."], weights: [1, 1] },
+    "спасибо": { answers: ["Всегда пожалуйста!", "Рад помочь."], weights: [1, 1] }
 };
 
 let LOCAL_BRAIN = {};
 let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
 
-// Автоочистка при смене версии (чтобы не тащить старые ошибки)
 const savedVersion = localStorage.getItem('shtabBrainVersion');
 if (savedVersion !== BRAIN_VERSION) {
     localStorage.removeItem('shtabLocalBrain');
@@ -32,26 +29,29 @@ function saveLocalBrain() {
     localStorage.setItem('shtabLocalBrain', JSON.stringify(LOCAL_BRAIN));
 }
 
-// ФУНКЦИЯ САМООБУЧЕНИЯ (Агент запоминает то, что нашел)
 function rememberFact(questionKey, answerText) {
     if (!answerText || answerText.includes("Не удалось") || answerText.includes("Ошибка")) return;
-    
     if (!LOCAL_BRAIN[questionKey]) {
         LOCAL_BRAIN[questionKey] = { answers: [], weights: [] };
     }
     if (!LOCAL_BRAIN[questionKey].answers.includes(answerText)) {
         LOCAL_BRAIN[questionKey].answers.push(answerText);
-        // Даем высокий вес (2), чтобы он запомнил это как важный факт
         LOCAL_BRAIN[questionKey].weights.push(2); 
         saveLocalBrain();
-        console.log(`🧠 Агент выучил новый факт: "${questionKey}"`);
     }
+}
+
+// Вспомогательная функция: очистка слов от мусора
+function getKeywords(text) {
+    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про'];
+    return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/)
+        .filter(word => word.length > 2 && !stopWords.includes(word));
 }
 
 async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const msg = userMessage.toLowerCase().trim();
 
-    // === 1. СПЕЦИАЛЬНЫЕ ЗАПРОСЫ (Погода) ===
+    // === 1. ПОГОДА ===
     if (/погод|градус|температур|на завтра/i.test(msg)) {
         let isTomorrow = /завтра/i.test(msg);
         let cleanText = msg.replace(/[?.!,]/g, '');
@@ -76,44 +76,40 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         }
     } 
 
-    // === 2. ПРОВЕРКА СВОЕЙ ПАМЯТИ ===
-    let bestMatchKey = null;
-    let maxScore = 0;
-    
-    // Ищем совпадения в том, что уже знаем
+    // === 2. АССОЦИАТИВНЫЙ ПОИСК В ПАМЯТИ (Синтез) ===
+    const keywords = getKeywords(msg);
+    let foundAnswers = [];
+    let matchedKeys = [];
+
+    // Ищем совпадения по каждому слову
     for (const [key, data] of Object.entries(LOCAL_BRAIN)) {
-        // Проверяем, есть ли ключ из памяти в вопросе пользователя
-        if (msg.includes(key)) {
-            const score = data.weights.reduce((a, b) => a + b, 0);
-            if (score > maxScore) {
-                maxScore = score;
-                bestMatchKey = key;
+        // Если ключ из памяти содержит хотя бы одно из слов вопроса
+        if (keywords.some(kw => key.includes(kw) || kw.includes(key))) {
+            // Находим лучший ответ для этого ключа
+            let maxWeightIndex = data.weights.indexOf(Math.max(...data.weights));
+            let answer = data.answers[maxWeightIndex];
+            
+            if (!foundAnswers.includes(answer)) {
+                foundAnswers.push(answer);
+                matchedKeys.push(key);
             }
         }
     }
 
-    // Если нашли в памяти - ВЫДАЕМ ОТВЕТ (без интернета)
-    if (bestMatchKey) {
-        const data = LOCAL_BRAIN[bestMatchKey];
-        let totalWeight = data.weights.reduce((a, b) => a + b, 0);
-        let randomPick = Math.random() * totalWeight;
-        let currentSum = 0;
-        let selectedIndex = 0;
-        
-        for (let i = 0; i < data.answers.length; i++) {
-            currentSum += data.weights[i];
-            if (randomPick <= currentSum) { selectedIndex = i; break; }
+    // Если нашли ассоциации в памяти
+    if (foundAnswers.length > 0) {
+        // Если нашли несколько кусочков, склеиваем их
+        if (foundAnswers.length > 1) {
+            return `🧠 Я собрал ответ из своих знаний: ${foundAnswers.join(' ... А также: ')}`;
         }
-        return `${data.answers[selectedIndex]}`;
+        return `🧠 Из памяти: ${foundAnswers[0]}`;
     }
 
-    // === 3. САМООБУЧЕНИЕ (ЕСЛИ НЕ ЗНАЕМ - ИДЕМ В ИНТЕРНЕТ) ===
+    // === 3. ЕСЛИ АССОЦИАЦИЙ НЕТ - ИДЕМ В ИНТЕРНЕТ И УЧИМСЯ ===
     try {
-        // Очищаем запрос от лишних слов для поиска
-        let searchQuery = msg.replace(/(?:что|как|кто|где|когда|думаешь|насчет|расскажи|найди|поищи|погугли|узнай|такое|такой|это|мне|тебе|а|и|в|на)/gi, ' ').replace(/\s+/g, ' ').trim();
+        let searchQuery = keywords.join(' '); 
         if (!searchQuery) searchQuery = userMessage;
 
-        // Идем в интернет через Deno
         const searchRes = await fetch(proxyUrl, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ searchQuery: searchQuery }),
@@ -124,22 +120,21 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         const searchData = await searchRes.json();
         
         if (searchData.success && searchData.results) {
-            // Берем первые 300 символов для ответа
             let rawText = searchData.results.substring(0, 300);
             if (searchData.results.length > 300) rawText += "...";
             
             let finalAnswer = `🔎 Я сходил в интернет и нашел: ${rawText}`;
             
-            // ГЛАВНЫЙ ШАГ: СОХРАНЯЕМ В ПАМЯТЬ (САМООБУЧЕНИЕ)
-            // Ключом делаем очищенный запрос
-            rememberFact(searchQuery.toLowerCase(), finalAnswer);
+            // УЧИМСЯ: Сохраняем факт под ключом из главных слов
+            const keyForMemory = keywords.slice(0, 3).join(' ') || msg;
+            rememberFact(keyForMemory, finalAnswer);
             
             return finalAnswer;
         } else {
-            return `Я проверил интернет, но не нашел информации по запросу "${searchQuery}".`;
+            return `Я проверил интернет, но не нашел информации.`;
         }
     } catch (e) {
         if (e.name === 'AbortError') throw e;
         return `Ошибка при попытке выйти в интернет: ${e.message}`;
     }
-}
+            }
