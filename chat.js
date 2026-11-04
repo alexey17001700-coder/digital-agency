@@ -361,12 +361,15 @@ async function sendMessage(overrideText = null, isKick = false) {
             const isSearchIntent = /найди|поищи|погугли|узнай/i.test(text);
 
             if (isWeatherIntent) {
-    // Убираем знаки препинания
+    // 1. Убираем знаки препинания
     let cleanText = text.replace(/[?.!,]/g, '');
-    // Вырезаем ключевые слова, используя \b (границы слов), чтобы не задеть буквы в названии города
-    cleanText = cleanText.replace(/\b(погода|погоду|температура|градус|найди|поищи|узнай|в|во|на|какая|какой|сейчас)\b/gi, ' ');
-    // Убираем лишние пробелы
-    let city = cleanText.replace(/\s+/g, ' ').trim() || "Москва";
+    
+    // 2. Вырезаем стандартные фразы-триггеры
+    // (?:\s*) означает любое количество пробелов, чтобы не оставалось лишних
+    cleanText = cleanText.replace(/(?:какая|какой|узнай|найди|покажи)?\s*(?:погода|погоду)\s*(?:в|во|на)?\s*/gi, '');
+    
+    // 3. То, что осталось — это город. Если пусто, ставим Москву.
+    let city = cleanText.trim() || "Москва";
 
     renderMessage(`🌤️ *[Система: Запрос погоды для "${city}"...]*`, 'director', activeAgent);
     
@@ -391,7 +394,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         lastError = `Ошибка сети: ${e.message}`;
     }
     clearTimeout(timeoutId);
-              }
             }
             } else {
                 if (typeof generateLocalResponse === 'function') {
