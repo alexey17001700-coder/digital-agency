@@ -391,6 +391,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         lastError = `Ошибка сети: ${e.message}`;
     }
     clearTimeout(timeoutId);
+              }
             }
             } else {
                 if (typeof generateLocalResponse === 'function') {
