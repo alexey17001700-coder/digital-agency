@@ -1,20 +1,14 @@
 // local_ai.js
+const BRAIN_VERSION = "16.1"; 
+const MAX_CONTEXT_MESSAGES = 20; // Держим в голове 20 сообщений
 
-const BRAIN_VERSION = "13.0"; 
-
-// Базовая память (Граф Знаний)
-// Формат: "сущность": { "свойство": "значение" }
 let KNOWLEDGE_GRAPH = {
-    "привет": { "тип": "приветствие" },
-    "пушкин": { "профессия": "поэт", "описание": "великий русский поэт" },
-    "илон маск": { "профессия": "предприниматель", "компания": "spacex" },
-    "spacex": { "деятельность": "космические полеты" }
+    "привет": { "тип": ["приветствие"] },
+    "пушкин": { "профессия": ["поэт"], "произведение": ["евгений онегин"] }
 };
 
-let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
-let chatContext = []; // Контекст беседы
+let CONTEXT_MEMORY = []; 
 
-// Загрузка графа из памяти
 const savedVersion = localStorage.getItem('shtabBrainVersion');
 if (savedVersion !== BRAIN_VERSION) {
     localStorage.removeItem('shtabLocalKG');
@@ -25,198 +19,151 @@ if (savedVersion !== BRAIN_VERSION) {
 try {
     const savedKG = localStorage.getItem('shtabLocalKG');
     if (savedKG) KNOWLEDGE_GRAPH = JSON.parse(savedKG);
-} catch(e) { console.error("Ошибка загрузки KG", e); }
-
-function saveKG() {
-    localStorage.setItem('shtabLocalKG', JSON.stringify(KNOWLEDGE_GRAPH));
-}
-
-// Загрузка контекста за 24 часа
-try {
-    const savedContext = localStorage.getItem('shtabContext');
-    if (savedContext) {
-        const parsed = JSON.parse(savedContext);
-        const now = Date.now();
-        chatContext = parsed.filter(c => now - c.timestamp < 24 * 60 * 60 * 1000);
-    }
+    const savedCtx = localStorage.getItem('shtabContext');
+    if (savedCtx) CONTEXT_MEMORY = JSON.parse(savedCtx);
 } catch(e) { }
 
-function updateContext(role, text) {
-    chatContext.push({ role: role, text: text.toLowerCase(), timestamp: Date.now() });
-    if (chatContext.length > 100) chatContext.shift();
-    localStorage.setItem('shtabContext', JSON.stringify(chatContext));
-}
+function saveBrain() { localStorage.setItem('shtabLocalKG', JSON.stringify(KNOWLEDGE_GRAPH)); }
+function saveContext() { localStorage.setItem('shtabContext', JSON.stringify(CONTEXT_MEMORY)); }
 
-// === АЛГОРИТМ ЛЕВЕНШТЕЙНА (Нечеткий поиск слов) ===
-// Позволяет находить слова, даже если в них есть опечатка или другое окончание
-function levenshtein(a, b) {
-    if (a.length === 0) return b.length;
-    if (b.length === 0) return a.length;
-    const matrix = [];
-    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-    for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
-            if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                matrix[i][j] = matrix[i - 1][j - 1];
-            } else {
-                matrix[i][j] = Math.min(
-                    matrix[i - 1][j - 1] + 1, // замена
-                    matrix[i][j - 1] + 1,     // вставка
-                    matrix[i - 1][j] + 1      // удаление
-                );
-            }
-        }
-    }
-    return matrix[b.length][a.length];
-}
+// Логический вывод: ищем сущность и ее связи
+function reasonAbout(entity) {
+    const e = entity.toLowerCase().trim();
+    if (!KNOWLEDGE_GRAPH[e]) return null;
 
-// Поиск наилучшего совпадения в графе
-function findEntity(word) {
-    let bestMatch = null;
-    let minDistance = 999;
-    
-    for (const entity of Object.keys(KNOWLEDGE_GRAPH)) {
-        // Прямое совпадение
-        if (entity.includes(word) || word.includes(entity)) return entity;
-        
-        // Нечеткое совпадение (расстояние <= 2 символа)
-        const dist = levenshtein(word.toLowerCase(), entity.toLowerCase());
-        if (dist < minDistance && dist <= 2) {
-            minDistance = dist;
-            bestMatch = entity;
-        }
-    }
-    return bestMatch;
-}
+    let facts = [];
+    const relations = KNOWLEDGE_GRAPH[e];
 
-function getKeywords(text) {
-    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'является', 'значит'];
-    return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/)
-        .filter(word => word.length > 2 && !stopWords.includes(word));
-}
-async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
-    const msg = userMessage.toLowerCase().trim();
-    updateContext("user", msg);
-
-    // === 1. ПОГОДА ===
-    if (/погод|градус|температур|на завтра/i.test(msg)) {
-        let isTomorrow = /завтра/i.test(msg);
-        let cleanText = msg.replace(/[?.!,]/g, '').replace(/(?:что|думаешь|насчет|расскажи|какая|какой|узнай|найди|покажи|сейчас)?\s*(?:погода|погоды|погоду|погоде)\s*(?:в|во|на)?\s*/gi, '').replace(/(?:в|во|на)\s*/gi, '');
-        let city = cleanText.trim() || lastCity;
-        localStorage.setItem('shtabLastCity', city);
-
-        const weatherRes = await fetch(proxyUrl, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weatherQuery: city, day: isTomorrow ? 1 : 0 }),
-            signal: signal
-        });
-        if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
-        const weatherData = await weatherRes.json();
-        
-        if (weatherData.success) {
-            let ans = `🌤️ Данные из сети: ${weatherData.results}`;
-            updateContext("assistant", ans);
-            return ans;
-        }
-        return `Не удалось получить данные о погоде.`;
-    } 
-
-    // === 2. ОБУЧЕНИЕ (Парсер сущностей) ===
-    // Ищем паттерны: "X это Y", "X - Y", "X является Y"
-    const teachMatch = msg.match(/(.+?)\s*(?:это|является|значит|—|-)\s+(.+)/i);
-    if (teachMatch) {
-        let subject = teachMatch[1].trim().replace(/[!.?]/g, '').toLowerCase();
-        let fact = teachMatch[2].trim().replace(/[!.?]/g, '');
-        
-        // Создаем сущность в графе, если её нет
-        if (!KNOWLEDGE_GRAPH[subject]) KNOWLEDGE_GRAPH[subject] = {};
-        
-        // Определяем свойство (пока просто пихаем в "описание" или пытаемся угадать)
-        if (fact.includes("поэт") || fact.includes("писатель")) KNOWLEDGE_GRAPH[subject]["профессия"] = fact;
-        else if (fact.includes("предприниматель") || fact.includes("бизнесмен")) KNOWLEDGE_GRAPH[subject]["профессия"] = fact;
-        else KNOWLEDGE_GRAPH[subject]["описание"] = fact;
-        
-        saveKG();
-        return `🧠 Обновил граф знаний. Сущность "${subject}" теперь имеет свойство: ${fact}.`;
-    }
-
-    // === 3. ПОИСК В ГРАФЕ (Ассоциативный) ===
-    const keywords = getKeywords(msg);
-    const isQuestion = msg.includes('?') || /^(кто|что|где|когда|как|почему|зачем|какой|какая|какие|сколько)/i.test(msg);
-
-    if (keywords.length > 0 && isQuestion) {
-        let foundEntities = [];
-        
-        // Ищем сущности по ключевым словам (с учетом опечаток)
-        for (const kw of keywords) {
-            const entity = findEntity(kw);
-            if (entity && !foundEntities.includes(entity)) foundEntities.push(entity);
-        }
-
-        if (foundEntities.length > 0) {
-            let answers = [];
-            // Собираем факты о найденных сущностях
-            for (const entity of foundEntities) {
-                const properties = KNOWLEDGE_GRAPH[entity];
-                for (const [key, value] of Object.entries(properties)) {
-                    if (key === "описание" || key === "профессия" || key === "деятельность") {
-                        answers.push(`${entity.charAt(0).toUpperCase() + entity.slice(1)} — ${value}`);
-                    } else {
-                        answers.push(`${entity.charAt(0).toUpperCase() + entity.slice(1)} (${key}): ${value}`);
-                    }
+    for (const [rel, objects] of Object.entries(relations)) {
+        if (rel === "тип") continue;
+        objects.forEach(obj => {
+            facts.push(`${e.charAt(0).toUpperCase() + e.slice(1)} — ${rel}: ${obj}`);
+            if (KNOWLEDGE_GRAPH[obj]) {
+                for (const [subRel, subObjs] of Object.entries(KNOWLEDGE_GRAPH[obj])) {
+                    if (subRel !== "тип") facts.push(`  -> Связано с "${obj}" — ${subRel}: ${subObjs.join(', ')}`);
                 }
             }
-            
-            // Если нашли инфу, выдаем её (генерация по шаблону)
-            if (answers.length > 0) {
-                let finalAns = `🧠 Из графа знаний: ${answers.join('. ')}.`;
-                updateContext("assistant", finalAns);
-                return finalAns;
+        });
+    }
+    return facts.length > 0 ? facts : null;
+}
+
+function extractKeywords(text) {
+    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'является', 'значит', 'давай', 'напиши', 'создай', 'сделай', 'код', 'скрипт'];
+    return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+    }
+async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
+    const msg = userMessage.toLowerCase().trim();
+    const keywords = extractKeywords(msg);
+
+    // СЛОЙ 1: ОПРЕДЕЛЕНИЕ ИНТЕНТА
+    const isQuestion = msg.includes('?') || /^(кто|что|где|когда|как|почему|зачем|какой|какая)/i.test(msg);
+    const teachMatch = msg.match(/(.+?)\s*(?:это|является|значит|—|-)\s+(.+)/i);
+    
+    // --- РЕЖИМ ОБУЧЕНИЯ ---
+    if (teachMatch && !isQuestion) {
+        let subject = teachMatch[1].trim().replace(/[!.?]/g, '').toLowerCase();
+        let fact = teachMatch[2].trim().replace(/[!.?]/g, '').toLowerCase();
+        
+        if (!KNOWLEDGE_GRAPH[subject]) KNOWLEDGE_GRAPH[subject] = {};
+        
+        let relation = "описание";
+        if (fact.includes("поэт") || fact.includes("писатель")) relation = "профессия";
+        
+        if (!KNOWLEDGE_GRAPH[subject][relation]) KNOWLEDGE_GRAPH[subject][relation] = [];
+        if (!KNOWLEDGE_GRAPH[subject][relation].includes(fact)) {
+            KNOWLEDGE_GRAPH[subject][relation].push(fact);
+        }
+        
+        saveBrain();
+        CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [subject] });
+        if (CONTEXT_MEMORY.length > MAX_CONTEXT_MESSAGES) CONTEXT_MEMORY.shift();
+        saveContext();
+        
+        return `🧠 **Слой обучения:** Я запомнил, что "${subject}" имеет связь "${relation}" со значением "${fact}".`;
+    }
+
+    // --- РЕЖИМ ВОПРОСА (Прямой поиск в памяти) ---
+    let finalFacts = [];
+    let foundEntities = [];
+    
+    if (isQuestion && keywords.length > 0) {
+        keywords.forEach(kw => {
+            const facts = reasonAbout(kw);
+            if (facts) {
+                finalFacts = finalFacts.concat(facts);
+                foundEntities.push(kw);
+            }
+        });
+
+        if (finalFacts.length > 0) {
+            CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: foundEntities });
+            if (CONTEXT_MEMORY.length > MAX_CONTEXT_MESSAGES) CONTEXT_MEMORY.shift();
+            saveContext();
+            return `🧠 **Слой логики (Из графа):**\n- ${finalFacts.join('\n- ')}`;
+        }
+    }
+
+    // --- РЕЖИМ ВОПРОСА (Использование Окна Контекста) ---
+    // Если прямых совпадений нет (например, вопрос "А он кто?"), ищем в последних 20 сообщениях
+    if (isQuestion && CONTEXT_MEMORY.length > 0) {
+        let lastEntity = null;
+        
+        // Идем с конца истории и ищем, о ком или о чем говорили
+        for (let i = CONTEXT_MEMORY.length - 1; i >= 0; i--) {
+            if (CONTEXT_MEMORY[i].entities && CONTEXT_MEMORY[i].entities.length > 0) {
+                lastEntity = CONTEXT_MEMORY[i].entities[0];
+                break;
+            }
+        }
+
+        if (lastEntity) {
+            const facts = reasonAbout(lastEntity);
+            if (facts) {
+                CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [lastEntity] });
+                if (CONTEXT_MEMORY.length > MAX_CONTEXT_MESSAGES) CONTEXT_MEMORY.shift();
+                saveContext();
+                return `🧠 **Слой контекста:** Я понял, что ты продолжаешь спрашивать про "${lastEntity}".\n- ${facts.join('\n- ')}`;
             }
         }
     }
 
-    // === 4. БАЗОВЫЕ ФРАЗЫ (Приветствия) ===
-    for (const [key, data] of Object.entries(KNOWLEDGE_GRAPH)) {
-        if (msg === key || (msg.length < 15 && msg.includes(key) && data["тип"] === "приветствие")) {
-             return "Привет, Босс! Чем займемся?";
-        }
+    // --- РЕЖИМ ГЕНЕРАЦИИ КОДА ---
+    if (/напиши|создай/i.test(msg) && /код|скрипт/i.test(msg)) {
+        return `💻 **Слой действий:** Босс, я могу написать код только если он есть в моих шаблонах.`;
     }
 
-    // === 5. ИНТЕРНЕТ (Если граф пуст) ===
+    // --- ИНТЕРНЕТ (Если в памяти пусто) ---
     try {
-        let searchQuery = keywords.join(' '); 
-        if (!searchQuery) searchQuery = msg.replace(/[?.!]/g, '');
-
+        const searchQuery = keywords.join(' ') || msg;
         const searchRes = await fetch(proxyUrl, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ searchQuery: searchQuery }),
             signal: signal
         });
 
-        if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
         const searchData = await searchRes.json();
         
         if (searchData.success && searchData.results) {
-            let rawText = searchData.results.substring(0, 300);
-            if (searchData.results.length > 300) rawText += "...";
-            let cleanFact = rawText.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim();
+            let cleanFact = searchData.results.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim();
+            cleanFact = cleanFact.substring(0, 200) + "...";
             
-            // СОХРАНЯЕМ В ГРАФ (как "описание" сущности)
-            const mainSubject = keywords[0] || msg;
+            const mainSubject = keywords[0] || "информация";
             if (!KNOWLEDGE_GRAPH[mainSubject]) KNOWLEDGE_GRAPH[mainSubject] = {};
-            KNOWLEDGE_GRAPH[mainSubject]["описание"] = cleanFact;
-            saveKG();
+            if (!KNOWLEDGE_GRAPH[mainSubject]["из_интернета"]) KNOWLEDGE_GRAPH[mainSubject]["из_интернета"] = [];
+            
+            KNOWLEDGE_GRAPH[mainSubject]["из_интернета"].push(cleanFact);
+            saveBrain();
+            
+            CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [mainSubject] });
+            if (CONTEXT_MEMORY.length > MAX_CONTEXT_MESSAGES) CONTEXT_MEMORY.shift();
+            saveContext();
 
-            let finalAnswer = `🔎 Я сходил в интернет и обновил граф знаний: ${cleanFact}`;
-            updateContext("assistant", finalAnswer);
-            return finalAnswer;
+            return `🔎 **Слой поиска (Из сети):** ${cleanFact}\n\n*[Знание добавлено в память]*`;
         } else {
-            return `Я проверил интернет, но не нашел информации.`;
+            return `Я проанализировал запрос, но в моем графе знаний и в интернете нет ответа.`;
         }
     } catch (e) {
-        if (e.name === 'AbortError') throw e;
-        return `Ошибка сети: ${e.message}`;
+        return `Ошибка Сети: ${e.message}`;
     }
-}
+                }
