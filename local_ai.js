@@ -1,7 +1,6 @@
 // local_ai.js
 
-// ВЕРСИЯ МОЗГА (Если изменить, память автоматически очистится)
-const BRAIN_VERSION = "2.0"; 
+const BRAIN_VERSION = "3.0"; // Очистка памяти
 
 const DEFAULT_BRAIN = {
     "привет": { answers: ["Привет, Босс!", "Здравствуй! Чем займемся?", "На связи."], weights: [1, 1, 1] },
@@ -11,17 +10,17 @@ const DEFAULT_BRAIN = {
 };
 
 let LOCAL_BRAIN = {};
+let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
 
-// АВТООЧИСТКА ПРИ СМЕНЕ ВЕРСИИ
+// Автоочистка при смене версии
 const savedVersion = localStorage.getItem('shtabBrainVersion');
 if (savedVersion !== BRAIN_VERSION) {
     localStorage.removeItem('shtabLocalBrain');
     localStorage.removeItem('shtabLastInteraction');
     localStorage.setItem('shtabBrainVersion', BRAIN_VERSION);
-    console.log("Мозг ИИ обновлен до версии " + BRAIN_VERSION + ". Память очищена.");
+    console.log("Мозг ИИ обновлен до версии " + BRAIN_VERSION);
 }
 
-// ЗАГРУЗКА МОЗГА
 try {
     const saved = localStorage.getItem('shtabLocalBrain');
     LOCAL_BRAIN = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_BRAIN));
@@ -35,7 +34,6 @@ function saveLocalBrain() {
 
 function rememberFact(questionKey, answerText) {
     if (!answerText || answerText.includes("Не удалось") || answerText.includes("Ошибка")) return;
-
     if (!LOCAL_BRAIN[questionKey]) {
         LOCAL_BRAIN[questionKey] = { answers: [], weights: [] };
     }
@@ -43,7 +41,6 @@ function rememberFact(questionKey, answerText) {
         LOCAL_BRAIN[questionKey].answers.push(answerText);
         LOCAL_BRAIN[questionKey].weights.push(2); 
         saveLocalBrain();
-        console.log(`Агент выучил новое: "${questionKey}"`);
     }
 }
 
@@ -59,21 +56,26 @@ function teachAgent(wasGood) {
         }
     } catch (e) { console.error("Ошибка обучения:", e); }
 }
+
 async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const msg = userMessage.toLowerCase().trim();
 
-    // === 1. СНАЧАЛА ПРОВЕРЯЕМ СЕТЕВЫЕ ЗАПРОСЫ ===
-    const isWeatherIntent = /погода|погоду|температура|градус/i.test(msg);
-    const isSearchIntent = /найди|поищи|погугли|узнай|кто такой|что такое/i.test(msg);
+    // === 1. СПЕЦИАЛЬНЫЙ ЗАПРОС (Погода) ===
+    // Погода требует отдельного API, поэтому мы ее выделяем
+    if (/погода|погоду|градус|температура|на завтра/i.test(msg)) {
+        let isTomorrow = /завтра/i.test(msg);
+        let city = lastCity; 
 
-    if (isWeatherIntent) {
-        let cleanText = msg.replace(/[?.!,]/g, '');
-        cleanText = cleanText.replace(/(?:какая|какой|узнай|найди|покажи|сейчас)?\s*(?:погода|погоду)\s*(?:в|во|на)?\s*/gi, '');
-        let city = cleanText.replace(/[^А-Яа-яA-Za-z\-\s]/g, '').trim() || "Москва";
+        const cityMatch = msg.match(/(?:погода|погоду)(?:\s+в|\s+во)?\s+([а-яёa-z\-]+)/i);
+        if (cityMatch && cityMatch[1] && !['завтра', 'сегодня', 'сейчас'].includes(cityMatch[1])) {
+            city = cityMatch[1];
+            city = city.charAt(0).toUpperCase() + city.slice(1);
+            localStorage.setItem('shtabLastCity', city); 
+        }
 
         const weatherRes = await fetch(proxyUrl, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weatherQuery: city }),
+            body: JSON.stringify({ weatherQuery: city, day: isTomorrow ? 1 : 0 }),
             signal: signal
         });
         
@@ -81,36 +83,14 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         const weatherData = await weatherRes.json();
         
         if (weatherData.success) {
-           return `По данным сети: ${weatherData.results}`;
+            return `Данные из сети (${isTomorrow ? 'на завтра' : 'сейчас'}): ${weatherData.results}`;
         } else {
-            return `Не удалось получить данные о погоде для "${city}". Попробуйте позже.`;
-        }
-    } 
-    
-    if (isSearchIntent) {
-        const searchRes = await fetch(proxyUrl, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ searchQuery: userMessage }),
-            signal: signal
-        });
-
-        if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
-        const searchData = await searchRes.json();
-        
-        if (searchData.success) {
-            let rawText = searchData.results.substring(0, 300);
-            if (searchData.results.length > 300) rawText += "...";
-            let finalAnswer = `Я нашел в интернете следующее: ${rawText}`;
-            
-            const keyForMemory = msg.split(' ').slice(0, 3).join(' '); 
-            rememberFact(keyForMemory, finalAnswer);
-            return finalAnswer;
-        } else {
-            return `Поиск в интернете не дал результатов.`;
+            return `Не удалось получить данные о погоде для "${city}".`;
         }
     } 
 
-    // === 2. ЕСЛИ НЕ ПОГОДА И НЕ ПОИСК, ИЩЕМ В ПАМЯТИ ===
+    // === 2. ИЩЕМ В ЛОКАЛЬНОЙ ПАМЯТИ ===
+    // Сначала проверяем, знаем ли мы уже ответ на этот вопрос
     let bestMatchKey = null;
     let maxScore = 0;
     for (const [key, data] of Object.entries(LOCAL_BRAIN)) {
@@ -138,6 +118,33 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         return `${data.answers[selectedIndex]}`;
     }
 
-    // === 3. ЕСЛИ СОВСЕМ НЕ ЗНАЕМ ===
-    return `Я не знаю ответа на "${userMessage}". Попробуйте спросить меня о погоде или скажите "найди...".`;
+    // === 3. АВТОНОМНЫЙ ПОИСК В ИНТЕРНЕТЕ ===
+    // Если мы не знаем ответа, мы НЕ ТРЕБУЕМ от Босса ключевых слов "найди".
+    // Мы берем весь его текст и отправляем в поиск.
+    try {
+        const searchRes = await fetch(proxyUrl, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ searchQuery: userMessage }),
+            signal: signal
+        });
+
+        if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
+        const searchData = await searchRes.json();
+        
+        if (searchData.success && searchData.results) {
+            let rawText = searchData.results.substring(0, 300);
+            if (searchData.results.length > 300) rawText += "...";
+            let finalAnswer = `Я сходил в интернет и нашел: ${rawText}`;
+            
+            // Запоминаем этот факт, чтобы в следующий раз ответить мгновенно
+            const keyForMemory = msg.split(' ').slice(0, 3).join(' '); 
+            rememberFact(keyForMemory, finalAnswer);
+            return finalAnswer;
+        } else {
+            return `Я не нашел информации по запросу "${userMessage}" в интернете.`;
+        }
+    } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        return `Ошибка при попытке выйти в интернет: ${e.message}`;
     }
+}
