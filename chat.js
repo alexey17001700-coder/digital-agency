@@ -361,55 +361,37 @@ async function sendMessage(overrideText = null, isKick = false) {
             const isSearchIntent = /найди|поищи|погугли|узнай/i.test(text);
 
             if (isWeatherIntent) {
-                let cleanText = text.replace(/[?.!,]/g, '').replace(/погода|погоду|температура|градус|найди|поищи|узнай|в|во|на|какая|какой|сейчас/gi, ' ').trim();
-                let city = cleanText || "Москва";
+    // Убираем знаки препинания
+    let cleanText = text.replace(/[?.!,]/g, '');
+    // Вырезаем ключевые слова, используя \b (границы слов), чтобы не задеть буквы в названии города
+    cleanText = cleanText.replace(/\b(погода|погоду|температура|градус|найди|поищи|узнай|в|во|на|какая|какой|сейчас)\b/gi, ' ');
+    // Убираем лишние пробелы
+    let city = cleanText.replace(/\s+/g, ' ').trim() || "Москва";
 
-                renderMessage(`🌤️ *[Система: Запрос погоды для "${city}"...]*`, 'director', activeAgent);
-                
-                try {
-                    const weatherRes = await fetch(PROXY, {
-                        method: "POST", 
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ weatherQuery: city }),
-                        signal: currentAbortController.signal
-                    });
-                    if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
-                    const weatherData = await weatherRes.json();
-                    
-                    if (weatherData.success && weatherData.results) {
-                        aiText = `📡 **Данные о погоде (${city}):**\n\n${weatherData.results}`;
-                        success = true;
-                    } else {
-                        throw new Error(weatherData.error || "Сервис не вернул данные");
-                    }
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                    lastError = `Ошибка сети: ${e.message}`;
-                }
-                clearTimeout(timeoutId);
-            } else if (isSearchIntent) {
-                renderMessage(`🔍 *[Система: Локальный агент ищет в сети "${text}"...]*`, 'director', activeAgent);
-                try {
-                    const searchRes = await fetch(PROXY, {
-                        method: "POST", 
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ searchQuery: text }),
-                        signal: currentAbortController.signal
-                    });
-                    if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
-                    const searchData = await searchRes.json();
-                    
-                    if (searchData.success && searchData.results) {
-                        aiText = `📡 **Данные из сети (Локальный поиск):**\n\n${searchData.results}\n\n*[Примечание: это сырые данные, так как для их обработки ИИ нужны API-ключи]*`;
-                        success = true;
-                    } else {
-                        throw new Error(searchData.error || "Сервис не вернул данные");
-                    }
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                    lastError = `Ошибка сети: ${e.message}`;
-                }
-                clearTimeout(timeoutId);
+    renderMessage(`🌤️ *[Система: Запрос погоды для "${city}"...]*`, 'director', activeAgent);
+    
+    try {
+        const weatherRes = await fetch(PROXY, {
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ weatherQuery: city }),
+            signal: currentAbortController.signal
+        });
+        if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
+        const weatherData = await weatherRes.json();
+        
+        if (weatherData.success && weatherData.results) {
+            aiText = `📡 **Данные о погоде (${city}):**\n\n${weatherData.results}`;
+            success = true;
+        } else {
+            throw new Error(weatherData.error || "Сервис не вернул данные");
+        }
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        lastError = `Ошибка сети: ${e.message}`;
+    }
+    clearTimeout(timeoutId);
+            }
             } else {
                 if (typeof generateLocalResponse === 'function') {
                     aiText = generateLocalResponse(activeAgent, text);
