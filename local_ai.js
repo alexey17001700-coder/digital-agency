@@ -623,3 +623,25 @@ registerLayer(
         }
     }
 );
+// ПЛАГИН: Светская беседа (Рефлексы)
+const SMALL_TALK_PHRASES = /что делаешь|чем занят|как жизнь|как настроение|что нового/;
+const SMALL_TALK_RESPONSES = [
+    `Работаю над твоими задачами, Босс. Слежу за слоями, проверяю файлы. А у тебя какие планы?`,
+    `Да всё как обычно: анализирую данные, жду новых вводных. Чем могу помочь?`,
+    `Провожу диагностику систем. Готов приступить к любой задаче, Босс.`
+];
+const SMALL_TALK_RESPONSES_LEN = SMALL_TALK_RESPONSES.length;
+
+registerLayer(
+    "small_talk",
+    (msg) => SMALL_TALK_PHRASES.test(msg),
+    (msg, { originalMsg }) => {
+        // Защита на случай, если массив ответов окажется пустым
+        if (SMALL_TALK_RESPONSES_LEN === 0) {
+            return "Системы в норме. Жду ваших команд.";
+        }
+        // Быстрый выбор случайного индекса через побитовый сдвиг
+        const randomIdx = (Math.random() * SMALL_TALK_RESPONSES_LEN) | 0;
+        return SMALL_TALK_RESPONSES[randomIdx];
+    }
+);
