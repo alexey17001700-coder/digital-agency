@@ -1,5 +1,5 @@
 // local_ai.js
-const BRAIN_VERSION = "42.1"; 
+const BRAIN_VERSION = "43.0"; 
 const MAX_CONTEXT = 20;
 const MAX_DICT_SIZE = 100;
 const DEBUG = true;
@@ -9,6 +9,13 @@ let CONTEXT_MEMORY = [];
 let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { brief: false, name: "Босс" };
 let DYNAMIC_DICT = {};
+
+// === РЕЕСТР НОВЫХ СЛОЁВ (ПЛАГИНОВ) ===
+const CUSTOM_LAYERS = [];
+function registerLayer(name, matcher, handler) {
+    CUSTOM_LAYERS.push({ name, matcher, handler });
+    if (DEBUG) console.log(`🔌 Слой "${name}" успешно зарегистрирован.`);
+}
 
 const BASE_DICT = ["привет", "погода", "спасибо", "код", "штаб", "агент", "время", "хакер", "оркестратор", "охранник", "юрист", "дизайнер"];
 
@@ -52,15 +59,6 @@ const ABBREVIATIONS = { "спс": "спасибо", "пжлст": "пожалу�
 function sanitize(text) { return text.replace(/<[^>]*>?/gm, '').replace(/[^\w\sа-яёА-ЯЁ?.!,]/gi, '').trim(); }
 function expandAbbreviations(text) { return text.split(/\s+/).map(w => ABBREVIATIONS[w.toLowerCase()] || w).join(' '); }
 function extractKeywords(text) { return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w)); }
-
-function analyzeSentiment(text) {
-    const angry = ["дурак", "тупой", "плохо", "бесит", "ошибка", "сломал"];
-    const happy = ["круто", "отлично", "супер", "молодец", "спасибо"];
-    let score = 0;
-    angry.forEach(w => { if (text.includes(w)) score -= 1; });
-    happy.forEach(w => { if (text.includes(w)) score += 1; });
-    return score < 0 ? 'angry' : (score > 0 ? 'happy' : 'neutral');
-}
 function levenshtein(a, b) {
     if (a.length === 0) return b.length; if (b.length === 0) return a.length;
     const m = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
@@ -155,7 +153,7 @@ function calculateMathScore(query, text) {
     const avg = (j + s + n + c) / 4;
     if (DEBUG) console.log(`🧮 Math: J=${j.toFixed(2)} C=${c.toFixed(2)} N=${n.toFixed(2)} -> Avg=${avg.toFixed(2)}`);
     return avg;
-}
+                    }
 function lemmatize(word) { return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей)$/i, '').replace(/ь$/, ''); }
 
 function stemmize(word) {
@@ -318,7 +316,7 @@ function checkHallucinations(answer, query) {
         if (foundPersons.length > 2) return { ok: false, reason: "Много новых имен" };
     }
     return { ok: true };
-               }
+}
 function vote(results) {
     const valid = results.filter(r => r.status === 'fulfilled' && r.value !== null && r.value !== undefined && String(r.value).trim() !== '');
     if (valid.length === 0) return null;
@@ -385,6 +383,7 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const dossier = await analyzeInputSwarm(userMessage);
     const { originalMsg, correctedMsg, context, intent, topic, complexity, keywords, entities, sentiment } = dossier;
 
+    // --- 1. РЕФЛЕКСЫ ---
     if (/^(привет|куку|хай|здравствуй)/i.test(correctedMsg) || keywords.includes("привет")) {
         return finalizeOutput({ msg: originalMsg, sentiment, output: `Привет, ${userPrefs.name}! На связи.` });
     }
@@ -396,12 +395,12 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     }
     if (/время/i.test(correctedMsg)) return finalizeOutput({ msg: originalMsg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
 
+    // --- 2. САМОСОЗНАНИЕ (Штаб и Агенты) ---
     if (/все.*агент|агенты.*на месте|кто.*в чате|сколько.*агент/i.test(correctedMsg)) {
         const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
         let chatStatus = activeAgents.length === 0 ? "Никого нет. Отвечаю как Оркестратор." : `Подключено: ${activeAgents.length} (${activeAgents.join(', ')}).`;
-        const report = `🏢 **Статус Агентов:**\n- Всего в офисе: ${allAgentsCount}.\n- ${chatStatus}\n- Все на местах и готовы к работе.`;
-        return finalizeOutput({ msg: originalMsg, sentiment, output: report });
+        return finalizeOutput({ msg: originalMsg, sentiment, output: `🏢 **Статус Агентов:**\n- Всего в офисе: ${allAgentsCount}.\n- ${chatStatus}\n- Все на местах.` });
     }
 
     if (/в порядке.*штаб|проверь.*файл|статус.*штаб|сверь.*бэкап/i.test(correctedMsg)) {
@@ -409,8 +408,8 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
             const statusRes = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkStatus: true }), signal });
             const statusData = await statusRes.json();
             if (statusData.success) {
-                let report = `🛠️ **Диагностика Штаба:**\n- Файлов в корне: ${statusData.totalRoot}.\n- Файлов в бэкапе: ${statusData.totalBackup}.\n`;
-                report += statusData.missingInBackup.length > 0 ? `⚠️ В бэкапе нет: ${statusData.missingInBackup.join(', ')}` : `✅ Бэкап актуален. Все файлы на месте.`;
+                let report = `🛠️ **Диагностика:**\n- В корне: ${statusData.totalRoot}.\n- В бэкапе: ${statusData.totalBackup}.\n`;
+                report += statusData.missingInBackup.length > 0 ? `⚠️ Нет в бэкапе: ${statusData.missingInBackup.join(', ')}` : `✅ Бэкап актуален.`;
                 return finalizeOutput({ msg: originalMsg, sentiment, output: report });
             }
         } catch (e) { return finalizeOutput({ msg: originalMsg, sentiment, output: `❌ Ошибка проверки: Deno недоступен.` }); }
@@ -421,10 +420,21 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     if (mentionedAgent && /тут|на месте|есть|здесь|статус|работает/i.test(correctedMsg)) {
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
         const isSelected = activeAgents.includes(mentionedAgent);
-        const status = isSelected ? "подключен к чату" : "в офисе, но не выбран";
-        return finalizeOutput({ msg: originalMsg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${status}.` });
+        return finalizeOutput({ msg: originalMsg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${isSelected ? 'подключен к чату' : 'в офисе, но не выбран'}.` });
     }
 
+    // --- 3. ПРОВЕРКА КАСТОМНЫХ СЛОЁВ (ПЛАГИНОВ) ---
+    for (const layer of CUSTOM_LAYERS) {
+        if (layer.matcher(correctedMsg, keywords)) {
+            if (DEBUG) console.log(`🔌 Сработал плагин: ${layer.name}`);
+            const pluginResult = await layer.handler(correctedMsg, { originalMsg, sentiment, keywords, entities });
+            if (pluginResult) {
+                return finalizeOutput({ msg: originalMsg, sentiment, output: pluginResult });
+            }
+        }
+    }
+
+    // --- 4. СТАНДАРТНАЯ МАРШРУТИЗАЦИЯ ---
     const ctx = { msg: correctedMsg, originalMsg, sentiment, entities, keywords, intent, topic, complexity, output: null };
 
     if (intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
@@ -436,11 +446,7 @@ async function validateOutputSwarm(fact, query) {
     const verdict = judge(fact, query, 'network');
     const conf = computeConfidence(fact, query, 'network');
     const hallucination = checkHallucinations(fact, query);
-    
-    if (!verdict.approved || mathScore < 0.3 || conf < 0.3 || !hallucination.ok) {
-        if (DEBUG) console.log(`⚠️ Выходной штурм отклонил. Math: ${mathScore.toFixed(2)}, Conf: ${conf.toFixed(2)}, Hall: ${hallucination.reason || 'OK'}`);
-        return false;
-    }
+    if (!verdict.approved || mathScore < 0.3 || conf < 0.3 || !hallucination.ok) return false;
     return true;
 }
 
@@ -451,12 +457,9 @@ async function processWeather(ctx, proxyUrl, signal) {
         { name: 'last', fn: () => extractCityLast(ctx.msg) }
     ]);
     let city = vote(cityResults) || lastCity;
-    
     if (city && ['в','во','на','с','и','а'].includes(city.toLowerCase())) {
-        ctx.output = `⚠️ Судья: "${city}" — предлог. Уточните город.`;
-        return finalizeOutput(ctx);
+        return finalizeOutput({ ...ctx, output: `⚠️ Судья: "${city}" — предлог.` });
     }
-    
     city = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
     localStorage.setItem('shtabLastCity', city);
     const isTomorrow = /завтра/i.test(ctx.msg);
@@ -464,22 +467,16 @@ async function processWeather(ctx, proxyUrl, signal) {
     try {
         const res = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weatherQuery: city, day: isTomorrow ? 1 : 0 }), signal });
         const data = await res.json();
-        if (data.success) {
-            ctx.output = `🌤️ ${data.results}`;
-            return finalizeOutput(ctx);
-        }
+        if (data.success) return finalizeOutput({ ...ctx, output: `🌤️ ${data.results}` });
     } catch(e) {}
-    ctx.output = `❌ Не удалось узнать погоду.`;
-    return finalizeOutput(ctx);
+    return finalizeOutput({ ...ctx, output: `❌ Не удалось узнать погоду.` });
 }
 
 async function fetchNetwork(query, proxyUrl, signal) {
     try {
         const res = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ searchQuery: query }), signal });
         const data = await res.json();
-        if (data.success && data.results && !data.results.includes("ничего не найдено")) {
-            return data.results.substring(0, 250);
-        }
+        if (data.success && data.results && !data.results.includes("ничего не найдено")) return data.results.substring(0, 250);
         return null;
     } catch(e) { return null; }
 }
@@ -494,31 +491,22 @@ async function processQuestion(ctx, proxyUrl, signal) {
     ]);
     const logicAnswer = vote(logicResults);
     
-    // ПРОВЕРКА ЛОГИКИ (Восстановлено)
     if (logicAnswer) {
         const verdict = judge(logicAnswer, ctx.msg, 'memory');
         const conf = computeConfidence(logicAnswer, ctx.msg, 'memory');
-        if (verdict.approved && conf > 0.3) { 
-            ctx.output = `🧠 Логика: ${logicAnswer}`; 
-            return finalizeOutput(ctx); 
-        }
+        if (verdict.approved && conf > 0.3) return finalizeOutput({ ...ctx, output: `🧠 Логика: ${logicAnswer}` });
     }
 
-    const searchQueries = [
-        ctx.keywords.join(' ') || ctx.msg,
-        ctx.keywords[0] || ctx.msg
-    ];
-
+    const searchQueries = [ctx.keywords.join(' ') || ctx.msg, ctx.keywords[0] || ctx.msg];
     const networkResults = await runParallel([
-        { name: 'full_query', fn: () => fetchNetwork(searchQueries[0], proxyUrl, signal) },
-        { name: 'short_query', fn: () => fetchNetwork(searchQueries[1], proxyUrl, signal) }
+        { name: 'full', fn: () => fetchNetwork(searchQueries[0], proxyUrl, signal) },
+        { name: 'short', fn: () => fetchNetwork(searchQueries[1], proxyUrl, signal) }
     ]);
 
     let finalFact = null;
     for (const res of networkResults) {
-        if (res.value) {
-            const isValid = await validateOutputSwarm(res.value, ctx.msg);
-            if (isValid) { finalFact = res.value; break; }
+        if (res.value && await validateOutputSwarm(res.value, ctx.msg)) {
+            finalFact = res.value; break;
         }
     }
 
@@ -527,12 +515,9 @@ async function processQuestion(ctx, proxyUrl, signal) {
         if (!KNOWLEDGE_GRAPH[mainSubj]) KNOWLEDGE_GRAPH[mainSubj] = {};
         KNOWLEDGE_GRAPH[mainSubj]['из_интернета'] = [finalFact];
         saveLocalBrain();
-        ctx.output = `🔎 ${finalFact}`;
-        return finalizeOutput(ctx);
+        return finalizeOutput({ ...ctx, output: `🔎 ${finalFact}` });
     }
-    
-    ctx.output = `🤔 Босс, я поискал в сети, но не нашел точного ответа. Попробуйте переформулировать.`;
-    return finalizeOutput(ctx);
+    return finalizeOutput({ ...ctx, output: `🤔 Босс, я поискал в сети, но не нашел ответа.` });
 }
 
 function processLearning(ctx) {
@@ -544,19 +529,15 @@ function processLearning(ctx) {
         if (!KNOWLEDGE_GRAPH[subj][rel]) KNOWLEDGE_GRAPH[subj][rel] = [];
         KNOWLEDGE_GRAPH[subj][rel].push(fact);
         saveLocalBrain();
-        ctx.output = `🧠 Запомнил: "${subj}" — это "${fact}".`;
-    } else { ctx.output = `Не понял, что запомнить.`; }
-    return finalizeOutput(ctx);
+        return finalizeOutput({ ...ctx, output: `🧠 Запомнил: "${subj}" — это "${fact}".` });
+    }
+    return finalizeOutput({ ...ctx, output: `Не понял, что запомнить.` });
 }
 
 function finalizeOutput(ctx) {
     if (!ctx.output || ctx.output.trim() === '') ctx.output = "⚠️ Пустой ответ.";
     if (ctx.sentiment === 'angry' && !ctx.output.includes('извин')) ctx.output = 'Извините. ' + ctx.output;
-    
-    // ВОССТАНОВЛЕНО: Режим краткости
-    if (userPrefs.brief && ctx.output.length > 300) {
-        ctx.output = ctx.output.substring(0, 300) + "...";
-    }
+    if (userPrefs.brief && ctx.output.length > 300) ctx.output = ctx.output.substring(0, 300) + "...";
     
     CONTEXT_MEMORY.push({ role: 'user', text: ctx.msg, entities: ctx.keywords, timestamp: Date.now() });
     CONTEXT_MEMORY.push({ role: 'assistant', text: ctx.output, entities: ctx.keywords, timestamp: Date.now() });
@@ -565,3 +546,29 @@ function finalizeOutput(ctx) {
     saveLocalBrain();
     return ctx.output;
 }
+
+// ==========================================
+// ЗДЕСЬ МЫ ДОБАВЛЯЕМ НОВЫЕ СЛОИ (ПЛАГИНЫ)
+// ==========================================
+
+// Пример 1: Слой для игры в "Угадай число"
+registerLayer(
+    "guess_number", 
+    (msg) => msg.includes("угадай число") || msg.includes("игра в числа"), 
+    (msg) => {
+        const secret = Math.floor(Math.random() * 10) + 1;
+        return `🎲 Я загадал число от 1 до 10. Попробуй угадать! (Пиши: "это число 5")`;
+    }
+);
+
+// Пример 2: Слой для курса валют (если добавим API)
+registerLayer(
+    "currency_rate",
+    (msg) => msg.includes("курс доллара") || msg.includes("курс валют"),
+    async (msg) => {
+        return `💵 Я пока не подключен к API Центробанка, но могу сказать, что курсы меняются каждый день!`;
+    }
+);
+
+// Чтобы добавить новый слой, ты просто пишешь внизу файла:
+// registerLayer("имя_слоя", (msg) => msg.includes("триггер"), async (msg) => { return "ответ"; });
