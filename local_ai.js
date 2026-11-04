@@ -1,5 +1,5 @@
 // local_ai.js
-const BRAIN_VERSION = "19.0"; 
+const BRAIN_VERSION = "19.1"; 
 const MAX_CONTEXT = 20;
 
 let KNOWLEDGE_GRAPH = {
@@ -29,6 +29,12 @@ try {
 
 function saveBrain() { localStorage.setItem('shtabLocalKG', JSON.stringify(KNOWLEDGE_GRAPH)); }
 function saveContext() { localStorage.setItem('shtabContext', JSON.stringify(CONTEXT_MEMORY)); }
+
+function updateContext(role, text, entities = []) {
+    CONTEXT_MEMORY.push({ role, text: text.toLowerCase(), entities, timestamp: Date.now() });
+    if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
+    saveContext();
+}
 
 // --- СЛОЙ МАТЕМАТИКИ (Embedding & Attention) ---
 function getVocab() {
@@ -87,12 +93,42 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const msg = userMessage.toLowerCase().trim();
     const tokens = extractTokens(msg);
 
-    // --- СЛОЙ 0: РЕФЛЕКСЫ (Приветствия) ---
+    // --- СЛОЙ 0: РЕФЛЕКСЫ ---
     if (/^(привет|куку|здорово|хай|приветствую|здравствуй)/i.test(msg)) {
-        return "Привет, Босс! На связи. Готов к новым задачам. Чем займемся?";
+        const ans = "Привет, Босс! На связи. Готов к новым задачам. Чем займемся?";
+        updateContext('assistant', ans);
+        return ans;
     }
     if (/как дела|как ты/i.test(msg)) return "Все системы в норме. Как ваши дела, Босс?";
     if (/спасибо|благодарю/i.test(msg)) return "Всегда пожалуйста! Рад помочь.";
+
+    // --- СЛОЙ УТОЧНЕНИЙ (Короткие вопросы к предыдущей теме) ---
+    const isShortQuestion = msg.length < 20 && (msg.includes('?') || /^(это|а|и)\s/i.test(msg));
+    if (isShortQuestion && CONTEXT_MEMORY.length > 0) {
+        // Ищем последнее упоминание погоды в контексте
+        const weatherContext = [...CONTEXT_MEMORY].reverse().find(c => c.text.includes("погод") || c.text.includes("градус") || c.text.includes("температур"));
+        if (weatherContext) {
+            let isTomorrow = /завтра/i.test(msg);
+            // Пытаемся найти город в старых сообщениях
+            let contextCity = lastCity;
+            const cityMatch = weatherContext.text.match(/(?:погода|погоду)(?:\s+в|\s+во)?\s+([а-яёa-z\-]+)/i);
+            if (cityMatch) contextCity = cityMatch[1];
+            
+            try {
+                const weatherRes = await fetch(proxyUrl, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ weatherQuery: contextCity, day: isTomorrow ? 1 : 0 }),
+                    signal: signal
+                });
+                const weatherData = await weatherRes.json();
+                if (weatherData.success) {
+                    let ans = `🌤️ Данные из сети (${isTomorrow ? 'на завтра' : 'сейчас'}) для ${contextCity}: ${weatherData.results}`;
+                    updateContext('assistant', ans);
+                    return ans;
+                }
+            } catch(e) {}
+        }
+    }
 
     // --- СЛОЙ 1: ПОГОДА ---
     if (/погод|градус|температур/i.test(msg)) {
@@ -108,7 +144,12 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
                 signal: signal
             });
             const weatherData = await weatherRes.json();
-            if (weatherData.success) return `🌤️ Данные из сети: ${weatherData.results}`;
+            if (weatherData.success) {
+                let ans = `🌤️ Данные из сети: ${weatherData.results}`;
+                updateContext('user', msg, [city]);
+                updateContext('assistant', ans);
+                return ans;
+            }
         } catch(e) { return `Не удалось получить данные о погоде.`; }
     }
 
@@ -117,41 +158,40 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         let target = null;
         if (msg.includes("змейк")) target = "змейка";
         if (msg.includes("калькулятор")) target = "калькулятор";
-
         if (target && CODE_GENERATORS[target]) {
-            let color = "green";
-            if (msg.includes("красн")) color = "red";
+            let color = msg.includes("красн") ? "red" : "green";
             return `💻 **Генератор кода:**\n\n\`\`\`html\n${CODE_GENERATORS[target](color)}\n\`\`\``;
         }
         return `💻 Босс, я могу написать код для: ${Object.keys(CODE_GENERATORS).join(', ')}.`;
     }
 
-    // --- СЛОЙ 3: ОБУЧЕНИЕ (Knowledge Graph) ---
+    // --- СЛОЙ 3: ОБУЧЕНИЕ (Граф Знаний) ---
     const teachMatch = msg.match(/(.+?)\s*(?:это|является|значит|—|-)\s+(.+)/i);
     if (teachMatch && !msg.includes('?')) {
         let subject = teachMatch[1].trim().replace(/[!.?]/g, '').toLowerCase();
         let fact = teachMatch[2].trim().replace(/[!.?]/g, '').toLowerCase();
         
         if (!KNOWLEDGE_GRAPH[subject]) KNOWLEDGE_GRAPH[subject] = {};
-        let relation = "описание";
-        if (fact.includes("поэт") || fact.includes("писатель")) relation = "профессия";
+        let relation = fact.includes("поэт") || fact.includes("писатель") ? "профессия" : "описание";
         
         if (!KNOWLEDGE_GRAPH[subject][relation]) KNOWLEDGE_GRAPH[subject][relation] = [];
         if (!KNOWLEDGE_GRAPH[subject][relation].includes(fact)) KNOWLEDGE_GRAPH[subject][relation].push(fact);
         
         saveBrain();
-        CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [subject] });
-        if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
-        saveContext();
+        updateContext('user', msg, [subject]);
         return `🧠 **Слой обучения:** Запомнил, что "${subject}" — это "${fact}".`;
     }
-        // --- СЛОЙ 4: МАТЕМАТИЧЕСКИЙ ПОИСК (Attention) ---
+
+    // --- СЛОЙ 4: МАТЕМАТИЧЕСКИЙ ПОИСК ---
     const mathResult = mathSearch(msg);
     if (mathResult && (msg.includes('?') || /^(кто|что|где|когда)/i.test(msg))) {
-        return `🧮 **Математический слой (Attention):**\n${mathResult}`;
+        updateContext('user', msg);
+        let ans = `🧮 **Математический слой (Attention):**\n${mathResult}`;
+        updateContext('assistant', ans);
+        return ans;
     }
 
-    // --- СЛОЙ 5: ОКНО КОНТЕКСТА ---
+    // --- СЛОЙ 5: КОНТЕКСТ ---
     if (msg.includes('?') && CONTEXT_MEMORY.length > 0) {
         let lastEntity = null;
         for (let i = CONTEXT_MEMORY.length - 1; i >= 0; i--) {
@@ -160,11 +200,13 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
             }
         }
         if (lastEntity && KNOWLEDGE_GRAPH[lastEntity]) {
-            return `🧠 **Слой контекста:** Мы говорили про "${lastEntity}". Что именно вас интересует?`;
+            let ans = `🧠 **Слой контекста:** Мы говорили про "${lastEntity}". Что именно вас интересует?`;
+            updateContext('assistant', ans);
+            return ans;
         }
     }
 
-    // --- СЛОЙ 6: ПОИСК В ИНТЕРНЕТЕ (Автообучение) ---
+    // --- СЛОЙ 6: ПОИСК В ИНТЕРНЕТЕ ---
     try {
         const searchQuery = tokens.join(' ') || msg;
         const searchRes = await fetch(proxyUrl, {
@@ -175,23 +217,21 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
 
         const searchData = await searchRes.json();
         if (searchData.success && searchData.results) {
-            let cleanFact = searchData.results.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim().substring(0, 250) + "...";
+            let cleanFact = searchData.results.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim().substring(0, 200) + "...";
             
-            // Автосохранение в память
             const mainSubject = tokens[0] || "информация";
             if (!KNOWLEDGE_GRAPH[mainSubject]) KNOWLEDGE_GRAPH[mainSubject] = {};
             if (!KNOWLEDGE_GRAPH[mainSubject]["из_интернета"]) KNOWLEDGE_GRAPH[mainSubject]["из_интернета"] = [];
             KNOWLEDGE_GRAPH[mainSubject]["из_интернета"].push(cleanFact);
             saveBrain();
             
-            CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [mainSubject] });
-            if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
-            saveContext();
-
-            return `🔎 **Слой поиска (Из сети):** ${cleanFact}\n\n*[Добавлено в память]*`;
+            updateContext('user', msg, [mainSubject]);
+            let ans = `🔎 **Слой поиска (Из сети):** ${cleanFact}\n\n*[Добавлено в память]*`;
+            updateContext('assistant', ans);
+            return ans;
         }
         return `❌ Я проанализировал запрос, но в памяти и в сети нет ответа.`;
     } catch (e) {
         return `❌ Ошибка Сети: ${e.message}`;
     }
-                                                             }
+}
