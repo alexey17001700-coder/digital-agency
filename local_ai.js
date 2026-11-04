@@ -1,5 +1,5 @@
 // local_ai.js
-const BRAIN_VERSION = "43.0"; 
+const BRAIN_VERSION = "44.2"; 
 const MAX_CONTEXT = 20;
 const MAX_DICT_SIZE = 100;
 const DEBUG = true;
@@ -10,11 +10,10 @@ let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { brief: false, name: "Босс" };
 let DYNAMIC_DICT = {};
 
-// === РЕЕСТР НОВЫХ СЛОЁВ (ПЛАГИНОВ) ===
 const CUSTOM_LAYERS = [];
 function registerLayer(name, matcher, handler) {
     CUSTOM_LAYERS.push({ name, matcher, handler });
-    if (DEBUG) console.log(`🔌 Слой "${name}" успешно зарегистрирован.`);
+    if (DEBUG) console.log(`🔌 Слой "${name}" зарегистрирован.`);
 }
 
 const BASE_DICT = ["привет", "погода", "спасибо", "код", "штаб", "агент", "время", "хакер", "оркестратор", "охранник", "юрист", "дизайнер"];
@@ -59,6 +58,15 @@ const ABBREVIATIONS = { "спс": "спасибо", "пжлст": "пожалу�
 function sanitize(text) { return text.replace(/<[^>]*>?/gm, '').replace(/[^\w\sа-яёА-ЯЁ?.!,]/gi, '').trim(); }
 function expandAbbreviations(text) { return text.split(/\s+/).map(w => ABBREVIATIONS[w.toLowerCase()] || w).join(' '); }
 function extractKeywords(text) { return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w)); }
+
+function analyzeSentiment(text) {
+    const angry = ["дурак", "тупой", "плохо", "бесит", "ошибка", "сломал"];
+    const happy = ["круто", "отлично", "супер", "молодец", "спасибо"];
+    let score = 0;
+    angry.forEach(w => { if (text.includes(w)) score -= 1; });
+    happy.forEach(w => { if (text.includes(w)) score += 1; });
+    return score < 0 ? 'angry' : (score > 0 ? 'happy' : 'neutral');
+    }
 function levenshtein(a, b) {
     if (a.length === 0) return b.length; if (b.length === 0) return a.length;
     const m = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
@@ -153,7 +161,7 @@ function calculateMathScore(query, text) {
     const avg = (j + s + n + c) / 4;
     if (DEBUG) console.log(`🧮 Math: J=${j.toFixed(2)} C=${c.toFixed(2)} N=${n.toFixed(2)} -> Avg=${avg.toFixed(2)}`);
     return avg;
-                    }
+}
 function lemmatize(word) { return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей)$/i, '').replace(/ь$/, ''); }
 
 function stemmize(word) {
@@ -383,7 +391,6 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const dossier = await analyzeInputSwarm(userMessage);
     const { originalMsg, correctedMsg, context, intent, topic, complexity, keywords, entities, sentiment } = dossier;
 
-    // --- 1. РЕФЛЕКСЫ ---
     if (/^(привет|куку|хай|здравствуй)/i.test(correctedMsg) || keywords.includes("привет")) {
         return finalizeOutput({ msg: originalMsg, sentiment, output: `Привет, ${userPrefs.name}! На связи.` });
     }
@@ -393,9 +400,8 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     if (/спасибо/i.test(correctedMsg) || keywords.includes("спасибо")) {
         return finalizeOutput({ msg: originalMsg, sentiment, output: 'Всегда пожалуйста!' });
     }
-    if (/время/i.test(correctedMsg)) return finalizeOutput({ msg: originalMsg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
+    if (/время/i.test(correctedMsg) && !msg.includes('как') && !msg.includes('когда')) return finalizeOutput({ msg: originalMsg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
 
-    // --- 2. САМОСОЗНАНИЕ (Штаб и Агенты) ---
     if (/все.*агент|агенты.*на месте|кто.*в чате|сколько.*агент/i.test(correctedMsg)) {
         const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
@@ -423,7 +429,6 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         return finalizeOutput({ msg: originalMsg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${isSelected ? 'подключен к чату' : 'в офисе, но не выбран'}.` });
     }
 
-    // --- 3. ПРОВЕРКА КАСТОМНЫХ СЛОЁВ (ПЛАГИНОВ) ---
     for (const layer of CUSTOM_LAYERS) {
         if (layer.matcher(correctedMsg, keywords)) {
             if (DEBUG) console.log(`🔌 Сработал плагин: ${layer.name}`);
@@ -434,7 +439,6 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         }
     }
 
-    // --- 4. СТАНДАРТНАЯ МАРШРУТИЗАЦИЯ ---
     const ctx = { msg: correctedMsg, originalMsg, sentiment, entities, keywords, intent, topic, complexity, output: null };
 
     if (intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
@@ -546,41 +550,46 @@ function finalizeOutput(ctx) {
     saveLocalBrain();
     return ctx.output;
 }
-
 // ==========================================
 // ЗДЕСЬ МЫ ДОБАВЛЯЕМ НОВЫЕ СЛОИ (ПЛАГИНЫ)
 // ==========================================
 
-// Пример 1: Слой для игры в "Угадай число"
-registerLayer(
-    "guess_number", 
-    (msg) => msg.includes("угадай число") || msg.includes("игра в числа"), 
+registerLayer("math_solver", 
+    (msg) => /^[\d\s\+\-\*\/\(\)\.]+$/.test(msg.replace(/[=?]/g, '').trim()) && msg.length > 2,
     (msg) => {
-        const secret = Math.floor(Math.random() * 10) + 1;
-        return `🎲 Я загадал число от 1 до 10. Попробуй угадать! (Пиши: "это число 5")`;
+        try {
+            let expr = msg.replace(/[=]/g, '').replace(/[а-яё]/gi, '');
+            if (!expr.trim()) return null;
+            const result = new Function('return ' + expr)();
+            return `🧮 Результат: ${expr.trim()} = **${result}**`;
+        } catch(e) { return `⚠️ Не удалось посчитать выражение.`; }
     }
 );
 
-// Пример 2: Слой для курса валют (если добавим API)
-registerLayer(
-    "currency_rate",
-    (msg) => msg.includes("курс доллара") || msg.includes("курс валют"),
-    async (msg) => {
-        return `💵 Я пока не подключен к API Центробанка, но могу сказать, что курсы меняются каждый день!`;
+registerLayer("date_checker",
+    (msg) => /какой сегодня день|какое сегодня число|какая дата|какой год/i.test(msg),
+    () => {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        return `📅 Сегодня **${now.toLocaleDateString('ru-RU', options)}**.`;
     }
 );
-// ==========================================
-// ПЛАГИН: Глубокая проверка целостности файлов (Аудит)
-// ==========================================
+
+registerLayer("code_checker",
+    (msg) => /проверь код|правильный код|нет ли ошибок/i.test(msg),
+    () => {
+        return `🛠️ **Слой проверки кода:** Готов проанализировать. Отправь код, и я проверю скобки ( { } [ ] ) и кавычки.`;
+    }
+);
+
 registerLayer(
-    "file_audit_validator", // Имя плагина
-    (msg) => /аудит|проверь файлы|целостность|все ли файлы|проверь штаб|файлы на месте/i.test(msg), // Триггеры
+    "file_audit_validator", 
+    (msg) => /аудит|проверь файлы|целостность|все ли файлы|проверь штаб|файлы на месте/i.test(msg), 
     async (msg, ctx) => {
         const PROXY_URL = "https://early-amoeba-1705.alexey17001700.deno.net";
         if (DEBUG) console.log("🔌 Запущен плагин аудита файлов...");
         
         try {
-            // Стучимся на Deno, чтобы он сверил корень и папку backup
             const res = await fetch(PROXY_URL, {
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
@@ -589,7 +598,6 @@ registerLayer(
             const data = await res.json();
             
             if (data.success) {
-                // Список файлов, без которых Штаб не работает
                 const criticalFiles = ["app.html", "index.html", "style.css", "chat.js", "local_ai.js", "office.js", "agents.js"];
                 
                 let report = `🕵️‍♂️ **Аудит целостности Штаба:**\n`;
@@ -599,7 +607,6 @@ registerLayer(
                 if (data.missingInBackup && data.missingInBackup.length > 0) {
                     report += `⚠️ В бэкапе не хватает: ${data.missingInBackup.join(', ')}\n`;
                     
-                    // Проверяем, нет ли среди них критических
                     const missingCritical = criticalFiles.filter(f => data.missingInBackup.includes(f));
                     if (missingCritical.length > 0) {
                         report += `🚨 **КРИТИЧЕСКАЯ ОШИБКА:** В бэкапе нет важных файлов: ${missingCritical.join(', ')}! Срочно нажми "Сохранить эталон" в Сейфе.`;
@@ -616,5 +623,3 @@ registerLayer(
         }
     }
 );
-// Чтобы добавить новый слой, ты просто пишешь внизу файла:
-// registerLayer("имя_слоя", (msg) => msg.includes("триггер"), async (msg) => { return "ответ"; });
