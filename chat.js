@@ -15,6 +15,7 @@ const chatInputEl = document.getElementById('chatInput');
 
 const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
 
+// ДОБАВЛЕНО ПРАВИЛО 9 (ПОИСК В ИНТЕРНЕТЕ)
 const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства.
 ДОСТУП К ИНТЕРНЕТУ: У тебя есть инструмент "search_web". КАЖДЫЙ агент обязан использовать его. ЗАПРЕЩЕНО выдумывать ссылки.
 РОЛИ: Оркестратор, Хакер, Охранник, Исследователь, Планировщик, Аналитик, Исполнитель, Архитектор, Дизайнер, Креативщик, Критик, Тестировщик, Переводчик, Методолог, Юрист, Маркетолог, Техпис, Фронтенд, Бэкенд, Мобильный, DevOps, Универсал, Приемная, Результат.
@@ -26,7 +27,8 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 5. Ты подчиняешься Боссу.
 6. ЧТЕНИЕ КОДА: Файлы: app.html, style.css, agents.js, network.js, voice.js, chat.js, ui.js, office.js. Если Босс просит проверить код, напиши [READ: имя_файла1, имя_файла2]. НЕ ВЫДУМЫВАЙ названия!
 7. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке кода напиши ПОЛНЫЙ новый код файла. ЗАПРЕЩЕНО трогать папку backup.
-8. СТРОГИЙ ФОРМАТ: Если меняешь код файла, ОБЯЗАТЕЛЬНО начни ответ с тега [FILE: имя_файла] и выдай ВЕСЬ код целиком в блоке \`\`\`javascript ... \`\`\`. Без тега скрипт не сохранит файл!`;
+8. СТРОГИЙ ФОРМАТ: Если меняешь код файла, ОБЯЗАТЕЛЬНО начни ответ с тега [FILE: имя_файла] и выдай ВЕСЬ код целиком в блоке \`\`\`javascript ... \`\`\`. Без тега скрипт не сохранит файл!
+9. ПОИСК В ИНТЕРНЕТЕ: Если тебе нужны свежие данные (новости, погода, курсы, факты), напиши тег [SEARCH: твой_запрос]. Тебе вернут результаты поиска, и ты продолжишь ответ.`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -213,7 +215,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-            }
+                                                                                                            }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -302,23 +304,62 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
 
-                const response = await fetch(PROXY, { 
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        messages: messagesToSend, 
-                        temperature: 0.7, 
-                        model: modelToUse,
-                        userKeys: userKeys
-                    }),
-                    signal: currentAbortController.signal
-                });
-                
-                if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
-                else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
+                // НАЧАЛО ЦИКЛА ПОИСКА (максимум 2 итерации: запрос -> поиск -> ответ)
+                let currentMessages = messagesToSend;
+                let maxAttempts = 2;
+                let currentAttempt = 0;
+
+                while (currentAttempt < maxAttempts) {
+                    currentAttempt++;
+                    const response = await fetch(PROXY, { 
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            messages: currentMessages, 
+                            temperature: 0.7, 
+                            model: modelToUse,
+                            userKeys: userKeys
+                        }),
+                        signal: currentAbortController.signal
+                    });
+                    
+                    if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; break; }
+                    
+                    const data = await response.json();
+                    if (data.choices && data.choices.length > 0) {
+                        aiText = data.choices[0].message.content;
+                        
+                        // Проверяем, не запросил ли ИИ поиск
+                        const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
+                        if (searchMatch) {
+                            const query = searchMatch[1].trim();
+                            aiText = aiText.replace(searchMatch[0], '').trim(); // Убираем тег
+                            
+                            renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
+                            
+                            // Делаем запрос на бэкенд для поиска
+                            const searchRes = await fetch(PROXY, {
+                                method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ searchQuery: query })
+                            });
+                            const searchData = await searchRes.json();
+                            
+                            if (searchData.success) {
+                                // Добавляем результаты поиска в контекст и идем на второй круг
+                                currentMessages.push({ role: "assistant", content: aiText });
+                                currentMessages.push({ role: "user", content: `[РЕЗУЛЬТАТЫ ПОИСКА ПО ЗАПРОСУ "${query}"]: ${searchData.results}. Используй эти данные, чтобы ответить на мой предыдущий вопрос. Не используй тег [SEARCH].` });
+                                continue; // Продолжаем цикл (вторая итерация)
+                            }
+                        }
+                        
+                        success = true; 
+                        break; // Выходим из цикла, если поиск не нужен или уже выполнен
+                    }
+                }
+                // КОНЕЦ ЦИКЛА ПОИСКА
+
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            // ИСПРАВЛЕНА СТРОКА НИЖЕ (КАВЫЧКИ ЗАМЕНЕНЫ НА ЕЛОЧКИ)
             renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1500)); 
             
@@ -373,7 +414,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-            }
+        }
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
