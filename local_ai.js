@@ -81,7 +81,7 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         const weatherData = await weatherRes.json();
         
         if (weatherData.success) {
-            return `По данным сети, сейчас в городе ${city}: ${weatherData.results}`;
+           return `По данным сети: ${weatherData.results}`;
         } else {
             return `Не удалось получить данные о погоде для "${city}". Попробуйте позже.`;
         }
