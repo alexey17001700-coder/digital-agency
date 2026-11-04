@@ -1,29 +1,58 @@
 // local_ai.js
-const BRAIN_VERSION = "23.0"; 
+const BRAIN_VERSION = "32.0"; 
 const MAX_CONTEXT = 20;
 
-let KNOWLEDGE_GRAPH = {
-    "пушкин": { "профессия": ["поэт"], "автор": ["онегин"] },
-    "онегин": { "тип": ["произведение"] }
-};
-
+let KNOWLEDGE_GRAPH = { "пушкин": { "профессия": ["поэт"], "автор": ["онегин"] } };
 let CONTEXT_MEMORY = []; 
 let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { brief: false, name: "Босс" };
+let DYNAMIC_DICT = {};
 
 const savedVersion = localStorage.getItem('shtabBrainVersion');
 if (savedVersion !== BRAIN_VERSION) {
-    localStorage.removeItem('shtabLocalKG'); localStorage.removeItem('shtabContext'); localStorage.setItem('shtabBrainVersion', BRAIN_VERSION);
+    localStorage.removeItem('shtabLocalKG'); 
+    localStorage.removeItem('shtabContext'); 
+    localStorage.setItem('shtabBrainVersion', BRAIN_VERSION);
 }
 
 try {
     if (localStorage.getItem('shtabLocalKG')) KNOWLEDGE_GRAPH = JSON.parse(localStorage.getItem('shtabLocalKG'));
     if (localStorage.getItem('shtabContext')) CONTEXT_MEMORY = JSON.parse(localStorage.getItem('shtabContext'));
+    if (localStorage.getItem('shtabDynamicDict')) DYNAMIC_DICT = JSON.parse(localStorage.getItem('shtabDynamicDict'));
 } catch(e) {}
 
-function saveBrain() { localStorage.setItem('shtabLocalKG', JSON.stringify(KNOWLEDGE_GRAPH)); }
-function saveContext() { localStorage.setItem('shtabContext', JSON.stringify(CONTEXT_MEMORY)); }
-function savePrefs() { localStorage.setItem('shtabPrefs', JSON.stringify(userPrefs)); }
+function saveLocalBrain() { 
+    localStorage.setItem('shtabLocalKG', JSON.stringify(KNOWLEDGE_GRAPH)); 
+    localStorage.setItem('shtabDynamicDict', JSON.stringify(DYNAMIC_DICT));
+    localStorage.setItem('shtabContext', JSON.stringify(CONTEXT_MEMORY));
+}
+const ABBREVIATIONS = {
+    "спс": "спасибо", "пжлст": "пожалуйста", "че": "что", "щас": "сейчас",
+    "прив": "привет", "здарова": "здорово", "мб": "может быть", "нзч": "не за что"
+};
+
+function sanitizeInput(text) {
+    return text.replace(/<[^>]*>?/gm, '').replace(/[^\w\sа-яёА-ЯЁ?.!,]/gi, '').trim();
+}
+
+function expandAbbreviations(text) {
+    return text.split(/\s+/).map(w => ABBREVIATIONS[w.toLowerCase()] || w).join(' ');
+}
+
+function analyzeSentiment(text) {
+    const angry = ["дурак", "тупой", "плохо", "ужасно", "бесит", "ошибка", "сломал"];
+    const happy = ["круто", "отлично", "супер", "молодец", "класс", "спасибо"];
+    let score = 0;
+    const lower = text.toLowerCase();
+    angry.forEach(w => { if (lower.includes(w)) score -= 1; });
+    happy.forEach(w => { if (lower.includes(w)) score += 1; });
+    return score < 0 ? 'angry' : (score > 0 ? 'happy' : 'neutral');
+}
+
+function hasNegation(text) {
+    return /\b(не|нет|никогда|нигде|никто|ничто)\b/i.test(text);
+}
+// 1. Левенштейн
 function levenshtein(a, b) {
     if (a.length === 0) return b.length; if (b.length === 0) return a.length;
     const matrix = [];
@@ -38,46 +67,120 @@ function levenshtein(a, b) {
     return matrix[b.length][a.length];
 }
 
-function extractTokens(text) {
-    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'является', 'значит', 'давай', 'напиши', 'создай', 'сделай', 'скажи', 'пожалуйста'];
-    return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
-}
-
-function getVocab() {
-    let vocab = new Set(["поэт", "автор", "произведение", "привет", "погод", "время"]);
-    Object.keys(KNOWLEDGE_GRAPH).forEach(k => vocab.add(k));
-    return Array.from(vocab);
-}
-
-function textToVector(text) {
-    const vocab = getVocab(); const vector = new Array(vocab.length).fill(0);
-    text.toLowerCase().split(/\s+/).forEach(word => {
-        vocab.forEach((v, i) => { if (word.includes(v) || v.includes(word)) vector[i] = 1; });
-    });
-    return vector;
-}
-
-function cosineSimilarity(vecA, vecB) {
-    let dotProduct = 0, normA = 0, normB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i]; normA += vecA[i] * vecA[i]; normB += vecB[i] * vecB[i];
+// 2. Дамерау-Левенштейн
+function damerauLevenshtein(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            const cost = b.charAt(i - 1) === a.charAt(j - 1) ? 0 : 1;
+            matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+            if (i > 1 && j > 1 && b.charAt(i - 1) === a.charAt(j - 2) && b.charAt(i - 2) === a.charAt(j - 1)) {
+                matrix[i][j] = Math.min(matrix[i][j], matrix[i - 2][j - 2] + cost);
+            }
+        }
     }
-    if (normA === 0 || normB === 0) return 0;
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    return matrix[b.length][a.length];
 }
 
-function jaccardSimilarity(textA, textB) {
-    const setA = new Set(textA.toLowerCase().split(/\s+/));
-    const setB = new Set(textB.toLowerCase().split(/\s+/));
-    const intersection = new Set([...setA].filter(x => setB.has(x)));
-    const union = new Set([...setA, ...setB]);
-    return intersection.size / union.size;
+// 3. Косинусное сходство
+function cosineSimilarity(vecA, vecB) {
+    let dot = 0, normA = 0, normB = 0;
+    for (let i = 0; i < vecA.length; i++) { dot += vecA[i] * vecB[i]; normA += vecA[i] ** 2; normB += vecB[i] ** 2; }
+    return normA === 0 || normB === 0 ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// 4. Жаккар
+function jaccardSimilarity(a, b) {
+    const setA = new Set(a.toLowerCase().split(/\s+/)), setB = new Set(b.toLowerCase().split(/\s+/));
+    const inter = [...setA].filter(x => setB.has(x)).length;
+    return inter / (setA.size + setB.size - inter);
+}
+
+// 5. Сёренсен-Дайс
+function sorensenDice(a, b) {
+    const setA = new Set(a.toLowerCase().split(/\s+/)), setB = new Set(b.toLowerCase().split(/\s+/));
+    const inter = [...setA].filter(x => setB.has(x)).length;
+    return 2 * inter / (setA.size + setB.size);
+}
+// 6. Хэмминг
+function hamming(a, b) {
+    if (a.length !== b.length) return -1;
+    let dist = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) dist++;
+    return dist;
+}
+
+// 7. TF-IDF
+function tfidf(docs, term) {
+    const tf = docs.map(d => d.toLowerCase().split(/\s+/).filter(w => w === term).length);
+    const idf = Math.log(docs.length / (1 + tf.filter(t => t > 0).length));
+    return tf.map(t => t * idf);
+}
+
+// 8. BM25
+function bm25(docs, term, k1 = 1.5, b = 0.75) {
+    const avgLen = docs.reduce((s, d) => s + d.length, 0) / docs.length;
+    return docs.map(d => {
+        const len = d.length, freq = d.toLowerCase().split(/\s+/).filter(w => w === term).length;
+        return freq > 0 ? (freq * (k1 + 1)) / (freq + k1 * (1 - b + b * len / avgLen)) : 0;
+    });
+}
+
+// 9. Сходство по общим n-граммам
+function ngramSimilarity(a, b, n = 2) {
+    const grams = s => Array.from({ length: s.length - n + 1 }, (_, i) => s.slice(i, i + n));
+    const setA = new Set(grams(a.toLowerCase())), setB = new Set(grams(b.toLowerCase()));
+    const inter = [...setA].filter(x => setB.has(x)).length;
+    return 2 * inter / (setA.size + setB.size);
+}
+
+// 10. Взвешенный косинус с IDF
+function weightedCosine(query, doc, vocab) {
+    const qVec = vocab.map(v => query.includes(v) ? 1 : 0);
+    const dVec = vocab.map(v => doc.includes(v) ? 1 : 0);
+    const idf = vocab.map(v => Math.log(1 + 1 / (1 + (doc.includes(v) ? 1 : 0))));
+    return cosineSimilarity(qVec.map((v, i) => v * idf[i]), dVec.map((v, i) => v * idf[i]));
+}
+function lemmatize(word) {
+    return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей)$/i, '').replace(/ь$/, '');
+}
+
+function correctSpelling(word, dictionary) {
+    let best = word, minDist = 3;
+    for (const dictWord of Object.keys(dictionary)) {
+        const dist = damerauLevenshtein(word.toLowerCase(), dictWord);
+        if (dist < minDist) { minDist = dist; best = dictWord; }
+    }
+    return best;
+}
+
+function expandWithSynonyms(text, dict) {
+    const words = text.split(/\s+/); const expanded = new Set(words);
+    words.forEach(w => { if (dict[w]?.synonyms) dict[w].synonyms.forEach(s => expanded.add(s)); });
+    return Array.from(expanded).join(' ');
+}
+
+function extractEntities(text) {
+    const entities = { persons: [], locations: [], dates: [] };
+    const personMatch = text.match(/\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\b/g);
+    if (personMatch) entities.persons = personMatch;
+    const cityMatch = text.match(/\b(?:в|во|на)\s+([А-ЯЁ][а-яё]+)/);
+    if (cityMatch) entities.locations.push(cityMatch[1]);
+    const dateMatch = text.match(/\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/);
+    if (dateMatch) entities.dates.push(dateMatch[0]);
+    return entities;
+}
+
+function planDialogue(query) {
+    const parts = query.split(/[.,;]/).filter(p => p.trim().length > 0);
+    return parts.length > 1 ? parts : [query];
 }
 function reasonAbout(entity) {
     const e = entity.toLowerCase().trim();
     let matchedEntity = Object.keys(KNOWLEDGE_GRAPH).find(k => k === e || levenshtein(k, e) <= 2);
     if (!matchedEntity) return null;
-    
     let facts = [];
     const relations = KNOWLEDGE_GRAPH[matchedEntity];
     for (const [rel, objects] of Object.entries(relations)) {
@@ -87,103 +190,110 @@ function reasonAbout(entity) {
     return facts.length > 0 ? facts : null;
 }
 
-function validateIntent(msg, currentIntent) {
-    if (currentIntent === 'weather' && !/погод|градус|температур/i.test(msg)) return false;
-    if (currentIntent === 'learning' && !/(это|является|—|-)/i.test(msg)) return false;
-    return true;
-}
-// СЛОЙ ИЗВЛЕЧЕНИЯ: Разбиваем текст на предложения и ищем самые релевантные
-function extractRelevantSentences(rawText, queryTokens) {
-    // Разбиваем текст на предложения
-    const sentences = rawText.split(/(?<=[.!?])\s+/).filter(s => s.length > 15);
-    let scoredSentences = [];
-
-    sentences.forEach(sentence => {
-        let score = 0;
-        const lowerSentence = sentence.toLowerCase();
-        
-        // Считаем, сколько ключевых слов из вопроса есть в предложении
-        queryTokens.forEach(token => {
-            if (lowerSentence.includes(token) || levenshtein(lowerSentence, token) <= 2) score += 1;
-        });
-        
-        // Дополнительный балл, если предложение содержит ключевые слова определения
-        if (lowerSentence.includes("это") || lowerSentence.includes("является") || lowerSentence.includes("называется")) score += 0.5;
-        
-        if (score > 0) scoredSentences.push({ text: sentence.trim(), score });
-    });
-
-    // Сортируем по релевантности (самые нужные наверх)
-    scoredSentences.sort((a, b) => b.score - a.score);
-    return scoredSentences;
-}
-
-// СЛОЙ СИНТЕЗА: Собираем ответ из лучших предложений
-function synthesizeAnswer(scoredSentences, originalQuery) {
-    if (scoredSentences.length === 0) return null;
-    
-    // Берем топ-3 предложения (или меньше, если нет)
-    const topCount = userPrefs.brief ? 1 : 3;
-    const bestSentences = scoredSentences.slice(0, topCount).map(s => s.text);
-    
-    // Склеиваем и добавляем вступление
-    let answer = bestSentences.join(' ');
-    
-    // Если предложения обрывочные, добавляем контекст
-    if (!answer.toLowerCase().includes(originalQuery.toLowerCase())) {
-        answer = `По вашему вопросу "${originalQuery}" найдено: ${answer}`;
+function transitiveClosure(startEntity, graph, depth = 3) {
+    let visited = new Set(), result = [];
+    function dfs(entity, level) {
+        if (level > depth || visited.has(entity)) return;
+        visited.add(entity);
+        const rels = graph[entity];
+        if (rels) {
+            for (const [rel, objs] of Object.entries(rels)) {
+                objs.forEach(obj => {
+                    result.push(`${entity} ${rel} ${obj}`);
+                    if (graph[obj]) dfs(obj, level + 1);
+                });
+            }
+        }
     }
-    return answer;
+    dfs(startEntity.toLowerCase(), 0);
+    return result;
+}
+
+function computeConfidence(answer, query, source) {
+    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const answerWords = answer.toLowerCase().split(/\s+/);
+    const matches = queryWords.filter(w => answerWords.includes(w)).length;
+    let conf = queryWords.length > 0 ? matches / queryWords.length : 0.5;
+    if (source === 'memory') conf += 0.2;
+    if (source === 'network') conf += 0.1;
+    return Math.min(1, conf);
+}
+
+function detectTopic(text) {
+    const topics = {
+        weather: ['погода', 'температура', 'градус', 'дождь', 'снег'],
+        code: ['код', 'скрипт', 'программа', 'javascript', 'python'],
+        history: ['история', 'война', 'древний', 'век'],
+        science: ['наука', 'физика', 'химия', 'биология']
+    };
+    for (const [topic, words] of Object.entries(topics)) {
+        if (words.some(w => text.toLowerCase().includes(w))) return topic;
+    }
+    return 'general';
+}
+async function fetchWordFromAPI(word, proxyUrl) {
+    if (DYNAMIC_DICT[word]) return DYNAMIC_DICT[word];
+    try {
+        const res = await fetch(proxyUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dictQuery: word }) });
+        const data = await res.json();
+        if (data.success && data.definition) { 
+            DYNAMIC_DICT[word] = data.definition; 
+            saveLocalBrain(); 
+            return DYNAMIC_DICT[word]; 
+        }
+    } catch (e) {}
+    return null;
+}
+
+async function prepareQuery(text, proxyUrl) {
+    let words = text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/);
+    let lemmatized = words.map(lemmatize);
+    let corrected = lemmatized.map(w => correctSpelling(w, DYNAMIC_DICT));
+    let expanded = expandWithSynonyms(corrected.join(' '), DYNAMIC_DICT);
+    return { text: expanded, lemmas: corrected };
 }
 async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
-    const msg = userMessage.toLowerCase().trim();
-    const tokens = extractTokens(msg);
-    let ctx = { msg, tokens, intent: 'unknown', data: null, valid: true, output: null };
+    let msg = sanitizeInput(userMessage.toLowerCase().trim());
+    msg = expandAbbreviations(msg);
+    
+    const sentiment = analyzeSentiment(msg);
+    const topic = detectTopic(msg);
+    const entities = extractEntities(msg);
+    const plan = planDialogue(msg);
+    
+    const { text: expandedMsg, lemmas } = await prepareQuery(msg, proxyUrl);
+    const keywords = lemmas.filter(w => w.length > 2);
+    
+    let ctx = { msg, expandedMsg, keywords, sentiment, topic, entities, plan, output: null, intent: 'unknown' };
 
-    // --- РЕФЛЕКСЫ ---
-    if (/^(привет|куку|здорово|хай|здравствуй)/i.test(msg)) return `Привет, ${userPrefs.name}! На связи.`;
-    if (/как дела/i.test(msg)) return `Все системы в норме, ${userPrefs.name}.`;
-    if (/спасибо/i.test(msg)) return "Всегда пожалуйста!";
-    if (/время|который час/i.test(msg)) return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`;
+    if (/^(привет|куку|здорово|хай|здравствуй|hello|hi)/i.test(msg)) return `Привет, ${userPrefs.name}! На связи.`;
+    if (/как дела|how are you/i.test(msg)) return `Все системы в норме, ${userPrefs.name}. Как ваши?`;
+    if (/спасибо|thanks/i.test(msg)) return "Всегда пожалуйста!";
+    if (/время|который час|time/i.test(msg)) return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`;
+    if (/что делаешь|чем занят/i.test(msg)) return `Работаю над вашими задачами, ${userPrefs.name}. А у вас какие планы?`;
 
-    // --- ОПРЕДЕЛЕНИЕ ИНТЕНТА ---
-    if (/погод|градус|температур/i.test(msg)) ctx.intent = 'weather';
+    if (/погод|градус|температур|weather/i.test(msg)) ctx.intent = 'weather';
     else if (/(.+?)\s*(?:это|является|значит|—|-)\s+(.+)/i.test(msg) && !msg.includes('?')) ctx.intent = 'learning';
-    else if (/напиши|создай/i.test(msg) && /код|скрипт/i.test(msg)) ctx.intent = 'code';
-    else if (msg.includes('?') || /^(кто|что|где|как|почему)/i.test(msg)) ctx.intent = 'question';
+    else if (/напиши|создай|code|script/i.test(msg) && /код|скрипт|змейк|калькулятор/i.test(msg)) ctx.intent = 'code';
+    else if (msg.includes('?') || /^(кто|что|где|как|почему|who|what|where|how)/i.test(msg)) ctx.intent = 'question';
 
-    // Валидация интента (Слой проверки)
-    if (!validateIntent(ctx.msg, ctx.intent)) ctx.intent = 'question';
-
-    // Маршрутизация
     if (ctx.intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
     if (ctx.intent === 'learning') return processLearning(ctx);
     if (ctx.intent === 'code') return processCode(ctx);
     return await processQuestion(ctx, proxyUrl, signal);
 }
+
 async function processWeather(ctx, proxyUrl, signal) {
-    let isTomorrow = /завтра/i.test(ctx.msg);
+    let isTomorrow = /завтра|tomorrow/i.test(ctx.msg);
     let city = lastCity;
-    const cityMatch = ctx.msg.match(/(?:в|во|на)\s+([а-яёa-z\-]+)/i);
+    const cityMatch = ctx.msg.match(/(?:в|во|на|in)\s+([А-ЯЁA-Z][а-яёa-z\-]+)/);
     if (cityMatch) city = cityMatch[1];
-    else {
-        const parts = ctx.msg.split(/погода|погоду|погоды|погоде/i);
-        if (parts.length > 1) city = parts[1].replace(/[?.!,]/g, '').replace(/(?:скажи|пожалуйста|мне)/gi, '').trim();
-    }
     city = city.replace(/[?.!,]/g, '').trim() || lastCity;
     localStorage.setItem('shtabLastCity', city);
-
     try {
-        const weatherRes = await fetch(proxyUrl, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weatherQuery: city, day: isTomorrow ? 1 : 0 }),
-            signal: signal
-        });
-        const weatherData = await weatherRes.json();
-        if (weatherData.success && !weatherData.results.includes("Не удалось")) {
-            ctx.output = `🌤️ Данные из сети: ${weatherData.results}`;
-            return finalizeOutput(ctx);
-        }
+        const res = await fetch(proxyUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ weatherQuery: city, day: isTomorrow ? 1 : 0 }), signal });
+        const data = await res.json();
+        if (data.success) { ctx.output = `🌤️ ${data.results}`; return finalizeOutput(ctx); }
     } catch(e) {}
     ctx.output = `❌ Не удалось узнать погоду для "${city}".`;
     return finalizeOutput(ctx);
@@ -192,107 +302,93 @@ async function processWeather(ctx, proxyUrl, signal) {
 function processLearning(ctx) {
     const teachMatch = ctx.msg.match(/(.+?)\s*(?:это|является|значит|—|-)\s+(.+)/i);
     if (teachMatch) {
-        let subject = teachMatch[1].trim().replace(/[!.?]/g, '').toLowerCase();
-        let fact = teachMatch[2].trim().replace(/[!.?]/g, '').toLowerCase();
-        if (!KNOWLEDGE_GRAPH[subject]) KNOWLEDGE_GRAPH[subject] = {};
-        let relation = fact.includes("поэт") || fact.includes("писатель") ? "профессия" : "описание";
-        if (!KNOWLEDGE_GRAPH[subject][relation]) KNOWLEDGE_GRAPH[subject][relation] = [];
-        if (!KNOWLEDGE_GRAPH[subject][relation].includes(fact)) KNOWLEDGE_GRAPH[subject][relation].push(fact);
-        saveBrain();
-        ctx.output = `🧠 **Слой обучения:** Запомнил, что "${subject}" — это "${fact}".`;
+        let subj = teachMatch[1].trim(), fact = teachMatch[2].trim();
+        if (!KNOWLEDGE_GRAPH[subj]) KNOWLEDGE_GRAPH[subj] = {};
+        let rel = fact.includes("поэт") || fact.includes("писатель") ? "профессия" : "описание";
+        if (!KNOWLEDGE_GRAPH[subj][rel]) KNOWLEDGE_GRAPH[subj][rel] = [];
+        KNOWLEDGE_GRAPH[subj][rel].push(fact);
+        saveLocalBrain();
+        ctx.output = `🧠 Запомнил: "${subj}" — это "${fact}".`;
     } else { ctx.output = `Не понял, что запомнить.`; }
     return finalizeOutput(ctx);
 }
 
 function processCode(ctx) {
-    if (ctx.msg.includes("змейк")) ctx.output = `💻 **Код змейки:**\n\n\`\`\`html\n<canvas id="game"></canvas><script>/* Змейка */</script>\n\`\`\``;
-    else if (ctx.msg.includes("калькулятор")) ctx.output = `💻 **Калькулятор:**\n\n\`\`\`html\n<div><input type="text"><button>1</button></div>\n\`\`\``;
-    else ctx.output = `💻 Босс, я могу написать код для: змейка, калькулятор.`;
+    if (ctx.msg.includes("змейк")) ctx.output = `💻 Код змейки готов.`;
+    else if (ctx.msg.includes("калькулятор")) ctx.output = `💻 Калькулятор готов.`;
+    else ctx.output = `💻 Могу написать код для змейки или калькулятора.`;
     return finalizeOutput(ctx);
 }
-async function processQuestion(ctx, proxyUrl, signal) {
-    // 1. Проверка контекста (Короткие вопросы)
-    if (ctx.msg.length < 20 && (ctx.msg.includes('?') || /^(это|а|и)\s/i.test(ctx.msg)) && CONTEXT_MEMORY.length > 0) {
-        const lastWeather = [...CONTEXT_MEMORY].reverse().find(c => c.text.includes("погод"));
-        if (lastWeather) return await processWeather({...ctx, msg: lastWeather.text + " " + ctx.msg}, proxyUrl, signal);
-    }
+function askForClarification(query) {
+    return `🤔 Босс, я не уверен, что понял. Уточните: "${query}" — вы имели в виду что-то конкретное?`;
+}
 
-    // 2. Логический вывод (Reasoning)
-    let foundFacts = [];
-    ctx.tokens.forEach(token => {
-        const facts = reasonAbout(token);
-        if (facts) foundFacts = foundFacts.concat(facts);
+async function processQuestion(ctx, proxyUrl, signal) {
+    // 1. Логический вывод
+    let facts = [];
+    ctx.keywords.forEach(k => { 
+        const f = reasonAbout(k); 
+        if (f) facts = facts.concat(f); 
     });
-    if (foundFacts.length > 0) {
-        ctx.output = `🧠 **Слой логики:**\n- ${foundFacts.join('\n- ')}`;
+    if (facts.length > 0) {
+        ctx.output = `🧠 Логика: ${facts.join('; ')}`;
         return finalizeOutput(ctx);
     }
 
-    // 3. Математика (Косинус)
-    const queryVec = textToVector(ctx.msg);
-    let bestScore = 0, bestFact = null;
-    for (const [entity, relations] of Object.entries(KNOWLEDGE_GRAPH)) {
-        for (const [rel, objects] of Object.entries(relations)) {
-            objects.forEach(obj => {
-                const score = cosineSimilarity(queryVec, textToVector(`${entity} ${rel} ${obj}`));
-                if (score > bestScore && score > 0.4) { bestScore = score; bestFact = `${entity} — ${rel}: ${obj}`; }
-            });
+    // 2. Транзитивное замыкание
+    if (ctx.entities.persons.length > 0) {
+        const closure = transitiveClosure(ctx.entities.persons[0], KNOWLEDGE_GRAPH);
+        if (closure.length > 0) {
+            ctx.output = `🔗 Связи: ${closure.join('; ')}`;
+            return finalizeOutput(ctx);
         }
     }
-    if (bestFact) {
-        ctx.output = `🧮 **Слой математики (Совпадение ${Math.round(bestScore*100)}%):** ${bestFact}`;
-        return finalizeOutput(ctx);
-    }
 
-    // 4. Поиск в интернете
-    return await processInternetSearch(ctx, proxyUrl, signal);
-}
-async function processInternetSearch(ctx, proxyUrl, signal) {
+    // 3. Поиск в интернете
     try {
-        const searchQuery = ctx.tokens.join(' ') || ctx.msg;
-        const searchRes = await fetch(proxyUrl, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ searchQuery: searchQuery }),
-            signal: signal
-        });
-
-        const searchData = await searchRes.json();
-        
-        if (searchData.success && searchData.results && !searchData.results.includes("ничего не найдено")) {
-            // Очищаем от HTML-тегов Википедии
-            let rawText = searchData.results.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/<\/?[^>]+(>|$)/g, "").trim();
+        const query = ctx.keywords.join(' ') || ctx.msg;
+        const res = await fetch(proxyUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ searchQuery: query }), signal });
+        const data = await res.json();
+        if (data.success && data.results) {
+            let fact = data.results.substring(0, 250);
+            let conf = computeConfidence(fact, ctx.msg, 'network');
             
-            // ВЫЗЫВАЕМ НОВЫЕ СЛОИ ИЗВЛЕЧЕНИЯ И СИНТЕЗА
-            const relevantSentences = extractRelevantSentences(rawText, ctx.tokens);
-            const synthesizedAnswer = synthesizeAnswer(relevantSentences, ctx.msg);
-
-            if (synthesizedAnswer) {
-                // Сохраняем в граф (Автообучение)
-                const mainSubject = ctx.tokens[0] || "информация";
-                if (!KNOWLEDGE_GRAPH[mainSubject]) KNOWLEDGE_GRAPH[mainSubject] = {};
-                if (!KNOWLEDGE_GRAPH[mainSubject]["из_интернета"]) KNOWLEDGE_GRAPH[mainSubject]["из_интернета"] = [];
-                KNOWLEDGE_GRAPH[mainSubject]["из_интернета"].push(synthesizedAnswer);
-                saveBrain();
-
-                ctx.output = `🔎 **Слой поиска и синтеза:** ${synthesizedAnswer}\n\n*[Добавлено в память]*`;
+            // Если уверенность низкая, переспрашиваем
+            if (conf < 0.3) {
+                ctx.output = askForClarification(ctx.msg);
                 return finalizeOutput(ctx);
             }
+            
+            const mainSubj = ctx.keywords[0] || 'информация';
+            if (!KNOWLEDGE_GRAPH[mainSubj]) KNOWLEDGE_GRAPH[mainSubj] = {};
+            KNOWLEDGE_GRAPH[mainSubj]['из_интернета'] = [fact];
+            saveLocalBrain();
+            
+            ctx.output = `🔎 ${fact} (Уверенность: ${Math.round(conf*100)}%)`;
+            return finalizeOutput(ctx);
         }
-        throw new Error("Не удалось извлечь релевантный текст");
+        throw new Error("Не найдено");
     } catch (e) {
-        ctx.output = `❌ Я поискал в сети, но не нашел точного ответа.`;
+        ctx.output = `❌ Не удалось найти ответ.`;
         return finalizeOutput(ctx);
     }
 }
-
-// ФИНАЛИЗАЦИЯ (Последний слой контроля)
 function finalizeOutput(ctx) {
-    if (!ctx.output || ctx.output.trim() === "") ctx.output = "⚠️ Ошибка в слоях обработки. Ответ пуст.";
+    if (!ctx.output || ctx.output.trim() === "") {
+        ctx.output = "⚠️ Ошибка в слоях обработки. Ответ пуст.";
+    }
+    
+    // Эмпатия: если Босс злится, добавляем извинение
+    if (ctx.sentiment === 'angry' && !ctx.output.includes("извин")) {
+        ctx.output = "Я понимаю ваше недовольство. " + ctx.output;
+    }
 
-    CONTEXT_MEMORY.push({ role: 'user', text: ctx.msg, entities: ctx.tokens, timestamp: Date.now() });
-    CONTEXT_MEMORY.push({ role: 'assistant', text: ctx.output, entities: ctx.tokens, timestamp: Date.now() });
+    // Сохраняем контекст беседы
+    CONTEXT_MEMORY.push({ role: 'user', text: ctx.msg, entities: ctx.keywords, timestamp: Date.now() });
+    CONTEXT_MEMORY.push({ role: 'assistant', text: ctx.output, entities: ctx.keywords, timestamp: Date.now() });
+    
     if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
-    saveContext();
-
+    saveLocalBrain();
+    
     return ctx.output;
 }
