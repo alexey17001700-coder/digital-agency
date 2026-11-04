@@ -1,15 +1,14 @@
 // local_ai.js
-const BRAIN_VERSION = "17.0"; 
+const BRAIN_VERSION = "18.0"; 
 const MAX_CONTEXT = 20;
 
-// СЛОЙ 3: БАЗА ЗНАНИЙ (Граф)
+// База знаний (остается как текст, но теперь мы будем считать к ней векторы)
 let KNOWLEDGE_GRAPH = {
     "привет": { "тип": ["приветствие"] },
     "пушкин": { "профессия": ["поэт"], "автор": ["онегин"] },
     "онегин": { "тип": ["произведение"] }
 };
 
-// СЛОЙ 5: ОКНО КОНТЕКСТА
 let CONTEXT_MEMORY = []; 
 
 const savedVersion = localStorage.getItem('shtabBrainVersion');
@@ -25,110 +24,121 @@ try {
 function saveBrain() { localStorage.setItem('shtabLocalKG', JSON.stringify(KNOWLEDGE_GRAPH)); }
 function saveContext() { localStorage.setItem('shtabContext', JSON.stringify(CONTEXT_MEMORY)); }
 
-// СЛОЙ 1: NLP-ПАРСЕР И СТЕММЕР (Обрезка окончаний для понимания смысла)
-function getRoot(word) {
-    // Примитивный стеммер: убираем частые русские окончания
-    return word.replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях)$/i, '');
+// ==========================================
+// МАТЕМАТИЧЕСКИЙ СЛОЙ 1: EMBEDDING (Векторизация)
+// Превращаем текст в набор чисел (вектор)
+// ==========================================
+function textToVector(text) {
+    const vocab = ["пушкин", "онегин", "поэт", "автор", "произведение", "привет", "илон", "маск", "космос"];
+    const vector = new Array(vocab.length).fill(0);
+    const words = text.toLowerCase().split(/\s+/);
+    
+    words.forEach(word => {
+        vocab.forEach((v, i) => {
+            // Если слово есть в словаре (или похоже), ставим 1
+            if (word.includes(v) || v.includes(word)) vector[i] = 1;
+        });
+    });
+    return vector;
+}
+
+// ==========================================
+// МАТЕМАТИЧЕСКИЙ СЛОЙ 2: ATTENTION (Косинусное сходство)
+// Считаем угол между векторами (насколько они близки)
+// ==========================================
+function cosineSimilarity(vecA, vecB) {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// Функция поиска самого близкого факта в памяти через математику
+function mathSearch(query) {
+    const queryVec = textToVector(query);
+    let bestMatch = null;
+    let highestScore = 0;
+
+    for (const [entity, relations] of Object.entries(KNOWLEDGE_GRAPH)) {
+        for (const [rel, objects] of Object.entries(relations)) {
+            if (rel === "тип") continue;
+            
+            objects.forEach(obj => {
+                const factText = `${entity} ${rel} ${obj}`;
+                const factVec = textToVector(factText);
+                const score = cosineSimilarity(queryVec, factVec);
+                
+                // Если математическая близость больше 30%
+                if (score > highestScore && score > 0.3) {
+                    highestScore = score;
+                    bestMatch = `[Совпадение ${Math.round(score*100)}%] ${entity.charAt(0).toUpperCase() + entity.slice(1)} — ${rel}: ${obj}`;
+                }
+            });
+        }
+    }
+    return bestMatch;
 }
 
 function extractTokens(text) {
-    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'является', 'значит', 'давай', 'напиши', 'создай', 'сделай', 'код', 'скрипт'];
-    const words = text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/);
-    return words.filter(w => w.length > 2 && !stopWords.includes(w)).map(w => getRoot(w));
-                       }
-// СЛОЙ 4: ЛОГИЧЕСКИЙ ДВИЖОК (Reasoning)
-function reasonAbout(rootWord) {
-    let facts = [];
-    // Ищем сущность по корню слова (например, "пушкин")
-    const entity = Object.keys(KNOWLEDGE_GRAPH).find(k => getRoot(k) === rootWord || k === rootWord);
-    
-    if (!entity) return null;
-    
-    const relations = KNOWLEDGE_GRAPH[entity];
-    for (const [rel, objects] of Object.entries(relations)) {
-        if (rel === "тип") continue;
-        objects.forEach(obj => {
-            facts.push(`${entity.charAt(0).toUpperCase() + entity.slice(1)} — ${rel}: ${obj}`);
-            // Логическая цепочка (глубина 2)
-            const subEntity = Object.keys(KNOWLEDGE_GRAPH).find(k => getRoot(k) === getRoot(obj));
-            if (subEntity) {
-                for (const [subRel, subObjs] of Object.entries(KNOWLEDGE_GRAPH[subEntity])) {
-                    if (subRel !== "тип") facts.push(`  -> Связано с "${obj}" — ${subRel}: ${subObjs.join(', ')}`);
-                }
-            }
-        });
-    }
-    return facts.length > 0 ? facts : null;
+    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'является', 'значит', 'давай', 'напиши', 'создай', 'сделай'];
+    return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
 }
 
-// СЛОЙ 7: ГЕНЕРАТОР ОТВЕТОВ (Шаблоны)
-function generateReply(type, data) {
-    if (type === 'learning') return `🧠 **Слой обучения:** Я обновил граф знаний. ${data}`;
-    if (type === 'memory') return `🧠 **Слой логики (Из памяти):**\n- ${data.join('\n- ')}`;
-    if (type === 'context') return `🧠 **Слой контекста:** Я понял, что ты продолжаешь спрашивать про "${data.entity}".\n- ${data.facts.join('\n- ')}`;
-    if (type === 'network') return `🔎 **Слой поиска (Из сети):** ${data.fact}\n\n*[Знание добавлено в память]*`;
-    if (type === 'error') return `❌ Ошибка Сети: ${data}`;
-    return data;
-}
+// ==========================================
+// ГЛАВНАЯ ФУНКЦИЯ (Оркестратор слоев)
+// ==========================================
 async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const msg = userMessage.toLowerCase().trim();
-    const tokens = extractTokens(msg); // Слой 1
+    const tokens = extractTokens(msg);
 
-    // СЛОЙ 2: АНАЛИЗ ИНТЕНТА
-    const isQuestion = msg.includes('?') || /^(кто|что|где|когда|как|почему|зачем|какой|какая)/i.test(msg);
+    // 1. ОБУЧЕНИЕ (Правила)
     const teachMatch = msg.match(/(.+?)\s*(?:это|является|значит|—|-)\s+(.+)/i);
-    
-    // СЛОЙ 8: ОБУЧЕНИЕ
-    if (teachMatch && !isQuestion) {
+    if (teachMatch && !msg.includes('?')) {
         let subject = teachMatch[1].trim().replace(/[!.?]/g, '').toLowerCase();
         let fact = teachMatch[2].trim().replace(/[!.?]/g, '').toLowerCase();
         
         if (!KNOWLEDGE_GRAPH[subject]) KNOWLEDGE_GRAPH[subject] = {};
         let relation = "описание";
         if (fact.includes("поэт") || fact.includes("писатель")) relation = "профессия";
+        if (fact.includes("автор")) relation = "автор";
         
         if (!KNOWLEDGE_GRAPH[subject][relation]) KNOWLEDGE_GRAPH[subject][relation] = [];
         if (!KNOWLEDGE_GRAPH[subject][relation].includes(fact)) KNOWLEDGE_GRAPH[subject][relation].push(fact);
         
         saveBrain();
-        CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [subject] });
-        if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
-        saveContext();
-        
-        return generateReply('learning', `Запомнил: "${subject}" -> "${relation}" -> "${fact}".`);
+        return `🧠 **Слой обучения:** Запомнил связь.`;
     }
 
-    // СЛОЙ 4: ПОИСК В ПАМЯТИ
-    let finalFacts = [];
-    let foundEntities = [];
-    if (isQuestion && tokens.length > 0) {
-        tokens.forEach(token => {
-            const facts = reasonAbout(token);
-            if (facts) { finalFacts = finalFacts.concat(facts); foundEntities.push(token); }
-        });
-        if (finalFacts.length > 0) {
-            CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: foundEntities });
-            if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
-            saveContext();
-            return generateReply('memory', finalFacts);
-        }
+    // 2. МАТЕМАТИЧЕСКИЙ ПОИСК В ПАМЯТИ (Embedding + Attention)
+    const mathResult = mathSearch(msg);
+    
+    if (mathResult && (msg.includes('?') || /^(кто|что|где|когда)/i.test(msg))) {
+        // Если математика нашла точное совпадение
+        return `🧮 **Математический слой (Attention):**\n${mathResult}`;
     }
 
-    // СЛОЙ 5: КОНТЕКСТНЫЙ ВЫВОД (Если прямых совпадений нет)
-    if (isQuestion && CONTEXT_MEMORY.length > 0) {
+    // 3. КОНТЕКСТНЫЙ ВЫВОД (Продолжение беседы)
+    if (msg.includes('?') && CONTEXT_MEMORY.length > 0) {
         let lastEntity = null;
         for (let i = CONTEXT_MEMORY.length - 1; i >= 0; i--) {
             if (CONTEXT_MEMORY[i].entities && CONTEXT_MEMORY[i].entities.length > 0) {
                 lastEntity = CONTEXT_MEMORY[i].entities[0]; break;
             }
         }
-        if (lastEntity) {
-            const facts = reasonAbout(lastEntity);
-            if (facts) return generateReply('context', { entity: lastEntity, facts: facts });
+        if (lastEntity && KNOWLEDGE_GRAPH[lastEntity]) {
+            return `🧠 **Слой контекста:** Мы говорили про "${lastEntity}".`;
         }
     }
 
-    // СЛОЙ 6: ПОИСК В ИНТЕРНЕТЕ
+    // 4. ПОИСК В ИНТЕРНЕТЕ (Если математика не справилась)
     try {
         const searchQuery = tokens.join(' ') || msg;
         const searchRes = await fetch(proxyUrl, {
@@ -139,23 +149,18 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
 
         const searchData = await searchRes.json();
         if (searchData.success && searchData.results) {
-            let cleanFact = searchData.results.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim().substring(0, 250) + "...";
+            let cleanFact = searchData.results.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim().substring(0, 200) + "...";
             
             const mainSubject = tokens[0] || "информация";
             if (!KNOWLEDGE_GRAPH[mainSubject]) KNOWLEDGE_GRAPH[mainSubject] = {};
             if (!KNOWLEDGE_GRAPH[mainSubject]["из_интернета"]) KNOWLEDGE_GRAPH[mainSubject]["из_интернета"] = [];
             KNOWLEDGE_GRAPH[mainSubject]["из_интернета"].push(cleanFact);
             saveBrain();
-            
-            CONTEXT_MEMORY.push({ role: 'user', text: msg, entities: [mainSubject] });
-            if (CONTEXT_MEMORY.length > MAX_CONTEXT) CONTEXT_MEMORY.shift();
-            saveContext();
 
-            return generateReply('network', { fact: cleanFact });
-        } else {
-            return generateReply('error', 'Я проанализировал запрос, но в графе знаний и в сети нет ответа.');
+            return `🔎 **Слой поиска (Из сети):** ${cleanFact}\n\n*[Добавлено в память]*`;
         }
+        return `❌ Я проанализировал запрос, но в памяти и в сети нет ответа.`;
     } catch (e) {
-        return generateReply('error', e.message);
+        return `❌ Ошибка Сети: ${e.message}`;
     }
 }
