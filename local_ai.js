@@ -569,6 +569,52 @@ registerLayer(
         return `💵 Я пока не подключен к API Центробанка, но могу сказать, что курсы меняются каждый день!`;
     }
 );
-
+// ==========================================
+// ПЛАГИН: Глубокая проверка целостности файлов (Аудит)
+// ==========================================
+registerLayer(
+    "file_audit_validator", // Имя плагина
+    (msg) => /аудит|проверь файлы|целостность|все ли файлы|проверь штаб|файлы на месте/i.test(msg), // Триггеры
+    async (msg, ctx) => {
+        const PROXY_URL = "https://early-amoeba-1705.alexey17001700.deno.net";
+        if (DEBUG) console.log("🔌 Запущен плагин аудита файлов...");
+        
+        try {
+            // Стучимся на Deno, чтобы он сверил корень и папку backup
+            const res = await fetch(PROXY_URL, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ checkStatus: true })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                // Список файлов, без которых Штаб не работает
+                const criticalFiles = ["app.html", "index.html", "style.css", "chat.js", "local_ai.js", "office.js", "agents.js"];
+                
+                let report = `🕵️‍♂️ **Аудит целостности Штаба:**\n`;
+                report += `- Файлов в корне: ${data.totalRoot}\n`;
+                report += `- Файлов в бэкапе: ${data.totalBackup}\n\n`;
+                
+                if (data.missingInBackup && data.missingInBackup.length > 0) {
+                    report += `⚠️ В бэкапе не хватает: ${data.missingInBackup.join(', ')}\n`;
+                    
+                    // Проверяем, нет ли среди них критических
+                    const missingCritical = criticalFiles.filter(f => data.missingInBackup.includes(f));
+                    if (missingCritical.length > 0) {
+                        report += `🚨 **КРИТИЧЕСКАЯ ОШИБКА:** В бэкапе нет важных файлов: ${missingCritical.join(', ')}! Срочно нажми "Сохранить эталон" в Сейфе.`;
+                    } else {
+                        report += `✅ Критические файлы (JS, HTML, CSS) в безопасности.`;
+                    }
+                } else {
+                    report += `✅ Бэкап актуален. Все файлы (включая критичные) на месте. Штаб в полном порядке.`;
+                }
+                return report;
+            }
+        } catch(e) {
+            return `❌ Ошибка аудита: не удалось связаться с сервером Deno.`;
+        }
+    }
+);
 // Чтобы добавить новый слой, ты просто пишешь внизу файла:
 // registerLayer("имя_слоя", (msg) => msg.includes("триггер"), async (msg) => { return "ответ"; });
