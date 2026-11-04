@@ -84,8 +84,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-}
-
+                                                            }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -128,6 +127,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
@@ -214,7 +214,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-}
+               }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -255,6 +255,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         const hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
         if (hasAnyKeys) {
+            // === СЕТЕВОЙ РЕЖИМ (С КЛЮЧАМИ) ===
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
@@ -354,75 +355,25 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
+            // === ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ) ===
             renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             
-            const isWeatherIntent = /погода|погоду|температура|градус/i.test(text);
-            const isSearchIntent = /найди|поищи|погугли|узнай/i.test(text);
-
-            if (isWeatherIntent) {
-                let cleanText = text.replace(/[?.!,]/g, '');
-                cleanText = cleanText.replace(/(?:какая|какой|узнай|найди|покажи)?\s*(?:погода|погоду)\s*(?:в|во|на)?\s*/gi, '');
-                let city = cleanText.trim() || "Москва";
-
-                renderMessage(`🌤️ *[Система: Запрос погоды для "${city}"...]*`, 'director', activeAgent);
-                
+            if (typeof generateLocalResponse === 'function') {
                 try {
-                    const weatherRes = await fetch(PROXY, {
-                        method: "POST", 
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ weatherQuery: city }),
-                        signal: currentAbortController.signal
-                    });
-                    if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
-                    const weatherData = await weatherRes.json();
-                    
-                    if (weatherData.success && weatherData.results) {
-                        aiText = `📡 **Данные о погоде (${city}):**\n\n${weatherData.results}`;
-                        success = true;
-                    } else {
-                        throw new Error(weatherData.error || "Сервис не вернул данные");
-                    }
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                    lastError = `Ошибка сети: ${e.message}`;
-                }
-                clearTimeout(timeoutId);
-            } else if (isSearchIntent) {
-                renderMessage(`🔍 *[Система: Локальный агент ищет в сети "${text}"...]*`, 'director', activeAgent);
-                try {
-                    const searchRes = await fetch(PROXY, {
-                        method: "POST", 
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ searchQuery: text }),
-                        signal: currentAbortController.signal
-                    });
-                    if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
-                    const searchData = await searchRes.json();
-                    
-                    if (searchData.success && searchData.results) {
-                        aiText = `📡 **Данные из сети (Локальный поиск):**\n\n${searchData.results}\n\n*[Примечание: это сырые данные, так как для их обработки ИИ нужны API-ключи]*`;
-                        success = true;
-                    } else {
-                        throw new Error(searchData.error || "Сервис не вернул данные");
-                    }
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                    lastError = `Ошибка сети: ${e.message}`;
-                }
-                clearTimeout(timeoutId);
-            } else {
-                if (typeof generateLocalResponse === 'function') {
-                    aiText = generateLocalResponse(activeAgent, text);
+                    aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal);
                     success = true;
-                    clearTimeout(timeoutId);
-                } else {
-                    lastError = "Локальный ИИ не загружен.";
-                    clearTimeout(timeoutId);
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    lastError = `Ошибка локального ИИ: ${e.message}`;
                 }
+            } else {
+                lastError = "Локальный ИИ не загружен.";
             }
+            clearTimeout(timeoutId);
         }
-
+        
+        // Дальнейшая обработка ответа (как для сетевого, так и для локального)
         if (success) {
             playSound('receive'); 
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
@@ -464,8 +415,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-}
-
+                    }
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
