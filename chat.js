@@ -360,17 +360,49 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
-            await new Promise(resolve => setTimeout(resolve, 1500)); 
+    // === ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ) ===
+    renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    
+    // Проверяем, просит ли Босс что-то найти в интернете
+    const isSearchIntent = /найди|поищи|погода|новости|курс|погугли|узнай/i.test(text);
+
+    if (isSearchIntent) {
+        renderMessage(`🔍 *[Система: Локальный агент ищет в сети "${text}"...]*`, 'director', activeAgent);
+        
+        try {
+            // Стучимся на наш бэкенд Deno напрямую за поиском
+            const searchRes = await fetch(PROXY, {
+                method: "POST", 
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ searchQuery: text })
+            });
+            const searchData = await searchRes.json();
             
-            if (typeof generateLocalResponse === 'function') {
-                aiText = generateLocalResponse(activeAgent, text);
+            if (searchData.success && searchData.results) {
+                // Форматируем сырой ответ от поисковика
+                aiText = `📡 **Данные из сети (Локальный поиск):**\n\n${searchData.results}\n\n*[Примечание: это сырые данные, так как для их обработки ИИ нужны API-ключи]*`;
                 success = true;
-                clearTimeout(timeoutId);
             } else {
-                lastError = "Локальный ИИ не загружен.";
-                clearTimeout(timeoutId);
+                aiText = `Я попытался найти "${text}" в сети, но поисковик ничего не выдал.`;
+                success = true;
             }
+        } catch (e) {
+            aiText = `Ошибка сети при локальном поиске: ${e.message}`;
+            success = true;
+        }
+        clearTimeout(timeoutId);
+    } else {
+        // Если это не поиск, используем стандартные заготовки
+        if (typeof generateLocalResponse === 'function') {
+            aiText = generateLocalResponse(activeAgent, text);
+            success = true;
+            clearTimeout(timeoutId);
+        } else {
+            lastError = "Локальный ИИ не загружен.";
+            clearTimeout(timeoutId);
+        }
+    }
         }
 
         if (success) {
