@@ -1,5 +1,5 @@
 // local_ai.js
-const BRAIN_VERSION = "37.0"; 
+const BRAIN_VERSION = "39.0"; 
 const MAX_CONTEXT = 20;
 const MAX_DICT_SIZE = 100;
 const DEBUG = true;
@@ -52,7 +52,7 @@ function expandAbbreviations(text) { return text.split(/\s+/).map(w => ABBREVIAT
 function extractKeywords(text) { return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w)); }
 
 function analyzeSentiment(text) {
-    const angry = ["дурак", "тупой", "плохо", "бесит", "ошибка"];
+    const angry = ["дурак", "тупой", "плохо", "бесит", "ошибка", "сломал"];
     const happy = ["круто", "отлично", "супер", "молодец", "спасибо"];
     let score = 0;
     angry.forEach(w => { if (text.includes(w)) score -= 1; });
@@ -68,6 +68,22 @@ function levenshtein(a, b) {
         for (let j = 1; j <= a.length; j++) {
             const cost = b[i-1] === a[j-1] ? 0 : 1;
             m[i][j] = Math.min(m[i-1][j]+1, m[i][j-1]+1, m[i-1][j-1]+cost);
+        }
+    }
+    return m[b.length][a.length];
+}
+
+function damerauLevenshtein(a, b) {
+    const m = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+    for (let i = 0; i <= b.length; i++) m[i][0] = i;
+    for (let j = 0; j <= a.length; j++) m[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            const cost = b[i-1] === a[j-1] ? 0 : 1;
+            m[i][j] = Math.min(m[i-1][j]+1, m[i][j-1]+1, m[i-1][j-1]+cost);
+            if (i > 1 && j > 1 && b[i-1] === a[j-2] && b[i-2] === a[j-1]) {
+                m[i][j] = Math.min(m[i][j], m[i-2][j-2]+cost);
+            }
         }
     }
     return m[b.length][a.length];
@@ -98,6 +114,34 @@ function ngramSimilarity(a, b, n = 2) {
     return 2 * inter / (sA.size + sB.size);
 }
 
+function hamming(a, b) {
+    if (a.length !== b.length) return -1;
+    let d = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+    return d;
+}
+
+function tfidf(docs, term) {
+    const tf = docs.map(d => d.toLowerCase().split(/\s+/).filter(w => w === term).length);
+    const idf = Math.log(docs.length / (1 + tf.filter(t => t > 0).length));
+    return tf.map(t => t * idf);
+}
+
+function bm25(docs, term, k1 = 1.5, b = 0.75) {
+    const avgLen = docs.reduce((s, d) => s + d.length, 0) / docs.length;
+    return docs.map(d => {
+        const len = d.length, freq = d.toLowerCase().split(/\s+/).filter(w => w === term).length;
+        return freq > 0 ? (freq * (k1 + 1)) / (freq + k1 * (1 - b + b * len / avgLen)) : 0;
+    });
+}
+
+function weightedCosine(query, doc, vocab) {
+    const qVec = vocab.map(v => query.includes(v) ? 1 : 0);
+    const dVec = vocab.map(v => doc.includes(v) ? 1 : 0);
+    const idf = vocab.map(v => Math.log(1 + 1 / (1 + (doc.includes(v) ? 1 : 0))));
+    return cosineSimilarity(qVec.map((v, i) => v * idf[i]), dVec.map((v, i) => v * idf[i]));
+}
+
 function calculateMathScore(query, text) {
     const j = jaccardSimilarity(query, text);
     const s = sorensenDice(query, text);
@@ -107,19 +151,29 @@ function calculateMathScore(query, text) {
     const tVec = vocab.map(v => text.includes(v) ? 1 : 0);
     const c = cosineSimilarity(qVec, tVec);
     const avg = (j + s + n + c) / 4;
-    if (DEBUG) console.log(`🧮 Math Score: Jaccard=${j.toFixed(2)}, Cosine=${c.toFixed(2)}, Ngram=${n.toFixed(2)} -> Avg=${avg.toFixed(2)}`);
+    if (DEBUG) console.log(`🧮 Math: J=${j.toFixed(2)} C=${c.toFixed(2)} N=${n.toFixed(2)} -> Avg=${avg.toFixed(2)}`);
     return avg;
 }
-
 function lemmatize(word) { return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей)$/i, '').replace(/ь$/, ''); }
 
 function correctSpelling(word, dictionary) {
     let best = word, minDist = 3;
     for (const dictWord of Object.keys(dictionary)) {
-        const dist = levenshtein(word.toLowerCase(), dictWord);
+        const dist = damerauLevenshtein(word.toLowerCase(), dictWord);
         if (dist < minDist) { minDist = dist; best = dictWord; }
     }
     return best;
+}
+
+function expandWithSynonyms(text, dict) {
+    const words = text.split(/\s+/); const expanded = new Set(words);
+    words.forEach(w => { if (dict[w]?.synonyms) dict[w].synonyms.forEach(s => expanded.add(s)); });
+    return Array.from(expanded).join(' ');
+}
+
+function planDialogue(query) {
+    const parts = query.split(/[.,;]/).filter(p => p.trim().length > 0);
+    return parts.length > 1 ? parts : [query];
 }
 
 function extractEntities(text) {
@@ -132,6 +186,19 @@ function extractEntities(text) {
     }
     return entities;
 }
+
+function detectTopic(text) {
+    const topics = {
+        weather: ['погода', 'температура', 'градус', 'дождь', 'снег'],
+        code: ['код', 'скрипт', 'программа', 'javascript', 'python'],
+        history: ['история', 'война', 'древний', 'век'],
+        science: ['наука', 'физика', 'химия', 'биология']
+    };
+    for (const [topic, words] of Object.entries(topics)) {
+        if (words.some(w => text.toLowerCase().includes(w))) return topic;
+    }
+    return 'general';
+}
 function resolveContext(msg) {
     const words = msg.split(' ');
     if (words.length <= 3 && (msg.includes('?') || /^(а|и|это|он|она)/i.test(msg))) {
@@ -139,7 +206,7 @@ function resolveContext(msg) {
             const lastCtx = CONTEXT_MEMORY[i];
             if (lastCtx.entities && lastCtx.entities.length > 0) {
                 const entity = lastCtx.entities[0];
-                if (DEBUG) console.log(`🔗 Контекст: подставляем "${entity}" вместо "${msg}"`);
+                if (DEBUG) console.log(`🔗 Контекст: "${entity}" вместо "${msg}"`);
                 return `${entity} ${msg}`;
             }
         }
@@ -192,20 +259,27 @@ async function fetchWordFromAPI(word, proxyUrl) {
     return null;
 }
 
-// ИСПРАВЛЕНО: теперь словарь реально загружает слова через fetchWordFromAPI
 async function prepareQuery(text, proxyUrl) {
     const words = text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/);
-    
-    // Загружаем незнакомые слова в словарь
     for (const word of words) {
         if (!DYNAMIC_DICT[word] && word.length > 2) {
             await fetchWordFromAPI(word, proxyUrl);
         }
     }
-    
     const lemmatized = words.map(lemmatize);
     const corrected = lemmatized.map(w => correctSpelling(w, DYNAMIC_DICT));
-    return { text: corrected.join(' '), lemmas: corrected };
+    const expanded = expandWithSynonyms(corrected.join(' '), DYNAMIC_DICT);
+    return { text: expanded, lemmas: corrected };
+}
+
+function computeConfidence(answer, query, source) {
+    const qWords = extractKeywords(query);
+    const aWords = answer.toLowerCase().split(/\s+/);
+    const matches = qWords.filter(w => aWords.includes(w)).length;
+    let conf = qWords.length > 0 ? matches / qWords.length : 0.5;
+    if (source === 'memory') conf += 0.2;
+    if (source === 'network') conf += 0.1;
+    return Math.min(1, conf);
 }
 
 function judge(answer, query, source) {
@@ -217,11 +291,10 @@ function judge(answer, query, source) {
         noError: !answer.includes('Ошибка') && !answer.includes('undefined')
     };
     const score = Object.values(checks).filter(v => v).length / 4;
-    if (DEBUG) console.log('⚖️ Судья:', { score, checks });
+    if (DEBUG) console.log('⚖️ Судья:', { score });
     return { approved: score >= 0.75, reason: score < 0.75 ? 'Не прошел' : null, score };
 }
 function vote(results) {
-    // ИСПРАВЛЕНО: отсеиваем пустые строки и null
     const valid = results.filter(r => r.status === 'fulfilled' && r.value !== null && r.value !== undefined && String(r.value).trim() !== '');
     if (valid.length === 0) return null;
     const groups = {};
@@ -258,20 +331,27 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const sentiment = analyzeSentiment(msg);
     const entities = extractEntities(msg);
     const keywords = extractKeywords(msg);
+    const topic = detectTopic(msg);
 
     if (/^(привет|куку|хай|здравствуй)/i.test(msg)) return finalizeOutput({ msg, sentiment, output: `Привет, ${userPrefs.name}! На связи.` });
     if (/как дела/i.test(msg)) return finalizeOutput({ msg, sentiment, output: 'Все системы в норме.' });
     if (/спасибо/i.test(msg)) return finalizeOutput({ msg, sentiment, output: 'Всегда пожалуйста!' });
     if (/время/i.test(msg)) return finalizeOutput({ msg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
-    if (/проверь|статус/i.test(msg) && msg.length < 25) return finalizeOutput({ msg, sentiment, output: '🟢 Ансамбль активен. 37 слоёв.' });
+    
+    if (/агент|штаб|офис|команда|сотрудник|на месте|статус/i.test(msg)) {
+        const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
+        const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
+        let chatStatus = activeAgents.length === 0 ? "В чате никого нет." : `В чате: ${activeAgents.length} (${activeAgents.join(', ')}).`;
+        const report = `🏢 **Штаб:**\n- Всего: ${allAgentsCount}.\n- ${chatStatus}\n- ИИ v39.0: Активен.\n- Тема: ${topic}.`;
+        return finalizeOutput({ msg, sentiment, output: report });
+    }
 
     const intentResults = await runParallel([
         { name: 'kw', fn: () => detectIntentKeywords(msg) },
         { name: 'qt', fn: () => detectIntentQuestion(msg) }
     ]);
     const intent = vote(intentResults) || 'question';
-
-    const ctx = { msg, sentiment, entities, keywords, intent, output: null };
+    const ctx = { msg, sentiment, entities, keywords, intent, topic, output: null };
 
     if (intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
     if (intent === 'learning') return processLearning(ctx);
@@ -283,10 +363,7 @@ async function processWeather(ctx, proxyUrl, signal) {
         { name: 'ctx', fn: () => extractCityContext(ctx.msg), weight: 2 },
         { name: 'last', fn: () => extractCityLast(ctx.msg) }
     ]);
-    
-    // ИСПРАВЛЕНО: защита от null
-    let city = vote(cityResults);
-    if (!city) city = lastCity; 
+    let city = vote(cityResults) || lastCity;
     
     if (city && ['в','во','на','с','и','а'].includes(city.toLowerCase())) {
         ctx.output = `⚠️ Судья: "${city}" — предлог. Уточните город.`;
@@ -339,9 +416,10 @@ async function processQuestion(ctx, proxyUrl, signal) {
     if (fact) {
         const mathScore = calculateMathScore(ctx.msg, fact);
         const verdict = judge(fact, ctx.msg, 'network');
+        const conf = computeConfidence(fact, ctx.msg, 'network');
         
-        if (!verdict.approved || mathScore < 0.3) {
-            if (DEBUG) console.log(`🔄 Самокоррекция: плохой ответ (Math: ${mathScore.toFixed(2)}). Пробуем только ключевые слова.`);
+        if (!verdict.approved || mathScore < 0.3 || conf < 0.3) {
+            if (DEBUG) console.log(`🔄 Самокоррекция (Math: ${mathScore.toFixed(2)}, Conf: ${conf.toFixed(2)})`);
             searchQuery = ctx.keywords[0] || ctx.msg;
             fact = await fetchNetwork(searchQuery, proxyUrl, signal);
         }
