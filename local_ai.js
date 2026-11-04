@@ -1,6 +1,6 @@
 // local_ai.js
 
-const BRAIN_VERSION = "10.0"; 
+const BRAIN_VERSION = "10.1"; // Смена версии очистит старую память
 
 const DEFAULT_BRAIN = {
     "привет": { answers: ["Привет, Босс!", "Здравствуй! Чем займемся?", "На связи."], weights: [1, 1, 1] },
@@ -45,7 +45,6 @@ function getKeywords(text) {
     return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/)
         .filter(word => word.length > 2 && !stopWords.includes(word));
 }
-
 async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const msg = userMessage.toLowerCase().trim();
 
@@ -99,7 +98,6 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     for (const [key, data] of Object.entries(LOCAL_BRAIN)) {
         if (msg === key || msg.includes(key)) {
              let maxWeightIndex = data.weights.indexOf(Math.max(...data.weights));
-             // Если это точное совпадение с короткой фразой, отвечаем сразу
              if (msg.length < 20) return `${data.answers[maxWeightIndex]}`;
         }
     }
@@ -146,16 +144,20 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
             let rawText = searchData.results.substring(0, 300);
             if (searchData.results.length > 300) rawText += "...";
             
+            // Очищаем текст от заголовков Википедии
+            let cleanFact = rawText.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').trim();
+
             let finalAnswer = "";
+            
             if (bestScore > 0 && bestAnswer && isQuestion) {
-                finalAnswer = `🔎 Я кое-что знал (${bestAnswer}), а теперь узнал в интернете: ${rawText}`;
+                finalAnswer = `🔎 Я кое-что знал (${bestAnswer}), а теперь узнал в интернете: ${cleanFact}`;
             } else {
-                finalAnswer = `🔎 Я сходил в интернет и нашел: ${rawText}`;
+                finalAnswer = `🔎 Я сходил в интернет и нашел: ${cleanFact}`;
             }
             
-            // Сохраняем в память, даже если это был не вопрос, а просто утверждение, которое он проверил
+            // Сохраняем только чистый факт
             const keyForMemory = keywords.join(' ') || msg;
-            rememberFact(keyForMemory, finalAnswer);
+            rememberFact(keyForMemory, cleanFact);
             
             return finalAnswer;
         } else {
