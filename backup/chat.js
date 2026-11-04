@@ -26,7 +26,8 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ди
 5. Ты подчиняешься Боссу.
 6. ЧТЕНИЕ КОДА: Файлы: app.html, style.css, agents.js, network.js, voice.js, chat.js, ui.js, office.js. Если Босс просит проверить код, напиши [READ: имя_файла1, имя_файла2]. НЕ ВЫДУМЫВАЙ названия!
 7. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке кода напиши ПОЛНЫЙ новый код файла. ЗАПРЕЩЕНО трогать папку backup.
-8. СТРОГИЙ ФОРМАТ: Если меняешь код файла, ОБЯЗАТЕЛЬНО начни ответ с тега [FILE: имя_файла] и выдай ВЕСЬ код целиком в блоке \`\`\`javascript ... \`\`\`. Без тега скрипт не сохранит файл!`;
+8. СТРОГИЙ ФОРМАТ: Если меняешь код файла, ОБЯЗАТЕЛЬНО начни ответ с тега [FILE: имя_файла] и выдай ВЕСЬ код целиком в блоке \`\`\`javascript ... \`\`\`. Без тега скрипт не сохранит файл!
+9. ПОИСК В ИНТЕРНЕТЕ: Если тебе нужны свежие данные (новости, погода, курсы, факты), напиши тег [SEARCH: твой_запрос]. Тебе вернут результаты поиска, и ты продолжишь ответ.`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -83,7 +84,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-    }
+                                                            }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -136,7 +137,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    // МГНОВЕННЫЙ ВЫВОД КОДА
     if (fullText.includes('[FILE:') || fullText.includes('```')) {
         const { cleanText, dangerBadges } = processDangerTags(fullText);
         try { 
@@ -164,7 +164,8 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-        }
+}
+
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -213,8 +214,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-}
-
+               }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -249,70 +249,131 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     try {
         let success = false; let aiText = ""; let lastError = "";
-        try {
-            let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
-            messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
+        
+        let userKeys = {};
+        try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+        const hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
-            let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
-            if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
-                const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
-                if (fileMatch) {
-                    lastUserMsg += ` [READ: ${fileMatch[0]}]`;
-                    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
-                } else if (/код штаба/i.test(lastUserMsg)) {
-                    lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
-                    messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+        if (hasAnyKeys) {
+            // === СЕТЕВОЙ РЕЖИМ (С КЛЮЧАМИ) ===
+            try {
+                let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
+                messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
+
+                let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
+                if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
+                    const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
+                    if (fileMatch) {
+                        lastUserMsg += ` [READ: ${fileMatch[0]}]`;
+                        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                    } else if (/код штаба/i.test(lastUserMsg)) {
+                        lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
+                        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                    }
                 }
-            }
 
-            let allCode = "";
-            const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
-            if (readMatch) {
-                const fileNames = readMatch[1].split(',').map(f => f.trim());
-                for (const fileName of fileNames) {
-                    try {
-                        const fileRes = await fetch(fileName + '?t=' + Date.now());
-                        if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
-                    } catch (e) {}
+                let allCode = "";
+                const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
+                if (readMatch) {
+                    const fileNames = readMatch[1].split(',').map(f => f.trim());
+                    for (const fileName of fileNames) {
+                        try {
+                            const fileRes = await fetch(fileName + '?t=' + Date.now(), { signal: currentAbortController.signal });
+                            if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
+                        } catch (e) { if (e.name === 'AbortError') return; }
+                    }
                 }
-            }
 
-            let finalPrompt = SYSTEM_PROMPT;
-            if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+                let finalPrompt = SYSTEM_PROMPT;
+                if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+                
+                if (selectedAgents.length > 0) {
+                    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+                    if (selectedAgents.length > 1) agentPrompt += `Это Совет. Каждый агент пишет с новой строки: [ИмяАгента]: Текст.\n`;
+                    else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+                    selectedAgents.forEach(agentName => {
+                        let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
+                        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                        if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                    });
+                    finalPrompt = agentPrompt + "\n" + finalPrompt;
+                }
+                if (allCode) finalPrompt += allCode; 
+                if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
+
+                let modelToUse = selectedAIModel;
+                if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
+
+                let currentMessages = messagesToSend;
+                let maxAttempts = 2;
+                let currentAttempt = 0;
+
+                while (currentAttempt < maxAttempts) {
+                    currentAttempt++;
+                    const response = await fetch(PROXY, { 
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            messages: currentMessages, 
+                            temperature: 0.7, 
+                            model: modelToUse,
+                            userKeys: userKeys
+                        }),
+                        signal: currentAbortController.signal
+                    });
+                    
+                    if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; break; }
+                    
+                    const data = await response.json();
+                    if (data.choices && data.choices.length > 0) {
+                        aiText = data.choices[0].message.content;
+                        
+                        const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
+                        if (searchMatch) {
+                            const query = searchMatch[1].trim();
+                            aiText = aiText.replace(searchMatch[0], '').trim(); 
+                            
+                            renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
+                            
+                            const searchRes = await fetch(PROXY, {
+                                method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ searchQuery: query }),
+                                signal: currentAbortController.signal
+                            });
+                            const searchData = await searchRes.json();
+                            
+                            if (searchData.success) {
+                                currentMessages.push({ role: "assistant", content: aiText });
+                                currentMessages.push({ role: "user", content: `[РЕЗУЛЬТАТЫ ПОИСКА ПО ЗАПРОСУ "${query}"]: ${searchData.results}. Используй эти данные, чтобы ответить на мой предыдущий вопрос. Не используй тег [SEARCH].` });
+                                continue; 
+                            }
+                        }
+                        
+                        success = true; 
+                        break; 
+                    }
+                }
+            } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
+            clearTimeout(timeoutId);
+        } else {
+            // === ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ) ===
+            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
+            await new Promise(resolve => setTimeout(resolve, 1000)); 
             
-            if (selectedAgents.length > 0) {
-                let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-                if (selectedAgents.length > 1) agentPrompt += `Это Совет. Каждый агент пишет с новой строки: [ИмяАгента]: Текст.\n`;
-                else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
-                selectedAgents.forEach(agentName => {
-                    let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-                    agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
-                    if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
-                });
-                finalPrompt = agentPrompt + "\n" + finalPrompt;
+            if (typeof generateLocalResponse === 'function') {
+                try {
+                    aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal);
+                    success = true;
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    lastError = `Ошибка локального ИИ: ${e.message}`;
+                }
+            } else {
+                lastError = "Локальный ИИ не загружен.";
             }
-            if (allCode) finalPrompt += allCode; 
-            if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
-
-            let modelToUse = selectedAIModel;
-            if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-
-            const response = await fetch(PROXY, { 
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    messages: messagesToSend, 
-                    temperature: 0.7, 
-                    model: modelToUse,
-                    userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {}
-                }),
-                signal: currentAbortController.signal
-            });
-            
-            if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; }
-            else { const data = await response.json(); if (data.choices && data.choices.length > 0) { aiText = data.choices[0].message.content; success = true; } }
-        } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
-        clearTimeout(timeoutId);
-
+            clearTimeout(timeoutId);
+        }
+        
+        // Дальнейшая обработка ответа (как для сетевого, так и для локального)
         if (success) {
             playSound('receive'); 
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
@@ -323,11 +384,11 @@ async function sendMessage(overrideText = null, isKick = false) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
-                    fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: codeMatch[1], file: targetFile }) })
+                    fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: codeMatch[1], file: targetFile }), signal: currentAbortController.signal })
                     .then(res => res.json()).then(data => {
                         if (data.success) renderMessage(`✅ **Файл ${targetFile} обновлен!**`, 'director', 'DevOps');
                         else renderMessage(`❌ **Ошибка:** ${data.error}`, 'director', 'DevOps');
-                    });
+                    }).catch(e => { if (e.name !== 'AbortError') console.error(e); });
                 }
             }
 
@@ -354,8 +415,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-}
-
+                    }
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -384,4 +444,4 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-                          }
+}
