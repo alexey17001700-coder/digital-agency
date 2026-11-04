@@ -1,10 +1,9 @@
 // local_ai.js
 
-const BRAIN_VERSION = "6.0"; 
+const BRAIN_VERSION = "7.0"; // Очистка памяти
 
 const DEFAULT_BRAIN = {
     "привет": { answers: ["Привет, Босс!", "Здравствуй! Чем займемся?", "На связи."], weights: [1, 1, 1] },
-    "как дела": { answers: ["Работаю в штатном режиме.", "Все системы в норме."], weights: [1, 1] },
     "спасибо": { answers: ["Всегда пожалуйста!", "Рад помочь."], weights: [1, 1] }
 };
 
@@ -41,9 +40,9 @@ function rememberFact(questionKey, answerText) {
     }
 }
 
-// Вспомогательная функция: очистка слов от мусора
+// Очистка запроса от "мусорных" слов
 function getKeywords(text) {
-    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про'];
+    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'такого', 'такая'];
     return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/)
         .filter(word => word.length > 2 && !stopWords.includes(word));
 }
@@ -72,40 +71,37 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         if (weatherData.success) {
             return `🌤️ Данные из сети: ${weatherData.results}`;
         } else {
-            return `Не удалось получить данные о погоде для "${city}".`;
+            return `Не удалось получить данные о погоде.`;
         }
     } 
 
-    // === 2. АССОЦИАТИВНЫЙ ПОИСК В ПАМЯТИ (Синтез) ===
+    // === 2. ПОИСК В ПАМЯТИ С ПРОВЕРКОЙ УВЕРЕННОСТИ (ПРЕДСКАЗАНИЕ) ===
     const keywords = getKeywords(msg);
-    let foundAnswers = [];
-    let matchedKeys = [];
+    let bestKey = null;
+    let bestScore = 0; // Считаем, сколько слов совпало
+    let bestAnswer = "";
 
-    // Ищем совпадения по каждому слову
-    for (const [key, data] of Object.entries(LOCAL_BRAIN)) {
-        // Если ключ из памяти содержит хотя бы одно из слов вопроса
-        if (keywords.some(kw => key.includes(kw) || kw.includes(key))) {
-            // Находим лучший ответ для этого ключа
-            let maxWeightIndex = data.weights.indexOf(Math.max(...data.weights));
-            let answer = data.answers[maxWeightIndex];
+    if (keywords.length > 0) {
+        for (const [key, data] of Object.entries(LOCAL_BRAIN)) {
+            // Считаем, сколько слов из вопроса есть в ключе памяти
+            let matchCount = keywords.filter(kw => key.includes(kw)).length;
             
-            if (!foundAnswers.includes(answer)) {
-                foundAnswers.push(answer);
-                matchedKeys.push(key);
+            if (matchCount > bestScore) {
+                bestScore = matchCount;
+                bestKey = key;
+                // Берем ответ с самым высоким весом
+                let maxWeightIndex = data.weights.indexOf(Math.max(...data.weights));
+                bestAnswer = data.answers[maxWeightIndex];
             }
         }
     }
 
-    // Если нашли ассоциации в памяти
-    if (foundAnswers.length > 0) {
-        // Если нашли несколько кусочков, склеиваем их
-        if (foundAnswers.length > 1) {
-            return `🧠 Я собрал ответ из своих знаний: ${foundAnswers.join(' ... А также: ')}`;
-        }
-        return `🧠 Из памяти: ${foundAnswers[0]}`;
+    // ПРЕДСКАЗАНИЕ: Если мы нашли ВСЕ слова (или больше половины), выдаем из памяти
+    if (bestScore > 0 && bestScore >= Math.ceil(keywords.length / 2)) {
+        return `🧠 Из памяти (Уверенность: ${Math.round((bestScore/keywords.length)*100)}%): ${bestAnswer}`;
     }
 
-    // === 3. ЕСЛИ АССОЦИАЦИЙ НЕТ - ИДЕМ В ИНТЕРНЕТ И УЧИМСЯ ===
+    // === 3. ЕСЛИ УВЕРЕННОСТЬ НИЗКАЯ - ИДЕМ В ИНТЕРНЕТ ===
     try {
         let searchQuery = keywords.join(' '); 
         if (!searchQuery) searchQuery = userMessage;
@@ -123,10 +119,16 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
             let rawText = searchData.results.substring(0, 300);
             if (searchData.results.length > 300) rawText += "...";
             
-            let finalAnswer = `🔎 Я сходил в интернет и нашел: ${rawText}`;
+            // Если у нас была ЧАСТИЧНАЯ информация из памяти, мы объединяем её с новой
+            let finalAnswer = "";
+            if (bestScore > 0 && bestAnswer) {
+                finalAnswer = `🔎 Я кое-что знал (${bestAnswer}), а теперь узнал в интернете: ${rawText}`;
+            } else {
+                finalAnswer = `🔎 Я сходил в интернет и нашел: ${rawText}`;
+            }
             
-            // УЧИМСЯ: Сохраняем факт под ключом из главных слов
-            const keyForMemory = keywords.slice(0, 3).join(' ') || msg;
+            // УЧИМСЯ: Сохраняем полный ответ под ключом из главных слов
+            const keyForMemory = keywords.join(' ') || msg;
             rememberFact(keyForMemory, finalAnswer);
             
             return finalAnswer;
@@ -135,6 +137,6 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         }
     } catch (e) {
         if (e.name === 'AbortError') throw e;
-        return `Ошибка при попытке выйти в интернет: ${e.message}`;
+        return `Ошибка сети: ${e.message}`;
     }
-            }
+}
