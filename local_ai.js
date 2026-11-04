@@ -1,5 +1,5 @@
 // local_ai.js
-const BRAIN_VERSION = "40.0"; 
+const BRAIN_VERSION = "42.1"; 
 const MAX_CONTEXT = 20;
 const MAX_DICT_SIZE = 100;
 const DEBUG = true;
@@ -9,6 +9,8 @@ let CONTEXT_MEMORY = [];
 let lastCity = localStorage.getItem('shtabLastCity') || "Москва";
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { brief: false, name: "Босс" };
 let DYNAMIC_DICT = {};
+
+const BASE_DICT = ["привет", "погода", "спасибо", "код", "штаб", "агент", "время", "хакер", "оркестратор", "охранник", "юрист", "дизайнер"];
 
 const savedVersion = localStorage.getItem('shtabBrainVersion');
 if (savedVersion !== BRAIN_VERSION) {
@@ -156,6 +158,10 @@ function calculateMathScore(query, text) {
 }
 function lemmatize(word) { return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей)$/i, '').replace(/ь$/, ''); }
 
+function stemmize(word) {
+    return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей|ый|ий|ая|ое|ые|ых|ым|им|ого|ему|ому|ыми|ими)$/i, '');
+}
+
 function correctSpelling(word, dictionary) {
     let best = word, minDist = 3;
     for (const dictWord of Object.keys(dictionary)) {
@@ -198,6 +204,15 @@ function detectTopic(text) {
         if (words.some(w => text.toLowerCase().includes(w))) return topic;
     }
     return 'general';
+}
+
+function estimateComplexity(text) {
+    let complexity = 0;
+    if (text.length > 30) complexity += 1;
+    if (text.split(/\s+/).length > 5) complexity += 1;
+    if (/[?]/.test(text)) complexity += 1;
+    if (/кто|что|где|когда|как|почему|зачем/i.test(text)) complexity += 2;
+    return complexity;
 }
 function resolveContext(msg) {
     const words = msg.split(' ');
@@ -294,6 +309,16 @@ function judge(answer, query, source) {
     if (DEBUG) console.log('⚖️ Судья:', { score });
     return { approved: score >= 0.75, reason: score < 0.75 ? 'Не прошел' : null, score };
 }
+
+function checkHallucinations(answer, query) {
+    const queryEntities = extractEntities(query);
+    const answerLower = answer.toLowerCase();
+    if (queryEntities.persons.length === 0) {
+        const foundPersons = answerLower.match(/\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\b/g) || [];
+        if (foundPersons.length > 2) return { ok: false, reason: "Много новых имен" };
+    }
+    return { ok: true };
+               }
 function vote(results) {
     const valid = results.filter(r => r.status === 'fulfilled' && r.value !== null && r.value !== undefined && String(r.value).trim() !== '');
     if (valid.length === 0) return null;
@@ -323,79 +348,102 @@ function extractCityPrep(msg) { const m = msg.match(/(?:в|во|на)\s+([а-я�
 function extractCityContext(msg) { const p = msg.split(/погода|погоду/i); return p.length > 1 ? p[1].trim().split(/\s+/)[0].toLowerCase() : null; }
 function extractCityLast(msg) { const w = msg.replace(/[?.!,]/g, '').split(/\s+/); for (let i = w.length - 1; i >= 0; i--) { if (!STOP_WORDS.includes(w[i]) && w[i].length > 2) return w[i].toLowerCase(); } return null; }
 
-async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
+async function analyzeInputSwarm(userMessage) {
     let msg = sanitize(userMessage.toLowerCase().trim());
     msg = expandAbbreviations(msg);
-    msg = resolveContext(msg);
+    
+    let words = msg.split(/\s+/);
+    let correctedWords = words.map(w => {
+        for (const base of BASE_DICT) {
+            if (damerauLevenshtein(w, base) <= 2) return base;
+        }
+        return w;
+    });
+    
+    const swarmResults = await runParallel([
+        { name: 'context', fn: () => resolveContext(msg) },
+        { name: 'intent_kw', fn: () => detectIntentKeywords(msg) },
+        { name: 'intent_qt', fn: () => detectIntentQuestion(msg) },
+        { name: 'topic', fn: () => detectTopic(msg) },
+        { name: 'complexity', fn: () => estimateComplexity(msg) }
+    ]);
+    
+    return {
+        originalMsg: msg,
+        correctedMsg: correctedWords.join(' '),
+        context: swarmResults[0].value || msg,
+        intent: vote([swarmResults[1], swarmResults[2]]) || 'question',
+        topic: swarmResults[3].value || 'general',
+        complexity: swarmResults[4].value || 0,
+        keywords: extractKeywords(correctedWords.join(' ')),
+        entities: extractEntities(correctedWords.join(' ')),
+        sentiment: analyzeSentiment(correctedWords.join(' '))
+    };
+}
 
-    const sentiment = analyzeSentiment(msg);
-    const entities = extractEntities(msg);
-    const keywords = extractKeywords(msg);
-    const topic = detectTopic(msg);
+async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
+    const dossier = await analyzeInputSwarm(userMessage);
+    const { originalMsg, correctedMsg, context, intent, topic, complexity, keywords, entities, sentiment } = dossier;
 
-    // РЕФЛЕКСЫ
-    if (/^(привет|куку|хай|здравствуй)/i.test(msg)) return finalizeOutput({ msg, sentiment, output: `Привет, ${userPrefs.name}! На связи.` });
-    if (/как дела/i.test(msg)) return finalizeOutput({ msg, sentiment, output: 'Все системы в норме.' });
-    if (/спасибо/i.test(msg)) return finalizeOutput({ msg, sentiment, output: 'Всегда пожалуйста!' });
-    if (/время/i.test(msg)) return finalizeOutput({ msg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
+    if (/^(привет|куку|хай|здравствуй)/i.test(correctedMsg) || keywords.includes("привет")) {
+        return finalizeOutput({ msg: originalMsg, sentiment, output: `Привет, ${userPrefs.name}! На связи.` });
+    }
+    if (/как дела/i.test(correctedMsg) || (keywords.includes("как") && keywords.includes("дела"))) {
+        return finalizeOutput({ msg: originalMsg, sentiment, output: 'Все системы в норме.' });
+    }
+    if (/спасибо/i.test(correctedMsg) || keywords.includes("спасибо")) {
+        return finalizeOutput({ msg: originalMsg, sentiment, output: 'Всегда пожалуйста!' });
+    }
+    if (/время/i.test(correctedMsg)) return finalizeOutput({ msg: originalMsg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
 
-    // САМОСОЗНАНИЕ: ВСЕ АГЕНТЫ
-    if (/все.*агент|агенты.*на месте|кто.*в чате|сколько.*агент/i.test(msg)) {
+    if (/все.*агент|агенты.*на месте|кто.*в чате|сколько.*агент/i.test(correctedMsg)) {
         const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
         let chatStatus = activeAgents.length === 0 ? "Никого нет. Отвечаю как Оркестратор." : `Подключено: ${activeAgents.length} (${activeAgents.join(', ')}).`;
         const report = `🏢 **Статус Агентов:**\n- Всего в офисе: ${allAgentsCount}.\n- ${chatStatus}\n- Все на местах и готовы к работе.`;
-        return finalizeOutput({ msg, sentiment, output: report });
+        return finalizeOutput({ msg: originalMsg, sentiment, output: report });
     }
 
-    // САМОСОЗНАНИЕ: ПРОВЕРКА ШТАБА И БЭКАПА
-    if (/в порядке.*штаб|проверь.*файл|статус.*штаб|сверь.*бэкап/i.test(msg)) {
+    if (/в порядке.*штаб|проверь.*файл|статус.*штаб|сверь.*бэкап/i.test(correctedMsg)) {
         try {
-            const statusRes = await fetch(proxyUrl, { 
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ checkStatus: true }),
-                signal 
-            });
+            const statusRes = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkStatus: true }), signal });
             const statusData = await statusRes.json();
-            
             if (statusData.success) {
                 let report = `🛠️ **Диагностика Штаба:**\n- Файлов в корне: ${statusData.totalRoot}.\n- Файлов в бэкапе: ${statusData.totalBackup}.\n`;
-                if (statusData.missingInBackup.length > 0) {
-                    report += `⚠️ **Внимание!** В бэкапе нет: ${statusData.missingInBackup.join(', ')}. Нажми "Сохранить эталон" в Сейфе.`;
-                } else {
-                    report += `✅ Бэкап актуален. Все файлы на месте.`;
-                }
-                return finalizeOutput({ msg, sentiment, output: report });
+                report += statusData.missingInBackup.length > 0 ? `⚠️ В бэкапе нет: ${statusData.missingInBackup.join(', ')}` : `✅ Бэкап актуален. Все файлы на месте.`;
+                return finalizeOutput({ msg: originalMsg, sentiment, output: report });
             }
-        } catch (e) {
-            return finalizeOutput({ msg, sentiment, output: `❌ Ошибка проверки: не удалось связаться с сервером Deno.` });
-        }
+        } catch (e) { return finalizeOutput({ msg: originalMsg, sentiment, output: `❌ Ошибка проверки: Deno недоступен.` }); }
     }
 
-    // САМОСОЗНАНИЕ: КОНКРЕТНЫЙ АГЕНТ
     const allAgentNames = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS) : [];
-    const mentionedAgent = allAgentNames.find(name => msg.includes(name.toLowerCase()));
-
-    if (mentionedAgent && /тут|на месте|есть|здесь|статус|работает/i.test(msg)) {
+    const mentionedAgent = allAgentNames.find(name => correctedMsg.includes(name.toLowerCase()));
+    if (mentionedAgent && /тут|на месте|есть|здесь|статус|работает/i.test(correctedMsg)) {
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
         const isSelected = activeAgents.includes(mentionedAgent);
-        const status = isSelected ? "подключен к чату и готов к работе" : "находится в офисе, но не выбран для диалога";
-        return finalizeOutput({ msg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${status}.` });
+        const status = isSelected ? "подключен к чату" : "в офисе, но не выбран";
+        return finalizeOutput({ msg: originalMsg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${status}.` });
     }
 
-    // АНСАМБЛЬ ИНТЕНТОВ
-    const intentResults = await runParallel([
-        { name: 'kw', fn: () => detectIntentKeywords(msg) },
-        { name: 'qt', fn: () => detectIntentQuestion(msg) }
-    ]);
-    const intent = vote(intentResults) || 'question';
-    const ctx = { msg, sentiment, entities, keywords, intent, topic, output: null };
+    const ctx = { msg: correctedMsg, originalMsg, sentiment, entities, keywords, intent, topic, complexity, output: null };
 
-    // МАРШРУТИЗАЦИЯ
     if (intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
     if (intent === 'learning') return processLearning(ctx);
     return await processQuestion(ctx, proxyUrl, signal);
-            }
+}
+async function validateOutputSwarm(fact, query) {
+    const mathScore = calculateMathScore(query, fact);
+    const verdict = judge(fact, query, 'network');
+    const conf = computeConfidence(fact, query, 'network');
+    const hallucination = checkHallucinations(fact, query);
+    
+    if (!verdict.approved || mathScore < 0.3 || conf < 0.3 || !hallucination.ok) {
+        if (DEBUG) console.log(`⚠️ Выходной штурм отклонил. Math: ${mathScore.toFixed(2)}, Conf: ${conf.toFixed(2)}, Hall: ${hallucination.reason || 'OK'}`);
+        return false;
+    }
+    return true;
+}
+
 async function processWeather(ctx, proxyUrl, signal) {
     const cityResults = await runParallel([
         { name: 'prep', fn: () => extractCityPrep(ctx.msg) },
@@ -417,8 +465,6 @@ async function processWeather(ctx, proxyUrl, signal) {
         const res = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weatherQuery: city, day: isTomorrow ? 1 : 0 }), signal });
         const data = await res.json();
         if (data.success) {
-            const verdict = judge(data.results, ctx.msg, 'network');
-            if (!verdict.approved) { ctx.output = `⚠️ Судья: ${verdict.reason}.`; return finalizeOutput(ctx); }
             ctx.output = `🌤️ ${data.results}`;
             return finalizeOutput(ctx);
         }
@@ -431,7 +477,10 @@ async function fetchNetwork(query, proxyUrl, signal) {
     try {
         const res = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ searchQuery: query }), signal });
         const data = await res.json();
-        return data.success && data.results ? data.results.substring(0, 250) : null;
+        if (data.success && data.results && !data.results.includes("ничего не найдено")) {
+            return data.results.substring(0, 250);
+        }
+        return null;
     } catch(e) { return null; }
 }
 
@@ -444,36 +493,45 @@ async function processQuestion(ctx, proxyUrl, signal) {
         { name: 'trans', fn: () => transitiveClosure(ctx.keywords[0] || '', KNOWLEDGE_GRAPH).join('; ') }
     ]);
     const logicAnswer = vote(logicResults);
+    
+    // ПРОВЕРКА ЛОГИКИ (Восстановлено)
     if (logicAnswer) {
         const verdict = judge(logicAnswer, ctx.msg, 'memory');
-        if (verdict.approved) { ctx.output = `🧠 Логика: ${logicAnswer}`; return finalizeOutput(ctx); }
-    }
-
-    let searchQuery = ctx.keywords.join(' ') || ctx.msg;
-    let fact = await fetchNetwork(searchQuery, proxyUrl, signal);
-
-    if (fact) {
-        const mathScore = calculateMathScore(ctx.msg, fact);
-        const verdict = judge(fact, ctx.msg, 'network');
-        const conf = computeConfidence(fact, ctx.msg, 'network');
-        
-        if (!verdict.approved || mathScore < 0.3 || conf < 0.3) {
-            if (DEBUG) console.log(`🔄 Самокоррекция (Math: ${mathScore.toFixed(2)}, Conf: ${conf.toFixed(2)})`);
-            searchQuery = ctx.keywords[0] || ctx.msg;
-            fact = await fetchNetwork(searchQuery, proxyUrl, signal);
+        const conf = computeConfidence(logicAnswer, ctx.msg, 'memory');
+        if (verdict.approved && conf > 0.3) { 
+            ctx.output = `🧠 Логика: ${logicAnswer}`; 
+            return finalizeOutput(ctx); 
         }
     }
 
-    if (fact) {
+    const searchQueries = [
+        ctx.keywords.join(' ') || ctx.msg,
+        ctx.keywords[0] || ctx.msg
+    ];
+
+    const networkResults = await runParallel([
+        { name: 'full_query', fn: () => fetchNetwork(searchQueries[0], proxyUrl, signal) },
+        { name: 'short_query', fn: () => fetchNetwork(searchQueries[1], proxyUrl, signal) }
+    ]);
+
+    let finalFact = null;
+    for (const res of networkResults) {
+        if (res.value) {
+            const isValid = await validateOutputSwarm(res.value, ctx.msg);
+            if (isValid) { finalFact = res.value; break; }
+        }
+    }
+
+    if (finalFact) {
         const mainSubj = ctx.keywords[0] || 'info';
         if (!KNOWLEDGE_GRAPH[mainSubj]) KNOWLEDGE_GRAPH[mainSubj] = {};
-        KNOWLEDGE_GRAPH[mainSubj]['из_интернета'] = [fact];
+        KNOWLEDGE_GRAPH[mainSubj]['из_интернета'] = [finalFact];
         saveLocalBrain();
-        ctx.output = `🔎 ${fact}`;
+        ctx.output = `🔎 ${finalFact}`;
         return finalizeOutput(ctx);
     }
     
-    ctx.output = `❌ Сеть не дала результатов.`;
+    ctx.output = `🤔 Босс, я поискал в сети, но не нашел точного ответа. Попробуйте переформулировать.`;
     return finalizeOutput(ctx);
 }
 
@@ -494,6 +552,11 @@ function processLearning(ctx) {
 function finalizeOutput(ctx) {
     if (!ctx.output || ctx.output.trim() === '') ctx.output = "⚠️ Пустой ответ.";
     if (ctx.sentiment === 'angry' && !ctx.output.includes('извин')) ctx.output = 'Извините. ' + ctx.output;
+    
+    // ВОССТАНОВЛЕНО: Режим краткости
+    if (userPrefs.brief && ctx.output.length > 300) {
+        ctx.output = ctx.output.substring(0, 300) + "...";
+    }
     
     CONTEXT_MEMORY.push({ role: 'user', text: ctx.msg, entities: ctx.keywords, timestamp: Date.now() });
     CONTEXT_MEMORY.push({ role: 'assistant', text: ctx.output, entities: ctx.keywords, timestamp: Date.now() });
