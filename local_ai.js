@@ -1,5 +1,5 @@
 // local_ai.js
-const BRAIN_VERSION = "39.0"; 
+const BRAIN_VERSION = "40.0"; 
 const MAX_CONTEXT = 20;
 const MAX_DICT_SIZE = 100;
 const DEBUG = true;
@@ -333,19 +333,57 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const keywords = extractKeywords(msg);
     const topic = detectTopic(msg);
 
+    // РЕФЛЕКСЫ
     if (/^(привет|куку|хай|здравствуй)/i.test(msg)) return finalizeOutput({ msg, sentiment, output: `Привет, ${userPrefs.name}! На связи.` });
     if (/как дела/i.test(msg)) return finalizeOutput({ msg, sentiment, output: 'Все системы в норме.' });
     if (/спасибо/i.test(msg)) return finalizeOutput({ msg, sentiment, output: 'Всегда пожалуйста!' });
     if (/время/i.test(msg)) return finalizeOutput({ msg, sentiment, output: `🕒 ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}` });
-    
-    if (/агент|штаб|офис|команда|сотрудник|на месте|статус/i.test(msg)) {
+
+    // САМОСОЗНАНИЕ: ВСЕ АГЕНТЫ
+    if (/все.*агент|агенты.*на месте|кто.*в чате|сколько.*агент/i.test(msg)) {
         const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
-        let chatStatus = activeAgents.length === 0 ? "В чате никого нет." : `В чате: ${activeAgents.length} (${activeAgents.join(', ')}).`;
-        const report = `🏢 **Штаб:**\n- Всего: ${allAgentsCount}.\n- ${chatStatus}\n- ИИ v39.0: Активен.\n- Тема: ${topic}.`;
+        let chatStatus = activeAgents.length === 0 ? "Никого нет. Отвечаю как Оркестратор." : `Подключено: ${activeAgents.length} (${activeAgents.join(', ')}).`;
+        const report = `🏢 **Статус Агентов:**\n- Всего в офисе: ${allAgentsCount}.\n- ${chatStatus}\n- Все на местах и готовы к работе.`;
         return finalizeOutput({ msg, sentiment, output: report });
     }
 
+    // САМОСОЗНАНИЕ: ПРОВЕРКА ШТАБА И БЭКАПА
+    if (/в порядке.*штаб|проверь.*файл|статус.*штаб|сверь.*бэкап/i.test(msg)) {
+        try {
+            const statusRes = await fetch(proxyUrl, { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ checkStatus: true }),
+                signal 
+            });
+            const statusData = await statusRes.json();
+            
+            if (statusData.success) {
+                let report = `🛠️ **Диагностика Штаба:**\n- Файлов в корне: ${statusData.totalRoot}.\n- Файлов в бэкапе: ${statusData.totalBackup}.\n`;
+                if (statusData.missingInBackup.length > 0) {
+                    report += `⚠️ **Внимание!** В бэкапе нет: ${statusData.missingInBackup.join(', ')}. Нажми "Сохранить эталон" в Сейфе.`;
+                } else {
+                    report += `✅ Бэкап актуален. Все файлы на месте.`;
+                }
+                return finalizeOutput({ msg, sentiment, output: report });
+            }
+        } catch (e) {
+            return finalizeOutput({ msg, sentiment, output: `❌ Ошибка проверки: не удалось связаться с сервером Deno.` });
+        }
+    }
+
+    // САМОСОЗНАНИЕ: КОНКРЕТНЫЙ АГЕНТ
+    const allAgentNames = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS) : [];
+    const mentionedAgent = allAgentNames.find(name => msg.includes(name.toLowerCase()));
+
+    if (mentionedAgent && /тут|на месте|есть|здесь|статус|работает/i.test(msg)) {
+        const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
+        const isSelected = activeAgents.includes(mentionedAgent);
+        const status = isSelected ? "подключен к чату и готов к работе" : "находится в офисе, но не выбран для диалога";
+        return finalizeOutput({ msg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${status}.` });
+    }
+
+    // АНСАМБЛЬ ИНТЕНТОВ
     const intentResults = await runParallel([
         { name: 'kw', fn: () => detectIntentKeywords(msg) },
         { name: 'qt', fn: () => detectIntentQuestion(msg) }
@@ -353,10 +391,11 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const intent = vote(intentResults) || 'question';
     const ctx = { msg, sentiment, entities, keywords, intent, topic, output: null };
 
+    // МАРШРУТИЗАЦИЯ
     if (intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
     if (intent === 'learning') return processLearning(ctx);
     return await processQuestion(ctx, proxyUrl, signal);
-}
+            }
 async function processWeather(ctx, proxyUrl, signal) {
     const cityResults = await runParallel([
         { name: 'prep', fn: () => extractCityPrep(ctx.msg) },
