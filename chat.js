@@ -85,6 +85,7 @@ function addMessageToHistory(text, sender, agentName = null) {
     }
     saveAll(); renderChatList();
 }
+
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -127,7 +128,6 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
-
 function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
@@ -361,40 +361,56 @@ async function sendMessage(overrideText = null, isKick = false) {
             const isSearchIntent = /найди|поищи|погугли|узнай/i.test(text);
 
             if (isWeatherIntent) {
-    // 1. Убираем знаки препинания
-    let cleanText = text.replace(/[?.!,]/g, '');
-    
-    // 2. Вырезаем стандартные фразы-триггеры
-    // (?:\s*) означает любое количество пробелов, чтобы не оставалось лишних
-    cleanText = cleanText.replace(/(?:какая|какой|узнай|найди|покажи)?\s*(?:погода|погоду)\s*(?:в|во|на)?\s*/gi, '');
-    
-    // 3. То, что осталось — это город. Если пусто, ставим Москву.
-    let city = cleanText.trim() || "Москва";
+                let cleanText = text.replace(/[?.!,]/g, '');
+                cleanText = cleanText.replace(/(?:какая|какой|узнай|найди|покажи)?\s*(?:погода|погоду)\s*(?:в|во|на)?\s*/gi, '');
+                let city = cleanText.trim() || "Москва";
 
-    renderMessage(`🌤️ *[Система: Запрос погоды для "${city}"...]*`, 'director', activeAgent);
-    
-    try {
-        const weatherRes = await fetch(PROXY, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weatherQuery: city }),
-            signal: currentAbortController.signal
-        });
-        if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
-        const weatherData = await weatherRes.json();
-        
-        if (weatherData.success && weatherData.results) {
-            aiText = `📡 **Данные о погоде (${city}):**\n\n${weatherData.results}`;
-            success = true;
-        } else {
-            throw new Error(weatherData.error || "Сервис не вернул данные");
-        }
-    } catch (e) {
-        if (e.name === 'AbortError') return;
-        lastError = `Ошибка сети: ${e.message}`;
-    }
-    clearTimeout(timeoutId);
-            }
+                renderMessage(`🌤️ *[Система: Запрос погоды для "${city}"...]*`, 'director', activeAgent);
+                
+                try {
+                    const weatherRes = await fetch(PROXY, {
+                        method: "POST", 
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ weatherQuery: city }),
+                        signal: currentAbortController.signal
+                    });
+                    if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
+                    const weatherData = await weatherRes.json();
+                    
+                    if (weatherData.success && weatherData.results) {
+                        aiText = `📡 **Данные о погоде (${city}):**\n\n${weatherData.results}`;
+                        success = true;
+                    } else {
+                        throw new Error(weatherData.error || "Сервис не вернул данные");
+                    }
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    lastError = `Ошибка сети: ${e.message}`;
+                }
+                clearTimeout(timeoutId);
+            } else if (isSearchIntent) {
+                renderMessage(`🔍 *[Система: Локальный агент ищет в сети "${text}"...]*`, 'director', activeAgent);
+                try {
+                    const searchRes = await fetch(PROXY, {
+                        method: "POST", 
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ searchQuery: text }),
+                        signal: currentAbortController.signal
+                    });
+                    if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
+                    const searchData = await searchRes.json();
+                    
+                    if (searchData.success && searchData.results) {
+                        aiText = `📡 **Данные из сети (Локальный поиск):**\n\n${searchData.results}\n\n*[Примечание: это сырые данные, так как для их обработки ИИ нужны API-ключи]*`;
+                        success = true;
+                    } else {
+                        throw new Error(searchData.error || "Сервис не вернул данные");
+                    }
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    lastError = `Ошибка сети: ${e.message}`;
+                }
+                clearTimeout(timeoutId);
             } else {
                 if (typeof generateLocalResponse === 'function') {
                     aiText = generateLocalResponse(activeAgent, text);
@@ -448,7 +464,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-                    }
+}
+
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
