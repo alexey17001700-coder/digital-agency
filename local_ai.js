@@ -1,9 +1,11 @@
 // local_ai.js
 
-const BRAIN_VERSION = "10.1"; // Смена версии очистит старую память
+const BRAIN_VERSION = "11.0"; 
 
 const DEFAULT_BRAIN = {
     "привет": { answers: ["Привет, Босс!", "Здравствуй! Чем займемся?", "На связи."], weights: [1, 1, 1] },
+    "куку": { answers: ["Куку! Я на связи.", "Ку-ку, Босс! Какие задачи?", "Куку! Слушаю внимательно."], weights: [1, 1, 1] },
+    "здорово": { answers: ["Здорово, Босс!", "Приветствую!"], weights: [1, 1] },
     "спасибо": { answers: ["Всегда пожалуйста!", "Рад помочь."], weights: [1, 1] }
 };
 
@@ -41,7 +43,7 @@ function rememberFact(questionKey, answerText) {
 }
 
 function getKeywords(text) {
-    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'такого', 'такая', 'является', 'значит', 'мне', 'тебе'];
+    const stopWords = ['что', 'как', 'кто', 'где', 'когда', 'зачем', 'почему', 'это', 'такое', 'такой', 'мне', 'тебе', 'расскажи', 'найди', 'поищи', 'узнай', 'а', 'и', 'в', 'во', 'на', 'с', 'про', 'такого', 'такая', 'является', 'значит'];
     return text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/)
         .filter(word => word.length > 2 && !stopWords.includes(word));
 }
@@ -80,7 +82,7 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
     const isTeach = !!teachMatch;
     const isSearchCmd = /^(найди|поищи|погугли|узнай)\b/i.test(msg);
 
-    // === 3. ОБУЧЕНИЕ (Если это утверждение с фактом) ===
+    // === 3. ОБУЧЕНИЕ ===
     if (isTeach && !isSearchCmd) {
         let subject = teachMatch[1].trim().replace(/[!.?]/g, '');
         let fact = teachMatch[2].trim().replace(/[!.?]/g, '');
@@ -94,15 +96,17 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         return `🧠 Записал в память: ${fullFact}`;
     }
 
-    // === 4. ПРОВЕРКА БАЗОВЫХ ФРАЗ (Привет, Спасибо и т.д.) ===
+    // === 4. БАЗОВЫЕ ФРАЗЫ (Приветствия) ===
     for (const [key, data] of Object.entries(LOCAL_BRAIN)) {
-        if (msg === key || msg.includes(key)) {
-             let maxWeightIndex = data.weights.indexOf(Math.max(...data.weights));
-             if (msg.length < 20) return `${data.answers[maxWeightIndex]}`;
+        // Если короткая фраза (например, "Куку") точно совпадает с ключом
+        if (msg === key || (msg.length < 15 && msg.includes(key))) {
+             // Выбираем случайный ответ из базы для вариативности
+             let randomIndex = Math.floor(Math.random() * data.answers.length);
+             return `${data.answers[randomIndex]}`;
         }
     }
 
-    // === 5. ПОИСК В ПАМЯТИ (Ассоциации) ===
+    // === 5. ПОИСК В ПАМЯТИ (С вариативностью) ===
     const keywords = getKeywords(msg);
     let bestKey = null;
     let bestScore = 0; 
@@ -115,18 +119,30 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
             if (matchCount > bestScore) {
                 bestScore = matchCount;
                 bestKey = key;
-                let maxWeightIndex = data.weights.indexOf(Math.max(...data.weights));
-                bestAnswer = data.answers[maxWeightIndex];
+                // Выбираем ответ с самым высоким весом
+                let maxWeight = Math.max(...data.weights);
+                let bestIndices = data.weights.reduce((acc, w, i) => w === maxWeight ? [...acc, i] : acc, []);
+                // Если ответов с одинаковым весом несколько, выбираем случайный
+                let randomIndex = bestIndices[Math.floor(Math.random() * bestIndices.length)];
+                bestAnswer = data.answers[randomIndex];
             }
         }
     }
 
     // Если это вопрос и мы нашли ответ в памяти
     if (isQuestion && bestScore > 0 && bestScore >= Math.ceil(keywords.length / 2)) {
-        return `🧠 Из памяти (Уверенность: ${Math.round((bestScore/keywords.length)*100)}%): ${bestAnswer}`;
+        // Генератор случайных вступлений, чтобы не повторяться
+        const memoryPrefixes = [
+            "🧠 Вспоминаю:", 
+            "🧠 Из моих архивов:", 
+            "🧠 Как я уже говорил:", 
+            "🧠 Я это знаю:"
+        ];
+        let prefix = memoryPrefixes[Math.floor(Math.random() * memoryPrefixes.length)];
+        return `${prefix} ${bestAnswer}`;
     }
 
-    // === 6. ИНТЕРНЕТ (Если не знаем или это команда поиска) ===
+    // === 6. ИНТЕРНЕТ ===
     try {
         let searchQuery = keywords.join(' '); 
         if (!searchQuery) searchQuery = msg.replace(/[?.!]/g, '');
@@ -144,8 +160,8 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
             let rawText = searchData.results.substring(0, 300);
             if (searchData.results.length > 300) rawText += "...";
             
-            // Очищаем текст от заголовков Википедии
-            let cleanFact = rawText.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').trim();
+            // Очищаем текст от заголовков Википедии и лишних символов
+            let cleanFact = rawText.replace(/Результаты поиска в Википедии по запросу "[^"]+":/i, '').replace(/^-\s*/, '').trim();
 
             let finalAnswer = "";
             
@@ -155,7 +171,6 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
                 finalAnswer = `🔎 Я сходил в интернет и нашел: ${cleanFact}`;
             }
             
-            // Сохраняем только чистый факт
             const keyForMemory = keywords.join(' ') || msg;
             rememberFact(keyForMemory, cleanFact);
             
