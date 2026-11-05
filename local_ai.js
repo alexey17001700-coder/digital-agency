@@ -66,7 +66,7 @@ function analyzeSentiment(text) {
     angry.forEach(w => { if (text.includes(w)) score -= 1; });
     happy.forEach(w => { if (text.includes(w)) score += 1; });
     return score < 0 ? 'angry' : (score > 0 ? 'happy' : 'neutral');
-    }
+}
 function levenshtein(a, b) {
     if (a.length === 0) return b.length; if (b.length === 0) return a.length;
     const m = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
@@ -127,8 +127,7 @@ function hamming(a, b) {
     let d = 0;
     for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
     return d;
-}
-
+             }
 function tfidf(docs, term) {
     const tf = docs.map(d => d.toLowerCase().split(/\s+/).filter(w => w === term).length);
     const idf = Math.log(docs.length / (1 + tf.filter(t => t > 0).length));
@@ -162,6 +161,7 @@ function calculateMathScore(query, text) {
     if (DEBUG) console.log(`🧮 Math: J=${j.toFixed(2)} C=${c.toFixed(2)} N=${n.toFixed(2)} -> Avg=${avg.toFixed(2)}`);
     return avg;
 }
+
 function lemmatize(word) { return word.toLowerCase().replace(/(а|я|ы|и|ов|ев|у|ю|ом|ем|е|ами|ями|ах|ях|ой|ей)$/i, '').replace(/ь$/, ''); }
 
 function stemmize(word) {
@@ -175,8 +175,7 @@ function correctSpelling(word, dictionary) {
         if (dist < minDist) { minDist = dist; best = dictWord; }
     }
     return best;
-}
-
+        }
 function expandWithSynonyms(text, dict) {
     const words = text.split(/\s+/); const expanded = new Set(words);
     words.forEach(w => { if (dict[w]?.synonyms) dict[w].synonyms.forEach(s => expanded.add(s)); });
@@ -220,6 +219,7 @@ function estimateComplexity(text) {
     if (/кто|что|где|когда|как|почему|зачем/i.test(text)) complexity += 2;
     return complexity;
 }
+
 function resolveContext(msg) {
     const words = msg.split(' ');
     if (words.length <= 3 && (msg.includes('?') || /^(а|и|это|он|она)/i.test(msg))) {
@@ -234,7 +234,6 @@ function resolveContext(msg) {
     }
     return msg;
 }
-
 function reasonAbout(entity) {
     const e = entity.toLowerCase().trim();
     const match = Object.keys(KNOWLEDGE_GRAPH).find(k => k === e || levenshtein(k, e) <= 2);
@@ -302,7 +301,6 @@ function computeConfidence(answer, query, source) {
     if (source === 'network') conf += 0.1;
     return Math.min(1, conf);
 }
-
 function judge(answer, query, source) {
     if (!answer || answer.trim() === '') return { approved: false, reason: 'Пустой' };
     const checks = {
@@ -325,6 +323,7 @@ function checkHallucinations(answer, query) {
     }
     return { ok: true };
 }
+
 function vote(results) {
     const valid = results.filter(r => r.status === 'fulfilled' && r.value !== null && r.value !== undefined && String(r.value).trim() !== '');
     if (valid.length === 0) return null;
@@ -353,7 +352,6 @@ function detectIntentQuestion(msg) {
 function extractCityPrep(msg) { const m = msg.match(/(?:в|во|на)\s+([а-яёa-z\-]{3,})/i); return m ? m[1].toLowerCase() : null; }
 function extractCityContext(msg) { const p = msg.split(/погода|погоду/i); return p.length > 1 ? p[1].trim().split(/\s+/)[0].toLowerCase() : null; }
 function extractCityLast(msg) { const w = msg.replace(/[?.!,]/g, '').split(/\s+/); for (let i = w.length - 1; i >= 0; i--) { if (!STOP_WORDS.includes(w[i]) && w[i].length > 2) return w[i].toLowerCase(); } return null; }
-
 async function analyzeInputSwarm(userMessage) {
     let msg = sanitize(userMessage.toLowerCase().trim());
     msg = expandAbbreviations(msg);
@@ -409,42 +407,59 @@ async function generateLocalResponse(agentName, userMessage, proxyUrl, signal) {
         return finalizeOutput({ msg: originalMsg, sentiment, output: `🏢 **Статус Агентов:**\n- Всего в офисе: ${allAgentsCount}.\n- ${chatStatus}\n- Все на местах.` });
     }
 
-    if (/в порядке.*штаб|проверь.*файл|статус.*штаб|сверь.*бэкап/i.test(correctedMsg)) {
-        try {
-            const statusRes = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkStatus: true }), signal });
-            const statusData = await statusRes.json();
-            if (statusData.success) {
-                let report = `🛠️ **Диагностика:**\n- В корне: ${statusData.totalRoot}.\n- В бэкапе: ${statusData.totalBackup}.\n`;
-                report += statusData.missingInBackup.length > 0 ? `⚠️ Нет в бэкапе: ${statusData.missingInBackup.join(', ')}` : `✅ Бэкап актуален.`;
-                return finalizeOutput({ msg: originalMsg, sentiment, output: report });
-            }
-        } catch (e) { return finalizeOutput({ msg: originalMsg, sentiment, output: `❌ Ошибка проверки: Deno недоступен.` }); }
-    }
+    // === ПАРЛАМЕНТ: Параллельный запуск и проверка Судьей ===
+    const matchedPlugins = CUSTOM_LAYERS.filter(layer => layer.matcher(correctedMsg, keywords));
+    
+    if (matchedPlugins.length > 0) {
+        if (DEBUG) console.log(`🔌 Найдено плагинов: ${matchedPlugins.length}. Запускаем парламент...`);
+        
+        // 1. Запускаем ВСЕ подходящие плагины параллельно
+        const pluginPromises = matchedPlugins.map(layer => 
+            layer.handler(correctedMsg, { originalMsg, sentiment, keywords, entities })
+                .then(res => ({ name: layer.name, result: res }))
+                .catch(err => ({ name: layer.name, result: null, error: err.message }))
+        );
+        const pluginResults = await Promise.all(pluginPromises);
 
-    const allAgentNames = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS) : [];
-    const mentionedAgent = allAgentNames.find(name => correctedMsg.includes(name.toLowerCase()));
-    if (mentionedAgent && /тут|на месте|есть|здесь|статус|работает/i.test(correctedMsg)) {
-        const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
-        const isSelected = activeAgents.includes(mentionedAgent);
-        return finalizeOutput({ msg: originalMsg, sentiment, output: `🤖 Агент **${mentionedAgent}** ${isSelected ? 'подключен к чату' : 'в офисе, но не выбран'}.` });
-    }
+        // 2. Отсеиваем пустые ответы
+        const validResults = pluginResults
+            .filter(r => r.result && typeof r.result === 'string' && r.result.trim() !== '')
+            .map(r => r.result);
 
-    for (const layer of CUSTOM_LAYERS) {
-        if (layer.matcher(correctedMsg, keywords)) {
-            if (DEBUG) console.log(`🔌 Сработал плагин: ${layer.name}`);
-            const pluginResult = await layer.handler(correctedMsg, { originalMsg, sentiment, keywords, entities });
-            if (pluginResult) {
-                return finalizeOutput({ msg: originalMsg, sentiment, output: pluginResult });
+        if (validResults.length > 0) {
+            // Если сработал только один плагин — сразу выдаем его
+            if (validResults.length === 1) {
+                return finalizeOutput({ msg: originalMsg, sentiment, output: validResults[0] });
             }
+            
+            // Если сработало несколько — Судья выбирает лучший
+            if (DEBUG) console.log(`⚖️ Судья выбирает лучший из ${validResults.length} ответов плагинов.`);
+            
+            let bestPluginAnswer = validResults[0];
+            let bestScore = -1;
+            
+            for (const ans of validResults) {
+                const verdict = judge(ans, originalMsg, 'network');
+                const mathScore = calculateMathScore(originalMsg, ans);
+                const totalScore = (verdict.approved ? 1 : 0) + mathScore;
+                
+                if (totalScore > bestScore) {
+                    bestScore = totalScore;
+                    bestPluginAnswer = ans;
+                }
+            }
+            
+            return finalizeOutput({ msg: originalMsg, sentiment, output: bestPluginAnswer });
         }
     }
 
+    // === МАРШРУТИЗАЦИЯ ЯДРА ===
     const ctx = { msg: correctedMsg, originalMsg, sentiment, entities, keywords, intent, topic, complexity, output: null };
 
     if (intent === 'weather') return await processWeather(ctx, proxyUrl, signal);
     if (intent === 'learning') return processLearning(ctx);
     return await processQuestion(ctx, proxyUrl, signal);
-}
+                    }
 async function validateOutputSwarm(fact, query) {
     const mathScore = calculateMathScore(query, fact);
     const verdict = judge(fact, query, 'network');
@@ -550,10 +565,10 @@ function finalizeOutput(ctx) {
     saveLocalBrain();
     return ctx.output;
 }
-// ==========================================
-// ЗДЕСЬ МЫ ДОБАВЛЯЕМ НОВЫЕ СЛОИ (ПЛАГИНЫ)
-// ==========================================
 
+// ==========================================
+// ПЛАГИНЫ
+// ==========================================
 registerLayer("math_solver", 
     (msg) => /^[\d\s\+\-\*\/\(\)\.]+$/.test(msg.replace(/[=?]/g, '').trim()) && msg.length > 2,
     (msg) => {
@@ -623,6 +638,7 @@ registerLayer(
         }
     }
 );
+
 // ПЛАГИН: Светская беседа (Рефлексы)
 const SMALL_TALK_PHRASES = /что делаешь|чем занят|как жизнь|как настроение|что нового/;
 const SMALL_TALK_RESPONSES = [
@@ -636,15 +652,14 @@ registerLayer(
     "small_talk",
     (msg) => SMALL_TALK_PHRASES.test(msg),
     (msg, { originalMsg }) => {
-        // Защита на случай, если массив ответов окажется пустым
         if (SMALL_TALK_RESPONSES_LEN === 0) {
             return "Системы в норме. Жду ваших команд.";
         }
-        // Быстрый выбор случайного индекса через побитовый сдвиг
         const randomIdx = (Math.random() * SMALL_TALK_RESPONSES_LEN) | 0;
         return SMALL_TALK_RESPONSES[randomIdx];
     }
 );
+
 // ==========================================
 // ПЛАГИН: Контекстная погода (Guru Edition)
 // ==========================================
@@ -656,28 +671,23 @@ registerLayer(
     (msg) => {
         if (typeof msg !== 'string') return false;
 
-        // 1. Нормализация и подсчет слов
         const normalizedMsg = msg.trim();
         const wordCount = normalizedMsg.split(/\s+/).filter(Boolean).length;
         const isShort = wordCount > 0 && wordCount <= 5;
 
-        // 2. Проверяем контекст (говорили ли про погоду)
         const hasWeatherContext = Array.isArray(CONTEXT_MEMORY) && 
             CONTEXT_MEMORY.some(c => typeof c.text === 'string' && WEATHER_CONTEXT_KEYWORDS.test(c.text));
 
-        // 3. Ищем город в текущем сообщении
         const hasCity = CITY_REGEX.test(normalizedMsg);
         
         return isShort && hasCity && hasWeatherContext;
     },
     async (msg, ctx) => {
-        // Берем оригинальное сообщение, чтобы контекстный парсер ядра не склеил лишнего
         const original = typeof ctx.originalMsg === 'string' ? ctx.originalMsg : msg;
         const match = original.match(CITY_REGEX);
 
         if (!match) return null;
 
-        // Нормализация названия города
         const city = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
         
         try {
@@ -693,7 +703,6 @@ registerLayer(
             const data = await res.json();
 
             if (data.success && typeof data.results === 'string') {
-                // Синхронизируемся с ядром через localStorage
                 try {
                     localStorage.setItem('shtabLastCity', city);
                 } catch (storageError) {
@@ -710,23 +719,20 @@ registerLayer(
         }
     }
 );
+
 // ==========================================
 // ПАКЕТ ПЛАГИНОВ: Обратная связь + Конвертер (Guru Edition)
 // ==========================================
 (function() {
-    // Защита хранилища (запись)
     const safeSetStorage = (key, value, isSession = false) => {
         try {
             if (isSession) sessionStorage.setItem(key, value);
-            else localStorage.setItem(key, value); // Перевели на local, чтобы настройки не сбрасывались
+            else localStorage.setItem(key, value);
         } catch (e) {
             console.warn('Plugin storage error:', e.message);
         }
     };
 
-    // ==========================================
-    // ПЛАГИН 1: Обратная связь (Feedback Loop)
-    // ==========================================
     const NEGATIVE_FEEDBACK = /плохо|не то|отстой|неправильно|бред|ужасно/i;
     const POSITIVE_FEEDBACK = /молодец|хорошо|супер|отлично|красавчик|здорово/i;
 
@@ -743,13 +749,9 @@ registerLayer(
         }
     );
 
-    // ==========================================
-    // ПЛАГИН 2: Конвертер величин (Unit Converter)
-    // ==========================================
     const UNITS = ['км', 'мили', 'кг', 'фунт', 'см', 'дюйм', 'градус', 'кельвин', 'метр', 'литр'];
     const CONVERTER_REGEX = /(\d+(?:[.,]\d+)?)\s*([а-яёa-z-]+)\s*(?:в|to)\s*([а-яёa-z-]+)/i;
 
-    // Единый словарь конвертации (включая функции для температур)
     const CONVERSION_MAP = {
         'км': { 'мили': 0.621371, 'метр': 1000 },
         'мили': { 'км': 1 / 0.621371 },
@@ -773,7 +775,6 @@ registerLayer(
             const value = parseFloat(match[1].replace(',', '.'));
             if (isNaN(value)) return `❌ Не удалось распознать число: \`${match[1]}\`.`;
 
-            // Нормализация окончаний (убираем 'ы' в конце)
             const from = match[2].toLowerCase().replace(/ы$/, '');
             const to = match[3].toLowerCase().replace(/ы$/, '');
 
@@ -783,10 +784,8 @@ registerLayer(
                 return `🤔 Я пока не умею переводить из **${from}** в **${to}**.`;
             }
 
-            // Вычисляем результат (проверяем, функция это или число)
             const result = typeof conversion === 'function' ? conversion(value) : value * conversion;
 
-            // Определяем точность (для температур 1 знак, для остального 2)
             const isTemp = ['градус', 'кельвин'].includes(from) || ['градус', 'кельвин'].includes(to);
             const fixedResult = result.toFixed(isTemp ? 1 : 2);
 
@@ -794,6 +793,7 @@ registerLayer(
         }
     );
 })();
+
 // ==========================================
 // ПЛАГИН 3: Мега-Статус (Файлы + Агенты в одном ответе)
 // ==========================================
@@ -804,7 +804,6 @@ registerLayer(
         const PROXY = "https://early-amoeba-1705.alexey17001700.deno.net";
         let report = `🛠️ **Полная диагностика Штаба:**\n\n`;
 
-        // 1. Проверка файлов через Deno
         try {
             const res = await fetch(PROXY, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -826,7 +825,6 @@ registerLayer(
             report += `📁 **Файлы:** ❌ Ошибка связи с Deno.\n`;
         }
 
-        // 2. Проверка агентов (из глобальных переменных ядра)
         const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
         const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
         
