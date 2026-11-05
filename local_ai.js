@@ -710,3 +710,87 @@ registerLayer(
         }
     }
 );
+// ==========================================
+// ПАКЕТ ПЛАГИНОВ: Обратная связь + Конвертер (Guru Edition)
+// ==========================================
+(function() {
+    // Защита хранилища (запись)
+    const safeSetStorage = (key, value, isSession = false) => {
+        try {
+            if (isSession) sessionStorage.setItem(key, value);
+            else localStorage.setItem(key, value); // Перевели на local, чтобы настройки не сбрасывались
+        } catch (e) {
+            console.warn('Plugin storage error:', e.message);
+        }
+    };
+
+    // ==========================================
+    // ПЛАГИН 1: Обратная связь (Feedback Loop)
+    // ==========================================
+    const NEGATIVE_FEEDBACK = /плохо|не то|отстой|неправильно|бред|ужасно/i;
+    const POSITIVE_FEEDBACK = /молодец|хорошо|супер|отлично|красавчик|здорово/i;
+
+    registerLayer(
+        "feedback_handler",
+        (msg) => NEGATIVE_FEEDBACK.test(msg) || POSITIVE_FEEDBACK.test(msg),
+        (msg, ctx) => {
+            const isNegative = NEGATIVE_FEEDBACK.test(msg);
+            safeSetStorage('shtabStrictMode', isNegative ? 'true' : 'false');
+            
+            return isNegative 
+                ? `🧠 Босс, принял. Включаю строгий режим (Скептик). Теперь я буду перепроверять ответы из сети.`
+                : `🧠 Спасибо, Босс! Отключаю строгий режим. Работаю в штатном режиме.`;
+        }
+    );
+
+    // ==========================================
+    // ПЛАГИН 2: Конвертер величин (Unit Converter)
+    // ==========================================
+    const UNITS = ['км', 'мили', 'кг', 'фунт', 'см', 'дюйм', 'градус', 'кельвин', 'метр', 'литр'];
+    const CONVERTER_REGEX = /(\d+(?:[.,]\d+)?)\s*([а-яёa-z-]+)\s*(?:в|to)\s*([а-яёa-z-]+)/i;
+
+    // Единый словарь конвертации (включая функции для температур)
+    const CONVERSION_MAP = {
+        'км': { 'мили': 0.621371, 'метр': 1000 },
+        'мили': { 'км': 1 / 0.621371 },
+        'метр': { 'км': 0.001, 'мили': 0.000621371 },
+        'кг': { 'фунт': 2.20462 },
+        'фунт': { 'кг': 1 / 2.20462 },
+        'см': { 'дюйм': 1 / 2.54, 'метр': 0.01 },
+        'дюйм': { 'см': 2.54 },
+        'литр': { 'галлон': 0.264172 },
+        'градус': { 'кельвин': (c) => c + 273.15 },
+        'кельвин': { 'градус': (k) => k - 273.15 }
+    };
+
+    registerLayer(
+        "unit_converter",
+        (msg) => /(переведи|конвертируй|сколько в|to)\s/i.test(msg) && new RegExp(UNITS.join('|'), 'i').test(msg),
+        (msg, ctx) => {
+            const match = msg.match(CONVERTER_REGEX);
+            if (!match) return null;
+
+            const value = parseFloat(match[1].replace(',', '.'));
+            if (isNaN(value)) return `❌ Не удалось распознать число: \`${match[1]}\`.`;
+
+            // Нормализация окончаний (убираем 'ы' в конце)
+            const from = match[2].toLowerCase().replace(/ы$/, '');
+            const to = match[3].toLowerCase().replace(/ы$/, '');
+
+            const conversion = CONVERSION_MAP[from]?.[to];
+            
+            if (conversion === undefined) {
+                return `🤔 Я пока не умею переводить из **${from}** в **${to}**.`;
+            }
+
+            // Вычисляем результат (проверяем, функция это или число)
+            const result = typeof conversion === 'function' ? conversion(value) : value * conversion;
+
+            // Определяем точность (для температур 1 знак, для остального 2)
+            const isTemp = ['градус', 'кельвин'].includes(from) || ['градус', 'кельвин'].includes(to);
+            const fixedResult = result.toFixed(isTemp ? 1 : 2);
+
+            return `📏 ${value} ${from} = **${fixedResult} ${to}**`;
+        }
+    );
+})();
