@@ -444,20 +444,30 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-
-    // Проверка ключей для мигания кнопки API
-    setTimeout(() => {
-        const apiBtn = document.getElementById('btnApiKeys');
-        if (apiBtn) {
-            let userKeys = {};
-            try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
-            const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
-            
-            if (!hasKeys) {
-                apiBtn.classList.add('needs-keys');
-            } else {
-                apiBtn.classList.remove('needs-keys');
-            }
+// Проверка ключей для мигания кнопки
+setTimeout(() => {
+    const apiBtn = document.getElementById('btnApiKeys');
+    if (apiBtn) {
+        let userKeys = {};
+        try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
+        
+        // ЖЕСТКАЯ ПРОВЕРКА: есть ли реальный текст ключа, а не просто пустые поля
+        const hasKeys = 
+            (userKeys.yandexKey && userKeys.yandexKey.trim() !== '') || 
+            (userKeys.yandexFolder && userKeys.yandexFolder.trim() !== '') || 
+            (userKeys.deepseekKey && userKeys.deepseekKey.trim() !== '');
+        
+        if (!hasKeys) {
+            // Принудительно применяем стили, чтобы точно сработало
+            apiBtn.style.animation = 'blink-red-api 1s infinite';
+            apiBtn.style.border = '2px solid #ff0055';
+            apiBtn.style.color = '#ff0055';
+            apiBtn.style.backgroundColor = 'rgba(255, 0, 85, 0.1)';
+        } else {
+            apiBtn.style.animation = '';
+            apiBtn.style.border = '';
+            apiBtn.style.color = '';
+            apiBtn.style.backgroundColor = '';
         }
-    }, 1000);
-}
+    }
+}, 1000);
