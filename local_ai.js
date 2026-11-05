@@ -645,3 +645,68 @@ registerLayer(
         return SMALL_TALK_RESPONSES[randomIdx];
     }
 );
+// ==========================================
+// ПЛАГИН: Контекстная погода (Guru Edition)
+// ==========================================
+const CITY_REGEX = /(?:в|во|на)\s+([а-яёa-z\-]{3,})/i;
+const WEATHER_CONTEXT_KEYWORDS = /погода|температура|градус|градусы/i;
+
+registerLayer(
+    "weather_context_fix",
+    (msg) => {
+        if (typeof msg !== 'string') return false;
+
+        // 1. Нормализация и подсчет слов
+        const normalizedMsg = msg.trim();
+        const wordCount = normalizedMsg.split(/\s+/).filter(Boolean).length;
+        const isShort = wordCount > 0 && wordCount <= 5;
+
+        // 2. Проверяем контекст (говорили ли про погоду)
+        const hasWeatherContext = Array.isArray(CONTEXT_MEMORY) && 
+            CONTEXT_MEMORY.some(c => typeof c.text === 'string' && WEATHER_CONTEXT_KEYWORDS.test(c.text));
+
+        // 3. Ищем город в текущем сообщении
+        const hasCity = CITY_REGEX.test(normalizedMsg);
+        
+        return isShort && hasCity && hasWeatherContext;
+    },
+    async (msg, ctx) => {
+        // Берем оригинальное сообщение, чтобы контекстный парсер ядра не склеил лишнего
+        const original = typeof ctx.originalMsg === 'string' ? ctx.originalMsg : msg;
+        const match = original.match(CITY_REGEX);
+
+        if (!match) return null;
+
+        // Нормализация названия города
+        const city = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+        
+        try {
+            const PROXY = "https://early-amoeba-1705.alexey17001700.deno.net";
+            const res = await fetch(PROXY, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ weatherQuery: city, day: 0 })
+            });
+
+            if (!res.ok) throw new Error(`HTTP Status: ${res.status}`);
+
+            const data = await res.json();
+
+            if (data.success && typeof data.results === 'string') {
+                // Синхронизируемся с ядром через localStorage
+                try {
+                    localStorage.setItem('shtabLastCity', city);
+                } catch (storageError) {
+                    console.warn('Weather plugin: LocalStorage access denied', storageError);
+                }
+                return `🌤️ Данные из сети: ${data.results}`;
+            } else {
+                return `❌ Не удалось найти погоду для города "${city}".`;
+            }
+
+        } catch (e) {
+            console.error('Weather plugin error:', e);
+            return `❌ Ошибка сети при запросе погоды для ${city}.`;
+        }
+    }
+);
