@@ -444,14 +444,20 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-    // Проверка ключей для мигания кнопки
-setTimeout(() => {
-    const apiBtn = document.getElementById('btnApiKeys');
-    if (apiBtn) {
-        alert("Кнопка найдена! Включаю мигание.");
-        apiBtn.classList.add('needs-keys');
-    } else {
-        alert("ОШИБКА: Кнопка с id='btnApiKeys' не найдена в app.html!");
-    }
-  }, 1000);
+
+    // Проверка ключей для мигания кнопки API
+    setTimeout(() => {
+        const apiBtn = document.getElementById('btnApiKeys');
+        if (apiBtn) {
+            let userKeys = {};
+            try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
+            const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
+            
+            if (!hasKeys) {
+                apiBtn.classList.add('needs-keys');
+            } else {
+                apiBtn.classList.remove('needs-keys');
+            }
+        }
+    }, 1000);
 }
