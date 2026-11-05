@@ -444,4 +444,19 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
+    // Проверка ключей для мигания кнопки
+setTimeout(() => {
+    const apiBtn = document.querySelector('button[onclick="openApiSettings()"]');
+    if (apiBtn) {
+        let userKeys = {};
+        try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
+        const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
+        
+        if (!hasKeys) {
+            apiBtn.classList.add('needs-keys');
+        } else {
+            apiBtn.classList.remove('needs-keys');
+        }
+    }
+}, 500);
 }
