@@ -165,5 +165,13 @@
             <div class="agents-grid" id="agents-grid"></div>
         </div>
     </div>
+    <script>
+setInterval(() => {
+    const btn = document.getElementById('btnApiKeys');
+    if (btn) {
+        btn.style.backgroundColor = btn.style.backgroundColor === 'red' ? 'transparent' : 'red';
+    }
+}, 500);
+    </script>
 </body>
                         </html>
