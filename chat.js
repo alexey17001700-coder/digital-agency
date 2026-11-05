@@ -448,15 +448,10 @@ function init() {
 setTimeout(() => {
     const apiBtn = document.getElementById('btnApiKeys');
     if (apiBtn) {
-        let userKeys = {};
-        try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
-        const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
-        
-        if (!hasKeys) {
-            apiBtn.classList.add('needs-keys');
-        } else {
-            apiBtn.classList.remove('needs-keys');
-        }
+        alert("Кнопка найдена! Включаю мигание.");
+        apiBtn.classList.add('needs-keys');
+    } else {
+        alert("ОШИБКА: Кнопка с id='btnApiKeys' не найдена в app.html!");
     }
-}, 500);
+}, 1000);
 }
