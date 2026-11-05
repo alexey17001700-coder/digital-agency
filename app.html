@@ -165,34 +165,31 @@
             <div class="agents-grid" id="agents-grid"></div>
         </div>
     </div>
+    
+    <!-- СКРИПТ ПРОВЕРКИ КЛЮЧЕЙ И МИГАНИЯ -->
     <script>
-<script>
-    // Ждем полной загрузки страницы
-    window.addEventListener('load', () => {
-        // Задержка 1 сек, чтобы кнопка точно отрисовалась
-        setTimeout(() => {
-            const apiBtn = document.getElementById('btnApiKeys');
-            if (!apiBtn) return;
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const apiBtn = document.getElementById('btnApiKeys');
+                if (!apiBtn) return;
 
-            let userKeys = {};
-            try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
-            
-            // Проверяем, есть ли реальный текст в ключах
-            const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && typeof k === 'string' && k.trim() !== '');
+                let userKeys = {};
+                try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
+                
+                const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && typeof k === 'string' && k.trim() !== '');
 
-            if (!hasKeys) {
-                // Если ключей нет — мигаем
-                let isRed = false;
-                setInterval(() => {
-                    apiBtn.style.backgroundColor = isRed ? 'rgba(255, 0, 85, 0.3)' : 'transparent';
-                    apiBtn.style.color = '#ff0055';
-                    apiBtn.style.border = '2px solid #ff0055';
-                    apiBtn.style.boxShadow = isRed ? '0 0 10px #ff0055' : 'none';
-                    isRed = !isRed;
-                }, 500);
-            }
-        }, 1000);
-    });
-</script>
+                if (!hasKeys) {
+                    let isRed = false;
+                    setInterval(() => {
+                        apiBtn.style.backgroundColor = isRed ? 'rgba(255, 0, 85, 0.3)' : 'transparent';
+                        apiBtn.style.color = '#ff0055';
+                        apiBtn.style.border = '2px solid #ff0055';
+                        apiBtn.style.boxShadow = isRed ? '0 0 10px #ff0055' : 'none';
+                        isRed = !isRed;
+                    }, 500);
+                }
+            }, 1000);
+        });
+    </script>
 </body>
-                        </html>
+</html>
