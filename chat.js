@@ -444,41 +444,4 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-
-    // --- ПРИНУДИТЕЛЬНОЕ МИГАНИЕ КНОПКИ API (БЕЗ CSS) ---
-    let blinkInterval = null;
-    setInterval(() => {
-        const apiBtn = document.getElementById('btnApiKeys');
-        if (!apiBtn) return;
-        
-        let userKeys = {};
-        try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
-        
-        // Жесткая проверка на наличие реальных текстовых ключей
-        const hasKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && typeof k === 'string' && k.trim() !== '');
-        
-        if (!hasKeys) {
-            // Если ключей нет, запускаем мигание (если оно еще не запущено)
-            if (!blinkInterval) {
-                let isRed = false;
-                blinkInterval = setInterval(() => {
-                    apiBtn.style.backgroundColor = isRed ? 'rgba(255, 0, 85, 0.3)' : 'transparent';
-                    apiBtn.style.color = '#ff0055';
-                    apiBtn.style.border = '2px solid #ff0055';
-                    apiBtn.style.boxShadow = isRed ? '0 0 10px #ff0055' : 'none';
-                    isRed = !isRed;
-                }, 500);
-            }
-        } else {
-            // Если ключи появились, останавливаем мигание и возвращаем стили
-            if (blinkInterval) {
-                clearInterval(blinkInterval);
-                blinkInterval = null;
-                apiBtn.style.backgroundColor = '';
-                apiBtn.style.color = '';
-                apiBtn.style.border = '';
-                apiBtn.style.boxShadow = '';
-            }
-        }
-    }, 1000); // Проверяем раз в секунду
 }
