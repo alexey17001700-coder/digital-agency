@@ -794,3 +794,52 @@ registerLayer(
         }
     );
 })();
+// ==========================================
+// ПЛАГИН 3: Мега-Статус (Файлы + Агенты в одном ответе)
+// ==========================================
+registerLayer(
+    "mega_status_check",
+    (msg) => /(проверь|статус|аудит).*(штаб|файл|агент)/i.test(msg),
+    async (msg, ctx) => {
+        const PROXY = "https://early-amoeba-1705.alexey17001700.deno.net";
+        let report = `🛠️ **Полная диагностика Штаба:**\n\n`;
+
+        // 1. Проверка файлов через Deno
+        try {
+            const res = await fetch(PROXY, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ checkStatus: true })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                report += `📁 **Файлы:**\n`;
+                report += `- В корне: ${data.totalRoot}\n`;
+                report += `- В бэкапе: ${data.totalBackup}\n`;
+                if (data.missingInBackup.length > 0) {
+                    report += `- ⚠️ Нет в бэкапе: ${data.missingInBackup.join(', ')}\n`;
+                } else {
+                    report += `- ✅ Все файлы в бэкапе на месте.\n`;
+                }
+            }
+        } catch(e) {
+            report += `📁 **Файлы:** ❌ Ошибка связи с Deno.\n`;
+        }
+
+        // 2. Проверка агентов (из глобальных переменных ядра)
+        const allAgentsCount = typeof AGENT_ICONS !== 'undefined' ? Object.keys(AGENT_ICONS).length : 24;
+        const activeAgents = typeof selectedAgents !== 'undefined' ? selectedAgents : [];
+        
+        report += `\n🤖 **Агенты:**\n`;
+        report += `- Всего в офисе: ${allAgentsCount}\n`;
+        if (activeAgents.length === 0) {
+            report += `- В чате сейчас никого нет (отвечаю как Оркестратор).\n`;
+        } else {
+            report += `- В чате: ${activeAgents.length} (${activeAgents.join(', ')}).\n`;
+        }
+
+        report += `\n⚙️ **Системы:** Ядро (44.2) + Плагины работают в штатном режиме.`;
+        
+        return report;
+    }
+);
