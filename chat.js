@@ -453,19 +453,5 @@ setTimeout(() => {
     } else {
         alert("ОШИБКА: Кнопка с id='btnApiKeys' не найдена в app.html!");
     }
-}, 1000);
+  }, 1000);
 }
-// ТЕСТ КНОПКИ (временный)
-window.addEventListener('load', () => {
-    setTimeout(() => {
-        const btn = document.getElementById('btnApiKeys');
-        if (btn) {
-            alert("Кнопка найдена! Делаю красной.");
-            btn.style.animation = 'blink-red-api 1s infinite';
-            btn.style.backgroundColor = 'red';
-            btn.style.color = 'white';
-        } else {
-            alert("Кнопка НЕ найдена! В app.html нет id='btnApiKeys'");
-        }
-    }, 2000);
-});
