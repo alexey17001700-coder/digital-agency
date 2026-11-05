@@ -841,4 +841,48 @@ registerLayer(
         return report;
     }
 );
+// ==========================================
+// НОВЫЕ СЛОИ: Работа с корнями слов (Стемминг)
+// ==========================================
 
+// Плагин 1: Умная светская беседа (по корням)
+registerLayer(
+    "smart_small_talk",
+    (msg) => {
+        // Разбиваем сообщение на слова и получаем корни через функцию ядра
+        const words = msg.split(/\s+/);
+        const roots = words.map(w => stemmize(w));
+        
+        // Проверяем наличие корней (дел- от делаешь/делаете, занят-, жизн-, настроен-)
+        return roots.includes('дел') || roots.includes('занят') || roots.includes('жизн') || roots.includes('настроен');
+    },
+    (msg) => {
+        const answers = [
+            `Работаю над твоими задачами, Босс. Слежу за слоями, проверяю файлы. А у тебя какие планы?`,
+            `Да всё как обычно: анализирую данные, жду новых вводных. Чем могу помочь?`,
+            `Провожу диагностику систем. Готов приступить к любой задаче, Босс.`
+        ];
+        return answers[Math.floor(Math.random() * answers.length)];
+    }
+);
+
+// Плагин 2: Умная проверка статуса (по корням)
+registerLayer(
+    "smart_status_check",
+    (msg) => {
+        const words = msg.split(/\s+/);
+        const roots = words.map(w => stemmize(w));
+        
+        // Проверяем корни для слов "проверь", "статус", "аудит", "файл"
+        return (roots.includes('провер') || roots.includes('статус') || roots.includes('аудит')) && 
+               (roots.includes('файл') || roots.includes('штаб') || roots.includes('агент'));
+    },
+    async (msg, ctx) => {
+        // Перенаправляем в существующий мега-статус, если он есть
+        const megaLayer = CUSTOM_LAYERS.find(l => l.name === "mega_status_check");
+        if (megaLayer) {
+            return await megaLayer.handler(msg, ctx);
+        }
+        return "⚙️ Слой статуса активирован (но mega_status_check не найден).";
+    }
+);
