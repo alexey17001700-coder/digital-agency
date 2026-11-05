@@ -446,16 +446,7 @@ function init() {
     }
     // Проверка ключей для мигания кнопки
 setTimeout(() => {
-    // Ищем кнопку по тексту "API Ключи", чтобы точно ее найти
-    const buttons = document.querySelectorAll('button');
-    let apiBtn = null;
-    for (let btn of buttons) {
-        if (btn.textContent.includes('API Ключи') || btn.getAttribute('onclick')?.includes('openApiSettings')) {
-            apiBtn = btn;
-            break;
-        }
-    }
-
+    const apiBtn = document.getElementById('btnApiKeys');
     if (apiBtn) {
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch(e) {}
