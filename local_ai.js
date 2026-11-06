@@ -1253,3 +1253,123 @@ registerLayer(
         return null; // Если не распознали, пусть другие слои попробуют
     }
 );
+// ==========================================
+// 📝 СИСТЕМНЫЙ ЛОГГЕР (Вечный Черный Ящик)
+// ==========================================
+window.SysLog = {
+    key: 'shtabSysLog_v1',
+    logs: [],
+    
+    init() {
+        try { this.logs = JSON.parse(localStorage.getItem(this.key) || '[]'); } catch(e) { this.logs = []; }
+    },
+    
+    add(type, msg, data) {
+        const entry = {
+            ts: new Date().toISOString(),
+            type: type, // 'error', 'crash', 'info', 'fix'
+            msg: String(msg).substring(0, 300),
+            data: data ? JSON.stringify(data).substring(0, 300) : null
+        };
+        this.logs.push(entry);
+        if (this.logs.length > 100) this.logs = this.logs.slice(-100); // Храним последние 100
+        try { localStorage.setItem(this.key, JSON.stringify(this.logs)); } catch(e) {}
+        console.log(`[SysLog:${type}]`, msg);
+    },
+    
+    getErrors() { return this.logs.filter(l => l.type === 'error' || l.type === 'crash'); },
+    getAll() { return this.logs; },
+    clear() { this.logs = []; localStorage.setItem(this.key, '[]'); }
+};
+
+window.SysLog.init();
+
+// 1. Перехватываем сетевые ошибки (если Дэн не отвечает)
+(function() {
+    if (window.__fetchWrapped) return;
+    window.__fetchWrapped = true;
+    const orig = window.fetch;
+    window.fetch = async function(...args) {
+        const url = String(args[0] || '');
+        try {
+            const res = await orig.apply(this, args);
+            if (!res.ok && url.includes('deno.net')) {
+                window.SysLog.add('error', `Дэн вернул ${res.status}`, { url });
+            }
+            return res;
+        } catch (e) {
+            if (url.includes('deno.net')) {
+                window.SysLog.add('error', `Сеть: ${e.message}`, { url });
+            }
+            throw e;
+        }
+    };
+})();
+
+// 2. Синхронизируем упавшие слои в журнал
+registerLayer(
+    "sys_log_sync",
+    () => true,
+    async () => {
+        if (window.__layerWarnings && window.__layerWarnings.length > 0) {
+            const lastLogged = window.__lastLoggedWarnIdx || 0;
+            const newWarns = window.__layerWarnings.slice(lastLogged);
+            newWarns.forEach(w => {
+                window.SysLog.add('crash', `Слой "${w.name}": ${w.msg || w.type}`);
+            });
+            window.__lastLoggedWarnIdx = window.__layerWarnings.length;
+        }
+        return null;
+    }
+);
+
+// 3. Плагин для просмотра и очистки журнала
+registerLayer(
+    "sys_log_viewer",
+    (msg) => /(покажи|открой|дай|очисти|сбрось|удали)\s+(лог|ошибк|журнал)|что\s+(там\s+)?сломалось|журнал\s+ошибок|ошибки\s+системы/i.test(msg),
+    async function(msg) {
+        const t = msg.toLowerCase();
+        
+        // Очистка
+        if (t.includes("очист") || t.includes("сбрось") || t.includes("удали")) {
+            window.SysLog.clear();
+            return "🗑 **Журнал очищен.** Все старые записи стерты.";
+        }
+
+        const all = window.SysLog.getAll();
+        const errors = window.SysLog.getErrors();
+        
+        if (all.length === 0) return "📝 **Журнал пуст.** Всё чисто, Босс!";
+
+        let report = `📝 **Журнал Системы (Черный Ящик)**\n`;
+        report += `📊 Всего записей: ${all.length}\n`;
+        report += `🚨 Ошибок и крашей: ${errors.length}\n\n`;
+        report += `**Последние события:**\n`;
+
+        // Показываем последние 10 записей (от новых к старым)
+        all.slice(-10).reverse().forEach(log => {
+            const icon = { error: '❌', crash: '💥', info: 'ℹ️', fix: '✅' }[log.type] || '•';
+            const time = new Date(log.ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            report += `${icon} [${time}] ${log.msg}\n`;
+        });
+
+        if (all.length > 10) report += `\n... и еще ${all.length - 10} в памяти.`;
+        report += `\n\n💡 *Напиши «очисти лог», чтобы сбросить.*`;
+        return report;
+    }
+);
+
+// 4. Фиксируем успешные авто-фиксы
+if (typeof window.applyAutoFix === 'function' && !window.applyAutoFix.__logged) {
+    const origApply = window.applyAutoFix;
+    window.applyAutoFix = async function(...args) {
+        const fileName = args[0];
+        const result = await origApply.apply(this, args);
+        if (result && result.success) window.SysLog.add('fix', `Файл ${fileName} успешно исправлен`);
+        else if (result && result.error) window.SysLog.add('error', `Ошибка фикса ${fileName}: ${result.error}`);
+        return result;
+    };
+    window.applyAutoFix.__logged = true;
+}
+
+window.SysLog.add('info', 'Системный логгер запущен');
