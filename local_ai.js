@@ -605,7 +605,12 @@ window.__layerWarnings = window.__layerWarnings || [];
 // ==========================================
 registerLayer(
     "self_healing_pipeline_ui",
-    (msg) => /проверь и исправь|найди и почини|самовосстановление|проверь все файлы|сканируй код/i.test(msg),
+    (msg) => {
+    const t = msg.toLowerCase();
+    const action = /(проверь|исправь|почини|аудит|диагностик|скан|глянь|найди)/i.test(t);
+    const target = /(штаб|код|файл|проект|ошибк|баг|слой|плагин)/i.test(t);
+    return (action && target) || /самовосстановление/i.test(t);
+},
     async function (msg, ctx) {
         try {
             const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
