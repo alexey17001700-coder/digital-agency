@@ -1496,100 +1496,44 @@ if (window.__pluginLogs) {
         return origPush.apply(this, arguments);
     };
 }
+ // ==========================================
+// 🧠 УНИВЕРСАЛЬНЫЙ УМНЫЙ РОУТЕР (Броня v3.0 - Focus State)
 // ==========================================
-// 🧠 УНИВЕРСАЛЬНЫЙ УМНЫЙ РОУТЕР (Броня v2.0)
-// ==========================================
+window.__chatFocus = window.__chatFocus || { topic: null, entity: null, day: 0 };
+
 registerLayer(
     "universal_smart_router",
-    () => true, // Срабатывает всегда, чтобы перехватить инициативу
+    () => true, 
     async function (msg, ctx) {
-        // 1. ЗАЩИТА ОТ ПУСТОТЫ: Берем оригинал, если есть, иначе текущий текст
         const original = (ctx && ctx.originalMsg ? ctx.originalMsg : msg || "").toLowerCase().trim();
         if (!original) return null;
 
-        // 2. КОНТЕКСТ: Достаем прошлое сообщение (для понимания "А в Москве?")
-        const lastUserMsg = (typeof CONTEXT_MEMORY !== 'undefined') 
-            ? ([...CONTEXT_MEMORY].reverse().find(m => m.role === 'user')?.text || "").toLowerCase() 
-            : "";
+        const t = original;
 
-        // --- БОЛТАЛКА (Small Talk) ---
-        if (/(привет|ку|здравствуй|добрый день)/i.test(original)) {
-            return "Привет, Босс! На связи. Готов к работе. 🚀";
-        }
-        if (/(как дела|как ты|как сам|как жизнь|как настроение)/i.test(original)) {
-            return "Все системы в норме, Босс! Плагины работают, защита активна. А у тебя как? 😎";
-        }
-        if (/(что делаешь|что нового|чем занят)/i.test(original)) {
-            return "Сканирую просторы интернета, жду твоих команд и слежу за порядком в коде. 🤖";
-        }
+        // --- 1. БОЛТАЛКА И СИСТЕМНОЕ (Сбрасывает фокус) ---
+        if (/(привет|ку|здравствуй|добрый день)/i.test(t)) { window.__chatFocus.topic = null; return "Привет, Босс! На связи. Готов к работе. 🚀"; }
+        if (/(как дела|как ты|как сам|как жизнь|как настроение)/i.test(t)) { window.__chatFocus.topic = null; return "Все системы в норме, Босс! Плагины работают, защита активна. 😎"; }
+        if (/(что делаешь|что нового|чем занят)/i.test(t)) return "Сканирую просторы интернета, жду твоих команд и слежу за порядком в коде. 🤖";
+        if (/(сколько времени|который час)/i.test(t)) return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
+        if (/(какое сегодня число|какая дата)/i.test(t)) return `📅 Сегодня ${new Date().toLocaleDateString('ru-RU', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}`;
 
-        // --- ВРЕМЯ И ДАТА ---
-        if (/(сколько времени|который час)/i.test(original)) {
-            return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
-        }
-        if (/(какое сегодня число|какая дата)/i.test(original)) {
-            return `📅 Сегодня ${new Date().toLocaleDateString('ru-RU', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}`;
-        }
-
-        // --- МАТЕМАТИКА (Защищенная) ---
-        if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(original) || /(сколько будет|посчитай)/i.test(original)) {
+        // --- 2. МАТЕМАТИКА (Сбрасывает фокус) ---
+        if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(t) || /(сколько будет|посчитай)/i.test(t)) {
+            window.__chatFocus.topic = null;
             try {
-                let expr = original.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
-                // Защита от недописанных выражений типа "5+"
-                if (expr && !/[\+\-\*\/]$/.test(expr)) {
-                    return `🧮 **Результат:** ${expr} = **${new Function('return ' + expr)()}**`;
-                }
-            } catch (e) {
-                return `⚠️ Не могу посчитать это выражение. Проверь пример.`;
-            }
+                let expr = t.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
+                if (expr && !/[\+\-\*\/]$/.test(expr)) return `🧮 **Результат:** ${expr} = **${new Function('return ' + expr)()}**`;
+            } catch (e) { return `⚠️ Не могу посчитать это выражение.`; }
         }
 
-        // --- ПОГОДА (С контекстом) ---
-        if (/(погод|температур|градус)/i.test(original) || (/(а\s+)?(в|во|на)\s+/i.test(original) && /(погод|градус)/i.test(lastUserMsg))) {
-            let city = "Москва"; 
-            // Ищем город в текущем сообщении
-            const match = original.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
-            
-            if (match) {
-                city = match[1];
-            } else if (/(а\s+)?(в|во|на)\s+/i.test(original)) {
-                // Если это уточнение ("А в Питере"), берем город из сообщения
-                city = original.replace(/.*(?:в|во|на)\s+/i, '').replace(/[?.!]/g, '').trim();
-            } else if (/(погод|градус)/i.test(lastUserMsg)) {
-                // Если контекст про погоду, но город не назван, берем из прошлого
-                const prevMatch = lastUserMsg.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
-                if (prevMatch) city = prevMatch[1];
-            }
-
-            // Чистим падежи
-            city = city.replace(/(е|у|ю|ой|ей)$/i, "").trim();
-            city = city.charAt(0).toUpperCase() + city.slice(1);
-            const day = original.includes("завтра") ? 1 : 0;
-
-            try {
-                const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ weatherQuery: city, day: day }),
-                    signal: AbortSignal.timeout(6000) // Защита от зависания сети
-                });
-                const data = await res.json();
-                if (data.success && data.results) {
-                    const dayText = day === 1 ? "на завтра" : "сейчас";
-                    return `🌤 **Погода в городе ${city} ${dayText}:**\n\n${data.results.trim()}`;
-                }
-            } catch (e) {
-                return `❌ Погодный сервис не отвечает или город не найден.`;
-            }
-        }
-
-        // --- ПОИСК В ИНТЕРНЕТЕ (Защищенный от пустоты) ---
-        if (/(кто такой|что такое|расскажи про|найди|поищи|почему|зачем|где находится|сколько лет)/i.test(original)) {
+        // --- 3. ПОИСК В ИНТЕРНЕТЕ (Ставит фокус на 'search') ---
+        if (/(кто такой|что такое|расскажи про|найди|поищи|почему|зачем|где находится|сколько лет)/i.test(t)) {
             const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
-            let queryWords = original.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
-            let query = queryWords.join(" ");
-
-            // Если после чистки ничего не осталось (например, написали просто "Кто такой?")
-            if (!query) return "🤷‍♂️ Босс, уточни, кого или что именно искать?";
+            let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
+            let query = queryWords.join(" ") || t;
+            
+            // Сохраняем фокус
+            window.__chatFocus = { topic: 'search', entity: query, day: 0 };
 
             try {
                 const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
@@ -1610,8 +1554,50 @@ registerLayer(
             }
         }
 
-        // ВАЖНО: Если это запрос на сканирование кода (проверь штаб и т.д.), 
-        // мы возвращаем null и НЕ мешаем нашему плагину с кнопками сделать свою работу.
+        // --- 4. ПОГОДА (Ставит или удерживает фокус на 'weather') ---
+        const isWeatherQuery = /(погод|градус|температур|дождь|снег)/i.test(t);
+        const isCityOrDateFollowUp = /^(а\s+)?(в|во|на)\s+/i.test(t) || /(завтра|послезавтра)/i.test(t);
+
+        // Если это явный запрос погоды ИЛИ уточнение (город/день), когда фокус на погоде
+        if (isWeatherQuery || (window.__chatFocus.topic === 'weather' && isCityOrDateFollowUp)) {
+            
+            // Если это новый явный запрос погоды, сбрасываем старый фокус перед установкой нового
+            if (isWeatherQuery) window.__chatFocus = { topic: 'weather', entity: null, day: 0 };
+
+            // Ищем город в текущем сообщении
+            const cityMatch = t.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+            if (cityMatch && !["погоду", "завтра", "сегодня", "послезавтра"].includes(cityMatch[1])) {
+                window.__chatFocus.entity = cityMatch[1];
+            }
+
+            // Если город еще не задан, ставим Москву по умолчанию
+            if (!window.__chatFocus.entity) window.__chatFocus.entity = "Москва";
+
+            // Обновляем день
+            if (/(завтра|послезавтра)/i.test(t)) window.__chatFocus.day = 1;
+
+            let city = window.__chatFocus.entity.replace(/(е|у|ю|ой|ей)$/i, "").trim();
+            city = city.charAt(0).toUpperCase() + city.slice(1);
+            const day = window.__chatFocus.day;
+
+            try {
+                const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ weatherQuery: city, day: day }),
+                    signal: AbortSignal.timeout(6000)
+                });
+                const data = await res.json();
+                if (data.success && data.results) {
+                    const dayText = day === 1 ? "на завтра" : "сейчас";
+                    return `🌤 **Погода в городе ${city} ${dayText}:**\n\n${data.results.trim()}`;
+                }
+            } catch (e) {
+                return `❌ Погодный сервис не отвечает или город не найден.`;
+            }
+        }
+
+        // --- 5. ЗАГЛУШКА ДЛЯ ОСТАЛЬНОГО ---
+        // Если ничего не подошло, и это не уточнение (фокус не сработал), просто молчим
         return null; 
     }
 );
