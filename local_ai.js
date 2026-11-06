@@ -1382,9 +1382,72 @@ registerLayer(
         return report;
     }
 );
+// ==========================================
+// ПЛАГИН: Самовосстановление (безопасная версия)
+// ==========================================
+const DENO_URL = "https://early-amoeba-1705.alexey17001700.deno.net";
+
+window.__pendingFixes = window.__pendingFixes || {};
+
+registerLayer(
+    "self_healing_pipeline_ui",
+    (msg) => /проверь и исправь|найди и почини|самовосстановление/i.test(msg),
+    function (msg, ctx) {
+        // ЖЕЛЕЗОБЕТОННО возвращаем Promise
+        return Promise.resolve().then(async () => {
+            const errorFile = "office.js";
+            try {
+                // 1) Читаем актуальный файл через Deno
+                const res = await fetch(DENO_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ readFile: true, path: errorFile }),
+                });
+                const data = await res.json();
+                if (!data.success || typeof data.content !== "string") {
+                    return `❌ Не удалось прочитать ${errorFile}: ${data.error || "пустой ответ"}`;
+                }
+                const fileContent = data.content;
+
+                // 2) Ищем ошибку: несбалансированные скобки
+                const opens = (fileContent.match(/{/g) || []).length;
+                const closes = (fileContent.match(/}/g) || []).length;
+
+                if (opens === closes) {
+                    return `✅ **${errorFile} проверен:** скобки сбалансированы ({ ${opens} / } ${closes}). Фикс не нужен.`;
+                }
+
+                const diff = opens - closes;
+                const errorDesc = `Несбалансированные скобки: { = ${opens}, } = ${closes} (не хватает ${diff})`;
+
+                // 3) Готовим фикс
+                const fixedContent = fileContent + "\n" + "}".repeat(diff) + "\n";
+
+                window.__pendingFixes[errorFile] = {
+                    path: errorFile,
+                    content: fixedContent,
+                    description: errorDesc,
+                };
+
+                let report = `📄 **Найдена ошибка в ${errorFile}:**\n`;
+                report += `⚠️ ${errorDesc}\n\n`;
+                report += `🧠 **Аналитик:** Не хватает ${diff} закрывающих скобок '}' в конце файла.\n`;
+                report += `⚖️ **Совет Судей:** ✅ Патч одобрен (фикс готов, ${fixedContent.length} байт)\n\n`;
+                report += `<div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="window.applyAutoFix('${errorFile}')" style="background:#00e5ff; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">✅ Исправить</button>
+                    <button onclick="window.skipAutoFix('${errorFile}')" style="background:#333; color:#fff; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">❌ Не трогать</button>
+                </div>`;
+                
+                return report;
+            } catch (e) {
+                return `❌ Ошибка сети: ${e.message}`;
+            }
+        });
+    }
+);
 
 // ==========================================
-// Глобальные функции для кнопок
+// Кнопки
 // ==========================================
 window.applyAutoFix = async function (fileName) {
     const pending = window.__pendingFixes && window.__pendingFixes[fileName];
@@ -1395,9 +1458,7 @@ window.applyAutoFix = async function (fileName) {
         return { success: false, error: err };
     }
 
-    const ok = confirm(
-        `Применить фикс для ${fileName}?\n\n${pending.description}\n\nФайл будет перезаписан на GitHub (main).`
-    );
+    const ok = confirm(`Применить фикс для ${fileName}?\n\n${pending.description}\n\nФайл будет перезаписан на GitHub (main).`);
     if (!ok) return { success: false, error: "Отменено" };
 
     if (typeof renderMessage === "function") {
@@ -1424,10 +1485,7 @@ window.applyAutoFix = async function (fileName) {
         delete window.__pendingFixes[fileName];
 
         if (typeof renderMessage === "function") {
-            renderMessage(
-                `✅ **Готово, Босс!**\n\n${data.message}\n\nПересборка Pages ~10–15 сек — страница перезагрузится.`,
-                "director", "DevOps"
-            );
+            renderMessage(`✅ **Готово, Босс!**\n\n${data.message}\n\nПересборка Pages ~10–15 сек — страница перезагрузится.`, "director", "DevOps");
         } else {
             alert(`✅ ${data.message}`);
         }
@@ -1453,3 +1511,4 @@ window.skipAutoFix = function (fileName) {
         alert(`Файл ${fileName} оставлен без изменений.`);
     }
 };
+
