@@ -569,6 +569,53 @@ function finalizeOutput(ctx) {
 // ==========================================
 // ПЛАГИНЫ
 // ==========================================
+// ==========================================
+// 🔧 УНИВЕРСАЛЬНЫЙ ФИКС: обёртка registerLayer
+// ==========================================
+window.__layerWarnings = window.__layerWarnings || [];
+
+(function () {
+    if (window.registerLayer && window.registerLayer.__isSafeWrapper) {
+        return;
+    }
+
+    const __orig = window.registerLayer || (typeof registerLayer === "function" ? registerLayer : null);
+    if (!__orig) {
+        console.error("[SafeRegister] registerLayer не найден!");
+        return;
+    }
+
+    function safeRegisterLayer(name, matcher, handler) {
+        const isAsync = handler && handler.constructor && handler.constructor.name === "AsyncFunction";
+
+        const safeHandler = function (...args) {
+            try {
+                const result = handler.apply(this, args);
+                if (result && typeof result.then === "function") return result;
+                
+                // Если плагин синхронный — просто заворачиваем в Promise
+                if (!isAsync) {
+                    window.__layerWarnings.push({ name, type: "sync", ts: Date.now() });
+                }
+                return Promise.resolve(result);
+            } catch (e) {
+                console.error(`[SafeRegister] Слой "${name}" упал:`, e);
+                window.__layerWarnings.push({ name, type: "error", msg: e.message, ts: Date.now() });
+                return Promise.resolve(`⚠️ Слой \`${name}\` упал: ${e.message}`);
+            }
+        };
+
+        safeHandler.__isSafeWrapped = true;
+        safeHandler.__originalHandler = handler;
+        return __orig(name, matcher, safeHandler);
+    }
+
+    safeRegisterLayer.__isSafeWrapper = true;
+    window.registerLayer = safeRegisterLayer;
+    try { registerLayer = safeRegisterLayer; } catch (e) {}
+
+    console.log("[SafeRegister] ✅ Установлен. Все плагины ниже — в броне.");
+})();
 registerLayer("math_solver", 
     (msg) => /^[\d\s\+\-\*\/\(\)\.]+$/.test(msg.replace(/[=?]/g, '').trim()) && msg.length > 2,
     (msg) => {
