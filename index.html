@@ -559,12 +559,32 @@ function wdNextTrack() {
     wdTrack = (wdTrack + 1) % wdTracks.length;
     document.getElementById('wd-track-btn').innerText = `⏭ TRACK ${wdTrack + 1}/4`;
 }
-    window.wdToggleMusic = function() {
+    // Функция жесткой остановки музыки
+function wdStopMusic() {
+    wdIsPlaying = false;
+    if (wdTimer) clearInterval(wdTimer);
+    if (wdAudioCtx) {
+        wdAudioCtx.close().catch(() => {});
+        wdAudioCtx = null;
+    }
+    const btn = document.getElementById('wd-music-btn');
+    const trackBtn = document.getElementById('wd-track-btn');
+    if (btn) {
+        btn.innerText = '🔊 MUSIC: OFF';
+        btn.style.color = '#555';
+        btn.style.borderColor = '#555';
+        btn.style.boxShadow = 'none';
+    }
+    if (trackBtn) trackBtn.style.display = 'none';
+}
+
+// Принудительно выключаем музыку перед закрытием/перезагрузкой страницы
+window.addEventListener('beforeunload', wdStopMusic);
+
+window.wdToggleMusic = function() {
     const btn = document.getElementById('wd-music-btn'), trackBtn = document.getElementById('wd-track-btn');
     if (wdIsPlaying) {
-        clearInterval(wdTimer); wdIsPlaying = false;
-        btn.innerText = '🔊 MUSIC: OFF'; btn.style.color = '#555'; btn.style.borderColor = '#555'; btn.style.boxShadow = 'none';
-        trackBtn.style.display = 'none';
+        wdStopMusic();
     } else {
         if (!wdAudioCtx) wdAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (wdAudioCtx.state === 'suspended') wdAudioCtx.resume();
@@ -575,6 +595,9 @@ function wdNextTrack() {
     }
 };
 window.wdNextTrack = wdNextTrack;
+
+// Сбрасываем кнопку при загрузке страницы
+wdStopMusic();
 
 const wdPanel = document.getElementById('wd-panel');
 const wdTerminal = document.getElementById('wd-terminal');
@@ -627,6 +650,7 @@ window.wdApplyPatch = async function() {
         const data = await res.json();
         if (data.success) {
             wdLog("> СИСТЕМА ВОССТАНОВЛЕНА. ПЕРЕЗАГРУЗКА...", "wd-log-info");
+            wdStopMusic(); // Убиваем музыку перед перезагрузкой!
             setTimeout(() => location.reload(), 2000);
         } else {
             wdLog("> ОШИБКА: " + data.error, "wd-log-error");
