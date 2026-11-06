@@ -1525,27 +1525,24 @@ registerLayer(
 );
 
 // ==========================================
-// 🌐 ПЛАГИН 2: Умный синтез из интернета
+// 🌐 ПЛАГИН: Умный синтез из интернета (Обрезка текста)
 // ==========================================
 registerLayer(
     "smart_web_synthesizer",
     (msg) => {
         const t = msg.toLowerCase().trim();
-        // Срабатывает на любые вопросы, требующие поиска (кто такой, что такое, где, почему)
         return /(кто\s+такой|что\s+такое|расскажи\s+про|найди|поищи|почему|зачем|где\s+находится|сколько\s+лет)/i.test(t);
     },
     async function (msg) {
         const t = msg.toLowerCase();
         
-        // 1. Очищаем запрос от слов-паразитов (оставляем только суть)
+        // Очищаем запрос от слов-паразитов
         const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
         let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
         let query = queryWords.join(" ");
 
-        // Если это был просто вопрос "Почему?" без сути, берем всё сообщение
         if (!query) query = msg.trim();
 
-        // 2. Стучимся в Дэн
         try {
             const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
                 method: "POST", 
@@ -1555,12 +1552,12 @@ registerLayer(
             const data = await res.json();
             
             if (data.success && data.results && !data.results.includes("ничего не найдено")) {
-                // 3. Обрабатываем сырой текст (чистим лишние переносы)
-                let cleanText = data.results
-                    .replace(/\n{3,}/g, '\n\n') // Убираем тройные переносы
-                    .trim();
-
-                // 4. Формируем красивый ответ для Судьи
+                // Чистим текст и ОБРЕЗАЕМ его до 1500 символов, чтобы Судья не придрался к длине
+                let cleanText = data.results.replace(/\n{3,}/g, '\n\n').trim();
+                if (cleanText.length > 1500) {
+                    cleanText = cleanText.substring(0, 1500) + "...\n\n*(Текст сокращен)*";
+                }
+                
                 return `🔎 **Нашел информацию по запросу "${query}":**\n\n${cleanText}`;
             } else {
                 return `🤷‍♂️ Босс, я перерыл интернет по запросу "${query}", но ничего путного не нашел.`;
