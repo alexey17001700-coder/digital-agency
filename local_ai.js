@@ -675,7 +675,8 @@ window.__layerWarnings = window.__layerWarnings || [];
             });
             const data = await res.json();
             if (!data.success) return `❌ Не удалось просканировать: ${data.error || "ошибка"}`;
-
+            window.__lastScanData = data; // <--- ВОТ ОНА, ПАМЯТЬ БОТА
+            
             if (!data.issues || data.issues.length === 0) {
                 return `✅ **Сканирование завершено:** проверено ${data.scanned} файлов. Ошибок не найдено!`;
             }
@@ -792,5 +793,33 @@ registerLayer(
         }
         
         return report + `\n💡 **Совет Судьям:** Работа продолжается.`;
+    }
+);
+// ==========================================
+// ПЛАГИН: Память и статус ошибок (Делает ИИ умнее)
+// ==========================================
+registerLayer(
+    "scan_status_reporter",
+    (msg) => /сколько.*(ошиб|проблем|файл)|что.*(ошиб|сканир)|статус.*(проверк|штаб)|отчет|результат/i.test(msg),
+    async () => {
+        const lastScan = window.__lastScanData;
+        
+        if (!lastScan) {
+            return "Босс, я еще не проводил сканирование. Напиши «Проверь штаб», и я проверю все файлы.";
+        }
+        
+        if (!lastScan.issues || lastScan.issues.length === 0) {
+            return `✅ **Статус:** По последним данным (проверено ${lastScan.scanned} файлов), в Штабе **0 ошибок**. Все чисто!`;
+        }
+
+        let report = `📊 **По последним данным сканирования (${lastScan.scanned} файлов):**\n`;
+        report += `⚠️ Осталось проблем: **${lastScan.issues.length}**\n\n`;
+        
+        lastScan.issues.forEach((issue, i) => {
+            report += `${i + 1}. \`${issue.path}\` — ${issue.description}\n`;
+        });
+        
+        report += `\n💡 Напиши «Проверь штаб» для обновления данных.`;
+        return report;
     }
 );
