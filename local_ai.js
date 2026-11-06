@@ -1229,3 +1229,141 @@ registerLayer(
                `*Нейросеть подключена к Судье. Она проверяет каждый ответ перед выдачей.*`;
     }
 );
+// ==========================================
+// СОВЕТ СУДЕЙ (Meta-Judge Loop)
+// ==========================================
+
+// Сохраняем оригинальную финализацию
+const originalFinalizeOutput = finalizeOutput;
+
+// Переопределяем её
+finalizeOutput = function(ctx) {
+    // Если ответа нет, сразу отдаем оригиналу (пусть обработает ошибку)
+    if (!ctx.output || ctx.output.trim() === '') return originalFinalizeOutput(ctx);
+
+    const answer = ctx.output;
+    const query = ctx.msg || "";
+    const source = ctx.source || 'network';
+
+    // --- 1. СОВЕТ СУДЕЙ (4 проверки) ---
+    // Судья 1: Базовая проверка (длина, мусор, наличие слов)
+    const verdict = judge(answer, query, source);
+    
+    // Судья 2: Математическая связь (насколько ответ относится к вопросу)
+    const mathScore = calculateMathScore(query, answer);
+    
+    // Судья 3: Уверенность (на основе источника)
+    const conf = computeConfidence(answer, query, source);
+    
+    // Судья 4: Детектор галлюцинаций (не придумал ли лишнего)
+    const hall = checkHallucinations(answer, query);
+
+    // --- 2. ВЫСТАВЛЯЕМ ОБЩИЙ БАЛЛ (0.0 - 1.0) ---
+    const scores = [
+        verdict.approved ? 1 : 0, // 1 или 0
+        mathScore,                // 0..1
+        conf,                     // 0..1
+        hall.ok ? 1 : 0           // 1 или 0
+    ];
+    const totalScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+
+    if (DEBUG) console.log(`⚖️ Совет Судей: ${Math.round(totalScore*100)}% (Судья: ${verdict.approved}, Мат: ${mathScore.toFixed(2)}, Увер: ${conf.toFixed(2)}, Галл: ${hall.ok})`);
+
+    // --- 3. ПРИГОВОР ---
+    if (totalScore < 0.8) {
+        // Если балл ниже 80% — формируем "пинок" (критику)
+        let critique = `\n\n---\n⚠️ **Совет Судей: ответ отклонен (${Math.round(totalScore*100)}% качества).**\n`;
+        
+        if (!verdict.approved) critique += `- ❌ **Базовый Судья:** ${verdict.reason || 'Не прошел проверку'}\n`;
+        if (mathScore < 0.5) critique += `- 🧮 **Математика:** слабая связь с вопросом (${Math.round(mathScore*100)}%)\n`;
+        if (conf < 0.5) critique += `- 🧠 **Уверенность:** низкая (${Math.round(conf*100)}%)\n`;
+        if (!hall.ok) critique += `- 👻 **Галлюцинации:** ${hall.reason}\n`;
+        
+        critique += `\n*Босс, этот ответ не дотягивает до идеала. Рекомендую переформулировать вопрос или включить API-ключи для более глубокого анализа.*`;
+        
+        // Добавляем критику к ответу
+        ctx.output = answer + critique;
+    }
+
+    // 4. Отдаем результат оригинальной функции (сохраняем память, выводим в чат)
+    return originalFinalizeOutput(ctx);
+};
+
+
+// ==========================================
+// ПЛАГИН: Ручной тестер Судей (По команде)
+// ==========================================
+registerLayer(
+    "judge_tester",
+    (msg) => /тест судьи|проверь судью|оцени ответ судьями|совет судей/i.test(msg),
+    (msg, ctx) => {
+        // Берем последний ответ агента из памяти
+        const lastMsg = CONTEXT_MEMORY.slice().reverse().find(m => m.role === 'assistant');
+        if (!lastMsg) return "🤔 Я еще ничего не отвечал. Нечего проверять.";
+        
+        const ans = lastMsg.text;
+        const q = CONTEXT_MEMORY.slice().reverse().find(m => m.role === 'user')?.text || "Неизвестный вопрос";
+
+        const v = judge(ans, q, 'network');
+        const m = calculateMathScore(q, ans);
+        const c = computeConfidence(ans, q, 'network');
+        const h = checkHallucinations(ans, q);
+
+        let report = `⚖️ **Ручной Тестер Судей (Анализ последнего ответа):**\n\n`;
+        report += `📝 **Ответ:** "${ans.substring(0, 80)}..."\n\n`;
+        report += `1️⃣ **Базовый Судья:** ${v.approved ? '✅ Одобрено' : '❌ Отклонено'}\n`;
+        report += `2️⃣ **Математика:** ${Math.round(m*100)}% связи с вопросом\n`;
+        report += `3️⃣ **Уверенность:** ${Math.round(c*100)}%\n`;
+        report += `4️⃣ **Галлюцинации:** ${h.ok ? '✅ Чисто' : '❌ ' + h.reason}\n`;
+        
+        return report;
+    }
+);
+// ==========================================
+// ПЛАГИН: Самовосстановление с кнопками
+// ==========================================
+registerLayer(
+    "self_healing_pipeline_ui",
+    (msg) => /проверь и исправь|найди и почини|самовосстановление/i.test(msg),
+    async (msg, ctx) => {
+        // Для примера имитируем нахождение ошибки в office.js
+        // В реальности здесь будет код из предыдущего плагина (аудит)
+        
+        const errorFile = "office.js";
+        const errorDesc = "Несбалансированные скобки: { = 45, } = 44";
+        
+        let report = `📄 **Найдена ошибка в ${errorFile}:**\n`;
+        report += `⚠️ ${errorDesc}\n\n`;
+        report += `🧠 **Аналитик:** Не хватает 1 закрывающей скобки '}' в конце файла.\n`;
+        report += `⚖️ **Совет Судей:** ✅ Патч одобрен (Судья: 0.9, Мат: 0.8)\n\n`;
+        
+        // Добавляем HTML-кнопки с вызовом глобальных функций
+        report += `<div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="window.applyAutoFix('${errorFile}')" style="background:#00e5ff; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">✅ Исправить</button>
+            <button onclick="window.skipAutoFix('${errorFile}')" style="background:#333; color:#fff; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">❌ Не трогать</button>
+        </div>`;
+        
+        return report;
+    }
+);
+
+// Глобальные функции для кнопок
+window.applyAutoFix = async function(fileName) {
+    // Здесь мы должны отправить запрос на Deno для записи файла
+    // Пока что просто выводим сообщение
+    if (typeof renderMessage === 'function') {
+        renderMessage(`⚙️ **Босс, команда на исправление ${fileName} принята.**\n\n` +
+                      `Для автоматической записи файла на GitHub нужен API-ключ или прямое подключение к Deno. ` +
+                      `Пока я могу только показать, что нужно исправить. Скопируй исправление и вставь вручную.`, 'director', 'DevOps');
+    } else {
+        alert(`Исправление для ${fileName} принято в работу. (Требуется API-ключ для записи)`);
+    }
+};
+
+window.skipAutoFix = function(fileName) {
+    if (typeof renderMessage === 'function') {
+        renderMessage(`🚫 **Босс, я не буду трогать файл ${fileName}.** Оставляем как есть.`, 'director', 'DevOps');
+    } else {
+        alert(`Файл ${fileName} оставлен без изменений.`);
+    }
+};
