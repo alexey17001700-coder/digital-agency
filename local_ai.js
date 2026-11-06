@@ -626,15 +626,29 @@ registerLayer(
             }
 
             window.__pendingFixes = window.__pendingFixes || {};
-            data.issues.forEach((issue) => {
-                const safeDiff = Math.max(0, issue.diff);
-const fixedContent = issue.content + "\n" + "}".repeat(safeDiff) + "\n";
-                window.__pendingFixes[issue.path] = {
-                    path: issue.path,
-                    content: fixedContent,
-                    description: issue.description,
-                };
-            });
+data.issues.forEach((issue) => {
+    let fixedContent = issue.content;
+    
+    if (issue.diff > 0) {
+        // Если не хватает закрывающих — добавляем в конец
+        fixedContent = issue.content + "\n" + "}".repeat(issue.diff) + "\n";
+    } else if (issue.diff < 0) {
+        // Если лишние — удаляем с конца файла
+        let excess = Math.abs(issue.diff);
+        for (let i = 0; i < excess; i++) {
+            let lastBrace = fixedContent.lastIndexOf('}');
+            if (lastBrace !== -1) {
+                fixedContent = fixedContent.substring(0, lastBrace) + fixedContent.substring(lastBrace + 1);
+            }
+        }
+    }
+
+    window.__pendingFixes[issue.path] = {
+        path: issue.path,
+        content: fixedContent,
+        description: issue.description,
+    };
+});
 
             let report = `🩺 **Сканирование завершено**\n📁 Проверено файлов: **${data.scanned}**\n⚠️ Найдено проблем: **${data.issues.length}**\n\n`;
             data.issues.forEach((issue, idx) => {
