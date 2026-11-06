@@ -926,3 +926,151 @@ registerLayer(
         return "Босс, я не понял команду. Попробуй переформулировать.";
     }
 );
+// ==========================================
+// 🤖 ПЛАГИН 1: Личность (Паспорт ИИ)
+// ==========================================
+registerLayer(
+    "identity_layer",
+    (msg) => /(а\s+)?(ты\s+кто|кто\s+ты|как\s+тебя\s+зовут|что\s+ты\s+умеешь|твоя\s+роль|ты\s+робот|ты\s+живой)/i.test(msg),
+    async () => {
+        const userName = (typeof userPrefs !== 'undefined' && userPrefs.name) ? userPrefs.name : "Босс";
+        const isProtected = window.registerLayer && window.registerLayer.__isSafeWrapper;
+        
+        return `🤖 **Докладываю, ${userName}!**\n\n` +
+               `Я — **Оркестратор**, локальный ИИ Цифрового Агентства.\n` +
+               `📍 Живу прямо в твоем браузере, не завишу от внешних серверов (кроме API).\n` +
+               `🛡 Самозащита слоев: ${isProtected ? "✅ Активна" : "❌ Выключена"}.\n\n` +
+               `**Мои навыки:**\n` +
+               `- 🌤 Погода и прогнозы\n` +
+               `- 🧮 Математика\n` +
+               `- 🔎 Поиск в Википедии\n` +
+               `- 🩺 Сканирование кода и авто-починка GitHub\n\n` +
+               `Готов к работе, Босс! Чего изволите?`;
+    }
+);
+
+// ==========================================
+// 🧠 ПЛАГИН 2: Омни-Контекст (Понимает "А в Москве?")
+// ==========================================
+registerLayer(
+    "omni_context_resolver",
+    (msg) => {
+        const t = msg.toLowerCase().trim();
+        // Ловит короткие уточнения: "А в Москве?", "А завтра?", "А Лермонтов?", "А 5+5?"
+        return /^(а|и|а что|а как|а где|а когда|а сколько|а почему|а зачем|а если|а в|а на|а про)\s+/i.test(t) || 
+               (t.length < 20 && t.endsWith("?"));
+    },
+    async function (msg, ctx) {
+        if (typeof CONTEXT_MEMORY === 'undefined' || CONTEXT_MEMORY.length === 0) return null;
+        
+        // Ищем, о чем говорили в прошлый раз
+        const lastUserMsg = [...CONTEXT_MEMORY].reverse().find(m => m.role === 'user');
+        if (!lastUserMsg) return null;
+        
+        const prev = lastUserMsg.text.toLowerCase();
+        const t = msg.toLowerCase().trim();
+
+        // 1. Контекст сканирования и ошибок
+        if (/проверь|штаб|ошибк|файл|скан|баг/i.test(prev)) {
+            if (/сколько|какие|список|статус|результат/i.test(t)) {
+                const lastScan = window.__lastScanData;
+                if (!lastScan) return "Босс, данных нет. Напиши «Проверь штаб».";
+                if (!lastScan.issues || lastScan.issues.length === 0) return `✅ Ошибок нет, проверено ${lastScan.scanned} файлов.`;
+                
+                let report = `📊 **Осталось проблем:** ${lastScan.issues.length}\n\n`;
+                lastScan.issues.forEach((issue, i) => { report += `${i + 1}. ${issue.path}\n`; });
+                return report;
+            }
+        }
+
+        // 2. Контекст погоды
+        if (/погод|градус|температур/i.test(prev)) {
+            let city = null;
+            const cityMatch = t.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i) || t.match(/^([а-яёa-z\-]{3,})/i);
+            
+            if (cityMatch) city = cityMatch[1];
+            else {
+                const prevMatch = prev.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+                if (prevMatch) city = prevMatch[1];
+            }
+
+            if (city) {
+                const day = t.includes("завтра") ? 1 : 0;
+                try {
+                    const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ weatherQuery: city, day: day })
+                    });
+                    const data = await res.json();
+                    if (data.success) return data.results;
+                } catch(e) {}
+            }
+        }
+
+        // 3. Контекст математики
+        if (/[\d\+\-\*\/\(\)]+/.test(prev) && /[\d\+\-\*\/\(\)]+/.test(t)) {
+            try {
+                let expr = t.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
+                if (expr) return `🧮 Результат: ${expr} = ${new Function('return ' + expr)()}`;
+            } catch(e) {}
+        }
+
+        // 4. Общие знания (Поиск)
+        const words = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => w.length > 2 && !["что", "как", "кто", "где", "когда", "зачем", "почему", "а", "и", "в", "на", "это"].includes(w));
+        if (words.length > 0) {
+            try {
+                const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ searchQuery: words.join(" ") })
+                });
+                const data = await res.json();
+                if (data.success && data.results && !data.results.includes("ничего не найдено")) return data.results;
+            } catch(e) {}
+        }
+
+        return null; // Если не поняли, пусть ядро попробует другие слои
+    }
+);
+
+// ==========================================
+// 🕵️ ПЛАГИН 3: Черный ящик (Инспектор плагинов)
+// ==========================================
+window.__pluginLogs = window.__pluginLogs || [];
+
+// Тихо записываем, кто сработал
+registerLayer(
+    "log_recorder",
+    () => true, 
+    async (msg, ctx) => {
+        if (typeof CUSTOM_LAYERS !== 'undefined') {
+            const activePlugins = CUSTOM_LAYERS.filter(l => l.matcher(msg, ctx)).map(l => l.name);
+            if (activePlugins.length > 0) {
+                window.__pluginLogs.push({
+                    time: new Date().toLocaleTimeString(),
+                    msg: msg,
+                    plugins: activePlugins
+                });
+                if (window.__pluginLogs.length > 20) window.__pluginLogs.shift();
+            }
+        }
+        return null; // Молчим, чтобы не мешать Судье
+    }
+);
+
+// Показываем логи по команде
+registerLayer(
+    "plugin_inspector",
+    (msg) => /(покажи\s+лог|что\s+там\s+с\s+плагин|инспектор|логи\s+плагин)/i.test(msg),
+    async () => {
+        if (window.__pluginLogs.length === 0) {
+            return "🕵️ **Инспектор:** Логов пока нет. Напиши что-нибудь, чтобы я записал.";
+        }
+
+        let report = `🕵️ **Последние срабатывания:**\n\n`;
+        window.__pluginLogs.slice(-5).forEach((log, i) => {
+            report += `**${i + 1}. [${log.time}]** «${log.msg}»\n`;
+            report += `   Сработали: \`${log.plugins.join('`, `')}\`\n\n`;
+        });
+        return report;
+    }
+);
