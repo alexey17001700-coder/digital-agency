@@ -1497,16 +1497,22 @@ if (window.__pluginLogs) {
     };
 }
 // ==========================================
-// 🧠 УНИВЕРСАЛЬНЫЙ УМНЫЙ РОУТЕР (Работает на всё)
+// 🧠 УНИВЕРСАЛЬНЫЙ УМНЫЙ РОУТЕР (Броня v2.0)
 // ==========================================
 registerLayer(
     "universal_smart_router",
-    () => true, // Срабатывает ВСЕГДА, чтобы перехватить инициативу
+    () => true, // Срабатывает всегда, чтобы перехватить инициативу
     async function (msg, ctx) {
-        // Берем ОРИГИНАЛЬНЫЙ текст (до того, как ядро испортило его своими опечатками)
-        const original = (ctx && ctx.originalMsg) ? ctx.originalMsg.toLowerCase().trim() : msg.toLowerCase().trim();
+        // 1. ЗАЩИТА ОТ ПУСТОТЫ: Берем оригинал, если есть, иначе текущий текст
+        const original = (ctx && ctx.originalMsg ? ctx.originalMsg : msg || "").toLowerCase().trim();
+        if (!original) return null;
 
-        // --- 1. БОЛТАЛКА (Small Talk) ---
+        // 2. КОНТЕКСТ: Достаем прошлое сообщение (для понимания "А в Москве?")
+        const lastUserMsg = (typeof CONTEXT_MEMORY !== 'undefined') 
+            ? ([...CONTEXT_MEMORY].reverse().find(m => m.role === 'user')?.text || "").toLowerCase() 
+            : "";
+
+        // --- БОЛТАЛКА (Small Talk) ---
         if (/(привет|ку|здравствуй|добрый день)/i.test(original)) {
             return "Привет, Босс! На связи. Готов к работе. 🚀";
         }
@@ -1517,54 +1523,79 @@ registerLayer(
             return "Сканирую просторы интернета, жду твоих команд и слежу за порядком в коде. 🤖";
         }
 
-        // --- 2. ПОГОДА (Weather) ---
-        if (/(погод|температур|градус)/i.test(original)) {
-            let city = "Москва"; 
-            const match = original.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
-            if (match) city = match[1];
-            else {
-                const words = original.split(/[\s,?.!]+/).filter(w => w.length > 3 && !["погода", "погоду", "завтра", "сегодня", "какая", "будет"].includes(w));
-                if (words.length > 0) city = words[0];
+        // --- ВРЕМЯ И ДАТА ---
+        if (/(сколько времени|который час)/i.test(original)) {
+            return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
+        }
+        if (/(какое сегодня число|какая дата)/i.test(original)) {
+            return `📅 Сегодня ${new Date().toLocaleDateString('ru-RU', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}`;
+        }
+
+        // --- МАТЕМАТИКА (Защищенная) ---
+        if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(original) || /(сколько будет|посчитай)/i.test(original)) {
+            try {
+                let expr = original.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
+                // Защита от недописанных выражений типа "5+"
+                if (expr && !/[\+\-\*\/]$/.test(expr)) {
+                    return `🧮 **Результат:** ${expr} = **${new Function('return ' + expr)()}**`;
+                }
+            } catch (e) {
+                return `⚠️ Не могу посчитать это выражение. Проверь пример.`;
             }
-            // Чистим падежи (Москве -> Москва)
-            city = city.replace(/(е|у|ю|ой|ей)$/i, "");
+        }
+
+        // --- ПОГОДА (С контекстом) ---
+        if (/(погод|температур|градус)/i.test(original) || (/(а\s+)?(в|во|на)\s+/i.test(original) && /(погод|градус)/i.test(lastUserMsg))) {
+            let city = "Москва"; 
+            // Ищем город в текущем сообщении
+            const match = original.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+            
+            if (match) {
+                city = match[1];
+            } else if (/(а\s+)?(в|во|на)\s+/i.test(original)) {
+                // Если это уточнение ("А в Питере"), берем город из сообщения
+                city = original.replace(/.*(?:в|во|на)\s+/i, '').replace(/[?.!]/g, '').trim();
+            } else if (/(погод|градус)/i.test(lastUserMsg)) {
+                // Если контекст про погоду, но город не назван, берем из прошлого
+                const prevMatch = lastUserMsg.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+                if (prevMatch) city = prevMatch[1];
+            }
+
+            // Чистим падежи
+            city = city.replace(/(е|у|ю|ой|ей)$/i, "").trim();
             city = city.charAt(0).toUpperCase() + city.slice(1);
             const day = original.includes("завтра") ? 1 : 0;
 
             try {
                 const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
                     method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ weatherQuery: city, day: day })
+                    body: JSON.stringify({ weatherQuery: city, day: day }),
+                    signal: AbortSignal.timeout(6000) // Защита от зависания сети
                 });
                 const data = await res.json();
                 if (data.success && data.results) {
                     const dayText = day === 1 ? "на завтра" : "сейчас";
                     return `🌤 **Погода в городе ${city} ${dayText}:**\n\n${data.results.trim()}`;
                 }
-            } catch (e) {}
-            return `❌ Не удалось получить погоду для ${city}.`;
-        }
-
-        // --- 3. МАТЕМАТИКА (Math) ---
-        if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(original) || /(сколько будет|посчитай)/i.test(original)) {
-            try {
-                let expr = original.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
-                if (expr) return `🧮 **Результат:** ${expr} = **${new Function('return ' + expr)()}**`;
             } catch (e) {
-                return `⚠️ Не могу посчитать это выражение.`;
+                return `❌ Погодный сервис не отвечает или город не найден.`;
             }
         }
 
-        // --- 4. ПОИСК В ИНТЕРНЕТЕ (Web Search) ---
+        // --- ПОИСК В ИНТЕРНЕТЕ (Защищенный от пустоты) ---
         if (/(кто такой|что такое|расскажи про|найди|поищи|почему|зачем|где находится|сколько лет)/i.test(original)) {
             const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
             let queryWords = original.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
-            let query = queryWords.join(" ") || original;
+            let query = queryWords.join(" ");
+
+            // Если после чистки ничего не осталось (например, написали просто "Кто такой?")
+            if (!query) return "🤷‍♂️ Босс, уточни, кого или что именно искать?";
 
             try {
                 const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
                     method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ searchQuery: query })
+                    body: JSON.stringify({ searchQuery: query }),
+                    signal: AbortSignal.timeout(6000)
                 });
                 const data = await res.json();
                 if (data.success && data.results && !data.results.includes("ничего не найдено")) {
@@ -1579,13 +1610,8 @@ registerLayer(
             }
         }
 
-        // --- 5. СКАНИРОВАНИЕ (Если просит проверить код) ---
-        if (/(проверь|исправь|почини|скан|аудит)/i.test(original) && /(штаб|код|файл|ошибк|баг)/i.test(original)) {
-            // (Здесь можно оставить вызов сканера, но для теста просто заглушка)
-            return `🩺 Босс, команда на сканирование принята. (Функция в разработке)`;
-        }
-
-        // Если ничего не подошло — молчим, пусть ядро отвечает само (или идет в интернет)
+        // ВАЖНО: Если это запрос на сканирование кода (проверь штаб и т.д.), 
+        // мы возвращаем null и НЕ мешаем нашему плагину с кнопками сделать свою работу.
         return null; 
     }
 );
