@@ -572,6 +572,60 @@ function finalizeOutput(ctx) {
 // ==========================================
 // 🔧 УНИВЕРСАЛЬНЫЙ ФИКС (Защита от крашей)
 // ==========================================
+// ==========================================
+// 🧠 УМНЫЙ АНАЛИЗАТОР СКОБОК (Игнорирует строки и комменты)
+// ==========================================
+window.analyzeBraces = function(code) {
+    let inString = false, stringChar = '';
+    let inLineComment = false, inBlockComment = false;
+    let braces = [];
+
+    for (let i = 0; i < code.length; i++) {
+        const c = code[i], next = code[i + 1];
+
+        if (inLineComment) {
+            if (c === '\n') inLineComment = false;
+            continue;
+        }
+        if (inBlockComment) {
+            if (c === '*' && next === '/') { inBlockComment = false; i++; }
+            continue;
+        }
+        if (inString) {
+            if (c === '\\') { i++; continue; } // Пропускаем экранирование
+            if (c === stringChar) inString = false;
+            continue;
+        }
+
+        if (c === '/' && next === '/') { inLineComment = true; i++; continue; }
+        if (c === '/' && next === '*') { inBlockComment = true; i++; continue; }
+        if (c === '"' || c === "'" || c === '`') { inString = true; stringChar = c; continue; }
+
+        if (c === '{' || c === '}') {
+            braces.push({ char: c, index: i });
+        }
+    }
+
+    let stack = [];
+    let excessCloses = []; // Индексы лишних закрывающих скобок
+
+    braces.forEach(b => {
+        if (b.char === '{') {
+            stack.push(b.index);
+        } else if (b.char === '}') {
+            if (stack.length > 0) {
+                stack.pop(); // Нашли пару
+            } else {
+                excessCloses.push(b.index); // Это лишняя закрывающая
+            }
+        }
+    });
+
+    return {
+        missingOpens: stack.length, // Сколько не хватает закрывающих
+        excessCloses: excessCloses  // Массив индексов лишних закрывающих (их надо удалить)
+    };
+};
 window.__layerWarnings = window.__layerWarnings || [];
 (function () {
     if (window.registerLayer && window.registerLayer.__isSafeWrapper) return;
@@ -603,14 +657,15 @@ window.__layerWarnings = window.__layerWarnings || [];
 // ==========================================
 // ПЛАГИН: Сканирование всех файлов и фиксы
 // ==========================================
-registerLayer(
+
+        registerLayer(
     "self_healing_pipeline_ui",
     (msg) => {
-    const t = msg.toLowerCase();
-    const action = /(проверь|исправь|почини|аудит|диагностик|скан|глянь|найди)/i.test(t);
-    const target = /(штаб|код|файл|проект|ошибк|баг|слой|плагин)/i.test(t);
-    return (action && target) || /самовосстановление/i.test(t);
-},
+        const t = msg.toLowerCase();
+        const action = /(проверь|исправь|почини|аудит|диагностик|скан|глянь|найди)/i.test(t);
+        const target = /(штаб|код|файл|проект|ошибк|баг|слой|плагин)/i.test(t);
+        return (action && target) || /самовосстановление/i.test(t);
+    },
     async function (msg, ctx) {
         try {
             const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
@@ -626,39 +681,46 @@ registerLayer(
             }
 
             window.__pendingFixes = window.__pendingFixes || {};
-data.issues.forEach((issue) => {
-    let fixedContent = issue.content;
-    
-    if (issue.diff > 0) {
-        // Если не хватает закрывающих — добавляем в конец
-        fixedContent = issue.content + "\n" + "}".repeat(issue.diff) + "\n";
-    } else if (issue.diff < 0) {
-        // Если лишние — удаляем с конца файла
-        let excess = Math.abs(issue.diff);
-        for (let i = 0; i < excess; i++) {
-            let lastBrace = fixedContent.lastIndexOf('}');
-            if (lastBrace !== -1) {
-                fixedContent = fixedContent.substring(0, lastBrace) + fixedContent.substring(lastBrace + 1);
-            }
-        }
-    }
-
-    window.__pendingFixes[issue.path] = {
-        path: issue.path,
-        content: fixedContent,
-        description: issue.description,
-    };
-});
-
             let report = `🩺 **Сканирование завершено**\n📁 Проверено файлов: **${data.scanned}**\n⚠️ Найдено проблем: **${data.issues.length}**\n\n`;
+
             data.issues.forEach((issue, idx) => {
-                report += `**${idx + 1}. ${issue.path}**\n   ${issue.description}\n`;
-                report += `<div style="display:flex; gap:10px; margin:6px 0 10px 0;">
-                    <button onclick="window.applyAutoFix('${issue.path}')" style="background:#00e5ff; border:none; padding:6px 10px; border-radius:5px; font-weight:bold; cursor:pointer;">✅ Исправить</button>
-                    <button onclick="window.skipAutoFix('${issue.path}')" style="background:#333; color:#fff; border:none; padding:6px 10px; border-radius:5px; cursor:pointer;">❌ Не трогать</button>
-                </div>`;
+                report += `**${idx + 1}. ${issue.path}**\n`;
+
+                // Запускаем УМНЫЙ анализ
+                const analysis = window.analyzeBraces(issue.content);
+                let fixedContent = issue.content;
+                let fixDesc = "";
+
+                if (analysis.missingOpens > 0) {
+                    fixedContent += "\n" + "}".repeat(analysis.missingOpens) + "\n";
+                    fixDesc = `✅ Добавить ${analysis.missingOpens} скоб.`;
+                } 
+                
+                if (analysis.excessCloses.length > 0) {
+                    // Удаляем лишние скобки с конца, чтобы индексы не съезжали
+                    const sortedIndices = [...analysis.excessCloses].sort((a, b) => b - a);
+                    for (const idxToRemove of sortedIndices) {
+                        fixedContent = fixedContent.slice(0, idxToRemove) + fixedContent.slice(idxToRemove + 1);
+                    }
+                    fixDesc = `🗑 Удалить ${analysis.excessCloses.length} лишн. скоб.`;
+                }
+
+                if (fixDesc) {
+                    window.__pendingFixes[issue.path] = {
+                        path: issue.path,
+                        content: fixedContent,
+                        description: fixDesc,
+                    };
+                    report += `   ${fixDesc}\n`;
+                    report += `<div style="display:flex; gap:10px; margin:6px 0 10px 0;">
+                        <button onclick="window.applyAutoFix('${issue.path}')" style="background:#00e5ff; border:none; padding:6px 10px; border-radius:5px; font-weight:bold; cursor:pointer;">✅ ${fixDesc}</button>
+                        <button onclick="window.skipAutoFix('${issue.path}')" style="background:#333; color:#fff; border:none; padding:6px 10px; border-radius:5px; cursor:pointer;">❌ Не трогать</button>
+                    </div>`;
+                } else {
+                    report += `   ⚠️ Ошибка есть, но умный анализатор не смог построить безопасный фикс.\n\n`;
+                }
             });
-            report += `\n💡 Каждый фикс — отдельный коммит. После «Исправить» страница перезагрузится.`;
+            
             return report;
         } catch (e) {
             return `❌ Ошибка сети: ${e.message}`;
