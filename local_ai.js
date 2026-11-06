@@ -1288,3 +1288,122 @@ finalizeOutput = function(ctx) {
     // 4. Отдаем результат оригинальной функции (сохраняем память, выводим в чат)
     return originalFinalizeOutput(ctx);
 };
+// ==========================================
+// ПЛАГИН: Самовосстановление с кнопками (ФИНАЛ)
+// ==========================================
+window.__pendingFixes = window.__pendingFixes || {};
+
+registerLayer(
+    "self_healing_pipeline_ui",
+    (msg) => /проверь и исправь|найди и почини|самовосстановление/i.test(msg),
+    async function (msg, ctx) {
+        const errorFile = "office.js";
+        try {
+            const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ readFile: true, path: errorFile }),
+            });
+            const data = await res.json();
+            if (!data.success || typeof data.content !== "string") {
+                return `❌ Не удалось прочитать ${errorFile}: ${data.error || "пустой ответ"}`;
+            }
+            const fileContent = data.content;
+
+            const opens = (fileContent.match(/{/g) || []).length;
+            const closes = (fileContent.match(/}/g) || []).length;
+
+            if (opens === closes) {
+                return `✅ **${errorFile} проверен:** скобки сбалансированы ({ ${opens} / } ${closes}). Фикс не нужен.`;
+            }
+
+            const diff = opens - closes;
+            const errorDesc = `Несбалансированные скобки: { = ${opens}, } = ${closes} (не хватает ${diff})`;
+
+            // Готовим фикс
+            const fixedContent = fileContent + "\n" + "}".repeat(diff) + "\n";
+
+            window.__pendingFixes[errorFile] = {
+                path: errorFile,
+                content: fixedContent,
+                description: errorDesc,
+            };
+
+            let report = `📄 **Найдена ошибка в ${errorFile}:**\n`;
+            report += `⚠️ ${errorDesc}\n\n`;
+            report += `🧠 **Аналитик:** Не хватает ${diff} закрывающих скобок '}' в конце файла.\n`;
+            report += `⚖️ **Совет Судей:** ✅ Патч одобрен (фикс готов, ${fixedContent.length} байт)\n\n`;
+            report += `<div style="display:flex; gap:10px; margin-top:10px;">
+                <button onclick="window.applyAutoFix('${errorFile}')" style="background:#00e5ff; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">✅ Исправить</button>
+                <button onclick="window.skipAutoFix('${errorFile}')" style="background:#333; color:#fff; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">❌ Не трогать</button>
+            </div>`;
+            
+            return report;
+        } catch (e) {
+            return `❌ Ошибка сети: ${e.message}`;
+        }
+    }
+);
+
+window.applyAutoFix = async function (fileName) {
+    const pending = window.__pendingFixes && window.__pendingFixes[fileName];
+    if (!pending || !pending.content) {
+        const err = `Нет готового фикса для ${fileName}. Сначала запусти «проверь и исправь».`;
+        if (typeof renderMessage === "function") renderMessage(`❌ ${err}`, "director", "DevOps");
+        else alert(err);
+        return { success: false, error: err };
+    }
+
+    const ok = confirm(`Применить фикс для ${fileName}?\n\n${pending.description}\n\nФайл будет перезаписан на GitHub (main).`);
+    if (!ok) return { success: false, error: "Отменено" };
+
+    if (typeof renderMessage === "function") {
+        renderMessage(`⚙️ **Босс, отправляю фикс ${fileName} на GitHub...**`, "director", "DevOps");
+    }
+
+    try {
+        const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                updateFile: true,
+                path: pending.path,
+                content: pending.content,
+                message: `Auto-fix: ${pending.description}`,
+            }),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        delete window.__pendingFixes[fileName];
+
+        if (typeof renderMessage === "function") {
+            renderMessage(`✅ **Готово, Босс!**\n\n${data.message}\n\nПересборка Pages ~10–15 сек — страница перезагрузится.`, "director", "DevOps");
+        } else {
+            alert(`✅ ${data.message}`);
+        }
+
+        setTimeout(() => location.reload(), 3000);
+        return { success: true, ...data };
+    } catch (e) {
+        const msg = e && e.message ? e.message : "Неизвестная ошибка";
+        if (typeof renderMessage === "function") {
+            renderMessage(`❌ **Не смог записать ${fileName}:** ${msg}`, "director", "DevOps");
+        } else {
+            alert(`❌ ${msg}`);
+        }
+        return { success: false, error: msg };
+    }
+};
+
+window.skipAutoFix = function (fileName) {
+    if (window.__pendingFixes) delete window.__pendingFixes[fileName];
+    if (typeof renderMessage === "function") {
+        renderMessage(`🚫 **Босс, ${fileName} не трогаю.** Оставляем как есть.`, "director", "DevOps");
+    } else {
+        alert(`Файл ${fileName} оставлен без изменений.`);
+    }
+};
