@@ -1149,3 +1149,107 @@ registerLayer(
         return `❌ Не могу найти погоду для города ${city}.`;
     }
 );
+// ==========================================
+// 🧠 УМНЫЙ РОУТЕР (Понимает суть и чистит запросы)
+// ==========================================
+registerLayer(
+    "smart_query_router",
+    (msg) => {
+        const t = msg.toLowerCase();
+        // Ловит: Погоду, Математику, Поиск (Википедию), Статус
+        return /(погод|температур|градус|сколько будет|посчитай|[\d]+\s*[\+\-\*\/]\s*[\d]+|кто такой|что такое|расскажи про|найди|поищи)/i.test(t) || 
+               /^(а|и)\s+в\s+/i.test(t); // Ловит "А в Москве" из контекста
+    },
+    async function (msg, ctx) {
+        const t = msg.toLowerCase().trim();
+
+        // === 1. ОПРЕДЕЛЯЕМ КОНТЕКСТ (Если это уточнение) ===
+        let isFollowUp = /^(а|и)\s+/.test(t);
+        let prevContext = "";
+        if (isFollowUp && typeof CONTEXT_MEMORY !== 'undefined') {
+            const lastUser = [...CONTEXT_MEMORY].reverse().find(m => m.role === 'user');
+            if (lastUser) prevContext = lastUser.text.toLowerCase();
+        }
+
+        // ==========================================
+        // СЦЕНАРИЙ А: ПОГОДА
+        // ==========================================
+        if (t.includes("погод") || t.includes("градус") || t.includes("температур") || (isFollowUp && prevContext.includes("погод"))) {
+            // 1. Ищем город (в новом сообщении или в старом)
+            let cityMatch = t.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+            let city = "Москва"; // По умолчанию
+
+            if (cityMatch) {
+                city = cityMatch[1];
+            } else if (isFollowUp && prevContext) {
+                const prevMatch = prevContext.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+                if (prevMatch) city = prevMatch[1];
+            }
+
+            // 2. Чистим падежи (Москве -> Москва, Питере -> Питер)
+            city = city.replace(/(е|у|ю|ой|ей)$/i, "");
+            city = city.charAt(0).toUpperCase() + city.slice(1);
+
+            // 3. Определяем день
+            const day = t.includes("завтра") ? 1 : 0;
+
+            // 4. Стучимся в Дэн
+            try {
+                const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ weatherQuery: city, day: day })
+                });
+                const data = await res.json();
+                if (data.success && data.results) {
+                    const dayText = day === 1 ? "на завтра" : "сейчас";
+                    return `🌤 **Погода в городе ${city} ${dayText}:**\n\n${data.results.trim()}`;
+                }
+            } catch (e) {
+                return `❌ Ошибка получения погоды для ${city}.`;
+            }
+        }
+
+        // ==========================================
+        // СЦЕНАРИЙ Б: МАТЕМАТИКА
+        // ==========================================
+        if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(t) || t.includes("сколько будет") || t.includes("посчитай")) {
+            try {
+                // Вырезаем только цифры и знаки из сообщения
+                let expr = t.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
+                if (expr) {
+                    const result = new Function('return ' + expr)();
+                    return `🧮 **Результат:** ${expr} = **${result}**`;
+                }
+            } catch (e) {
+                return `⚠️ Не могу посчитать это выражение.`;
+            }
+        }
+
+        // ==========================================
+        // СЦЕНАРИЙ В: ПОИСК В ВИКИПЕДИИ
+        // ==========================================
+        if (t.includes("кто такой") || t.includes("что такое") || t.includes("расскажи про") || t.includes("найди") || t.includes("поищи")) {
+            // Очищаем запрос от слов-паразитов
+            const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об"];
+            let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
+            
+            let query = queryWords.join(" ");
+            if (!query) return "Босс, а кого или что искать-то?";
+
+            try {
+                const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ searchQuery: query })
+                });
+                const data = await res.json();
+                if (data.success && data.results) {
+                    return `🔎 **Результаты поиска по запросу "${query}":**\n\n${data.results}`;
+                }
+            } catch (e) {
+                return `❌ Ошибка поиска по запросу "${query}".`;
+            }
+        }
+
+        return null; // Если не распознали, пусть другие слои попробуют
+    }
+);
