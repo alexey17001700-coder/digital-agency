@@ -1497,90 +1497,168 @@ if (window.__pluginLogs) {
     };
 }
  // ==========================================
-// 🧠 УНИВЕРСАЛЬНЫЙ УМНЫЙ РОУТЕР (Броня v3.0 - Focus State)
+// 🧠 УНИВЕРСАЛЬНЫЙ УМНЫЙ РОУТЕР (Броня v5.0 - Глобальный интеллект)
 // ==========================================
-window.__chatFocus = window.__chatFocus || { topic: null, entity: null, day: 0 };
+window.__getFocus = function() {
+    try { return JSON.parse(localStorage.getItem('shtabChatFocus') || '{"topic": null, "entity": null, "day": 0}'); } 
+    catch(e) { return { topic: null, entity: null, day: 0 }; }
+};
+window.__setFocus = function(focus) {
+    window.__chatFocus = focus;
+    localStorage.setItem('shtabChatFocus', JSON.stringify(focus));
+};
+window.__chatFocus = window.__getFocus();
 
+// ==========================================
+// 📖 ГЛОБАЛЬНЫЙ СЛОВАРЬ СУЩНОСТЕЙ
+// ==========================================
+const SMART_DICT = {
+    // Города для погоды
+    cities: [
+        "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань",
+        "Нижний Новгород", "Челябинск", "Самара", "Омск", "Ростов-на-Дону",
+        "Уфа", "Красноярск", "Воронеж", "Пермь", "Волгоград", "Краснодар",
+        "Саратов", "Тюмень", "Тольятти", "Ижевск", "Барнаул", "Ульяновск",
+        "Иркутск", "Хабаровск", "Ярославль", "Владивосток", "Махачкала",
+        "Томск", "Оренбург", "Кемерово", "Новокузнецк", "Рязань", "Астрахань",
+        "Пенза", "Липецк", "Киров", "Чебоксары", "Тула", "Калининград",
+        "Курск", "Севастополь", "Сочи", "Ставрополь", "Тверь", "Брянск",
+        "Белгород", "Сургут", "Владимир", "Чита", "Архангельск", "Смоленск",
+        "Мурманск", "Якутск", "Тамбов", "Грозный", "Кострома", "Петрозаводск", 
+        "Йошкар-Ола", "Новороссийск", "Сыктывкар", "Нальчик", "Псков"
+    ],
+    // Известные личности, бренды, объекты (для поиска)
+    entities: [
+        "Гагарин", "Пушкин", "Лермонтов", "Ленин", "Сталин", "Наполеон",
+        "Эйнштейн", "Ньютон", "Тесла", "Маск", "Стив Джобс", "Билл Гейтс",
+        "Яндекс", "Гугл", "Телеграм", "Вконтакте", "Тикток", "Ютуб",
+        "Кремль", "Эрмитаж", "Лувр", "Эйфелева башня", "Пизанская башня",
+        "Тверская", "Арбат", "Невский проспект", "Красная площадь"
+    ],
+    // Сленговые сокращения
+    aliases: {
+        "мск": "Москва", "питер": "Санкт-Петербург", "спб": "Санкт-Петербург", 
+        "екб": "Екатеринбург", "ебург": "Екатеринбург", "нск": "Новосибирск", 
+        "челяба": "Челябинск", "владик": "Владивосток", "хабара": "Хабаровск",
+        "пушкн": "Пушкин", "гагарн": "Гагарин", "гугл": "Гугл", "яндекс": "Яндекс"
+    }
+};
+
+// Универсальный поиск и исправление сущности
+function resolveEntity(input, dictionaryType) {
+    if (!input) return input;
+    let clean = input.toLowerCase().trim().replace(/[?.!,]/g, '');
+    
+    // 1. Проверяем сленг (алиасы)
+    if (SMART_DICT.aliases[clean]) return SMART_DICT.aliases[clean];
+    
+    // 2. Ищем точное совпадение
+    const dictArray = SMART_DICT[dictionaryType] || [];
+    const exact = dictArray.find(c => c.toLowerCase() === clean || c.toLowerCase().startsWith(clean));
+    if (exact) return exact;
+
+    // 3. Умный поиск по опечаткам (через функцию ядра)
+    let bestMatch = null;
+    let minDistance = 3; // Максимум 3 опечатки
+
+    for (const item of dictArray) {
+        const iLower = item.toLowerCase();
+        const dist = (typeof damerauLevenshtein === 'function') 
+            ? damerauLevenshtein(clean, iLower) 
+            : 99;
+        
+        // Также проверяем начало слова (если написали "Гагар" вместо "Гагарин")
+        const startDist = (typeof damerauLevenshtein === 'function' && iLower.startsWith(clean)) ? 0 : 99;
+        const finalDist = Math.min(dist, startDist);
+
+        if (finalDist < minDistance) {
+            minDistance = finalDist;
+            bestMatch = item;
+        }
+    }
+
+    if (bestMatch) return bestMatch;
+    return input.charAt(0).toUpperCase() + input.slice(1);
+}
+
+// ==========================================
+// РОУТЕР (Использует Глобальный Интеллект)
+// ==========================================
 registerLayer(
     "universal_smart_router",
     () => true, 
     async function (msg, ctx) {
-        const original = (ctx && ctx.originalMsg ? ctx.originalMsg : msg || "").toLowerCase().trim();
-        if (!original) return null;
+        try {
+            const original = (ctx && ctx.originalMsg ? ctx.originalMsg : msg || "").toLowerCase().trim();
+            if (!original) return null;
+            const t = original;
 
-        const t = original;
+            // --- БОЛТАЛКА ---
+            if (/(привет|ку|здравствуй|добрый день)/i.test(t)) { window.__setFocus({topic:null, entity:null, day:0}); return "Привет, Босс! На связи. 🚀"; }
+            if (/(как дела|как ты|как сам|как жизнь|как настроение)/i.test(t)) { window.__setFocus({topic:null, entity:null, day:0}); return "Все системы в норме, Босс! Плагины работают, защита активна. 😎"; }
+            if (/(что делаешь|что нового|чем занят)/i.test(t)) return "Сканирую просторы интернета, жду твоих команд. 🤖";
 
-        // --- 1. БОЛТАЛКА И СИСТЕМНОЕ (Сбрасывает фокус) ---
-        if (/(привет|ку|здравствуй|добрый день)/i.test(t)) { window.__chatFocus.topic = null; return "Привет, Босс! На связи. Готов к работе. 🚀"; }
-        if (/(как дела|как ты|как сам|как жизнь|как настроение)/i.test(t)) { window.__chatFocus.topic = null; return "Все системы в норме, Босс! Плагины работают, защита активна. 😎"; }
-        if (/(что делаешь|что нового|чем занят)/i.test(t)) return "Сканирую просторы интернета, жду твоих команд и слежу за порядком в коде. 🤖";
-        if (/(сколько времени|который час)/i.test(t)) return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
-        if (/(какое сегодня число|какая дата)/i.test(t)) return `📅 Сегодня ${new Date().toLocaleDateString('ru-RU', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}`;
+            // --- ВРЕМЯ И ДАТА ---
+            if (/(сколько времени|который час)/i.test(t)) return `🕒 Сейчас ${new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
+            if (/(какое сегодня число|какая дата)/i.test(t)) return `📅 Сегодня ${new Date().toLocaleDateString('ru-RU', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}`;
 
-        // --- 2. МАТЕМАТИКА (Сбрасывает фокус) ---
-        if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(t) || /(сколько будет|посчитай)/i.test(t)) {
-            window.__chatFocus.topic = null;
-            try {
-                let expr = t.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
-                if (expr && !/[\+\-\*\/]$/.test(expr)) return `🧮 **Результат:** ${expr} = **${new Function('return ' + expr)()}**`;
-            } catch (e) { return `⚠️ Не могу посчитать это выражение.`; }
-        }
+            // --- МАТЕМАТИКА ---
+            if (/[\d]+\s*[\+\-\*\/]\s*[\d]+/i.test(t) || /(сколько будет|посчитай)/i.test(t)) {
+                window.__setFocus({topic:null, entity:null, day:0});
+                try {
+                    let expr = t.replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
+                    if (expr && !/[\+\-\*\/]$/.test(expr)) return `🧮 **Результат:** ${expr} = **${new Function('return ' + expr)()}**`;
+                } catch (e) { return `⚠️ Не могу посчитать.`; }
+            }
 
-        // --- 3. ПОИСК В ИНТЕРНЕТЕ (Ставит фокус на 'search') ---
-        if (/(кто такой|что такое|расскажи про|найди|поищи|почему|зачем|где находится|сколько лет)/i.test(t)) {
-            const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
-            let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
-            let query = queryWords.join(" ") || t;
-            
-            // Сохраняем фокус
-            window.__chatFocus = { topic: 'search', entity: query, day: 0 };
+            // --- ПОИСК В ИНТЕРНЕТЕ (С использованием Глобального Словаря) ---
+            if (/(кто такой|что такое|расскажи про|найди|поищи|почему|зачем|где находится|сколько лет)/i.test(t)) {
+                const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
+                let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
+                
+                // Берем главное слово и пропускаем его через умный резолвер!
+                let rawQuery = queryWords.join(" ") || t;
+                let finalQuery = resolveEntity(rawQuery, 'entities'); // Исправляем опечатки в именах/брендах
 
-            try {
+                window.__setFocus({ topic: 'search', entity: finalQuery, day: 0 });
+
                 const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
                     method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ searchQuery: query }),
+                    body: JSON.stringify({ searchQuery: finalQuery }),
                     signal: AbortSignal.timeout(6000)
                 });
                 const data = await res.json();
                 if (data.success && data.results && !data.results.includes("ничего не найдено")) {
                     let cleanText = data.results.replace(/\n{3,}/g, '\n\n').trim();
                     if (cleanText.length > 1500) cleanText = cleanText.substring(0, 1500) + "...\n\n*(Текст сокращен)*";
-                    return `🔎 **Нашел информацию по запросу "${query}":**\n\n${cleanText}`;
+                    return `🔎 **Нашел информацию по запросу "${finalQuery}":**\n\n${cleanText}`;
                 } else {
-                    return `🤷‍♂️ Босс, я перерыл интернет по запросу "${query}", но ничего путного не нашел.`;
+                    return `🤷‍♂️ Босс, я перерыл интернет по запросу "${finalQuery}", но ничего не нашел.`;
                 }
-            } catch (e) {
-                return `❌ Ошибка сети при поиске "${query}": ${e.message}`;
-            }
-        }
-
-        // --- 4. ПОГОДА (Ставит или удерживает фокус на 'weather') ---
-        const isWeatherQuery = /(погод|градус|температур|дождь|снег)/i.test(t);
-        const isCityOrDateFollowUp = /^(а\s+)?(в|во|на)\s+/i.test(t) || /(завтра|послезавтра)/i.test(t);
-
-        // Если это явный запрос погоды ИЛИ уточнение (город/день), когда фокус на погоде
-        if (isWeatherQuery || (window.__chatFocus.topic === 'weather' && isCityOrDateFollowUp)) {
-            
-            // Если это новый явный запрос погоды, сбрасываем старый фокус перед установкой нового
-            if (isWeatherQuery) window.__chatFocus = { topic: 'weather', entity: null, day: 0 };
-
-            // Ищем город в текущем сообщении
-            const cityMatch = t.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
-            if (cityMatch && !["погоду", "завтра", "сегодня", "послезавтра"].includes(cityMatch[1])) {
-                window.__chatFocus.entity = cityMatch[1];
             }
 
-            // Если город еще не задан, ставим Москву по умолчанию
-            if (!window.__chatFocus.entity) window.__chatFocus.entity = "Москва";
+            // --- ПОГОДА (С использованием Глобального Словаря) ---
+            const isWeatherQuery = /(погод|градус|температур|дождь|снег)/i.test(t);
+            const isFollowUp = /(в|во|на)\s+[а-яё]|завтра|послезавтра/i.test(t);
 
-            // Обновляем день
-            if (/(завтра|послезавтра)/i.test(t)) window.__chatFocus.day = 1;
+            if (isWeatherQuery || (window.__chatFocus.topic === 'weather' && isFollowUp)) {
+                let focus = window.__chatFocus;
+                if (isWeatherQuery) focus = { topic: 'weather', entity: null, day: 0 };
 
-            let city = window.__chatFocus.entity.replace(/(е|у|ю|ой|ей)$/i, "").trim();
-            city = city.charAt(0).toUpperCase() + city.slice(1);
-            const day = window.__chatFocus.day;
+                const cityMatch = t.match(/(?:в|во|на|про)\s+([а-яёa-z\-]{3,})/i);
+                if (cityMatch && !["погоду", "завтра", "сегодня", "послезавтра"].includes(cityMatch[1])) {
+                    focus.entity = cityMatch[1];
+                }
+                
+                if (!focus.entity) focus.entity = "Москва";
+                if (/(завтра|послезавтра)/i.test(t)) focus.day = 1;
+                
+                window.__setFocus(focus);
 
-            try {
+                // Пропускаем город через умный резолвер!
+                const city = resolveEntity(focus.entity, 'cities');
+                const day = focus.day;
+
                 const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ weatherQuery: city, day: day }),
@@ -1590,14 +1668,15 @@ registerLayer(
                 if (data.success && data.results) {
                     const dayText = day === 1 ? "на завтра" : "сейчас";
                     return `🌤 **Погода в городе ${city} ${dayText}:**\n\n${data.results.trim()}`;
+                } else {
+                    return `❌ Погодный сервис не отвечает или город не найден.`;
                 }
-            } catch (e) {
-                return `❌ Погодный сервис не отвечает или город не найден.`;
             }
-        }
 
-        // --- 5. ЗАГЛУШКА ДЛЯ ОСТАЛЬНОГО ---
-        // Если ничего не подошло, и это не уточнение (фокус не сработал), просто молчим
-        return null; 
+            return null;
+        } catch (error) {
+            if (window.SysLog) window.SysLog.add('error', `Router Error: ${error.message}`);
+            return null; 
+        }
     }
 );
