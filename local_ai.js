@@ -1214,7 +1214,7 @@ judge = function(answer, query, source) {
     }
 
     return originalResult;
-//};
+};
 
 // ==========================================
 // ПЛАГИН ДЛЯ ПРОСМОТРА ВЕСОВ (Команда "Покажи мозг")
@@ -1288,34 +1288,3 @@ finalizeOutput = function(ctx) {
     // 4. Отдаем результат оригинальной функции (сохраняем память, выводим в чат)
     return originalFinalizeOutput(ctx);
 };
-
-
-// ==========================================
-// ПЛАГИН: Ручной тестер Судей (По команде)
-// ==========================================
-registerLayer(
-    "judge_tester",
-    (msg) => /тест судьи|проверь судью|оцени ответ судьями|совет судей/i.test(msg),
-    (msg, ctx) => {
-        // Берем последний ответ агента из памяти
-        const lastMsg = CONTEXT_MEMORY.slice().reverse().find(m => m.role === 'assistant');
-        if (!lastMsg) return "🤔 Я еще ничего не отвечал. Нечего проверять.";
-        
-        const ans = lastMsg.text;
-        const q = CONTEXT_MEMORY.slice().reverse().find(m => m.role === 'user')?.text || "Неизвестный вопрос";
-
-        const v = judge(ans, q, 'network');
-        const m = calculateMathScore(q, ans);
-        const c = computeConfidence(ans, q, 'network');
-        const h = checkHallucinations(ans, q);
-
-        let report = `⚖️ **Ручной Тестер Судей (Анализ последнего ответа):**\n\n`;
-        report += `📝 **Ответ:** "${ans.substring(0, 80)}..."\n\n`;
-        report += `1️⃣ **Базовый Судья:** ${v.approved ? '✅ Одобрено' : '❌ Отклонено'}\n`;
-        report += `2️⃣ **Математика:** ${Math.round(m*100)}% связи с вопросом\n`;
-        report += `3️⃣ **Уверенность:** ${Math.round(c*100)}%\n`;
-        report += `4️⃣ **Галлюцинации:** ${h.ok ? '✅ Чисто' : '❌ ' + h.reason}\n`;
-        
-        return report;
-    }
-);
