@@ -1454,3 +1454,45 @@ window.skipAutoFix = function (fileName) {
         alert(`Файл ${fileName} оставлен без изменений.`);
     }
 };
+// ==========================================
+// ПЛАГИН: Диагностика плагинов (для Судей)
+// ==========================================
+registerLayer(
+    "plugin_health_checker",
+    (msg) => /проверь плагины|проверь слои|диагностика слоев|health check|аудит плагинов/i.test(msg),
+    async () => {
+        const warnings = window.__layerWarnings || [];
+        const safeReg = window.registerLayer && window.registerLayer.__isSafeWrapper;
+
+        let report = `🩺 **Диагностика слоёв**\n\n`;
+        report += `🔧 Защитная обёртка: ${safeReg ? "✅ активна" : "❌ НЕ УСТАНОВЛЕНА"}\n`;
+        report += `📊 Всего предупреждений: ${warnings.length}\n\n`;
+
+        if (warnings.length === 0) {
+            report += `✅ Все слои отдают Promise. Проблем не найдено.`;
+            return report;
+        }
+
+        const syncs = warnings.filter((w) => w.type === "sync");
+        const errors = warnings.filter((w) => w.type === "error");
+
+        if (syncs.length > 0) {
+            report += `⚠️ **Синхронные слои (обёрнуты автоматически):**\n`;
+            [...new Set(syncs.map((w) => w.name))].forEach((n) => {
+                report += `  • \`${n}\`\n`;
+            });
+            report += `\n`;
+        }
+
+        if (errors.length > 0) {
+            report += `❌ **Упавшие слои (последние 5):**\n`;
+            errors.slice(-5).forEach((e) => {
+                report += `  • \`${e.name}\`: ${e.msg}\n`;
+            });
+            report += `\n`;
+        }
+
+        report += `💡 **Совет Судьям:** Все проблемы изолированы обёрткой. Работа продолжается.`;
+        return report;
+    }
+);
