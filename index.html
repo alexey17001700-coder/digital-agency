@@ -404,7 +404,7 @@ setTimeout(() => {
             navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
         }
     </script>
-    <!-- 🚨 WATCHDOG (СИСТЕМА АВТО-ПРОВЕРКИ) -->
+    <!-- 🚨 WATCHDOG + 🎵 PLAYER -->
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
 #matrix-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9998;pointer-events:none;opacity:0.15}
@@ -430,9 +430,18 @@ setTimeout(() => {
 .btn{flex:1;padding:12px;border:1px solid #00ff41;background:transparent;color:#00ff41;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;letter-spacing:1px;font-family:'Fira Code',monospace}
 .btn-fix:hover{background:#00ff41;color:#000;box-shadow:0 0 20px #00ff41}
 .btn-ignore{border-color:#555;color:#555}.btn-ignore:hover{border-color:#ff3333;color:#ff3333}
-#sys-alarm-btn{position:fixed;top:50px;right:20px;z-index:1000000;cursor:pointer;display:none;animation:alarmPulse 1s infinite alternate;font-size:40px;line-height:1}
+
+/* Плеер (сдвинут ниже, чтобы не мешать Штабу) */
+#music-controls{position:fixed;top:60px;right:20px;z-index:100000;display:flex;gap:10px;font-family:'Fira Code',monospace}
+.music-btn{background:rgba(0,10,0,0.9);color:#00ff41;border:1px solid #00ff41;padding:6px 10px;font-size:12px;cursor:pointer;border-radius:4px;transition:0.2s;box-shadow:0 0 10px rgba(0,255,65,0.3)}
+.music-btn:hover{box-shadow:0 0 15px #00ff41}
+#sys-alarm-btn{position:fixed;top:100px;right:20px;z-index:1000000;cursor:pointer;display:none;animation:alarmPulse 1s infinite alternate;font-size:40px;line-height:1}
 </style>
 <canvas id="matrix-bg"></canvas>
+<div id="music-controls">
+<button id="music-btn" class="music-btn" onclick="toggleMusic()">🔊 MUSIC: OFF</button>
+<button id="track-btn" class="music-btn" onclick="nextTrack()" style="display:none;">⏭ NEXT TRACK</button>
+</div>
 <div id="sys-alarm-btn" onclick="showWatchdog()" title="Ошибка в коде!">🚨</div>
 <div id="watchdog-panel">
 <div class="wd-header">
@@ -449,8 +458,7 @@ setTimeout(() => {
 </div>
 </div>
 <script>
-    // МАТРИЦА
-const canvas = document.getElementById('matrix-bg');
+    const canvas = document.getElementById('matrix-bg');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -478,7 +486,8 @@ let schedulerTimer = null;
 let nextNoteTime = 0;
 let stepIndex = 0;
 let currentTrack = 0;
-    const notes = {
+
+const notes = {
     'A1': 55.00, 'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31, 'G2': 98.00,
     'A2': 110.00, 'B2': 123.47, 'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61,
     'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'B3': 246.94, 'C4': 261.63, 'D4': 293.66,
@@ -487,22 +496,11 @@ let currentTrack = 0;
     'E6': 1318.51, 'D6': 1174.66, 'C6': 1046.50, 'B5': 987.77, 'Bb5': 932.33, 'Bb2': 116.54,
     'Bb3': 233.08, 'G#5': 830.61, 'Bb4': 466.16
 };
-
-const t1M = ['A4',null,'E5',null,'A5',null,'G5','E5','F5',null,'E5',null,'D5',null,'C5',null,'D5',null,'A4',null,'D5',null,'F5','A5','G5',null,'F5',null,'E5',null,'D5',null,'C5',null,'G4',null,'C5',null,'E5','G5','A5',null,'G5',null,'E5',null,'C5',null,'D5',null,'E5',null,'F5',null,'G5',null,'A5',null,null,null,null,null,null,null,'A4','C5','E5','A5','G5','E5','C5','E5','F5','A5','C6','A5','G5','E5','C5','A4','G4','B4','D5','G5','F5','D5','B4','D5','E5','G5','B5','G5','F5','D5','B4','G4','A4','C5','E5','A5','G5','E5','C5','E5','F5','A5','C6','A5','G5','E5','C5','A4','E5',null,'G5',null,'A5',null,'B5',null,'C6',null,null,null,null,null,null,null];
+    const t1M = ['A4',null,'E5',null,'A5',null,'G5','E5','F5',null,'E5',null,'D5',null,'C5',null,'D5',null,'A4',null,'D5',null,'F5','A5','G5',null,'F5',null,'E5',null,'D5',null,'C5',null,'G4',null,'C5',null,'E5','G5','A5',null,'G5',null,'E5',null,'C5',null,'D5',null,'E5',null,'F5',null,'G5',null,'A5',null,null,null,null,null,null,null,'A4','C5','E5','A5','G5','E5','C5','E5','F5','A5','C6','A5','G5','E5','C5','A4','G4','B4','D5','G5','F5','D5','B4','D5','E5','G5','B5','G5','F5','D5','B4','G4','A4','C5','E5','A5','G5','E5','C5','E5','F5','A5','C6','A5','G5','E5','C5','A4','E5',null,'G5',null,'A5',null,'B5',null,'C6',null,null,null,null,null,null,null];
 const t1B = ['A2','A2',null,'A3','A2','A2',null,'A3','F2','F2',null,'F3','F2','F2',null,'F3','D2','D2',null,'D3','D2','D2',null,'D3','G2','G2',null,'G3','G2','G2',null,'G3','C3','C3',null,'C4','C3','C3',null,'C4','A2','A2',null,'A3','A2','A2',null,'A3','F2','F2',null,'F3','G2','G2',null,'G3','A2','A2',null,'A3','A2',null,null,null,'A2','A2',null,'A3','A2','A2',null,'A3','F2','F2',null,'F3','F2','F2',null,'F3','G2','G2',null,'G3','G2','G2',null,'G3','E2','E2',null,'E3','E2','E2',null,'E3','A2','A2',null,'A3','A2','A2',null,'A3','F2','F2',null,'F3','F2','F2',null,'F3','E2','E2',null,'E3','E2','E2',null,'E3','A2',null,null,null,null,null,null,null];
 
 const t2M = ['D5',null,'D5','F5','A5',null,'G5','F5','E5',null,'D5',null,'C5','D5',null,null,'Bb4',null,'Bb4','D5','F5',null,'E5','D5','C5',null,'Bb4',null,'A4','Bb4',null,null,'C5',null,'C5','E5','G5',null,'F5','E5','D5',null,'C5',null,'Bb4','C5',null,null,'A4',null,'C5','E5','A5',null,'G5','E5','C5',null,'A4',null,'E4','A4',null,null,'D5','F5','A5','D6',null,'C6','A5','F5','D5','F5','A5','D6','C6','A5','F5','D5','Bb4','D5','F5','Bb5',null,'A5','F5','D5','Bb4','D5','F5','Bb5','A5','F5','D5','Bb4','C5','E5','G5','C6',null,'B5','G5','E5','C5','E5','G5','C6','B5','G5','E5','C5','A4','C5','E5','A5','G5','E5','C5','A4','E4','A4','C5','E5','A5','G5','E5','C5'];
-    const t2B = ['D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2','D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2'];
-
-const sadMelody = ['E5',null,null,null,'D5',null,'C5',null,'B4',null,null,null,'A4',null,null,null,'A4',null,null,null,'B4',null,'C5',null,'E5',null,null,null,null,null,null,null,'F5',null,null,null,'E5',null,'D5',null,'C5',null,null,null,'A4',null,null,null,'C5',null,null,null,'B4',null,'A4',null,'G4',null,null,null,null,null,null,null,'G4',null,null,null,'C5',null,'E5',null,'G5',null,null,null,'F5',null,null,null,'E5',null,null,null,'D5',null,'C5',null,'B4',null,null,null,null,null,null,null,'D5',null,null,null,'F5',null,'A5',null,'G5',null,null,null,'F5',null,null,null,'E5',null,null,null,'D5',null,'C5',null,'D5',null,null,null,null,null,null,null,'E5',null,null,null,'G#4',null,'B4',null,'E5',null,null,null,'D5',null,null,null,'C5',null,null,null,'B4',null,'A4',null,'G#4',null,null,null,null,null,null,null,'A4',null,null,null,'C5',null,'E5',null,'A5',null,null,null,'G5',null,null,null,'F5',null,null,null,'E5',null,'D5',null,'C5',null,null,null,null,null,null,null,'F4',null,null,null,'A4',null,'C5',null,'F5',null,null,null,'E5',null,null,null,'D5',null,null,null,'C5',null,'B4',null,'A4',null,null,null,null,null,null,null,'G#4',null,null,null,'B4',null,'E5',null,'G#5',null,null,null,'B5',null,null,null,'A5',null,null,null,'G#5',null,'E5',null,'B4',null,null,null,null,null,null,null];
-const sadBass = ['A2',null,null,null,null,null,null,null,'A2',null,null,null,null,null,null,null,'A2',null,null,null,null,null,null,null,'A2',null,null,null,'E2',null,null,null,'F2',null,null,null,null,null,null,null,'F2',null,null,null,null,null,null,null,'C3',null,null,null,null,null,null,null,'C3',null,null,null,null,null,null,null,'G2',null,null,null,null,null,null,null,'G2',null,null,null,null,null,null,null,'C3',null,null,null,null,null,null,null,'C3',null,null,null,null,null,null,null,'D2',null,null,null,null,null,null,null,'D2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,'B2',null,null,null,'A2',null,null,null,null,null,null,null,'A2',null,null,null,null,null,null,null,'F2',null,null,null,null,null,null,null,'F2',null,null,null,null,null,null,null,'F2',null,null,null,null,null,null,null,'F2',null,null,null,null,null,null,null,'G2',null,null,null,null,null,null,null,'G2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null,'E2',null,null,null,null,null,null,null];
-
-const tracks = [
-    { tempo: 110, melody: t1M, bass: t1B, wave: 'square', bassWave: 'triangle' },
-    { tempo: 120, melody: t2M, bass: t2B, wave: 'sawtooth', bassWave: 'square' },
-    { tempo: 130, melody: t2M, bass: t2B, wave: 'square', bassWave: 'sawtooth' },
-    { tempo: 115, melody: sadMelody, bass: sadBass, wave: 'sine', bassWave: 'triangle' }
-];
+const t2B = ['D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2','D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','D2','D2','D3','D2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','Bb2','Bb2','Bb3','Bb2','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','C3','C3','C4','C3','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2','A2','A2','A3','A2'];
     function playTone(freq, duration, type, vol) {
     if (!audioCtx || !freq) return;
     const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
@@ -546,10 +544,31 @@ function scheduleNotes() {
             if (idx % 2 === 0) playNoise(0.03, 7000, true, 0.03);
         }
         nextNoteTime += timeStep; stepIndex++;
-        if (stepIndex >= track.melody.length) { stepIndex = 0; currentTrack = (currentTrack + 1) % tracks.length; }
+        if (stepIndex >= track.melody.length) { stepIndex = 0; nextTrack(); }
     }
+}
+function nextTrack() {
+    if (!isMusicPlaying) return;
+    currentTrack = (currentTrack + 1) % tracks.length;
+    document.getElementById('track-btn').innerText = `⏭ TRACK ${currentTrack + 1}/4`;
+             }
+    function toggleMusic() {
+    const btn = document.getElementById('music-btn'), trackBtn = document.getElementById('track-btn');
+    if (isMusicPlaying) {
+        clearInterval(schedulerTimer); isMusicPlaying = false;
+        btn.innerText = '🔊 MUSIC: OFF'; btn.style.color = '#555'; btn.style.borderColor = '#555'; btn.style.boxShadow = 'none';
+        trackBtn.style.display = 'none';
+    } else {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        nextNoteTime = audioCtx.currentTime + 0.05; stepIndex = 0; isMusicPlaying = true;
+        schedulerTimer = setInterval(scheduleNotes, 25);
+        btn.innerText = '🔇 MUSIC: ON'; btn.style.color = '#00ff41'; btn.style.borderColor = '#00ff41'; btn.style.boxShadow = '0 0 15px #00ff41';
+        trackBtn.style.display = 'block'; trackBtn.innerText = `⏭ TRACK ${currentTrack + 1}/4`;
     }
-    const panel = document.getElementById('watchdog-panel');
+}
+
+const panel = document.getElementById('watchdog-panel');
 const terminal = document.getElementById('wd-terminal');
 const alarmBtn = document.getElementById('sys-alarm-btn');
 let pendingFix = null;
@@ -561,14 +580,8 @@ function log(text, className) {
     terminal.appendChild(line);
     terminal.scrollTop = terminal.scrollHeight;
 }
-
-function showWatchdog() {
-    panel.classList.add('active');
-}
-
-function hideWatchdog() {
-    panel.classList.remove('active');
-}
+function showWatchdog() { panel.classList.add('active'); }
+function hideWatchdog() { panel.classList.remove('active'); }
 
 async function runAutoScan() {
     try {
@@ -579,7 +592,7 @@ async function runAutoScan() {
         });
         const data = await res.json();
         if (data.success && data.issues && data.issues.length > 0) {
-            const issue = data.issues.find(i => i.diff > 0); // Ищем только те, где не хватает скобок
+            const issue = data.issues.find(i => i.diff > 0);
             if (issue) {
                 const fixedContent = issue.content + "\n" + "}".repeat(issue.diff) + "\n";
                 pendingFix = { path: issue.path, content: fixedContent };
@@ -591,9 +604,7 @@ async function runAutoScan() {
                 log("> ОЖИДАНИЕ КОМАНДЫ...", "log-system");
             }
         }
-    } catch (e) {
-        console.log("Сканер не смог связаться с сервером:", e);
-    }
+    } catch (e) { console.log("Сканер не смог связаться с сервером:", e); }
 }
 
 async function applyPatch() {
@@ -612,9 +623,7 @@ async function applyPatch() {
         } else {
             log("> ОШИБКА: " + data.error, "log-error");
         }
-    } catch (e) {
-        log("> ОШИБКА СЕТИ", "log-error");
-    }
+    } catch (e) { log("> ОШИБКА СЕТИ", "log-error"); }
 }
 setTimeout(runAutoScan, 3000);
 </script>
