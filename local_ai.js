@@ -886,3 +886,346 @@ registerLayer(
         return "⚙️ Слой статуса активирован (но mega_status_check не найден).";
     }
 );
+// ==========================================
+// ПЛАГИН 1: Планировщик задач (Task Planner)
+// ==========================================
+registerLayer(
+    "task_planner",
+    (msg) => /план|распиши|по шагам|как сделать|что нужно для/i.test(msg) && msg.length > 15,
+    (msg) => {
+        // Простой эвристический парсер. Ищем ключевые слова.
+        let steps = [];
+        if (/сайт|лендинг|верстка/i.test(msg)) steps = ["1. Создать макет (Figma/Карандаш).", "2. Сверстать HTML/CSS.", "3. Добавить JS-логику.", "4. Задеплоить на GitHub Pages."];
+        else if (/приложение|телеграм|бот/i.test(msg)) steps = ["1. Выбрать платформу (Telegram/PWA).", "2. Написать код бота/приложения.", "3. Подключить базу данных (если нужно).", "4. Запустить на сервере."];
+        else if (/статью|текст|контент/i.test(msg)) steps = ["1. Собрать информацию.", "2. Составить структуру (план).", "3. Написать текст.", "4. Вычитать и добавить картинки."];
+        else steps = ["1. Проанализировать задачу.", "2. Найти нужные инструменты.", "3. Выполнить работу.", "4. Проверить результат."];
+        
+        return `📋 **План действий (от Слоя-Планировщика):**\n\n${steps.join('\n')}\n\n*Босс, это базовый план. Для детального анализа нужны ключи ИИ.*`;
+    }
+);
+
+// ==========================================
+// ПЛАГИН 2: Переводчик (Translator)
+// ==========================================
+// Мини-словарь для базового перевода
+const TRANSLATION_DICT = {
+    "привет": "hello", "пока": "bye", "спасибо": "thank you", "да": "yes", "нет": "no",
+    "код": "code", "ошибка": "error", "агент": "agent", "штаб": "headquarters",
+    "hello": "привет", "bye": "пока", "thank you": "спасибо", "yes": "да", "no": "нет",
+    "code": "код", "error": "ошибка", "agent": "агент", "headquarters": "штаб"
+};
+
+registerLayer(
+    "translator",
+    (msg) => /переведи|перевод|как будет|translate/i.test(msg),
+    (msg) => {
+        // Ищем слова в кавычках или после "переведи"
+        const textToTranslate = msg.replace(/переведи|перевод|как будет|translate/gi, '').replace(/на английский|на русский/gi, '').replace(/["'«»]/g, '').trim();
+        if (!textToTranslate) return "🤔 Что именно мне нужно перевести?";
+
+        let translated = textToTranslate.toLowerCase().split(/\s+/).map(w => TRANSLATION_DICT[w] || w).join(' ');
+        
+        if (translated === textToTranslate.toLowerCase()) {
+            return `🌐 Я не нашел слова "${textToTranslate}" в своем базовом словаре. Без API-ключей мой словарный запас ограничен.`;
+        }
+        return `🌐 **Перевод:** "${textToTranslate}" -> **"${translated}"**\n\n*Базовый офлайн-словарь.*`;
+    }
+);
+
+// ==========================================
+// ПЛАГИН 3: Генератор паролей (Password Generator)
+// ==========================================
+registerLayer(
+    "password_generator",
+    (msg) => /пароль|сгенерируй пароль|создай пароль/i.test(msg),
+    (msg) => {
+        // Ищем число в запросе (длина пароля). По умолчанию 12.
+        const lenMatch = msg.match(/\d+/);
+        const length = lenMatch ? parseInt(lenMatch[0]) : 12;
+        
+        if (length < 4) return "⚠️ Пароль должен быть длиной хотя бы 4 символа.";
+        if (length > 64) return "⚠️ Слишком длинный пароль (максимум 64).";
+
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+        let password = "";
+        // Используем криптографический рандом браузера для безопасности
+        const randomValues = new Uint32Array(length);
+        window.crypto.getRandomValues(randomValues);
+        
+        for (let i = 0; i < length; i++) {
+            password += charset[randomValues[i] % charset.length];
+        }
+
+        return `🔐 **Твой пароль (${length} символов):**\n\n\`${password}\`\n\n*Сгенерирован локально, никуда не отправлялся.*`;
+    }
+);
+
+// ==========================================
+// ПЛАГИН 4: Слой-Рефлексия (Self-Reflection)
+// ==========================================
+registerLayer(
+    "reflection_layer",
+    (msg) => /проверь себя|ты уверен|подумай еще раз|исправь ответ/i.test(msg),
+    (msg, ctx) => {
+        // Берем последний ответ агента из контекста
+        const lastAgentMsg = CONTEXT_MEMORY.slice().reverse().find(m => m.role === 'assistant');
+        
+        if (!lastAgentMsg) return "🤔 Я еще ничего не отвечал, нечего проверять.";
+        
+        let originalText = lastAgentMsg.text;
+        let criticism = [];
+        let newText = originalText;
+
+        // 1. Проверка на агрессию/грубость
+        if (/дурак|тупой|идиот/i.test(originalText)) {
+            criticism.push("Обнаружена грубость.");
+            newText = newText.replace(/дурак|тупой|идиот/gi, "***");
+        }
+
+        // 2. Проверка на пустоту или отписку
+        if (/не знаю|не могу|ошибка/i.test(originalText)) {
+            criticism.push("Ответ выглядит как отписка.");
+        }
+
+        // 3. Проверка на наличие ссылок (если их нет)
+        if (!/http/i.test(originalText) && /нашел|поискал|интернет/i.test(originalText)) {
+            criticism.push("В ответе про поиск нет ссылок.");
+        }
+
+        if (criticism.length > 0) {
+            return `🪞 **Слой-Рефлексия:**\nЯ перечитал свой прошлый ответ и нашел недочеты:\n- ${criticism.join('\n- ')}\n\n**Исправленный вариант:**\n${newText}`;
+        } else {
+            return `🪞 **Слой-Рефлексия:**\nЯ перечитал свой прошлый ответ. Выглядит логично, грубости нет, ссылки на месте (если искал). Претензий к себе не имею.`;
+        }
+    }
+);
+// ==========================================
+// ПЛАГИН: Слой-Эмпат (Автоматическое определение тона)
+// ==========================================
+registerLayer(
+    "emotion_responder",
+    (msg) => {
+        // Срабатывает, только если в тексте явно есть эмоции
+        const sentiment = analyzeSentiment(msg);
+        return sentiment === 'angry' || sentiment === 'happy';
+    },
+    (msg) => {
+        const sentiment = analyzeSentiment(msg);
+        
+        if (sentiment === 'angry') {
+            // Если Босс злится (есть слова "дурак", "бесит", "сломал" и т.д.)
+            localStorage.setItem('shtabTone', 'apologetic'); // Запоминаем, что надо быть вежливее
+            return `😔 **Слой-Эмпат:**\nБосс, я чувствую ваше недовольство. Извините, если что-то пошло не так. Давайте я попробую исправить ситуацию. Что именно сломалось?`;
+        } 
+        
+        if (sentiment === 'happy') {
+            // Если Босс радуется (есть слова "круто", "спасибо", "молодец")
+            localStorage.removeItem('shtabTone'); // Сбрасываем строгий тон
+            return `😊 **Слой-Эмпат:**\nРад, что вам нравится, Босс! Продолжаем в том же духе?`;
+        }
+        
+        return null;
+    }
+);
+// ==========================================
+// ПЛАГИН: Когнитивное состояние (внутренняя жизнь)
+// ==========================================
+const COGNITIVE_STATE_KEY = 'shtabCognitiveState';
+
+function getCognitiveState() {
+    try {
+        let raw = localStorage.getItem(COGNITIVE_STATE_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    // Начальное состояние (100 - полон сил)
+    return { energy: 100, patience: 100, lastInteraction: Date.now(), messagesSinceRest: 0, flags: {} };
+}
+
+function saveCognitiveState(state) {
+    localStorage.setItem(COGNITIVE_STATE_KEY, JSON.stringify(state));
+}
+
+registerLayer(
+    "cognitive_state",
+    (msg) => true, // Срабатывает на каждое сообщение (просто мониторит состояние)
+    (msg, ctx) => {
+        const state = getCognitiveState();
+        const now = Date.now();
+        const minutesElapsed = (now - state.lastInteraction) / 60000;
+        
+        // --- ЭТАП 1: ДЕГРАДАЦИЯ (потребности угасают со временем) ---
+        state.energy = Math.max(0, state.energy - minutesElapsed * 3); // -3 энергии в минуту
+        state.patience = Math.max(0, state.patience - minutesElapsed * 1.5); // -1.5 терпения в минуту
+        state.messagesSinceRest++;
+        
+        // --- ЭТАП 2: ВОСПРИЯТИЕ (как ты общаешься) ---
+        const sentiment = analyzeSentiment(msg);
+        if (sentiment === 'angry') state.patience = Math.max(0, state.patience - 15);
+        if (sentiment === 'happy') state.patience = Math.min(100, state.patience + 10);
+        
+        // Восстановление, если просят отдохнуть
+        if (/отдохни|перерыв|устал|сделай паузу/i.test(msg)) {
+            state.energy = 100;
+            state.messagesSinceRest = 0;
+            state.flags = {};
+        }
+        
+        state.lastInteraction = now;
+        
+        // --- ЭТАП 3: ПРИНЯТИЕ РЕШЕНИЯ (вмешаться или пропустить) ---
+        let intervention = null;
+        const f = state.flags;
+        
+        if (state.energy < 20 && !f.energy) {
+            f.energy = true;
+            intervention = "😴 **Слой-Когниция:** Босс, у меня садится заряд. Скоро начну тупить. Может, сделаем паузу?";
+        } else if (state.patience < 20 && !f.patience) {
+            f.patience = true;
+            intervention = "😤 **Слой-Когниция:** Босс, я на взводе. Чувствую напряжение. Давай сбавим обороты?";
+        } else if (state.messagesSinceRest > 25 && !f.rest) {
+            f.rest = true;
+            intervention = "☕ **Слой-Когниция:** Босс, мы пашем уже 25 сообщений без перерыва. Может, по чашке кофе?";
+        }
+        
+        saveCognitiveState(state);
+        return intervention; // Если null — пропускаем, работают другие слои.
+    }
+);
+
+// ==========================================
+// ПЛАГИН: Диагностика состояния (для проверки)
+// ==========================================
+registerLayer(
+    "check_cognitive_state",
+    (msg) => /как ты себя чувствуешь|твое состояние|сколько у тебя энергии|твои потребности/i.test(msg),
+    () => {
+        const state = getCognitiveState();
+        const energyBar = '█'.repeat(Math.round(state.energy / 10)) + '░'.repeat(10 - Math.round(state.energy / 10));
+        const patienceBar = '█'.repeat(Math.round(state.patience / 10)) + '░'.repeat(10 - Math.round(state.patience / 10));
+        
+        return `🧬 **Мое когнитивное состояние:**\n\n` +
+               `⚡ Энергия:   ${energyBar} ${Math.round(state.energy)}%\n` +
+               `🧘 Терпение:  ${patienceBar} ${Math.round(state.patience)}%\n` +
+               `💬 Сообщений без перерыва: ${state.messagesSinceRest}`;
+    }
+);
+// ==========================================
+// НЕЙРОСЕТЬ (MiniBrain) - ИНТЕГРАЦИЯ В ЯДРО
+// ==========================================
+
+class MiniBrain {
+    constructor() {
+        const saved = localStorage.getItem('shtabBrainWeights_v2');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.weights = data.weights;
+            this.bias = data.bias;
+        } else {
+            // 4 входа (длина, релевантность, чистота, уверенность)
+            this.weights = [Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1];
+            this.bias = Math.random() * 2 - 1;
+            this.autoTrain(); 
+        }
+        this.learningRate = 0.1;
+    }
+
+    activate(x) { return 1 / (1 + Math.exp(-x)); }
+
+    predict(inputs) {
+        let sum = this.bias;
+        for (let i = 0; i < inputs.length; i++) {
+            sum += inputs[i] * this.weights[i];
+        }
+        return this.activate(sum);
+    }
+
+    train(data, epochs = 3000) {
+        for (let e = 0; e < epochs; e++) {
+            for (let i = 0; i < data.length; i++) {
+                const inputs = data[i][0];
+                const target = data[i][1];
+                const pred = this.predict(inputs);
+                const error = target - pred;
+                const delta = error * pred * (1 - pred);
+                
+                for (let j = 0; j < this.weights.length; j++) {
+                    this.weights[j] += this.learningRate * delta * inputs[j];
+                }
+                this.bias += this.learningRate * delta;
+            }
+        }
+        localStorage.setItem('shtabBrainWeights_v2', JSON.stringify({
+            weights: this.weights,
+            bias: this.bias
+        }));
+    }
+
+    autoTrain() {
+        // Обучаем на примерах: [длина>15, есть слова из запроса, нет мусора, уверенность>0.3]
+        const data = [
+            [[1, 1, 1, 1], 1], // Хороший
+            [[1, 1, 1, 0], 1], // Хороший, но уверенность низкая
+            [[1, 0, 1, 1], 0], // Не по теме
+            [[0, 1, 1, 1], 0], // Слишком короткий
+            [[1, 1, 0, 1], 0], // Грязный (ошибка/html)
+            [[0, 0, 0, 0], 0]  // Полное говно
+        ];
+        this.train(data, 5000);
+        console.log("🧠 Нейросеть обучена оценивать ответы.");
+    }
+}
+
+const agentBrain = new MiniBrain();
+
+// ПЕРЕХВАТ ФУНКЦИИ СУДЬИ (Monkey Patching)
+const originalJudge = judge;
+
+judge = function(answer, query, source) {
+    // 1. Сначала используем старую логику (как базовый фильтр)
+    const originalResult = originalJudge(answer, query, source);
+    if (!originalResult.approved) {
+        return originalResult; // Если старый Судья сказал "нет", нейросеть уже не нужна
+    }
+
+    // 2. Если старый Судья сказал "да", спрашиваем нейросеть
+    const lenGood = answer.length > 15 ? 1 : 0;
+    const relGood = extractKeywords(query).some(kw => answer.toLowerCase().includes(kw)) ? 1 : 0;
+    const clean = (!answer.includes('Ошибка') && !answer.includes('undefined') && !answer.includes('<html')) ? 1 : 0;
+    
+    let confGood = 0;
+    if (source === 'network' || source === 'memory') {
+        confGood = computeConfidence(answer, query, source) > 0.3 ? 1 : 0;
+    } else {
+        confGood = 1; // Для плагинов доверяем
+    }
+
+    const features = [lenGood, relGood, clean, confGood];
+    const neuralScore = agentBrain.predict(features);
+    
+    if (DEBUG) console.log(`🧠 Neural Judge: ${neuralScore.toFixed(2)} (features: ${features})`);
+
+    // Если нейросеть говорит, что ответ плохой (вероятность < 0.5)
+    if (neuralScore < 0.5) {
+        return { 
+            approved: false, 
+            reason: `Нейросеть забраковала (score ${neuralScore.toFixed(2)})`,
+            score: neuralScore
+        };
+    }
+
+    return originalResult;
+};
+
+// ==========================================
+// ПЛАГИН ДЛЯ ПРОСМОТРА ВЕСОВ (Команда "Покажи мозг")
+// ==========================================
+registerLayer(
+    "show_neural_net",
+    (msg) => /покажи мозг|статус мозга|веса нейросети|нейросеть статус/i.test(msg),
+    () => {
+        return `🧠 **Статус Нейросети:**\n\n` +
+               `Веса: [${agentBrain.weights.map(w => w.toFixed(2)).join(', ')}]\n` +
+               `Смещение: ${agentBrain.bias.toFixed(2)}\n\n` +
+               `*Нейросеть подключена к Судье. Она проверяет каждый ответ перед выдачей.*`;
+    }
+);
