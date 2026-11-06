@@ -786,11 +786,11 @@ registerLayer(
             [...new Set(syncs.map((w) => w.name))].forEach((n) => { report += `  • \`${n}\`\n`; });
             report += `\n`;
         }
-        if (errors.length > 0) {
+                if (errors.length > 0) {
             report += `❌ **Упавшие слои:**\n`;
             errors.slice(-5).forEach((e) => { report += `  • \`${e.name}\`: ${e.msg}\n`; });
+        }
         
         return report + `\n💡 **Совет Судьям:** Работа продолжается.`;
     }
 );
-}
