@@ -823,3 +823,106 @@ registerLayer(
         return report;
     }
 );
+// ==========================================
+// 📖 СЛОВАРЬ И ГЛОБАЛЬНЫЙ РОУТЕР (Единый мозг)
+// ==========================================
+window.DICT = {
+    greet: ["привет", "ку", "куку", "здравствуй", "хай", "пртвет", "здарова", "добрый день"],
+    scan_action: ["проверь", "исправь", "почини", "аудит", "скан", "глянь", "найди", "поищи", "проверка", "восстанови"],
+    scan_target: ["штаб", "код", "файл", "проект", "ошибк", "баг", "слой", "плагин", "система", "агентство"],
+    status_q: ["сколько", "статус", "отчет", "результат", "покажи", "осталось", "проблемы", "список", "что там", "как там"]
+};
+
+function matchDict(msg, category) {
+    const t = msg.toLowerCase();
+    return window.DICT[category].some(word => t.includes(word));
+}
+
+registerLayer(
+    "global_intent_router",
+    (msg) => {
+        const t = msg.toLowerCase();
+        
+        // 1. Приветствие
+        if (matchDict(msg, "greet")) return true;
+        
+        // 2. Сканирование (есть действие + цель)
+        if (matchDict(msg, "scan_action") && matchDict(msg, "scan_target")) return true;
+        
+        // 3. Запрос статуса (есть вопрос + цель)
+        if (matchDict(msg, "status_q") && matchDict(msg, "scan_target")) return true;
+
+        // 4. Жесткие фразы
+        if (t.includes("что там со штабом") || t.includes("сколько осталось")) return true;
+        
+        return false;
+    },
+    async function (msg, ctx) {
+        const t = msg.toLowerCase();
+
+        // --- ОБРАБОТКА ПРИВЕТСТВИЯ ---
+        if (matchDict(msg, "greet")) {
+            return `Привет, Босс! На связи. Готов к работе.`;
+        }
+
+        // --- ОБРАБОТКА ЗАПРОСА СТАТУСА (ИЗ ПАМЯТИ) ---
+        if (matchDict(msg, "status_q") && matchDict(msg, "scan_target")) {
+            const lastScan = window.__lastScanData;
+            if (!lastScan) return "Босс, данных нет. Напиши «Проверь штаб», я просканирую файлы.";
+            
+            if (!lastScan.issues || lastScan.issues.length === 0) {
+                return `✅ **Статус:** Проверено ${lastScan.scanned} файлов. Ошибок нет, всё чисто!`;
+            }
+            
+            let report = `📊 **По последним данным сканирования (${lastScan.scanned} файлов):**\n⚠️ Осталось проблем: **${lastScan.issues.length}**\n\n`;
+            lastScan.issues.forEach((issue, i) => {
+                report += `${i + 1}. \`${issue.path}\` — ${issue.description}\n`;
+            });
+            return report;
+        }
+
+        // --- ОБРАБОТКА ЗАПУСКА СКАНИРОВАНИЯ ---
+        if (matchDict(msg, "scan_action") && matchDict(msg, "scan_target")) {
+            try {
+                const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ scanRepo: true }),
+                });
+                const data = await res.json();
+                if (!data.success) return `❌ Не удалось просканировать: ${data.error || "ошибка"}`;
+
+                window.__lastScanData = data; // Запоминаем!
+
+                if (!data.issues || data.issues.length === 0) {
+                    return `✅ **Сканирование завершено:** проверено ${data.scanned} файлов. Ошибок не найдено!`;
+                }
+
+                window.__pendingFixes = window.__pendingFixes || {};
+                let report = `🩺 **Сканирование завершено**\n📁 Проверено файлов: **${data.scanned}**\n⚠️ Найдено проблем: **${data.issues.length}**\n\n`;
+
+                data.issues.forEach((issue, idx) => {
+                    // Безопасное добавление (без удаления)
+                    if (issue.diff > 0) {
+                        const fixedContent = issue.content + "\n" + "}".repeat(issue.diff) + "\n";
+                        window.__pendingFixes[issue.path] = { path: issue.path, content: fixedContent, description: `Добавить ${issue.diff} скоб.` };
+                        
+                        report += `**${idx + 1}. ${issue.path}**\n   Не хватает ${issue.diff} закрывающих скобок.\n`;
+                        // Убрал двойную галочку! Теперь она одна.
+                        report += `<div style="display:flex; gap:10px; margin:6px 0 10px 0;">
+                            <button onclick="window.applyAutoFix('${issue.path}')" style="background:#00e5ff; border:none; padding:6px 10px; border-radius:5px; font-weight:bold; cursor:pointer;">Добавить ${issue.diff} скоб.</button>
+                            <button onclick="window.skipAutoFix('${issue.path}')" style="background:#333; color:#fff; border:none; padding:6px 10px; border-radius:5px; cursor:pointer;">❌ Не трогать</button>
+                        </div>`;
+                    } else {
+                        report += `**${idx + 1}. ${issue.path}**\n<div style="color:#f88; font-size:12px; margin-bottom:10px;">⚠️ Лишние скобки (${Math.abs(issue.diff)} шт). Автоудаление отключено, удали вручную.</div>`;
+                    }
+                });
+                return report;
+            } catch (e) {
+                return `❌ Ошибка сети: ${e.message}`;
+            }
+        }
+
+        return "Босс, я не понял команду. Попробуй переформулировать.";
+    }
+);
