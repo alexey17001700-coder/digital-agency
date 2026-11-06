@@ -729,5 +729,6 @@ registerLayer(
             errors.slice(-5).forEach((e) => { report += `  • \`${e.name}\`: ${e.msg}\n`; });
         
         return report + `\n💡 **Совет Судьям:** Работа продолжается.`;
-    
+    }
 );
+}
