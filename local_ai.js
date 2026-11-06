@@ -1093,3 +1093,16 @@ registerLayer(
         return variants[Math.floor(Math.random() * variants.length)];
     }
 );
+// ==========================================
+// 📋 ПЛАГИН: Реестр всех плагинов (Список)
+// ==========================================
+registerLayer(
+    "list_all_plugins",
+    (msg) => /(список|реестр|все)\s+(плагин|сло|агент)/i.test(msg),
+    async () => {
+        if (typeof CUSTOM_LAYERS === 'undefined') return "Ошибка: список слоев не найден.";
+        const names = CUSTOM_LAYERS.map(l => l.name);
+        return `📋 **Реестр Штаба**\nВсего плагинов: **${names.length}**\n\n` + 
+               names.map((n, i) => `${i + 1}. \`${n}\``).join('\n');
+    }
+);
