@@ -727,7 +727,7 @@ registerLayer(
         if (errors.length > 0) {
             report += `❌ **Упавшие слои:**\n`;
             errors.slice(-5).forEach((e) => { report += `  • \`${e.name}\`: ${e.msg}\n`; });
-        }
+        
         return report + `\n💡 **Совет Судьям:** Работа продолжается.`;
-    }
+    
 );
