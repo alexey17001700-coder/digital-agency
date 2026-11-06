@@ -627,7 +627,8 @@ registerLayer(
 
             window.__pendingFixes = window.__pendingFixes || {};
             data.issues.forEach((issue) => {
-                const fixedContent = issue.content + "\n" + "}".repeat(issue.diff) + "\n";
+                const safeDiff = Math.max(0, issue.diff);
+const fixedContent = issue.content + "\n" + "}".repeat(safeDiff) + "\n";
                 window.__pendingFixes[issue.path] = {
                     path: issue.path,
                     content: fixedContent,
