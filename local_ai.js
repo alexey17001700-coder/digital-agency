@@ -1373,3 +1373,126 @@ if (typeof window.applyAutoFix === 'function' && !window.applyAutoFix.__logged) 
 }
 
 window.SysLog.add('info', 'Системный логгер запущен');
+// ==========================================
+// 🐞 ДЕБАГ-РЕЖИМ (Отладка ИИ для Босса)
+// ==========================================
+window.__DEBUG_MODE = localStorage.getItem('shtabDebug') === 'true';
+window.__debugLogs = window.__debugLogs || [];
+
+// 1. Переключатель дебага
+registerLayer(
+    "debug_toggle",
+    (msg) => /(включи|выключи|статус)\s+(дебаг|debug|отладку)/i.test(msg),
+    async (msg) => {
+        if (/включи/i.test(msg)) {
+            window.__DEBUG_MODE = true;
+            localStorage.setItem('shtabDebug', 'true');
+            return "🐞 **Дебаг-режим ВКЛЮЧЕН.**\nТеперь я буду записывать все запросы к Дэну и ответы Судьи. Напиши «Покажи дебаг» для просмотра.";
+        } else if (/выключи/i.test(msg)) {
+            window.__DEBUG_MODE = false;
+            localStorage.setItem('shtabDebug', 'false');
+            return "🐞 **Дебаг-режим ВЫКЛЮЧЕН.**";
+        } else {
+            return `🐞 Дебаг-режим: **${window.__DEBUG_MODE ? '✅ ВКЛ' : '❌ ВЫКЛ'}**`;
+        }
+    }
+);
+
+// 2. Перехватываем fetch (чтобы видеть запросы в Дэн)
+(function() {
+    if (window.__fetchDebugWrapped) return;
+    window.__fetchDebugWrapped = true;
+    const orig = window.fetch;
+    window.fetch = async function(...args) {
+        const url = String(args[0] || '');
+        const options = args[1];
+        
+        if (window.__DEBUG_MODE && url.includes('deno.net') && options && options.body) {
+            try {
+                const bodyData = JSON.parse(options.body);
+                const keys = Object.keys(bodyData).filter(k => k !== 'isBackup' && k !== 'isRollback');
+                if (keys.length > 0) {
+                    window.__debugLogs.push({
+                        time: new Date().toLocaleTimeString(),
+                        type: 'request',
+                        msg: `Запрос в Дэн: ${keys.join(', ')}`,
+                        data: options.body
+                    });
+                }
+            } catch(e) {}
+        }
+        
+        const res = await orig.apply(this, args);
+        
+        if (window.__DEBUG_MODE && url.includes('deno.net')) {
+            const clone = res.clone();
+            clone.json().then(d => {
+                if (d.success) {
+                    window.__debugLogs.push({
+                        time: new Date().toLocaleTimeString(),
+                        type: 'response',
+                        msg: `Ответ Дэна: УСПЕХ`,
+                        data: d.results ? String(d.results).substring(0, 50) + '...' : 'OK'
+                    });
+                } else {
+                    window.__debugLogs.push({
+                        time: new Date().toLocaleTimeString(),
+                        type: 'error',
+                        msg: `Ответ Дэна: ОШИБКА`,
+                        data: d.error
+                    });
+                }
+                if (window.__debugLogs.length > 30) window.__debugLogs.shift();
+            }).catch(() => {});
+        }
+        return res;
+    };
+})();
+
+// 3. Записываем, какие слои сработали (дублируем в дебаг)
+const originalMatch = registerLayer;
+// 4. Плагин для просмотра дебага
+registerLayer(
+    "debug_viewer",
+    (msg) => /(покажи|открой)\s+(дебаг|debug|отладку)|что\s+там\s+в\s+дебаге/i.test(msg),
+    async () => {
+        if (!window.__DEBUG_MODE) return "🐞 Дебаг-режим выключен. Напиши «Включи дебаг».";
+        if (window.__debugLogs.length === 0) return "🐞 Дебаг включен, но логов пока нет. Задай мне какой-нибудь вопрос!";
+        
+        let report = `🐞 **Дебаг-отчет (последние события):**\n\n`;
+        window.__debugLogs.slice(-10).reverse().forEach(log => {
+            const icon = { request: '➡️', response: '⬅️', error: '❌', layer: '🔌' }[log.type] || '•';
+            report += `${icon} [${log.time}] ${log.msg}\n`;
+            if (log.data) report += `   └ \`${String(log.data).substring(0, 80)}\`\n`;
+        });
+        report += `\n💡 *Для очистки напиши «Очисти дебаг»*`;
+        return report;
+    }
+);
+
+// 5. Очистка дебага
+registerLayer(
+    "debug_clear",
+    (msg) => /(очисти|сбрось)\s+(дебаг|debug|отладку)/i.test(msg),
+    async () => {
+        window.__debugLogs = [];
+        return "🗑 Дебаг-лог очищен.";
+    }
+);
+
+// 6. Записываем активацию слоев в дебаг (перехватываем log_recorder)
+if (window.__pluginLogs) {
+    const origPush = window.__pluginLogs.push;
+    window.__pluginLogs.push = function(entry) {
+        if (window.__DEBUG_MODE && entry.plugins && entry.plugins.length > 0) {
+            window.__debugLogs.push({
+                time: entry.time,
+                type: 'layer',
+                msg: `Сработали слои: ${entry.plugins.join(', ')}`,
+                data: `Текст: "${entry.msg}"`
+            });
+            if (window.__debugLogs.length > 30) window.__debugLogs.shift();
+        }
+        return origPush.apply(this, arguments);
+    };
+}
