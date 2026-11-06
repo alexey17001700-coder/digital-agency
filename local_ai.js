@@ -1009,7 +1009,7 @@ registerLayer(
         const sentiment = analyzeSentiment(msg);
         return sentiment === 'angry' || sentiment === 'happy';
     },
-    (msg) => {
+    async (msg) => {
         const sentiment = analyzeSentiment(msg);
         
         if (sentiment === 'angry') {
@@ -1048,7 +1048,7 @@ function saveCognitiveState(state) {
 registerLayer(
     "cognitive_state",
     (msg) => true, // Срабатывает на каждое сообщение (просто мониторит состояние)
-    (msg, ctx) => {
+    async (msg, ctx) => {
         const state = getCognitiveState();
         const now = Date.now();
         const minutesElapsed = (now - state.lastInteraction) / 60000;
@@ -1221,7 +1221,7 @@ judge = function(answer, query, source) {
 // ==========================================
 registerLayer(
     "show_neural_net",
-    (msg) => /покажи мозг|статус мозга|веса нейросети|нейросеть статус/i.test(msg),
+   async (msg) => /покажи мозг|статус мозга|веса нейросети|нейросеть статус/i.test(msg),
     () => {
         return `🧠 **Статус Нейросети:**\n\n` +
                `Веса: [${agentBrain.weights.map(w => w.toFixed(2)).join(', ')}]\n` +
@@ -1295,7 +1295,7 @@ window.__pendingFixes = window.__pendingFixes || {};
 
 registerLayer(
     "self_healing_pipeline_ui",
-    (msg) => /проверь и исправь|найди и почини|самовосстановление/i.test(msg),
+    async (msg) => /проверь и исправь|найди и почини|самовосстановление/i.test(msg),
     async function (msg, ctx) {
         const errorFile = "office.js";
         try {
