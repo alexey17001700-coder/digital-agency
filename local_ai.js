@@ -1612,16 +1612,17 @@ registerLayer(
             }
 
             // --- ПОИСК В ИНТЕРНЕТЕ (С использованием Глобального Словаря) ---
-            if (/(кто такой|что такое|расскажи про|найди|поищи|почему|зачем|где находится|сколько лет)/i.test(t)) {
-                const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
-                let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
-                
-                // Берем главное слово и пропускаем его через умный резолвер!
-                let rawQuery = queryWords.join(" ") || t;
-                let finalQuery = resolveEntity(rawQuery, 'entities'); // Исправляем опечатки в именах/брендах
+// Теперь ловит даже без слова "такой": "кто пушкин", "что осень"
+if (/(кто|что|расскажи|найди|поищи|почему|зачем|где|сколько)\s+[а-яёa-z\-]{3,}/i.test(t)) {
+    const stopWords = ["кто", "такой", "что", "такое", "расскажи", "про", "найди", "поищи", "информацию", "о", "об", "почему", "зачем", "где", "находится", "сколько", "лет"];
+    let queryWords = t.replace(/[?.!,]/g, '').split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
+    
+    let rawQuery = queryWords.join(" ") || t;
+    let finalQuery = resolveEntity(rawQuery, 'entities'); 
 
-                window.__setFocus({ topic: 'search', entity: finalQuery, day: 0 });
+    window.__setFocus({ topic: 'search', entity: finalQuery, day: 0 });
 
+    // ... (дальше идет fetch к Дэну, его не меняем) ...
                 const res = await fetch("https://early-amoeba-1705.alexey17001700.deno.net", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ searchQuery: finalQuery }),
