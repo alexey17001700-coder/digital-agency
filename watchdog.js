@@ -331,6 +331,8 @@ function wdSendPatch(content) {
 }
 
 function wdInit() {
+    wdInjectCSS();
+    wdStartMatrix();
     fetch(wd_TARGET_FILE + "?t=" + Date.now(), { cache: "no-store" })
         .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
         .then(function (code) {
