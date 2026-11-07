@@ -230,7 +230,18 @@ function wdOpenModal() {
     header.querySelector("#wd-music-btn").addEventListener("click", wdToggleMusic);
 
     var terminal = document.createElement("div"); terminal.className = "wd-terminal"; terminal.id = "wd-terminal";
-    wdRenderErrors(terminal);
+terminal.innerHTML = '<div class="wd-warn">> Загрузка свежего кода...</div>';
+fetch(wd_TARGET_FILE + "?t=" + Date.now(), { cache: "no-store" })
+  .then(function(r){ return r.text(); })
+  .then(function(code){
+      wd_state.code = code;
+      wd_state.secrets = wdScanSecrets(code);
+      wd_state.analysis = wdSmartAnalyzer(code);
+      wdRenderErrors(terminal);
+  })
+  .catch(function(e){
+      terminal.innerHTML = '<div class="wd-err">Ошибка загрузки: ' + e.message + '</div>';
+  });
 
     var footer = document.createElement("div"); footer.className = "wd-footer";
     var fixAllBtn = document.createElement("button"); fixAllBtn.className = "wd-btn wd-btn-primary"; fixAllBtn.textContent = "Починить всё";
