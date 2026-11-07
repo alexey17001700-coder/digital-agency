@@ -1853,3 +1853,261 @@ registerLayer(
         return `🎭 **@${st.agent} говорит:**\n\n${text}\n\n_(Обучен на ${st.vocab} словах)_`;
     }
 );
+// ==========================================
+// 🧠 МУЛЬТИАГЕНТНЫЙ МАРКОВ v1.0
+// ==========================================
+const MARKOV_MAX_ENTRIES = 5000;
+
+const AGENT_ROLES = {
+    "Оркестратор": ["план","координация","управление","задачи","стратегия"],
+    "Хакер": ["код","взлом","уязвимость","безопасность","js","python","скрипт","баг","sql","xss"],
+    "Охранник": ["пароль","доступ","защита","шифрование","аудит","фаервол"],
+    "Исследователь": ["поиск","исследование","информация","данные","найти"],
+    "Планировщик": ["roadmap","этап","срок","календарь","план"],
+    "Аналитик": ["метрика","анализ","статистика","отчёт"],
+    "Исполнитель": ["сделать","выполнить","работа","задача"],
+    "Архитектор": ["архитектура","структура","система","схема","проект"],
+    "Дизайнер": ["дизайн","макет","ui","ux","tailwind","css","цвет","шрифт"],
+    "Креативщик": ["идея","креатив","нестандарт","придумать","вдохновение"],
+    "Критик": ["критика","ошибка","плохо","слабое","недочёт"],
+    "Тестировщик": ["тест","qa","проверка","bug","баг"],
+    "Переводчик": ["перевод","translate","язык","англ","английский"],
+    "Методолог": ["инструкция","регламент","метод","процесс"],
+    "Юрист": ["закон","суд","договор","право","юрид","соглашение"],
+    "Маркетолог": ["реклама","маркетинг","ца","продвижение","бренд","продажи"],
+    "Техпис": ["документация","техпис","readme","описание","гайд"],
+    "Фронтенд": ["html","верстка","frontend","интерфейс","react","vue"],
+    "Бэкенд": ["backend","сервер","api","база","node","deno"],
+    "Мобильный": ["мобильный","ios","android","app","flutter","react-native"],
+    "DevOps": ["ci","cd","docker","деплой","девопс","kubernetes","infra"],
+    "Универсал": ["полный","универсал","fullstack","всё"],
+    "Приемная": ["комиссия","принять","готово"],
+    "Результат": ["финал","упаковка","сдать","выпуск"]
+};
+
+window.__markovs = {};
+
+function getMarkov(agentId) {
+    const id = (agentId || "default").toLowerCase();
+    if (window.__markovs[id]) return window.__markovs[id];
+    const m = {
+        bigram: {}, trigram: {}, starters: [], vocabSize: 0,
+        key: "shtab_markov_" + id, agent: id,
+        tokenize(text) {
+            return (String(text).toLowerCase().replace(/\s+/g, " ").trim().match(/[а-яёa-z0-9]+|[.!?]/g) || []);
+        },
+        countEntries() {
+            let n = 0;
+            for (const w in this.bigram) n += Object.keys(this.bigram[w]).length;
+            return n;
+        },
+        trim() {
+            let entries = this.countEntries();
+            if (entries <= MARKOV_MAX_ENTRIES) return;
+            for (let th = 1; th <= 5 && entries > MARKOV_MAX_ENTRIES; th++) {
+                for (const w1 in this.bigram) {
+                    for (const w2 in this.bigram[w1]) {
+                        if (this.bigram[w1][w2] <= th) { delete this.bigram[w1][w2]; entries--; }
+                    }
+                }
+            }
+            for (const w1 in this.bigram) if (!Object.keys(this.bigram[w1]).length) delete this.bigram[w1];
+        },
+        train(text) {
+            const tokens = this.tokenize(text);
+            if (tokens.length < 3) return false;
+            const vocab = new Set();
+            for (let i = 0; i < tokens.length; i++) vocab.add(tokens[i]);
+            this.vocabSize = vocab.size;
+            for (let i = 0; i < tokens.length - 1; i++) {
+                const w1 = tokens[i], w2 = tokens[i+1];
+                if (!this.bigram[w1]) this.bigram[w1] = {};
+                this.bigram[w1][w2] = (this.bigram[w1][w2] || 0) + 1;
+                if (i < tokens.length - 2) {
+                    const w3 = tokens[i+2];
+                    if (!this.trigram[w1]) this.trigram[w1] = {};
+                    if (!this.trigram[w1][w2]) this.trigram[w1][w2] = {};
+                    this.trigram[w1][w2][w3] = (this.trigram[w1][w2][w3] || 0) + 1;
+                }
+                if (i > 0 && (tokens[i-1] === "." || tokens[i-1] === "!" || tokens[i-1] === "?")) this.starters.push(w1);
+            }
+            if (!this.starters.length) this.starters = Array.from(vocab);
+            this.trim(); this.save(); return true;
+        },
+        weightedPick(options) {
+            let total = 0;
+            for (const k in options) total += options[k];
+            if (total === 0) return null;
+            let r = Math.random() * total;
+            for (const k in options) { r -= options[k]; if (r <= 0) return k; }
+            return Object.keys(options)[0];
+        },
+        generate(maxWords) {
+            if (!this.starters.length) return null;
+            let result = [], w1 = this.starters[Math.floor(Math.random() * this.starters.length)], w2 = null;
+            result.push(w1);
+            for (let i = 0; i < maxWords; i++) {
+                let next = null;
+                if (w2 && this.trigram[w1] && this.trigram[w1][w2]) next = this.weightedPick(this.trigram[w1][w2]);
+                if (!next && this.bigram[w1]) next = this.weightedPick(this.bigram[w1]);
+                if (!next) break;
+                result.push(next);
+                if (next === "." || next === "!" || next === "?") {
+                    w1 = this.starters[Math.floor(Math.random() * this.starters.length)];
+                    result.push(w1); w2 = null; continue;
+                }
+                w2 = w1; w1 = next;
+            }
+            return result.join(" ").replace(/ ([.!?])/g, "$1");
+        },
+        save() {
+            try { localStorage.setItem(this.key, JSON.stringify({ bigram: this.bigram, trigram: this.trigram, starters: this.starters, vocab: this.vocabSize })); }
+            catch(e) { console.warn("[Markov:" + this.agent + "] save fail:", e.message); }
+        },
+        load() {
+            try {
+                const raw = localStorage.getItem(this.key);
+                if (!raw) return;
+                const d = JSON.parse(raw);
+                this.bigram = d.bigram || {}; this.trigram = d.trigram || {};
+                this.starters = d.starters || []; this.vocabSize = d.vocab || 0;
+            } catch(e) {}
+        },
+        reset() {
+            this.bigram = {}; this.trigram = {}; this.starters = []; this.vocabSize = 0;
+            localStorage.removeItem(this.key);
+        },
+        status() {
+            const bi = this.countEntries();
+            const tri = Object.keys(this.trigram).reduce((s, w) => s + Object.keys(this.trigram[w]).length, 0);
+            const sizeKB = (JSON.stringify({ bigram: this.bigram, trigram: this.trigram, starters: this.starters }).length / 1024).toFixed(1);
+            return { agent: this.agent, vocab: this.vocabSize, bigram: bi, trigram: tri, sizeKB: sizeKB };
+        }
+    };
+    m.load();
+    window.__markovs[id] = m;
+    return m;
+                    }
+function distributeToAgents(text) {
+    if (typeof AGENT_ICONS === "undefined") return [];
+    const t = text.toLowerCase();
+    const matched = [];
+    for (const id in AGENT_ROLES) {
+        if (!AGENT_ICONS[id]) continue;
+        if ((AGENT_ROLES[id] || []).some(k => t.includes(k))) matched.push(id);
+    }
+    if (!matched.length && AGENT_ICONS["Универсал"]) matched.push("Универсал");
+    const results = [];
+    for (const id of matched) {
+        if (getMarkov(id).train(text)) results.push(id);
+    }
+    return results;
+}
+
+registerLayer(
+    "markov_control",
+    (msg) => /^\s*марков\s+(обучись|сгенерируй|статус|сброс|список)/i.test(msg),
+    async function (msg) {
+        const t = msg.trim();
+        const cmd = t.toLowerCase();
+        const agentMatch = t.match(/@([а-яёa-z0-9_]+)/i);
+        const agent = agentMatch ? agentMatch[1] : null;
+
+        if (cmd.startsWith("марков обучись")) {
+            const text = t.replace(/^марков\s+обучись\s*/i, "").replace(/@[а-яёa-z0-9_]+\s*/i, "");
+            if (text.length < 10) return "⚠️ Дай больше текста (10+ символов).";
+            if (agent && agent.toLowerCase() === "все") {
+                if (typeof AGENT_ICONS === "undefined") return "⚠️ Список агентов не найден.";
+                let ok = 0, fail = [];
+                for (const id in AGENT_ICONS) {
+                    if (getMarkov(id).train(text)) ok++; else fail.push(id);
+                }
+                return `📚 @все обучены:\n✅ ${ok}\n❌ Не хватило текста: ${fail.join(", ") || "—"}`;
+            }
+            const m = getMarkov(agent || "default");
+            if (!m.train(text)) return "❌ Слишком мало текста (нужно 3+ слов).";
+            const s = m.status();
+            return `🧠 **@${s.agent}** обучен. Слов: ${s.vocab}, пар: ${s.bigram}, ${s.sizeKB} КБ.`;
+        }
+        
+        if (cmd.startsWith("марков сгенерируй")) {
+            const mm = cmd.match(/сгенерируй\s*(\d+)/);
+            const n = mm && mm[1] ? parseInt(mm[1]) : 30;
+            const m = getMarkov(agent || "default");
+            const text = m.generate(n);
+            if (!text) return `⚠️ @${agent || "default"} пуст. Сначала: \`марков обучись @${agent || "default"} <текст>\`.`;
+            return `📖 **@${m.agent}:**\n\n${text}`;
+        }
+        
+        if (cmd.startsWith("марков статус")) {
+            const m = getMarkov(agent || "default");
+            const s = m.status();
+            if (s.vocab === 0) return `📊 @${s.agent} пуст.`;
+            return `📊 **@${s.agent}:**\nСлов: ${s.vocab} | Пар: ${s.bigram} | Триграмм: ${s.trigram} | Размер: ${s.sizeKB} КБ`;
+        }
+        
+        if (cmd.startsWith("марков сброс")) {
+            const m = getMarkov(agent || "default");
+            m.reset();
+            return `🗑 Модель @${m.agent} стёрта.`;
+        }
+        
+        if (cmd.startsWith("марков список")) {
+            const all = (typeof AGENT_ICONS !== "undefined") ? Object.keys(AGENT_ICONS) : Object.keys(window.__markovs);
+            const lines = all.map(id => {
+                const m = window.__markovs[id.toLowerCase()];
+                if (!m) return `• @${id}: ⚪ не инициализирован`;
+                const s = m.status();
+                return s.vocab > 0 ? `• @${id}: ✅ ${s.vocab} слов` : `• @${id}: ⚪ пуст`;
+            });
+            return "📋 **Агенты:**\n" + lines.join("\n");
+        }
+        return null;
+    }
+);
+registerLayer(
+    "markov_agent_reply",
+    (msg) => {
+        // Срабатывает если в сообщении есть @Агент (но не команды "марков")
+        if (/^\s*марков\s/i.test(msg)) return false;
+        return /@[а-яёa-z0-9_]+/i.test(msg);
+    },
+    async function (msg, ctx) {
+        const m = msg.match(/@([а-яёa-z0-9_]+)/i);
+        if (!m) return null;
+        const rawAgent = m[1];
+        // Проверяем, есть ли такой агент в списке
+        if (typeof AGENT_ICONS !== "undefined") {
+            const found = Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === rawAgent.toLowerCase());
+            if (!found) return null;
+        }
+        const agentName = (typeof AGENT_ICONS !== "undefined") 
+            ? Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === rawAgent.toLowerCase()) 
+            : rawAgent;
+        
+        // Текст без @Агент — что реально сказал Босс
+        const cleanText = msg.replace(/@[а-яёa-z0-9_]+/gi, "").trim();
+        
+        const markov = getMarkov(agentName);
+        
+        // 1. Если есть текст — обучаем на нём
+        if (cleanText.length > 0) markov.train(cleanText);
+        
+        // 2. Если модель пуста — уступаем слово другим слоям
+        const st = markov.status();
+        if (st.vocab === 0) return null;
+        
+        // 3. Генерируем ответ
+        const generated = markov.generate(40);
+        if (!generated) return null;
+        
+        const icon = (typeof AGENT_ICONS !== "undefined" && AGENT_ICONS[agentName]) ? AGENT_ICONS[agentName] : "🤖";
+        return `${icon} **${agentName}:**\n\n${generated}`;
+    }
+);
+
+// Инициализация: создаём пустые модели для всех агентов
+if (typeof AGENT_ICONS !== "undefined") {
+    for (const id in AGENT_ICONS) getMarkov(id);
+    console.log("[Markov] Инициализировано моделей: " + Object.keys(window.__markovs).length);
+}
