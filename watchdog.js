@@ -193,20 +193,24 @@ function wdScanSecrets(code) {
 }
 
 function wdFixCode(code, analysis) {
-    var unclosed = analysis.errors.filter(function (e) { return e.type === "unclosed" && e.fixable; });
-    if (!unclosed.length) return { code: code, applied: 0 };
-    var lines = code.split("\n");
-    var insertions = [];
-    var stackCopy = analysis.stack.slice();
-    for (var i = stackCopy.length - 1; i >= 0; i--) {
-        var op = stackCopy[i];
-        var closer = op.char === "{" ? "}" : op.char === "(" ? ")" : "]";
-        var openLineText = lines[op.line - 1] || "";
-        var indent = (openLineText.match(/^[ \t]*/) || [""])[0];
-        insertions.push(indent + closer);
+    var fixedCode = code, applied = 0;
+    var extra = analysis.errors.filter(function(e){ return e.type === "extra"; });
+    extra.sort(function(a,b){ return b.index - a.index; });
+    for (var i = 0; i < extra.length; i++) {
+        fixedCode = fixedCode.slice(0, extra[i].index) + fixedCode.slice(extra[i].index + 1);
+        applied++;
     }
-    if (insertions.length > 0) lines = lines.concat(insertions);
-    return { code: lines.join("\n"), applied: insertions.length };
+    var unclosed = analysis.errors.filter(function(e){ return e.type === "unclosed" && e.fixable; });
+    if (unclosed.length) {
+        var lines = fixedCode.split("\n"), ins = [], sc = analysis.stack.slice();
+        for (var j = sc.length - 1; j >= 0; j--) {
+            var op = sc[j], cl = op.char === "{" ? "}" : op.char === "(" ? ")" : "]";
+            var ol = lines[op.line - 1] || "", ind = (ol.match(/^[ \t]*/) || [""])[0];
+            ins.push(ind + cl); applied++;
+        }
+        if (ins.length) fixedCode = lines.join("\n") + "\n" + ins.join("\n");
+    }
+    return { code: fixedCode, applied: applied };
 }
     function wdShowBell(count) {
     if (document.getElementById("wd-bell")) return;
