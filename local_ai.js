@@ -2111,3 +2111,188 @@ if (typeof AGENT_ICONS !== "undefined") {
     for (const id in AGENT_ICONS) getMarkov(id);
     console.log("[Markov] Инициализировано моделей: " + Object.keys(window.__markovs).length);
 }
+// ==========================================
+// 🏗 АРХИТЕКТОР + ИСТОЧНИКИ (v1.0)
+// ==========================================
+window.__sourceRegistry = {
+    busy: {},
+    book(agent, source) {
+        if (this.busy[source]) return false;
+        this.busy[source] = agent;
+        return true;
+    },
+    releaseAll() { this.busy = {}; }
+};
+
+const AGENT_SOURCES = {
+    "Исследователь": ["wikipedia", "ddg", "books"],
+    "Аналитик": ["ddg", "currency", "wikipedia"],
+    "Хакер": ["stackoverflow", "github", "ddg"],
+    "Охранник": ["ddg", "github"],
+    "Переводчик": ["ddg"],
+    "Погода": ["weather", "time"],
+    "Юрист": ["wikipedia", "ddg"],
+    "Техпис": ["mdn", "ddg", "wikipedia"],
+    "Фронтенд": ["mdn", "stackoverflow", "github"],
+    "Бэкенд": ["stackoverflow", "github", "ddg"],
+    "DevOps": ["github", "stackoverflow", "ddg"],
+    "Критик": ["ddg", "wikipedia"],
+    "Тестировщик": ["stackoverflow", "ddg"],
+    "Универсал": ["wikipedia", "ddg", "weather", "currency"]
+};
+
+const TOPIC_AGENTS = {
+    code: ["Хакер", "Фронтенд", "Бэкенд"],
+    fact: ["Исследователь", "Аналитик", "Юрист"],
+    weather: ["Погода"],
+    currency: ["Аналитик"],
+    docs: ["Техпис", "Фронтенд"],
+    general: ["Универсал", "Исследователь"]
+};
+const API_SOURCES = {
+    "weather": async (query) => {
+        try {
+            const city = query.replace(/(погод|какая|в|во|на|градус|температур|сейчас|завтра)/gi, "").trim();
+            if (!city) return null;
+            const g = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru&format=json`);
+            const gd = await g.json();
+            if (!gd.results || !gd.results.length) return null;
+            const { latitude, longitude, name } = gd.results[0];
+            const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+            const wd = await w.json();
+            const cw = wd.current_weather;
+            return `🌤 Погода в ${name}: ${cw.temperature}°C, ветер ${cw.windspeed} км/ч`;
+        } catch (e) { return null; }
+    },
+    "currency": async () => {
+        try {
+            const r = await fetch("https://www.cbr-xml-daily.ru/daily_json.js");
+            const d = await r.json();
+            return `💰 Курсы ЦБ РФ:\n- USD: ${d.Valute.USD.Value.toFixed(2)} ₽\n- EUR: ${d.Valute.EUR.Value.toFixed(2)} ₽\n- CNY: ${d.Valute.CNY.Value.toFixed(2)} ₽`;
+        } catch (e) { return null; }
+    },
+    "time": async () => {
+        try {
+            const r = await fetch("https://worldtimeapi.org/api/timezone/Europe/Moscow");
+            const d = await r.json();
+            const dt = new Date(d.datetime);
+            return `🕒 Время (Москва): ${dt.toLocaleTimeString("ru-RU")}, ${dt.toLocaleDateString("ru-RU")}`;
+        } catch (e) { return null; }
+    }
+};
+API_SOURCES["github"] = async (query) => {
+    try {
+        const q = query.replace(/(найди|покажи|github|репозиторий|код)/gi, "").trim();
+        if (!q) return null;
+        const r = await fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=3`);
+        const d = await r.json();
+        if (!d.items || !d.items.length) return null;
+        return "🐙 **GitHub:**\n" + d.items.map(i => `- [${i.full_name}](${i.html_url}) ⭐${i.stargazers_count}`).join("\n");
+    } catch (e) { return null; }
+};
+
+API_SOURCES["stackoverflow"] = async (query) => {
+    try {
+        const q = query.replace(/(найди|покажи|код|ошибка|js|python)/gi, "").trim();
+        if (!q) return null;
+        const r = await fetch(`https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q=${encodeURIComponent(q)}&site=stackoverflow`);
+        const d = await r.json();
+        if (!d.items || !d.items.length) return null;
+        return "💻 **StackOverflow:**\n" + d.items.slice(0, 3).map(i => `- [${i.title}](${i.link})`).join("\n");
+    } catch (e) { return null; }
+};
+
+API_SOURCES["mdn"] = async (query) => {
+    try {
+        const q = query.replace(/(как|работает|что такое|js|html|css|mdn)/gi, "").trim();
+        if (!q) return null;
+        const r = await fetch(`https://developer.mozilla.org/api/v1/search?q=${encodeURIComponent(q)}&locale=ru`);
+        const d = await r.json();
+        if (!d.documents || !d.documents.length) return null;
+        return "📖 **MDN Docs:**\n" + d.documents.slice(0, 3).map(i => `- [${i.title}](${i.mdn_url})`).join("\n");
+    } catch (e) { return null; }
+};
+API_SOURCES["books"] = async (query) => {
+    try {
+        const q = query.replace(/(найди|книга|книгу|автор)/gi, "").trim();
+        if (!q) return null;
+        const r = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=3`);
+        const d = await r.json();
+        if (!d.docs || !d.docs.length) return null;
+        return "📚 **Open Library:**\n" + d.docs.map(b => `- ${b.title}${b.author_name ? " (" + b.author_name[0] + ")" : ""}`).join("\n");
+    } catch (e) { return null; }
+};
+
+API_SOURCES["maps"] = async (query) => {
+    try {
+        const q = query.replace(/(где|находит|карта|адрес)/gi, "").trim();
+        if (!q) return null;
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`);
+        const d = await r.json();
+        if (!d.length) return null;
+        return `🗺 **${d[0].display_name}**\nКоординаты: ${d[0].lat}, ${d[0].lon}`;
+    } catch (e) { return null; }
+};
+
+API_SOURCES["wikipedia"] = async (query) => {
+    try {
+        const r = await fetch(`https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1&srlimit=2&origin=*`);
+        const d = await r.json();
+        if (!d.query || !d.query.search.length) return null;
+        return "📖 **Википедия:**\n" + d.query.search.map(s => `- **${s.title}**: ${s.snippet.replace(/<[^>]+>/g, "")}...`).join("\n");
+    } catch (e) { return null; }
+};
+
+API_SOURCES["ddg"] = async (query) => {
+    try {
+        const r = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+        const d = await r.json();
+        if (d.AbstractText) return `🔎 **DuckDuckGo:**\n${d.AbstractText}`;
+        return null;
+    } catch (e) { return null; }
+};
+async function runAgent(agentName, query) {
+    const preferred = AGENT_SOURCES[agentName] || ["ddg"];
+    let booked = null;
+    for (const src of preferred) {
+        if (window.__sourceRegistry.book(agentName, src)) { booked = src; break; }
+    }
+    if (!booked) booked = "ddg";
+    let data = null;
+    if (API_SOURCES[booked]) data = await API_SOURCES[booked](query);
+    return { agent: agentName, source: booked, ok: !!data, data: data };
+}
+
+registerLayer(
+    "architect_ensemble",
+    (msg) => {
+        if (/^\s*(марков|проверь|почини|статус|скан)/i.test(msg)) return false;
+        return /\?|какой|какая|какое|кто|что|где|когда|почему|сколько|погод|курс|найди|покажи/i.test(msg);
+    },
+    async function (msg) {
+        try {
+            const t = msg.toLowerCase();
+            let topic = "general";
+            if (/(погод|градус|температур)/i.test(t)) topic = "weather";
+            else if (/(курс|валют|доллар|евро)/i.test(t)) topic = "currency";
+            else if (/(код|js|python|функция|скрипт|напиши код|ошибка)/i.test(t)) topic = "code";
+            else if (/(закон|договор|право|суд)/i.test(t)) topic = "fact";
+            else if (/(кто|что|где|когда|почему|сколько|найди|расскажи)/i.test(t)) topic = "fact";
+            
+            const agents = (TOPIC_AGENTS[topic] || TOPIC_AGENTS.general).slice(0, 3);
+            window.__sourceRegistry.releaseAll();
+            
+            const results = await Promise.all(agents.map(a => runAgent(a, msg)));
+            const ok = results.filter(r => r.ok);
+            
+            if (!ok.length) return null;
+            
+            let report = `🏗 **Архитектор (${topic})**\n\n`;
+            ok.forEach(r => {
+                report += `**${r.agent}** _(${r.source})_\n`;
+                report += r.data.slice(0, 500) + (r.data.length > 500 ? "..." : "") + "\n\n";
+            });
+            return report.trim();
+        } catch (e) { return null; }
+    }
+);
