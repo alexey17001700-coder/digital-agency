@@ -1681,4 +1681,157 @@ if (/(кто|что|расскажи|найди|поищи|почему|заче
         }
     }
 );
-
+// ==========================================
+// 🧠 МАРКОВСКИЙ ДВИЖОК (локальный)
+// ==========================================
+window.__markov = {
+    bigram: {}, trigram: {}, starters: [], vocabSize: 0,
+    key: "shtab_markov_v1",
+    
+    tokenize(text) {
+        return (text.toLowerCase().replace(/\s+/g, " ").trim().match(/[а-яёa-z0-9]+|[.!?]/g) || []);
+    },
+    
+    train(text) {
+        const tokens = this.tokenize(text);
+        if (tokens.length < 5) return false;
+        const vocab = new Set();
+        for (let i = 0; i < tokens.length; i++) vocab.add(tokens[i]);
+        this.vocabSize = vocab.size;
+        
+        for (let i = 0; i < tokens.length - 1; i++) {
+            const w1 = tokens[i], w2 = tokens[i+1];
+            if (!this.bigram[w1]) this.bigram[w1] = {};
+            this.bigram[w1][w2] = (this.bigram[w1][w2] || 0) + 1;
+            
+            if (i < tokens.length - 2) {
+                const w3 = tokens[i+2];
+                if (!this.trigram[w1]) this.trigram[w1] = {};
+                if (!this.trigram[w1][w2]) this.trigram[w1][w2] = {};
+                this.trigram[w1][w2][w3] = (this.trigram[w1][w2][w3] || 0) + 1;
+            }
+            if (i > 0 && tokens[i-1] === ".") this.starters.push(w1);
+        }
+        if (!this.starters.length) this.starters = Array.from(vocab);
+        this.save();
+        return true;
+    },
+    
+    weightedPick(options) {
+        let total = 0;
+        for (const k in options) total += options[k];
+        if (total === 0) return null;
+        let r = Math.random() * total;
+        for (const k in options) { r -= options[k]; if (r <= 0) return k; }
+        return Object.keys(options)[0];
+    },
+    
+    generate(maxWords) {
+        if (!this.starters.length) return null;
+        let result = [], w1 = this.starters[Math.floor(Math.random() * this.starters.length)], w2 = null;
+        result.push(w1);
+        for (let i = 0; i < maxWords; i++) {
+            let next = null;
+            if (w2 && this.trigram[w1] && this.trigram[w1][w2]) next = this.weightedPick(this.trigram[w1][w2]);
+            if (!next && this.bigram[w1]) next = this.weightedPick(this.bigram[w1]);
+            if (!next) break;
+            result.push(next);
+            if (next === "." || next === "!" || next === "?") {
+                w1 = this.starters[Math.floor(Math.random() * this.starters.length)];
+                result.push(w1);
+                w2 = null; continue;
+            }
+            w2 = w1; w1 = next;
+        }
+        return result.join(" ").replace(/ ([.!?])/g, "$1");
+    },
+    
+    save() {
+        try {
+            localStorage.setItem(this.key, JSON.stringify({
+                bigram: this.bigram, trigram: this.trigram, starters: this.starters, vocab: this.vocabSize
+            }));
+        } catch(e) { console.warn("Марков: сохранение провалилось", e); }
+    },
+    
+    load() {
+        try {
+            const raw = localStorage.getItem(this.key);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            this.bigram = d.bigram || {};
+            this.trigram = d.trigram || {};
+            this.starters = d.starters || [];
+            this.vocabSize = d.vocab || 0;
+        } catch(e) {}
+    },
+    
+    reset() {
+        this.bigram = {}; this.trigram = {}; this.starters = []; this.vocabSize = 0;
+        localStorage.removeItem(this.key);
+    },
+    
+    status() {
+        const bi = Object.keys(this.bigram).length;
+        const tri = Object.keys(this.trigram).reduce((s, w) => s + Object.keys(this.trigram[w]).length, 0);
+        return { vocab: this.vocabSize, bigram: bi, trigram: tri };
+    }
+};
+window.__markov.load();
+// ==========================================
+// 📚 ПЛАГИН: Управление Марковским ИИ
+// ==========================================
+registerLayer(
+    "markov_control",
+    (msg) => /^\s*марков\s+(обучись|сгенерируй|статус|сброс)/i.test(msg),
+    async function (msg) {
+        const t = msg.trim();
+        const cmd = t.toLowerCase();
+        
+        if (cmd.startsWith("марков обучись")) {
+            const text = t.replace(/^марков\s+обучись\s*/i, "");
+            if (text.length < 20) return "⚠️ Дай больше текста для обучения (минимум 20 символов).";
+            const ok = window.__markov.train(text);
+            if (!ok) return "❌ Слишком мало текста. Нужно минимум 5 слов.";
+            const st = window.__markov.status();
+            return `🧠 **Модель обучена!**\nСлов: ${st.vocab}\nБиграмм: ${st.bigram}\nТриграмм: ${st.trigram}`;
+        }
+        
+        if (cmd.startsWith("марков сгенерируй")) {
+            const m = cmd.match(/марков\s+сгенерируй\s*(\d+)?/);
+            const n = m && m[1] ? parseInt(m[1]) : 30;
+            const text = window.__markov.generate(n);
+            if (!text) return "⚠️ Модель пуста. Сначала: `марков обучись <текст>`.";
+            return `📖 **Сгенерировано:**\n\n${text}`;
+        }
+        
+        if (cmd.startsWith("марков статус")) {
+            const st = window.__markov.status();
+            if (st.vocab === 0) return "📊 Модель пуста. Обучи: `марков обучись <текст>`.";
+            return `📊 **Марковский ИИ:**\n- Слов в словаре: ${st.vocab}\n- Биграмм: ${st.bigram}\n- Триграмм: ${st.trigram}`;
+        }
+        
+        if (cmd.startsWith("марков сброс")) {
+            window.__markov.reset();
+            return "🗑 Модель стёрта. Обучение начнётся с нуля.";
+        }
+        
+        return null;
+    }
+);
+// ==========================================
+// 🎭 ПЛАГИН: Авто-генерация через Маркова
+// (Срабатывает, когда пользователь просит "поговори", "скажи что-нибудь")
+// ==========================================
+registerLayer(
+    "markov_auto",
+    (msg) => /(скажи|сгенерируй|придумай)\s+(что-нибудь|текст|фразу|историю)|поговори со мной/i.test(msg),
+    async function (msg) {
+        const st = window.__markov.status();
+        if (st.vocab === 0) {
+            return "🧠 Я пока не обучен на текстах. Напиши: `марков обучись <текст>` — и я запомню.";
+        }
+        const text = window.__markov.generate(40);
+        return `🎭 **Марковский ИИ говорит:**\n\n${text}\n\n_(Обучен на ${st.vocab} словах)_`;
+    }
+);
