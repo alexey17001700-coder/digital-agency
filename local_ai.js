@@ -392,3 +392,153 @@ function finalizeOutput(ctx) {
     
     return ctx.output;
 }
+// ==========================================
+// 🏗 СИСТЕМА ПЛАГИНОВ (добавляем, чтобы не трогать ядро)
+// ==========================================
+window.CUSTOM_LAYERS = window.CUSTOM_LAYERS || [];
+window.registerLayer = function(name, matcher, handler) {
+    window.CUSTOM_LAYERS.push({ name, matcher, handler });
+};
+
+// Перехватываем старую функцию, чтобы сначала проверить плагины
+const __old_generateLocalResponse = generateLocalResponse;
+window.generateLocalResponse = async function(agentName, userMessage, proxyUrl, signal) {
+    const msg = userMessage.trim();
+    
+    // 1. Сначала пробуем наши плагины
+    for (const layer of window.CUSTOM_LAYERS) {
+        try {
+            if (layer.matcher(msg)) {
+                const res = await layer.handler(msg);
+                if (res !== null && res !== undefined && res !== "") {
+                    return res;
+                }
+            }
+        } catch (e) {
+            console.warn("Плагин упал:", e);
+        }
+    }
+    
+    // 2. Если никто не ответил — отдаём слово старому ядру
+    return await __old_generateLocalResponse(agentName, userMessage, proxyUrl, signal);
+};
+
+// ==========================================
+// 🏗 АРХИТЕКТОР (ИСТОЧНИКИ)
+// ==========================================
+window.__sourceRegistry = {
+    busy: {},
+    book(agent, source) {
+        if (this.busy[source]) return false;
+        this.busy[source] = agent;
+        return true;
+    },
+    releaseAll() { this.busy = {}; }
+};
+
+const AGENT_SOURCES = {
+    "Погода": ["weather", "time"],
+    "Аналитик": ["currency", "ddg"],
+    "Хакер": ["stackoverflow", "github", "ddg"],
+    "Исследователь": ["wikipedia", "ddg", "books"],
+    "Универсал": ["wikipedia", "ddg", "weather", "currency"]
+};
+const API_SOURCES = {
+    "weather": async (query) => {
+        try {
+            const city = query.replace(/(погод|какая|в|во|на|градус|температур|сейчас|завтра)/gi, "").trim();
+            if (!city) return null;
+            const g = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru`);
+            const gd = await g.json();
+            if (!gd.results || !gd.results.length) return null;
+            const { latitude, longitude, name } = gd.results[0];
+            const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+            const wd = await w.json();
+            return `🌤 Погода в ${name}: ${wd.current_weather.temperature}°C`;
+        } catch (e) { return null; }
+    },
+    "currency": async () => {
+        try {
+            const r = await fetch("https://www.cbr-xml-daily.ru/daily_json.js");
+            const d = await r.json();
+            return `💰 Курсы ЦБ РФ:\n- USD: ${d.Valute.USD.Value.toFixed(2)} ₽\n- EUR: ${d.Valute.EUR.Value.toFixed(2)} ₽`;
+        } catch (e) { return null; }
+    },
+    "time": async () => {
+        try {
+            const r = await fetch("https://worldtimeapi.org/api/timezone/Europe/Moscow");
+            const d = await r.json();
+            return `🕒 ${new Date(d.datetime).toLocaleTimeString("ru-RU")}`;
+        } catch (e) { return null; }
+    },
+    "github": async (query) => {
+        try {
+            const q = query.replace(/(найди|покажи|github|репозиторий|код)/gi, "").trim();
+            if (!q) return null;
+            const r = await fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=3`);
+            const d = await r.json();
+            return d.items ? "🐙 GitHub:\n" + d.items.map(i => `- ${i.full_name}`).join("\n") : null;
+        } catch (e) { return null; }
+    },
+    "wikipedia": async (query) => {
+        try {
+            const r = await fetch(`https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1&srlimit=2&origin=*`);
+            const d = await r.json();
+            if (!d.query || !d.query.search.length) return null;
+            return "📖 Википедия:\n" + d.query.search.map(s => `- ${s.title}: ${s.snippet.replace(/<[^>]+>/g, "")}`).join("\n");
+        } catch (e) { return null; }
+    },
+    "ddg": async (query) => {
+        try {
+            const r = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`);
+            const d = await r.json();
+            return d.AbstractText ? `🔎 ${d.AbstractText}` : null;
+        } catch (e) { return null; }
+    }
+};
+
+async function runAgent(agentName, query) {
+    const preferred = AGENT_SOURCES[agentName] || ["ddg"];
+    let booked = null;
+    for (const src of preferred) {
+        if (window.__sourceRegistry.book(agentName, src)) { booked = src; break; }
+    }
+    if (!booked) booked = "ddg";
+    let data = null;
+    if (API_SOURCES[booked]) data = await API_SOURCES[booked](query);
+    return { agent: agentName, ok: !!data, data: data };
+}
+
+// Регистрируем Архитектора
+window.registerLayer(
+    "architect_ensemble",
+    (msg) => /\?|какой|какая|какое|кто|что|где|когда|почему|сколько|погод|курс|найди|покажи|расскажи/i.test(msg) && !/^\s*марков/i.test(msg),
+    async function (msg) {
+        const t = msg.toLowerCase();
+        let topic = "general";
+        if (/(погод|градус|температур)/i.test(t)) topic = "weather";
+        else if (/(курс|валют|доллар|евро)/i.test(t)) topic = "currency";
+        else if (/(кто|что|где|когда|почему|сколько)/i.test(t)) topic = "fact";
+        
+        const agents = (topic === "weather" ? ["Погода"] : (topic === "currency" ? ["Аналитик"] : ["Исследователь"])).slice(0, 2);
+        window.__sourceRegistry.releaseAll();
+        
+        const results = await Promise.all(agents.map(a => runAgent(a, msg)));
+        const ok = results.filter(r => r.ok);
+        if (!ok.length) return null;
+        
+        return ok.map(r => `**${r.agent}**\n${r.data}`).join("\n\n");
+    }
+);
+
+// Регистрируем Болталку
+window.registerLayer(
+    "human_talk",
+    (msg) => /(^|\s)(привет|ку|здравствуй|добрый день|как дела|как ты)(\s|$)/i.test(msg),
+    async (msg) => {
+        const t = msg.toLowerCase();
+        if (/(привет|ку|здравствуй)/i.test(t)) return "Привет, Босс! На связи. 🚀";
+        if (/(как дела|как ты)/i.test(t)) return "Все системы в норме, Босс! 😎";
+        return "На связи, Босс!";
+    }
+);
