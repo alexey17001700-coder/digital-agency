@@ -648,6 +648,183 @@ window.wdApplyPatch = async function() {
         }
     } catch (e) { wdLog("> ОШИБКА СЕТИ", "wd-log-error"); }
 };
+// Новые слова, которых раньше не было
+const wdExtraTypos = {
+    'reutrn': 'return', 'retrun': 'return', 'retun': 'return', 'retrn': 'return',
+    'consle': 'console', 'consoel': 'console', 'cosnt': 'const', 'conts': 'const', 'cnost': 'const',
+    'lte': 'let', 'lst': 'let', 'va r': 'var', 'vra': 'var',
+    'tru e': 'true', 'tr ue': 'true', 'flase': 'false', 'fales': 'false', 'fasle': 'false',
+    'asycn': 'async', 'asnyc': 'async', 'awiat': 'await', 'awit': 'await', 'awiat': 'await',
+    'proimse': 'Promise', 'promsie': 'Promise', 'promis': 'Promise',
+    'Objet': 'Object', 'Arrat': 'Array', 'Arr ay': 'Array', 'Strng': 'String', 'Numbr': 'Number',
+    'Boolen': 'Boolean', 'math': 'Math', 'dAte': 'Date', 'RegEx': 'RegExp', 'Rgexp': 'RegExp',
+    'addEvenetListener': 'addEventListener', 'addEventLister': 'addEventListener', 'addeventlistener': 'addEventListener',
+    'getElementByID': 'getElementById', 'getelementbyid': 'getElementById', 'getElementById': 'getElementById',
+    'getElementByClass': 'getElementsByClassName', 'getElementsByClass': 'getElementsByClassName',
+    'querrySelector': 'querySelector', 'querryselector': 'querySelector', 'querySelctor': 'querySelector',
+    'innerHtml': 'innerHTML', 'innerhtml': 'innerHTML', 'classname': 'className', 'classList': 'classList',
+    'documnt': 'document', 'documnet': 'document', 'doccument': 'document',
+    'windo': 'window', 'widow': 'window', 'wnidow': 'window',
+    'localstorage': 'localStorage', 'LocalStorage': 'localStorage', 'localStorge': 'localStorage',
+    'sessionstorage': 'sessionStorage', 'settimeout': 'setTimeout', 'setTimeout': 'setTimeout',
+    'setinterval': 'setInterval', 'clearintervl': 'clearInterval', 'clearInterval': 'clearInterval',
+    'lenght': 'length', 'lengt': 'length', 'lnegth': 'length',
+    'slce': 'slice', 'splce': 'splice', 'splice': 'splice', 'filtr': 'filter', 'fitler': 'filter',
+    'reverese': 'reverse', 'toUppercase': 'toUpperCase', 'toLowercase': 'toLowerCase',
+    'registerLayr': 'registerLayer', 'registerlayer': 'registerLayer', 'registerLayer': 'registerLayer',
+    'applyautofix': 'applyAutoFix', 'applyAutoFiX': 'applyAutoFix',
+    'JSON.parse': 'JSON.parse', 'json.parse': 'JSON.parse', 'JSON.stringify': 'JSON.stringify',
+    'parseInt': 'parseInt', 'parseFloat': 'parseFloat', 'isNaN': 'isNaN',
+    'Math.floor': 'Math.floor', 'Math.random': 'Math.random', 'Math.max': 'Math.max', 'Math.min': 'Math.min',
+    'Promise.all': 'Promise.all', 'Promise.resolve': 'Promise.resolve', 'Promise.reject': 'Promise.reject',
+    'encodeURIComponent': 'encodeURIComponent', 'decodeURIComponent': 'decodeURIComponent'
+};
+    function wdLexer(code) {
+    let lines = code.split('\n');
+    let inString = false, stringChar = '', inComment = false, inBlockComment = false;
+    let braces = 0, parens = 0, brackets = 0;
+    let braceLines = [], parenLines = [], bracketLines = [];
+
+    for (let l = 0; l < lines.length; l++) {
+        for (let i = 0; i < lines[l].length; i++) {
+            const c = lines[l][i], next = lines[l][i+1];
+            if (inComment) { if (c === '\n') inComment = false; continue; }
+            if (inBlockComment) { if (c === '*' && next === '/') { inBlockComment = false; i++; } continue; }
+            if (c === '/' && next === '/') { inComment = true; i++; continue; }
+            if (c === '/' && next === '*') { inBlockComment = true; i++; continue; }
+            
+            if (inString) {
+                if (c === '\\') { i++; continue; }
+                if (c === stringChar) inString = false;
+                continue;
+            }
+            if (c === '"' || c === "'" || c === '`') { inString = true; stringChar = c; continue; }
+
+            if (c === '{') { braces++; braceLines.push(l + 1); }
+            if (c === '}') { braces--; if (braceLines.length > 0) braceLines.pop(); }
+            if (c === '(') { parens++; parenLines.push(l + 1); }
+            if (c === ')') { parens--; if (parenLines.length > 0) parenLines.pop(); }
+            if (c === '[') { brackets++; bracketLines.push(l + 1); }
+            if (c === ']') { brackets--; if (bracketLines.length > 0) bracketLines.pop(); }
+        }
+        inComment = false;
+    }
+    return { lines, inString, stringChar, inBlockComment, braces, parens, brackets, braceLines, parenLines, bracketLines };
+    }
+    function wdFindMissingPunctuation(lines) {
+    let issues = [];
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        // 'a' 'b' без запятой
+        if (/['"][^'"]+['"]\s+['"][^'"]+['"]/.test(line) && !line.includes('+')) {
+            issues.push({ line: i + 1, type: 'comma', msg: 'Пропущена запятая между строками' });
+        }
+        // { name 'John' } без двоеточия
+        if (/\b\w+\s+['"][^'"]+['"]/.test(line) && !line.includes(':') && !line.includes('=')) {
+            issues.push({ line: i + 1, type: 'colon', msg: 'Пропущено двоеточие в объекте' });
+        }
+    }
+    return issues;
+    }
+    function wdScanSecrets(code) {
+    let leaks = [];
+    const lines = code.split('\n');
+    const patterns = [
+        { regex: /sk-[a-zA-Z0-9]{20,}/g, name: 'OpenAI/DeepSeek API Key' },
+        { regex: /ghp_[a-zA-Z0-9]{30,}/g, name: 'GitHub Personal Token' },
+        { regex: /AQVN[a-zA-Z0-9_]{30,}/g, name: 'Yandex API Key' },
+        { regex: /yandexKey\s*[:=]\s*['"][^'"]+['"]/gi, name: 'Yandex Key Variable' },
+        { regex: /deepseekKey\s*[:=]\s*['"][^'"]+['"]/gi, name: 'DeepSeek Key Variable' }
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+        patterns.forEach(p => {
+            if (p.regex.test(lines[i])) {
+                leaks.push({ line: i + 1, msg: `УТЕЧКА: ${p.name} в строке ${i + 1}!` });
+            }
+        });
+    }
+    return leaks;
+    }
+    function wdAutoRepair(code, lexer, punctIssues) {
+    let fixes = [];
+    let lines = code.split('\n');
+    punctIssues.forEach(issue => {
+        if (issue.type === 'comma') {
+            lines[issue.line - 1] = lines[issue.line - 1].replace(/['"]([^'"]+)['"]\s+['"]/, `'$1', '`);
+            fixes.push(`Строка ${issue.line}: добавлена запятая`);
+        }
+        if (issue.type === 'colon') {
+            lines[issue.line - 1] = lines[issue.line - 1].replace(/\b(\w+)\s+(['"][^'"]+['"])/, `$1: $2`);
+            fixes.push(`Строка ${issue.line}: добавлено двоеточие`);
+        }
+    });
+    code = lines.join('\n');
+    if (lexer.inString) { code += lexer.stringChar; fixes.push(`Не закрыта кавычка ${lexer.stringChar} (конец файла)`); }
+    if (lexer.inBlockComment) { code += " */"; fixes.push(`Не закрыт блочный комментарий */`); }
+    if (lexer.braces > 0) {
+        code += "\n" + "}".repeat(lexer.braces);
+        let lineInfo = lexer.braceLines.length > 0 ? ` (открыты в строках: ${lexer.braceLines.join(', ')})` : '';
+        fixes.push(`Добавлено ${lexer.braces} скобок }${lineInfo}`);
+    }
+    if (lexer.parens > 0) { code += ")".repeat(lexer.parens); fixes.push(`Добавлено ${lexer.parens} скобок )`); }
+    if (lexer.brackets > 0) { code += "]".repeat(lexer.brackets); fixes.push(`Добавлено ${lexer.brackets} скобок ]`); }
+    return { fixedCode: code, fixes };
+    }
+    async function wdRunScan() {
+    try {
+        wdLog("> ЗАПУСК РАСШИРЕННОГО АНАЛИЗА...", "wd-log-system");
+        const res = await fetch('local_ai.js?t=' + Date.now());
+        if (!res.ok) throw new Error("Файл local_ai.js не найден");
+        const originalCode = await res.text();
+        let currentCode = originalCode;
+        let allFixes = [];
+
+        // 1. Проверка утечек
+        const leaks = wdScanSecrets(currentCode);
+        if (leaks.length > 0) {
+            wdTerminal.innerHTML = '';
+            leaks.forEach(l => wdLog(`> ${l.msg}`, "wd-log-error"));
+            wdLog("> РЕМОНТ ОСТАНОВЛЕН. УДАЛИ КЛЮЧИ ВРУЧНУЮ!", "wd-log-error");
+            wdAlarmBtn.style.display = 'block';
+            return;
+        }
+
+        // 2. Поиск пропущенных запятых и двоеточий
+        const punctIssues = wdFindMissingPunctuation(currentCode.split('\n'));
+
+        // 3. Лексер скобок
+        const lexer = wdLexer(currentCode);
+
+        // 4. Авторемонт
+        const repairResult = wdAutoRepair(currentCode, lexer, punctIssues);
+        currentCode = repairResult.fixedCode;
+        allFixes.push(...repairResult.fixes);
+
+        // 5. Опечатки
+        for (const [bad, good] of Object.entries(wdExtraTypos)) {
+            const safeBad = bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(?<![a-zA-Z0-9_])${safeBad}(?![a-zA-Z0-9_])`, 'g');
+            if (regex.test(currentCode)) {
+                currentCode = currentCode.replace(regex, good);
+                allFixes.push(`Опечатка: "${bad}" -> "${good}"`);
+            }
+        }
+
+        // 6. Вывод результатов
+        if (allFixes.length > 0) {
+            wdTerminal.innerHTML = '';
+            allFixes.forEach(fix => wdLog(`> ${fix}`, "wd-log-info"));
+            wdPendingFix = { path: 'local_ai.js', content: currentCode };
+            wdAlarmBtn.style.display = 'block';
+            wdLog("> АВТО-ФИКС ГОТОВ. ЖДУ КОМАНДЫ...", "wd-log-system");
+        } else {
+            wdLog("> ВСЁ ИДЕАЛЬНО. ОШИБОК, УТЕЧЕК И ОПЕЧАТОК НЕТ.", "wd-log-info");
+        }
+    } catch (e) { wdLog("> СБОЙ: " + e.message, "wd-log-error"); }
+}
+
+// Закрываем модуль (эти 3 строки ты удалил сверху, теперь они снова в конце)
 setTimeout(wdRunScan, 3000);
 })();
 </script>
