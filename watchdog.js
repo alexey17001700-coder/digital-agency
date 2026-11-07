@@ -1,3 +1,4 @@
+alert("Watchdog успешно загружен!");
 <!DOCTYPE html>
 <html lang="ru">
 <head>
