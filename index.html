@@ -405,6 +405,7 @@ setTimeout(() => {
         }
     </script>
     <style>
+<style>
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
 #wd-matrix-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9998;pointer-events:none;opacity:0.15}
 #wd-panel{position:fixed;bottom:20px;right:20px;width:380px;max-width:calc(100vw - 40px);background:rgba(0,10,0,0.95);border:1px solid #00ff41;border-radius:4px;box-shadow:0 0 25px rgba(0,255,65,0.5),inset 0 0 20px rgba(0,255,65,0.1);z-index:999999;overflow:hidden;display:none;transform:scale(0.9);opacity:0;transition:all 0.3s ease-out;font-family:'Fira Code',monospace}
@@ -429,16 +430,11 @@ setTimeout(() => {
 .wd-btn{flex:1;padding:12px;border:1px solid #00ff41;background:transparent;color:#00ff41;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;letter-spacing:1px;font-family:'Fira Code',monospace}
 .wd-btn-fix:hover{background:#00ff41;color:#000;box-shadow:0 0 20px #00ff41}
 .wd-btn-ignore{border-color:#555;color:#555}.wd-btn-ignore:hover{border-color:#ff3333;color:#ff3333}
-#wd-music-controls{position:fixed;top:60px;right:20px;z-index:100000;display:flex;gap:10px;font-family:'Fira Code',monospace}
-.wd-music-btn{background:rgba(0,10,0,0.9);color:#00ff41;border:1px solid #00ff41;padding:6px 10px;font-size:12px;cursor:pointer;border-radius:4px;transition:0.2s;box-shadow:0 0 10px rgba(0,255,65,0.3)}
-.wd-music-btn:hover{box-shadow:0 0 15px #00ff41}
+.wd-music-btn{background:none;border:1px solid #00ff41;color:#00ff41;padding:4px 8px;font-size:12px;cursor:pointer;border-radius:4px;font-family:inherit;margin-left:10px}
+.wd-music-btn:hover{background:#00ff41;color:#000}
 #wd-alarm-btn{position:fixed;top:100px;right:20px;z-index:1000000;cursor:pointer;display:none;animation:wd-alarmPulse 1s infinite alternate;font-size:40px;line-height:1}
 </style>
 <canvas id="wd-matrix-bg"></canvas>
-<div id="wd-music-controls">
-<button id="wd-music-btn" class="wd-music-btn" onclick="window.wdToggleMusic()">🔊 MUSIC: OFF</button>
-<button id="wd-track-btn" class="wd-music-btn" onclick="window.wdNextTrack()" style="display:none;">⏭ NEXT TRACK</button>
-</div>
 <div id="wd-alarm-btn" onclick="window.wdShow()" title="Ошибка в коде!">🚨</div>
 <div id="wd-panel">
 <div class="wd-header">
@@ -446,7 +442,11 @@ setTimeout(() => {
 <div class="wd-cyber-alarm"></div>
 <div class="wd-title">SYS_ERR // WATCHDOG</div>
 </div>
-<button class="wd-close" onclick="window.wdHide()">✕</button>
+<div style="display:flex; align-items:center;">
+<button id="wd-music-btn" class="wd-music-btn" onclick="window.wdToggleMusic()">🔊 MUSIC: OFF</button>
+<button id="wd-track-btn" class="wd-music-btn" onclick="window.wdNextTrack()" style="display:none; margin-left:5px;">⏭ 1/4</button>
+<button class="wd-close" onclick="window.wdHide()" style="margin-left:15px;">✕</button>
+</div>
 </div>
 <div class="wd-terminal" id="wd-terminal"></div>
 <div class="wd-actions">
@@ -557,28 +557,9 @@ function wdSchedule() {
 function wdNextTrack() {
     if (!wdIsPlaying) return;
     wdTrack = (wdTrack + 1) % wdTracks.length;
-    document.getElementById('wd-track-btn').innerText = `⏭ TRACK ${wdTrack + 1}/4`;
+    document.getElementById('wd-track-btn').innerText = `⏭ ${wdTrack + 1}/4`;
 }
-    // Функция жесткой остановки музыки
-function wdStopMusic() {
-    wdIsPlaying = false;
-    if (wdTimer) clearInterval(wdTimer);
-    if (wdAudioCtx) {
-        wdAudioCtx.close().catch(() => {});
-        wdAudioCtx = null;
-    }
-    const btn = document.getElementById('wd-music-btn');
-    const trackBtn = document.getElementById('wd-track-btn');
-    if (btn) {
-        btn.innerText = '🔊 MUSIC: OFF';
-        btn.style.color = '#555';
-        btn.style.borderColor = '#555';
-        btn.style.boxShadow = 'none';
-    }
-    if (trackBtn) trackBtn.style.display = 'none';
-}
-// Функция жесткой остановки музыки
-function wdStopMusic() {
+    function wdStopMusic() {
     wdIsPlaying = false;
     if (wdTimer) clearInterval(wdTimer);
     if (wdAudioCtx) {
@@ -587,22 +568,9 @@ function wdStopMusic() {
     }
     const btn = document.getElementById('wd-music-btn');
     const trackBtn = document.getElementById('wd-track-btn');
-    if (btn) {
-        btn.innerText = '🔊 MUSIC: OFF';
-        btn.style.color = '#555';
-        btn.style.borderColor = '#555';
-        btn.style.boxShadow = 'none';
-    }
+    if (btn) btn.innerText = '🔊 MUSIC: OFF';
     if (trackBtn) trackBtn.style.display = 'none';
 }
-
-// Убиваем музыку при любом уходе со страницы
-window.addEventListener('beforeunload', wdStopMusic);
-window.addEventListener('pagehide', wdStopMusic);
-window.addEventListener('unload', wdStopMusic);
-
-// Принудительный сброс при загрузке
-wdStopMusic();
 
 window.wdToggleMusic = function() {
     const btn = document.getElementById('wd-music-btn'), trackBtn = document.getElementById('wd-track-btn');
@@ -613,8 +581,8 @@ window.wdToggleMusic = function() {
         if (wdAudioCtx.state === 'suspended') wdAudioCtx.resume();
         wdNextNote = wdAudioCtx.currentTime + 0.05; wdStep = 0; wdIsPlaying = true;
         wdTimer = setInterval(wdSchedule, 25);
-        btn.innerText = '🔇 MUSIC: ON'; btn.style.color = '#00ff41'; btn.style.borderColor = '#00ff41'; btn.style.boxShadow = '0 0 15px #00ff41';
-        trackBtn.style.display = 'block'; trackBtn.innerText = `⏭ TRACK ${wdTrack + 1}/4`;
+        btn.innerText = '🔇 MUSIC: ON';
+        trackBtn.style.display = 'block'; trackBtn.innerText = `⏭ ${wdTrack + 1}/4`;
     }
 };
 window.wdNextTrack = wdNextTrack;
@@ -632,7 +600,10 @@ function wdLog(text, className) {
     wdTerminal.scrollTop = wdTerminal.scrollHeight;
 }
 window.wdShow = function() { wdPanel.classList.add('active'); };
-window.wdHide = function() { wdPanel.classList.remove('active'); };
+window.wdHide = function() { 
+    wdPanel.classList.remove('active'); 
+    wdStopMusic(); // Выключаем музыку при закрытии окна
+};
 
 async function wdRunScan() {
     try {
@@ -670,7 +641,7 @@ window.wdApplyPatch = async function() {
         const data = await res.json();
         if (data.success) {
             wdLog("> СИСТЕМА ВОССТАНОВЛЕНА. ПЕРЕЗАГРУЗКА...", "wd-log-info");
-            wdStopMusic(); // Убиваем звук перед релоадом
+            wdStopMusic();
             setTimeout(() => location.reload(), 2000);
         } else {
             wdLog("> ОШИБКА: " + data.error, "wd-log-error");
