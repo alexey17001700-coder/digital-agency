@@ -356,7 +356,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             clearTimeout(timeoutId);
         } else {
             // === ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ) ===
-        
+            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             
             if (typeof generateLocalResponse === 'function') {

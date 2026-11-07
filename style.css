@@ -309,12 +309,3 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     animation: none !important;
     transition: none !important;
 }
-/* Мигающая кнопка API-ключей */
-@keyframes blink-red-api {
-    0%, 100% { box-shadow: 0 0 2px #ff0000; border: 1px solid #ff0000; }
-    50% { box-shadow: 0 0 15px #ff0000; border: 1px solid #ff0000; background: rgba(255, 0, 0, 0.2); }
-}
-.mode-btn.needs-keys {
-    animation: blink-red-api 1.5s infinite;
-    color: #ff4444 !important;
-}
