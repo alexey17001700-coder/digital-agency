@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "72.0";
+const BRAIN_VERSION = "73.0";
 const MAX_CONTEXT = 6;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -14,10 +14,10 @@ window.__markovs = {};
 
 // Максимально простые промпты для 135M модели
 const AGENTS_CONFIG = {
-    "Регистратор": "Отвечай на русском языке. Ты помощник. Будь краток.",
-    "Хакер": "Отвечай на русском. Ты хакер. Будь краток.",
-    "Охранник": "Отвечай на русском. Ты охранник. Будь краток.",
-    "Кодер": "Отвечай на русском. Пиши только код. Без слов."
+    "Регистратор": "Ты — Регистратор. Отвечай на русском языке. Будь краток.",
+    "Хакер": "Ты — Хакер. Отвечай на русском языке. Будь краток.",
+    "Охранник": "Ты — Охранник. Отвечай на русском языке. Будь краток.",
+    "Кодер": "Ты — Кодер. Пиши только код."
 };
 
 function updateBoot(pct, status, modelsHtml) {
@@ -25,6 +25,10 @@ function updateBoot(pct, status, modelsHtml) {
         window.parent.updateAILoading(pct, status, modelsHtml);
     }
 }
+
+// ==========================================
+// ЗАГРУЗКА НЕЙРОСЕТИ
+// ==========================================
 window.bootAllBrains = async function() {
     updateBoot(0, "Подготовка...", "");
     try {
@@ -71,6 +75,22 @@ window.bootAllBrains = async function() {
         if (window.parent && typeof window.parent.aiLoadingError === 'function') window.parent.aiLoadingError(e.message);
     }
 };
+
+// ==========================================
+// ОЧИСТКА И ЗАПРОС К НЕЙРОСЕТИ (С ПРИМЕРАМИ)
+// ==========================================
+function cleanBrainOutput(rawText) {
+    if (!rawText) return null;
+    let text = rawText;
+    text = text.replace(/[a-zA-Z]+/g, ''); // Режем английский
+    text = text.replace(/[@#$%^&*_+=\[\]{}<>|\\\/~`]/g, ''); // Режем спецсимволы
+    text = text.replace(/\s+/g, ' ').trim(); // Убираем лишние пробелы
+    
+    const words = text.split(' ').filter(w => w.length > 1);
+    if (words.length < 3 || text.length < 10) return null; // Слишком мало смысла
+    return text;
+}
+
 async function askRawBrain(agent, userMsg) {
     if (!window.__sharedBrain && window.__brainPromise) {
         try { window.__sharedBrain = await window.__brainPromise; } 
@@ -78,37 +98,62 @@ async function askRawBrain(agent, userMsg) {
     }
     if (!window.__sharedBrain) return { text: "⏳ Мозг не загружен.", time: "0" };
 
-    const sysPrompt = AGENTS_CONFIG[agent] || AGENTS_CONFIG["Регистратор"];
-    
+    // Промпт с ПРИМЕРАМИ (Few-Shot)
+    const messages = [
+        { role: "system", content: `Ты — ${agent}. Отвечай ТОЛЬКО на русском языке. Кратко.` },
+        { role: "user", content: "Привет" },
+        { role: "assistant", content: "Здравствуйте, Босс! Я готов к работе." },
+        { role: "user", content: "Какая погода в Москве?" },
+        { role: "assistant", content: "Я не знаю погоду. У меня нет доступа к интернету." },
+        { role: "user", content: "Кто ты?" },
+        { role: "assistant", content: `Я — ${agent}, твой цифровой помощник.` }
+    ];
+
     if (!window.__agentMemory[agent]) window.__agentMemory[agent] = [];
     const mem = window.__agentMemory[agent];
-
-    const messages = [{ role: "system", content: sysPrompt }];
     mem.slice(-2).forEach(m => messages.push({ role: m.role, content: m.text }));
+    
     messages.push({ role: "user", content: userMsg });
 
     const t0 = Date.now();
     try {
         const out = await window.__sharedBrain(messages, { 
-            max_new_tokens: 40, 
-            temperature: 0.3, 
+            max_new_tokens: agent === "Кодер" ? 150 : 40, 
+            temperature: agent === "Кодер" ? 0.2 : 0.4, 
             do_sample: true, 
             repetition_penalty: 1.2 
         });
+        
         let ans = "";
         const gen = out?.[0]?.generated_text;
         if (Array.isArray(gen)) ans = gen[gen.length - 1]?.content || "";
         else if (typeof gen === "string") ans = gen.split('<|im_start|>assistant\n').pop().split('<|im_end|>')[0].trim();
 
         const time = ((Date.now() - t0) / 1000).toFixed(1);
+
+        // Кодеру не режем код, остальным — режем английский
+        let finalAnswer = ans;
+        if (agent !== "Кодер") {
+            finalAnswer = cleanBrainOutput(ans);
+            if (!finalAnswer) {
+                return { text: "⚠️ Нейросеть выдала слишком сырой ответ. Смысл потерян. Попробуйте перефразировать.", time };
+            }
+        }
+
         mem.push({ role: 'user', text: userMsg });
-        mem.push({ role: 'assistant', text: ans });
+        mem.push({ role: 'assistant', text: finalAnswer });
         if (mem.length > MAX_CONTEXT) mem.shift();
-        return { text: ans || "(пусто)", time };
+        
+        return { text: finalAnswer, time };
+        
     } catch (e) {
         return { text: "Ошибка: " + e.message, time: "0" };
     }
 }
+
+// ==========================================
+// МАРКОВ И ЕГО КОМАНДЫ
+// ==========================================
 function getMarkov(id) {
     id = (id || "default").toLowerCase();
     if (window.__markovs[id]) return window.__markovs[id];
@@ -174,6 +219,10 @@ async function markovController(userMessage) {
     }
     return null;
 }
+
+// ==========================================
+// СОВЕТ АГЕНТОВ
+// ==========================================
 window.runCouncil = async function(msg) {
     const t = msg.toLowerCase();
     let tasks = [];
@@ -194,6 +243,9 @@ window.runCouncil = async function(msg) {
     return report;
 };
 
+// ==========================================
+// ГЛАВНЫЙ ОБРАБОТЧИК
+// ==========================================
 window.generateLocalResponse = async function(agentName, userMessage) {
     if (!window.__bootComplete) return "⏳ **Штаб загружается.** Подождите.";
 
@@ -229,5 +281,6 @@ window.generateLocalResponse = async function(agentName, userMessage) {
     return `**Регистратор** _(⏱ ${r.time} сек):_\n${r.text}`;
 };
 
+// АВТОЗАПУСК
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.bootAllBrains);
 else window.bootAllBrains();
