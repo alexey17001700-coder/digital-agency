@@ -6,7 +6,8 @@
     <title>Штаб: Броня</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a0a0a">
-    
+    <link rel="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0a0a'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='60'>👑</text></svg>">
+
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; position: fixed; top: 0; left: 0; }
         #app-frame { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; border: none; display: block; }
@@ -23,7 +24,10 @@
         .splash-title { color: #00e5ff; font-size: 18px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 30px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); animation: pulse-text 2s infinite alternate; }
         @keyframes pulse-text { from { opacity: 0.7; } to { opacity: 1; } }
         
-        /* Блок загрузки нейросетей */
+        .splash-loader-bar { width: 200px; height: 4px; background: #1e1e1e; border-radius: 10px; overflow: hidden; position: relative; }
+        .splash-loader-bar::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 50%; background: #00e5ff; border-radius: 10px; animation: loading 1.5s infinite ease-in-out; box-shadow: 0 0 10px #00e5ff; }
+        @keyframes loading { 0% { left: -50%; } 100% { left: 100%; } }
+
         #ai-loading-status { margin-top: 15px; font-size: 13px; color: #00e5ff; text-align: center; font-family: monospace; font-weight: bold; }
         #ai-loading-bar-container { width: 220px; height: 6px; background: #1e1e1e; border-radius: 4px; margin-top: 8px; }
         #ai-loading-progress { height: 100%; width: 0%; background: #00e5ff; border-radius: 4px; transition: width 0.3s; }
@@ -39,11 +43,13 @@
         .btn-backup { background: rgba(0, 200, 100, 0.15); color: #00ff88; border: 1px solid rgba(0, 200, 100, 0.3); }
         .btn-rollback { background: rgba(255, 0, 85, 0.15); color: #ff4477; border: 1px solid rgba(255, 0, 85, 0.3); margin-top: 5px; }
         #safe-lock-container { display: flex; flex-direction: column; align-items: center; background: #121212; border-radius: 12px; padding: 10px; }
-        #safe-display { width: 100%; background: #000; color: #00e5ff; font-family: monospace; font-size: 20px; text-align: center; padding: 8px 0; border-radius: 5px; margin-bottom: 10px; border: 1px solid #333; }
+        #safe-display { width: 100%; background: #000; color: #00e5ff; font-family: monospace; font-size: 20px; text-align: center; padding: 8px 0; border-radius: 5px; margin-bottom: 10px; border: 1px solid #333; letter-spacing: 5px; }
         .safe-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 100%; }
         .safe-key { background: #2a2a2a; color: #fff; border: none; border-radius: 5px; padding: 10px 0; font-size: 16px; cursor: pointer; }
-        .safe-key.ok { background: #005662; color: #00e5ff; }
+        .safe-key.ok { background: #005662; color: #00e5ff; font-weight: bold; font-size: 12px; }
+        .safe-key.clear { background: #662222; color: #ff8888; }
         #fab-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99998; }
+        #fab-overlay.open { display: block; }
     </style>
 </head>
 <body>
@@ -52,6 +58,7 @@
         <div class="splash-content">
             <div class="splash-logo">👑</div>
             <div class="splash-title">Цифровое Агентство</div>
+            <div class="splash-loader-bar"></div>
             
             <div id="ai-loading-status">Инициализация...</div>
             <div id="ai-loading-bar-container"><div id="ai-loading-progress"></div></div>
@@ -76,7 +83,7 @@
                     <button class="safe-key" onclick="pressSafeKey('7')">7</button>
                     <button class="safe-key" onclick="pressSafeKey('8')">8</button>
                     <button class="safe-key" onclick="pressSafeKey('9')">9</button>
-                    <button class="safe-key" style="background:#662222; color:#ff8888;" onclick="clearSafePin()">C</button>
+                    <button class="safe-key clear" onclick="clearSafePin()">C</button>
                     <button class="safe-key" onclick="pressSafeKey('0')">0</button>
                     <button class="safe-key ok" onclick="checkSafePin()">OK</button>
                 </div>
@@ -98,10 +105,10 @@
         
         appFrame.src = "app.html?v=" + Date.now();
 
-        // Матрица
         let matrixInterval;
         function startMatrix() {
             const canvas = document.getElementById('matrix-canvas');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             const chars = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*'.split('');
@@ -111,7 +118,8 @@
                 ctx.fillStyle = 'rgba(10, 10, 10, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#00e5ff'; ctx.font = fontSize + 'px monospace';
                 for (let i = 0; i < drops.length; i++) {
-                    ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * fontSize, drops[i] * fontSize);
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
                     if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
                     drops[i]++;
                 }
@@ -121,14 +129,16 @@
         startMatrix();
 
         let appLoaded = false, minTimePassed = false, aiReady = false;
-
         setTimeout(() => { minTimePassed = true; hideSplashIfReady(); }, 6000); 
         appFrame.onload = () => { appLoaded = true; hideSplashIfReady(); };
 
         window.updateAILoading = function(pct, status, modelsHtml) {
-            document.getElementById('ai-loading-status').innerText = status;
-            document.getElementById('ai-loading-progress').style.width = pct + '%';
-            if(modelsHtml) document.getElementById('ai-model-list').innerHTML = modelsHtml;
+            const s = document.getElementById('ai-loading-status');
+            const p = document.getElementById('ai-loading-progress');
+            const l = document.getElementById('ai-model-list');
+            if (s) s.innerText = status;
+            if (p) p.style.width = pct + '%';
+            if (l && modelsHtml) l.innerHTML = modelsHtml;
         };
 
         window.aiLoadingComplete = function() {
@@ -138,8 +148,7 @@
 
         window.aiLoadingError = function(msg) {
             const el = document.getElementById('ai-loading-status');
-            el.innerText = "❌ ОШИБКА: " + msg;
-            el.style.color = "#ff3333";
+            if (el) { el.innerText = "❌ ОШИБКА: " + msg; el.style.color = "#ff3333"; }
         };
 
         function hideSplashIfReady() {
@@ -149,11 +158,10 @@
             } else if (minTimePassed && !appLoaded) {
                 document.querySelector('.splash-title').innerText = "Загрузка Штаба...";
             } else if (appLoaded && minTimePassed && !aiReady) {
-                document.querySelector('.splash-title').innerText = "Загрузка нейросетей...";
+                document.querySelector('.splash-title').innerText = "Загрузка нейросети...";
             }
         }
 
-        // Сейф и БКП
         let safePin = "", CORRECT_PIN = "8452"; 
         function toggleMenu() { fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); if (fabMenu.classList.contains('open')) resetSafe(); }
         function resetSafe() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; document.getElementById('safe-lock-container').style.display = 'flex'; document.getElementById('save-action-container').style.display = 'none'; }
