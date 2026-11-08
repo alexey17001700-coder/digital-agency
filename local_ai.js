@@ -34,6 +34,8 @@ window.bootAllBrains = async function() {
         const modelsHtml = Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#555;">⚪ ${a} — ждет</div>`).join('');
         updateBoot(10, `Загрузка единого мозга ИИ (350 МБ)...`, modelsHtml);
 
+        let isDownloaded = false;
+
         window.__brainPromise = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
             device: 'wasm',
             dtype: 'q4',
@@ -41,10 +43,37 @@ window.bootAllBrains = async function() {
                 if (p.status === 'progress' && typeof p.progress === 'number') {
                     const safeProgress = Math.min(1, Math.max(0, p.progress));
                     updateBoot(safeProgress * 100, `Загрузка ядра: ${Math.round(safeProgress * 100)}%`, modelsHtml);
+                    
+                    if (safeProgress >= 1 && !isDownloaded) {
+                        isDownloaded = true;
+                        updateBoot(100, `⏳ Компиляция нейросети (1-2 мин)...`, modelsHtml);
+                    }
                 }
             }
         });
 
+        window.__sharedBrain = await window.__brainPromise;
+        
+        const allReadyHtml = Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a} — готов</div>`).join('');
+        updateBoot(100, "Нейросеть готова к работе!", allReadyHtml);
+        window.__bootComplete = true;
+        
+        if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
+            window.parent.aiLoadingComplete();
+        }
+        
+        if (typeof renderMessage === "function") {
+            renderMessage("🧠 **Нейросеть загружена.** Все агенты готовы.", "director", "DevOps");
+        }
+
+    } catch (e) {
+        console.error("Критическая ошибка загрузки:", e);
+        updateBoot(0, "❌ ОШИБКА: " + e.message, "");
+        if (window.parent && typeof window.parent.aiLoadingError === 'function') {
+            window.parent.aiLoadingError(e.message);
+        }
+    }
+};
         window.__sharedBrain = await window.__brainPromise;
         
         const allReadyHtml = Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a} — готов</div>`).join('');
