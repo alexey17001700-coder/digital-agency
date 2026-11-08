@@ -29,6 +29,8 @@ window.bootAllBrains = async function() {
         const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
         env.useBrowserCache = true;
         env.allowLocalModels = false;
+        env.useBrowserCache = true; // Включаем кэш
+env.backends.onnx.wasm.numThreads = 1; // Отключаем многопоточность (иногда из-за нее падает в iframe)
         // Переключаемся на зеркало для обхода блокировки
 env.remoteHost = 'https://hf-mirror.com';
 env.remotePathTemplate = '{model}/resolve/{revision}/{file}';
