@@ -23,46 +23,54 @@ function updateBoot(pct, status, modelsHtml) {
         window.parent.updateAILoading(pct, status, modelsHtml);
     }
 }
-
 window.bootAllBrains = async function() {
     try {
         const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
+        
         env.useBrowserCache = true;
         env.allowLocalModels = false;
-        env.useBrowserCache = true; // Включаем кэш
-env.backends.onnx.wasm.numThreads = 1; // Отключаем многопоточность (иногда из-за нее падает в iframe)
-        // Переключаемся на зеркало для обхода блокировки
-env.remoteHost = 'https://hf-mirror.com';
-env.remotePathTemplate = '{model}/resolve/{revision}/{file}';
-        // Указываем, где брать WASM файлы
-        env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/';
         
-        const agents = Object.keys(AGENTS_CONFIG);
+        const agent = "Регистратор"; // Грузим ТОЛЬКО ОДНУ модель для теста
+        const modelsHtml = `<div style="color:#ffd700;">⏳ ${agent} — загрузка...</div>`;
         
-        for (let i = 0; i < agents.length; i++) {
-            const agent = agents[i];
-            const modelsHtml = agents.map((a, idx) => {
-                if (idx < i) return `<div style="color:#00ff41;">✅ ${a} — готов</div>`;
-                if (idx === i) return `<div style="color:#ffd700;">⏳ ${a} — загрузка...</div>`;
-                return `<div style="color:#555;">⚪ ${a} — в очереди</div>`;
-            }).join('');
-            
-            updateBoot((i / agents.length) * 100, `Загрузка ${i+1}/4: ${agent}`, modelsHtml);
-            
-            try {
-                window.__brainPromises[agent] = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
-                    device: 'wasm',
-                    dtype: 'q4',
-                    progress_callback: (p) => {
-                        if (p.status === 'progress' && typeof p.progress === 'number') {
-                            updateBoot(
-                                ((i + p.progress) / agents.length) * 100, 
-                                `Загрузка ${agent}: ${Math.round(p.progress * 100)}%`, 
-                                modelsHtml
-                            );
-                        }
+        updateBoot(0, `Загрузка ${agent}`, modelsHtml);
+        
+        try {
+            window.__brainPromises[agent] = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
+                device: 'wasm',
+                dtype: 'q4',
+                progress_callback: (p) => {
+                    if (p.status === 'progress' && typeof p.progress === 'number') {
+                        updateBoot(p.progress * 100, `Загрузка ${agent}: ${Math.round(p.progress * 100)}%`, modelsHtml);
                     }
-                });
+                }
+            });
+            window.__brains[agent] = await window.__brainPromises[agent];
+        } catch (e) { 
+            console.error("Ошибка загрузки:", e); 
+            updateBoot(0, `❌ ОШИБКА: ${agent} (${e.message})`, modelsHtml);
+            throw e;
+        }
+        
+        updateBoot(100, "ИИ готов!", `<div style="color:#00ff41;">✅ ${agent}</div>`);
+        window.__bootComplete = true;
+        
+        if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
+            window.parent.aiLoadingComplete();
+        }
+        
+        if (typeof renderMessage === "function") {
+            renderMessage("🧠 **Штаб запущен.** Регистратор в памяти.", "director", "DevOps");
+        }
+        
+    } catch (e) {
+        console.error("Критическая ошибка ИИ:", e);
+        updateBoot(0, "❌ ОШИБКА: " + e.message, "");
+        if (window.parent && typeof window.parent.aiLoadingError === 'function') {
+            window.parent.aiLoadingError(e.message);
+        }
+    }
+};
                 window.__brains[agent] = await window.__brainPromises[agent];
             } catch (e) { 
                 console.error("Ошибка загрузки " + agent + ":", e); 
