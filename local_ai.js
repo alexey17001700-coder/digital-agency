@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "74.0";
+const BRAIN_VERSION = "75.0";
 const MAX_CONTEXT = 6;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -76,6 +76,43 @@ window.bootAllBrains = async function() {
 };
 
 // ==========================================
+// ПОИСК В ИНТЕРНЕТЕ (ФАКТЫ)
+// ==========================================
+async function fetchWebInfo(query) {
+    // 1. Проверяем, не погода ли это
+    if (/погод|градус|температур/i.test(query)) {
+        try {
+            const city = query.replace(/(погод|какая|в|во|на|градус|температур|сейчас|завтра)/gi, "").trim();
+            const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=3&lang=ru`);
+            const text = await res.text();
+            if (text && !text.includes("<html")) return { source: "Погода", text: text.trim() };
+        } catch (e) {}
+    }
+
+    // 2. Ищем в Википедии
+    try {
+        const r = await fetch(`https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1&srlimit=1&origin=*`);
+        const d = await r.json();
+        if (d.query && d.query.search && d.query.search.length > 0) {
+            const title = d.query.search[0].title;
+            // Берем краткое описание
+            const extractRes = await fetch(`https://ru.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`);
+            const extractData = await extractRes.json();
+            const pages = extractData.query.pages;
+            const pageId = Object.keys(pages)[0];
+            if (pageId !== "-1" && pages[pageId].extract) {
+                // Обрезаем до 400 символов, чтобы модель не захлебнулась
+                let fact = pages[pageId].extract.substring(0, 400);
+                return { source: "Википедия", text: fact };
+            }
+        }
+    } catch (e) {}
+
+    // 3. Если ничего не нашли
+    return null;
+}
+
+// ==========================================
 // ПЕРЕВОДЧИК (Если модель ушла в английский)
 // ==========================================
 async function translateToRussian(text) {
@@ -88,13 +125,12 @@ async function translateToRussian(text) {
         }
         return text;
     } catch (e) {
-        console.error("Ошибка перевода:", e);
         return text;
     }
 }
 
 // ==========================================
-// ЗАПРОС К НЕЙРОСЕТИ (С ПРИМЕРАМИ)
+// ЗАПРОС К НЕЙРОСЕТИ (С ФАКТАМИ И ПРИМЕРАМИ)
 // ==========================================
 async function askRawBrain(agent, userMsg) {
     if (!window.__sharedBrain && window.__brainPromise) {
@@ -103,12 +139,24 @@ async function askRawBrain(agent, userMsg) {
     }
     if (!window.__sharedBrain) return { text: "⏳ Мозг не загружен.", time: "0" };
 
+    // 1. Ищем факты в интернете (если это вопрос)
+    let webFact = null;
+    if (agent !== "Кодер" && /кто|что|где|когда|почему|как|погод|курс|найди|расскажи/i.test(userMsg)) {
+        if (typeof renderMessage === "function") renderMessage("🌐 Ищу информацию в сети...", "director", "DevOps");
+        webFact = await fetchWebInfo(userMsg);
+    }
+
+    // 2. Формируем промпт
+    let systemPrompt = `Ты — ${agent}. Отвечай ТОЛЬКО на русском языке. Кратко.`;
+    
+    if (webFact) {
+        systemPrompt += `\n\nИспользуй эти факты для ответа:\n${webFact.text}`;
+    }
+
     const messages = [
-        { role: "system", content: `Ты — ${agent}. Отвечай ТОЛЬКО на русском языке. Кратко.` },
+        { role: "system", content: systemPrompt },
         { role: "user", content: "Привет" },
         { role: "assistant", content: "Здравствуйте, Босс! Я готов к работе." },
-        { role: "user", content: "Какая погода в Москве?" },
-        { role: "assistant", content: "Я не знаю погоду. У меня нет доступа к интернету." },
         { role: "user", content: "Кто ты?" },
         { role: "assistant", content: `Я — ${agent}, твой цифровой помощник.` }
     ];
@@ -121,7 +169,7 @@ async function askRawBrain(agent, userMsg) {
     const t0 = Date.now();
     try {
         const out = await window.__sharedBrain(messages, { 
-            max_new_tokens: agent === "Кодер" ? 150 : 40, 
+            max_new_tokens: agent === "Кодер" ? 150 : 50, 
             temperature: agent === "Кодер" ? 0.2 : 0.4, 
             do_sample: true, 
             repetition_penalty: 1.2 
@@ -145,6 +193,11 @@ async function askRawBrain(agent, userMsg) {
 
         if (!finalAnswer || finalAnswer.length < 5) {
             return { text: "⚠️ Нейросеть не смогла сформулировать ответ.", time };
+        }
+
+        // Если нашли факты, добавим пометку
+        if (webFact) {
+            finalAnswer = `[📖 ${webFact.source}] ${finalAnswer}`;
         }
 
         mem.push({ role: 'user', text: userMsg });
