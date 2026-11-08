@@ -24,38 +24,6 @@ function updateBoot(pct, status, modelsHtml) {
     }
 }
 
-window.bootAllBrains = async function() {
-    updateBoot(0, "Подготовка движка...", "");
-    try {
-        const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
-        env.useBrowserCache = true;
-        env.allowLocalModels = false;
-        const agents = Object.keys(AGENTS_CONFIG);
-        
-        for (let i = 0; i < agents.length; i++) {
-            const agent = agents[i];
-            const modelsHtml = agents.map((a, idx) => {
-                if (idx < i) return `<div style="color:#00ff41;">✅ ${a} — готов</div>`;
-                if (idx === i) return `<div style="color:#ffd700;">⏳ ${a} — загрузка...</div>`;
-                return `<div style="color:#555;">⚪ ${a} — в очереди</div>`;
-            }).join('');
-            
-            updateBoot((i / agents.length) * 100, `Загрузка ${i+1}/4: ${agent}`, modelsHtml);
-            
-            try {
-                window.__brainPromises[agent] = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
-                    device: 'wasm',
-                    dtype: 'q4',
-                    progress_callback: (p) => {
-                        if (p.status === 'progress' && typeof p.progress === 'number') {
-                            updateBoot(
-                                ((i + p.progress) / agents.length) * 100, 
-                                `Загрузка ${agent}: ${Math.round(p.progress * 100)}%`, 
-                                modelsHtml
-                            );
-                        }
-                    }
-                });
                 window.__brains[agent] = await window.__brainPromises[agent];
             } catch (e) { 
                 console.error("Ошибка " + agent + ":", e); 
@@ -63,7 +31,103 @@ window.bootAllBrains = async function() {
                 throw new Error("Не удалось скачать " + agent);
             }
         }
-        
+        window.bootAllBrains = async function() {
+    updateBoot(0, "Подготовка движка...", "");
+    try {
+        const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
+        env.useBrowserCache = true;
+        env.allowLocalModels = false;
+
+        let pending = Object.keys(AGENTS_CONFIG); // Список тех, кого надо скачать
+        let attempt = 1;
+        const maxAttempts = 3; // Всего 3 круга попыток
+        let lastError = "";
+
+        while (pending.length > 0 && attempt <= maxAttempts) {
+            let currentBatch = [...pending]; // Берем тех, кто остался
+            pending = []; // Очищаем очередь для следующего круга
+            
+            for (let i = 0; i < currentBatch.length; i++) {
+                const agent = currentBatch[i];
+                const totalAgents = Object.keys(AGENTS_CONFIG).length;
+                const doneCount = Object.keys(window.__brains).length;
+                
+                // Формируем красивый список статусов
+                const modelsHtml = Object.keys(AGENTS_CONFIG).map(a => {
+                    if (window.__brains[a]) return `<div style="color:#00ff41;">✅ ${a} — готов</div>`;
+                    if (a === agent) return `<div style="color:#ffd700;">⏳ ${a} — загрузка (попытка ${attempt}/${maxAttempts})...</div>`;
+                    if (pending.includes(a)) return `<div style="color:#ff5555;">❌ ${a} — ошибка, в очереди</div>`;
+                    return `<div style="color:#555;">⚪ ${a} — ждет</div>`;
+                }).join('');
+                
+                updateBoot((doneCount / totalAgents) * 100, `Загрузка ${agent} (Попытка ${attempt}/${maxAttempts})`, modelsHtml);
+
+                try {
+                    window.__brainPromises[agent] = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
+                        device: 'wasm',
+                        dtype: 'q4',
+                        progress_callback: (p) => {
+                            if (p.status === 'progress' && typeof p.progress === 'number') {
+                                const safeProgress = Math.min(1, Math.max(0, p.progress));
+                                const basePct = (doneCount / totalAgents) * 100;
+                                const currentPct = (safeProgress / totalAgents) * 100;
+                                updateBoot(basePct + currentPct, `Загрузка ${agent}: ${Math.round(safeProgress * 100)}%`, modelsHtml);
+                            }
+                        }
+                    });
+                    window.__brains[agent] = await window.__brainPromises[agent];
+                    
+                    // Пауза, чтобы телефон перевел дух
+                    await new Promise(r => setTimeout(r, 1500));
+                    
+                } catch (e) { 
+                    console.error(`Ошибка ${agent} (Попытка ${attempt}):`, e); 
+                    lastError = e.message;
+                    pending.push(agent); // Возвращаем в очередь на следующий круг
+                    
+                    // Ждем 2 секунды перед следующей моделью
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+            
+            // Если после круга остались должники - увеличиваем счетчик
+            if (pending.length > 0) {
+                attempt++;
+                if (attempt <= maxAttempts) {
+                    updateBoot(0, `Пауза перед попыткой ${attempt}/${maxAttempts}...`, "");
+                    await new Promise(r => setTimeout(r, 3000)); // Отдыхаем 3 секунды перед новым кругом
+                }
+            }
+        }
+
+        // --- ФИНАЛЬНАЯ ПРОВЕРКА ---
+        if (pending.length > 0) {
+            // Если после всех попыток кто-то не скачался
+            const errorMsg = `Не удалось скачать: ${pending.join(", ")}. Причина: ${lastError}`;
+            updateBoot(0, `❌ ОСТАНОВКА: ${errorMsg}`, "");
+            if (window.parent && typeof window.parent.aiLoadingError === 'function') {
+                window.parent.aiLoadingError(errorMsg);
+            }
+        } else {
+            // Всё скачалось!
+            updateBoot(100, "Все ИИ готовы!", Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a}</div>`).join(''));
+            window.__bootComplete = true;
+            if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
+                window.parent.aiLoadingComplete();
+            }
+            if (typeof renderMessage === "function") {
+                renderMessage("🧠 **Штаб запущен.** Все ИИ в памяти.", "director", "DevOps");
+            }
+        }
+
+    } catch (e) {
+        console.error("Критическая ошибка:", e);
+        updateBoot(0, "❌ ОШИБКА ДВИЖКА: " + e.message, "");
+        if (window.parent && typeof window.parent.aiLoadingError === 'function') {
+            window.parent.aiLoadingError(e.message);
+        }
+    }
+};
         updateBoot(100, "Все ИИ готовы!", agents.map(a => `<div style="color:#00ff41;">✅ ${a}</div>`).join(''));
         window.__bootComplete = true;
         if (window.parent && typeof window.parent.aiLoadingComplete === 'function') window.parent.aiLoadingComplete();
