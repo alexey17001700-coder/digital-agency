@@ -29,6 +29,9 @@ window.bootAllBrains = async function() {
         const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
         env.useBrowserCache = true;
         env.allowLocalModels = false;
+        // Переключаемся на зеркало для обхода блокировки
+env.remoteHost = 'https://hf-mirror.com';
+env.remotePathTemplate = '{model}/resolve/{revision}/{file}';
         // Указываем, где брать WASM файлы
         env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/';
         
