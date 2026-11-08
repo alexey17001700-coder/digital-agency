@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "63.0";
+const BRAIN_VERSION = "64.0";
 const MAX_CONTEXT = 8;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -74,28 +74,6 @@ window.bootAllBrains = async function() {
         }
     }
 };
-        window.__sharedBrain = await window.__brainPromise;
-        
-        const allReadyHtml = Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a} — готов</div>`).join('');
-        updateBoot(100, "Нейросеть готова к работе!", allReadyHtml);
-        window.__bootComplete = true;
-        
-        if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
-            window.parent.aiLoadingComplete();
-        }
-        
-        if (typeof renderMessage === "function") {
-            renderMessage("🧠 **Нейросеть загружена.** Все агенты готовы.", "director", "DevOps");
-        }
-
-    } catch (e) {
-        console.error("Критическая ошибка загрузки:", e);
-        updateBoot(0, "❌ ОШИБКА: " + e.message, "");
-        if (window.parent && typeof window.parent.aiLoadingError === 'function') {
-            window.parent.aiLoadingError(e.message);
-        }
-    }
-};
 
 window.askBrain = async function(agent, msg) {
     if (!window.__sharedBrain && window.__brainPromise) {
@@ -113,7 +91,7 @@ window.askBrain = async function(agent, msg) {
 
     const t0 = Date.now();
     try {
-        const out = await window.__sharedBrain(messages, { max_new_tokens: 90, temperature: 0.7, do_sample: true, repetition_penalty: 1.1 });
+        const out = await window.__sharedBrain(messages, { max_new_tokens: 40, temperature: 0.6, do_sample: true, repetition_penalty: 1.1 });
         let ans = "";
         const gen = out?.[0]?.generated_text;
         if (Array.isArray(gen)) ans = gen[gen.length - 1]?.content || "";
@@ -169,6 +147,7 @@ window.generateLocalResponse = async function(agentName, userMessage) {
     if (match) {
         const found = Object.keys(AGENTS_CONFIG).find(a => a.toLowerCase() === match[1].toLowerCase());
         if (found) {
+            if (typeof renderMessage === "function") renderMessage("🧠 Нейросеть думает (на телефоне это ~1 минута)...", "director", "DevOps");
             const clean = msg.replace(/@[А-ЯЁа-яёa-z]+\s*/i, "").trim();
             const r = await window.askBrain(found, clean);
             return `**${found}** _(⏱ ${r.time} сек):_\n${r.text}`;
@@ -180,6 +159,7 @@ window.generateLocalResponse = async function(agentName, userMessage) {
         if (council) return council;
     }
 
+    if (typeof renderMessage === "function") renderMessage("🧠 Нейросеть думает (на телефоне это ~1 минута)...", "director", "DevOps");
     const r = await window.askBrain("Регистратор", msg);
     return `**Регистратор** _(⏱ ${r.time} сек):_\n${r.text}`;
 };
