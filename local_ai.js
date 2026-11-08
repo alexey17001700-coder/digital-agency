@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "61.0";
+const BRAIN_VERSION = "63.0";
 const MAX_CONTEXT = 8;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -6,10 +6,10 @@ let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Бо�
 function sanitizeInput(t) { return String(t || "").replace(/<[^>]*>?/gm, '').trim(); }
 function saveLocalBrain() { localStorage.setItem('shtabContext', JSON.stringify(CONTEXT_MEMORY)); }
 
-window.__brains = {};
+window.__sharedBrain = null;
+window.__brainPromise = null;
 window.__agentMemory = {};
 window.__bootComplete = false;
-window.__brainPromises = {};
 
 const AGENTS_CONFIG = {
     "Регистратор": "Ты — Регистратор. Главный координатор. Отвечай кратко, вежливо.",
@@ -24,9 +24,6 @@ function updateBoot(pct, status, modelsHtml) {
     }
 }
 
-// ==========================================
-// ЗАГРУЗКА НЕЙРОСЕТЕЙ (С 3 ПОПЫТКАМИ)
-// ==========================================
 window.bootAllBrains = async function() {
     updateBoot(0, "Подготовка движка...", "");
     try {
@@ -34,91 +31,49 @@ window.bootAllBrains = async function() {
         env.useBrowserCache = true;
         env.allowLocalModels = false;
 
-        let pending = Object.keys(AGENTS_CONFIG); 
-        let attempt = 1;
-        const maxAttempts = 3; 
-        let lastError = "";
+        const modelsHtml = Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#555;">⚪ ${a} — ждет</div>`).join('');
+        updateBoot(10, `Загрузка единого мозга ИИ (350 МБ)...`, modelsHtml);
 
-        while (pending.length > 0 && attempt <= maxAttempts) {
-            let currentBatch = [...pending]; 
-            pending = []; 
-            
-            for (let i = 0; i < currentBatch.length; i++) {
-                const agent = currentBatch[i];
-                const totalAgents = Object.keys(AGENTS_CONFIG).length;
-                const doneCount = Object.keys(window.__brains).length;
-                
-                const modelsHtml = Object.keys(AGENTS_CONFIG).map(a => {
-                    if (window.__brains[a]) return `<div style="color:#00ff41;">✅ ${a} — готов</div>`;
-                    if (a === agent) return `<div style="color:#ffd700;">⏳ ${a} — загрузка (попытка ${attempt}/${maxAttempts})...</div>`;
-                    if (pending.includes(a)) return `<div style="color:#ff5555;">❌ ${a} — ошибка, в очереди</div>`;
-                    return `<div style="color:#555;">⚪ ${a} — ждет</div>`;
-                }).join('');
-                
-                updateBoot((doneCount / totalAgents) * 100, `Загрузка ${agent} (Попытка ${attempt}/${maxAttempts})`, modelsHtml);
-
-                try {
-                    window.__brainPromises[agent] = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
-                        device: 'wasm',
-                        dtype: 'q4',
-                        progress_callback: (p) => {
-                            if (p.status === 'progress' && typeof p.progress === 'number') {
-                                const safeProgress = Math.min(1, Math.max(0, p.progress));
-                                const basePct = (doneCount / totalAgents) * 100;
-                                const currentPct = (safeProgress / totalAgents) * 100;
-                                updateBoot(basePct + currentPct, `Загрузка ${agent}: ${Math.round(safeProgress * 100)}%`, modelsHtml);
-                            }
-                        }
-                    });
-                    window.__brains[agent] = await window.__brainPromises[agent];
-                    await new Promise(r => setTimeout(r, 1500)); // Пауза для памяти
-                    
-                } catch (e) { 
-                    console.error(`Ошибка ${agent} (Попытка ${attempt}):`, e); 
-                    lastError = e.message;
-                    pending.push(agent); // Возвращаем в очередь
-                    await new Promise(r => setTimeout(r, 2000)); // Отдых перед следующей
+        window.__brainPromise = pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
+            device: 'wasm',
+            dtype: 'q4',
+            progress_callback: (p) => {
+                if (p.status === 'progress' && typeof p.progress === 'number') {
+                    const safeProgress = Math.min(1, Math.max(0, p.progress));
+                    updateBoot(safeProgress * 100, `Загрузка ядра: ${Math.round(safeProgress * 100)}%`, modelsHtml);
                 }
             }
-            
-            if (pending.length > 0) {
-                attempt++;
-                if (attempt <= maxAttempts) {
-                    updateBoot(0, `Пауза перед попыткой ${attempt}/${maxAttempts}...`, "");
-                    await new Promise(r => setTimeout(r, 3000)); 
-                }
-            }
+        });
+
+        window.__sharedBrain = await window.__brainPromise;
+        
+        const allReadyHtml = Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a} — готов</div>`).join('');
+        updateBoot(100, "Нейросеть готова к работе!", allReadyHtml);
+        window.__bootComplete = true;
+        
+        if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
+            window.parent.aiLoadingComplete();
         }
-
-        // Проверка результата
-        if (pending.length > 0) {
-            const errorMsg = `Не удалось скачать: ${pending.join(", ")}. Причина: ${lastError}`;
-            updateBoot(0, `❌ ОСТАНОВКА: ${errorMsg}`, "");
-            if (window.parent && typeof window.parent.aiLoadingError === 'function') window.parent.aiLoadingError(errorMsg);
-        } else {
-            updateBoot(100, "Все ИИ готовы!", Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a}</div>`).join(''));
-            window.__bootComplete = true;
-            if (window.parent && typeof window.parent.aiLoadingComplete === 'function') window.parent.aiLoadingComplete();
-            if (typeof renderMessage === "function") renderMessage("🧠 **Штаб запущен.** Все ИИ в памяти.", "director", "DevOps");
+        
+        if (typeof renderMessage === "function") {
+            renderMessage("🧠 **Нейросеть загружена.** Все агенты готовы.", "director", "DevOps");
         }
 
     } catch (e) {
-        console.error("Критическая ошибка:", e);
-        updateBoot(0, "❌ ОШИБКА ДВИЖКА: " + e.message, "");
-        if (window.parent && typeof window.parent.aiLoadingError === 'function') window.parent.aiLoadingError(e.message);
+        console.error("Критическая ошибка загрузки:", e);
+        updateBoot(0, "❌ ОШИБКА: " + e.message, "");
+        if (window.parent && typeof window.parent.aiLoadingError === 'function') {
+            window.parent.aiLoadingError(e.message);
+        }
     }
 };
 
-// ==========================================
-// ЗАПРОС К НЕЙРОСЕТИ
-// ==========================================
 window.askBrain = async function(agent, msg) {
-    let brain = window.__brains[agent];
-    if (!brain && window.__brainPromises[agent]) {
-        try { brain = await window.__brainPromises[agent]; window.__brains[agent] = brain; } 
+    if (!window.__sharedBrain && window.__brainPromise) {
+        try { window.__sharedBrain = await window.__brainPromise; } 
         catch (e) { return { text: "Ошибка загрузки мозга: " + e.message, time: "0" }; }
     }
-    if (!brain) return { text: "⏳ Мозг " + agent + " не загружен.", time: "0" };
+    if (!window.__sharedBrain) return { text: "⏳ Мозг еще не загружен.", time: "0" };
 
     if (!window.__agentMemory[agent]) window.__agentMemory[agent] = [];
     const mem = window.__agentMemory[agent];
@@ -129,7 +84,7 @@ window.askBrain = async function(agent, msg) {
 
     const t0 = Date.now();
     try {
-        const out = await brain(messages, { max_new_tokens: 90, temperature: 0.7, do_sample: true, repetition_penalty: 1.1 });
+        const out = await window.__sharedBrain(messages, { max_new_tokens: 90, temperature: 0.7, do_sample: true, repetition_penalty: 1.1 });
         let ans = "";
         const gen = out?.[0]?.generated_text;
         if (Array.isArray(gen)) ans = gen[gen.length - 1]?.content || "";
@@ -145,9 +100,6 @@ window.askBrain = async function(agent, msg) {
     }
 };
 
-// ==========================================
-// СОВЕТ АГЕНТОВ
-// ==========================================
 window.runCouncil = async function(msg) {
     const t = msg.toLowerCase();
     let tasks = [];
@@ -173,9 +125,6 @@ window.runCouncil = async function(msg) {
     return report;
 };
 
-// ==========================================
-// ГЛАВНЫЙ ОБРАБОТЧИК
-// ==========================================
 window.generateLocalResponse = async function(agentName, userMessage) {
     if (!window.__bootComplete) return "⏳ **Штаб еще загружается.** Пожалуйста, подождите.";
 
@@ -206,6 +155,5 @@ window.generateLocalResponse = async function(agentName, userMessage) {
     return `**Регистратор** _(⏱ ${r.time} сек):_\n${r.text}`;
 };
 
-// АВТОЗАПУСК
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.bootAllBrains);
 else window.bootAllBrains();
