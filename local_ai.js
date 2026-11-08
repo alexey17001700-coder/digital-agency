@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "51.0";
+const BRAIN_VERSION = "52.0";
 const MAX_CONTEXT = 8;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -29,6 +29,9 @@ window.bootAllBrains = async function() {
         const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
         env.useBrowserCache = true;
         env.allowLocalModels = false;
+        // Указываем, где брать WASM файлы
+        env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/';
+        
         const agents = Object.keys(AGENTS_CONFIG);
         
         for (let i = 0; i < agents.length; i++) {
@@ -58,8 +61,8 @@ window.bootAllBrains = async function() {
                 window.__brains[agent] = await window.__brainPromises[agent];
             } catch (e) { 
                 console.error("Ошибка загрузки " + agent + ":", e); 
-                updateBoot((i / agents.length) * 100, `❌ ОШИБКА СКАЧИВАНИЯ: ${agent}`, modelsHtml);
-                throw new Error("Не удалось скачать " + agent + ". Проверьте интернет.");
+                updateBoot((i / agents.length) * 100, `❌ ОШИБКА: ${agent} (${e.message})`, modelsHtml);
+                throw new Error("Не удалось скачать " + agent + ". " + e.message);
             }
         }
         
@@ -180,4 +183,4 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.bootAllBrains);
 } else {
     window.bootAllBrains();
-}
+            }
