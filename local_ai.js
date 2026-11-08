@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "73.0";
+const BRAIN_VERSION = "74.0";
 const MAX_CONTEXT = 6;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -12,7 +12,6 @@ window.__agentMemory = {};
 window.__bootComplete = false;
 window.__markovs = {};
 
-// Максимально простые промпты для 135M модели
 const AGENTS_CONFIG = {
     "Регистратор": "Ты — Регистратор. Отвечай на русском языке. Будь краток.",
     "Хакер": "Ты — Хакер. Отвечай на русском языке. Будь краток.",
@@ -77,20 +76,26 @@ window.bootAllBrains = async function() {
 };
 
 // ==========================================
-// ОЧИСТКА И ЗАПРОС К НЕЙРОСЕТИ (С ПРИМЕРАМИ)
+// ПЕРЕВОДЧИК (Если модель ушла в английский)
 // ==========================================
-function cleanBrainOutput(rawText) {
-    if (!rawText) return null;
-    let text = rawText;
-    text = text.replace(/[a-zA-Z]+/g, ''); // Режем английский
-    text = text.replace(/[@#$%^&*_+=\[\]{}<>|\\\/~`]/g, ''); // Режем спецсимволы
-    text = text.replace(/\s+/g, ' ').trim(); // Убираем лишние пробелы
-    
-    const words = text.split(' ').filter(w => w.length > 1);
-    if (words.length < 3 || text.length < 10) return null; // Слишком мало смысла
-    return text;
+async function translateToRussian(text) {
+    try {
+        const shortText = text.substring(0, 500);
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(shortText)}&langpair=en|ru`);
+        const data = await res.json();
+        if (data.responseData && data.responseData.translatedText) {
+            return data.responseData.translatedText;
+        }
+        return text;
+    } catch (e) {
+        console.error("Ошибка перевода:", e);
+        return text;
+    }
 }
 
+// ==========================================
+// ЗАПРОС К НЕЙРОСЕТИ (С ПРИМЕРАМИ)
+// ==========================================
 async function askRawBrain(agent, userMsg) {
     if (!window.__sharedBrain && window.__brainPromise) {
         try { window.__sharedBrain = await window.__brainPromise; } 
@@ -98,7 +103,6 @@ async function askRawBrain(agent, userMsg) {
     }
     if (!window.__sharedBrain) return { text: "⏳ Мозг не загружен.", time: "0" };
 
-    // Промпт с ПРИМЕРАМИ (Few-Shot)
     const messages = [
         { role: "system", content: `Ты — ${agent}. Отвечай ТОЛЬКО на русском языке. Кратко.` },
         { role: "user", content: "Привет" },
@@ -112,7 +116,6 @@ async function askRawBrain(agent, userMsg) {
     if (!window.__agentMemory[agent]) window.__agentMemory[agent] = [];
     const mem = window.__agentMemory[agent];
     mem.slice(-2).forEach(m => messages.push({ role: m.role, content: m.text }));
-    
     messages.push({ role: "user", content: userMsg });
 
     const t0 = Date.now();
@@ -129,15 +132,19 @@ async function askRawBrain(agent, userMsg) {
         if (Array.isArray(gen)) ans = gen[gen.length - 1]?.content || "";
         else if (typeof gen === "string") ans = gen.split('<|im_start|>assistant\n').pop().split('<|im_end|>')[0].trim();
 
+        let finalAnswer = ans;
+
+        // Если это не Кодер, и в тексте есть английские буквы — переводим
+        if (agent !== "Кодер" && /[a-zA-Z]/.test(ans)) {
+            if (typeof renderMessage === "function") renderMessage("🌐 Модель ушла в английский. Перевожу...", "director", "DevOps");
+            finalAnswer = await translateToRussian(ans);
+        }
+
+        finalAnswer = finalAnswer.replace(/[@#$%^&*_+=\[\]{}<>|\\\/~`]/g, '').replace(/\s+/g, ' ').trim();
         const time = ((Date.now() - t0) / 1000).toFixed(1);
 
-        // Кодеру не режем код, остальным — режем английский
-        let finalAnswer = ans;
-        if (agent !== "Кодер") {
-            finalAnswer = cleanBrainOutput(ans);
-            if (!finalAnswer) {
-                return { text: "⚠️ Нейросеть выдала слишком сырой ответ. Смысл потерян. Попробуйте перефразировать.", time };
-            }
+        if (!finalAnswer || finalAnswer.length < 5) {
+            return { text: "⚠️ Нейросеть не смогла сформулировать ответ.", time };
         }
 
         mem.push({ role: 'user', text: userMsg });
@@ -152,7 +159,7 @@ async function askRawBrain(agent, userMsg) {
 }
 
 // ==========================================
-// МАРКОВ И ЕГО КОМАНДЫ
+// МАРКОВ
 // ==========================================
 function getMarkov(id) {
     id = (id || "default").toLowerCase();
