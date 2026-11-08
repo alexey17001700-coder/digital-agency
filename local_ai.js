@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "60.0";
+const BRAIN_VERSION = "61.0";
 const MAX_CONTEXT = 8;
 let CONTEXT_MEMORY = [];
 let userPrefs = JSON.parse(localStorage.getItem('shtabPrefs')) || { name: "Босс" };
@@ -24,35 +24,30 @@ function updateBoot(pct, status, modelsHtml) {
     }
 }
 
-                window.__brains[agent] = await window.__brainPromises[agent];
-            } catch (e) { 
-                console.error("Ошибка " + agent + ":", e); 
-                updateBoot((i / agents.length) * 100, `❌ ОШИБКА: ${agent} (${e.message})`, modelsHtml);
-                throw new Error("Не удалось скачать " + agent);
-            }
-        }
-        window.bootAllBrains = async function() {
+// ==========================================
+// ЗАГРУЗКА НЕЙРОСЕТЕЙ (С 3 ПОПЫТКАМИ)
+// ==========================================
+window.bootAllBrains = async function() {
     updateBoot(0, "Подготовка движка...", "");
     try {
         const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
         env.useBrowserCache = true;
         env.allowLocalModels = false;
 
-        let pending = Object.keys(AGENTS_CONFIG); // Список тех, кого надо скачать
+        let pending = Object.keys(AGENTS_CONFIG); 
         let attempt = 1;
-        const maxAttempts = 3; // Всего 3 круга попыток
+        const maxAttempts = 3; 
         let lastError = "";
 
         while (pending.length > 0 && attempt <= maxAttempts) {
-            let currentBatch = [...pending]; // Берем тех, кто остался
-            pending = []; // Очищаем очередь для следующего круга
+            let currentBatch = [...pending]; 
+            pending = []; 
             
             for (let i = 0; i < currentBatch.length; i++) {
                 const agent = currentBatch[i];
                 const totalAgents = Object.keys(AGENTS_CONFIG).length;
                 const doneCount = Object.keys(window.__brains).length;
                 
-                // Формируем красивый список статусов
                 const modelsHtml = Object.keys(AGENTS_CONFIG).map(a => {
                     if (window.__brains[a]) return `<div style="color:#00ff41;">✅ ${a} — готов</div>`;
                     if (a === agent) return `<div style="color:#ffd700;">⏳ ${a} — загрузка (попытка ${attempt}/${maxAttempts})...</div>`;
@@ -76,70 +71,47 @@ function updateBoot(pct, status, modelsHtml) {
                         }
                     });
                     window.__brains[agent] = await window.__brainPromises[agent];
-                    
-                    // Пауза, чтобы телефон перевел дух
-                    await new Promise(r => setTimeout(r, 1500));
+                    await new Promise(r => setTimeout(r, 1500)); // Пауза для памяти
                     
                 } catch (e) { 
                     console.error(`Ошибка ${agent} (Попытка ${attempt}):`, e); 
                     lastError = e.message;
-                    pending.push(agent); // Возвращаем в очередь на следующий круг
-                    
-                    // Ждем 2 секунды перед следующей моделью
-                    await new Promise(r => setTimeout(r, 2000));
+                    pending.push(agent); // Возвращаем в очередь
+                    await new Promise(r => setTimeout(r, 2000)); // Отдых перед следующей
                 }
             }
             
-            // Если после круга остались должники - увеличиваем счетчик
             if (pending.length > 0) {
                 attempt++;
                 if (attempt <= maxAttempts) {
                     updateBoot(0, `Пауза перед попыткой ${attempt}/${maxAttempts}...`, "");
-                    await new Promise(r => setTimeout(r, 3000)); // Отдыхаем 3 секунды перед новым кругом
+                    await new Promise(r => setTimeout(r, 3000)); 
                 }
             }
         }
 
-        // --- ФИНАЛЬНАЯ ПРОВЕРКА ---
+        // Проверка результата
         if (pending.length > 0) {
-            // Если после всех попыток кто-то не скачался
             const errorMsg = `Не удалось скачать: ${pending.join(", ")}. Причина: ${lastError}`;
             updateBoot(0, `❌ ОСТАНОВКА: ${errorMsg}`, "");
-            if (window.parent && typeof window.parent.aiLoadingError === 'function') {
-                window.parent.aiLoadingError(errorMsg);
-            }
+            if (window.parent && typeof window.parent.aiLoadingError === 'function') window.parent.aiLoadingError(errorMsg);
         } else {
-            // Всё скачалось!
             updateBoot(100, "Все ИИ готовы!", Object.keys(AGENTS_CONFIG).map(a => `<div style="color:#00ff41;">✅ ${a}</div>`).join(''));
             window.__bootComplete = true;
-            if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
-                window.parent.aiLoadingComplete();
-            }
-            if (typeof renderMessage === "function") {
-                renderMessage("🧠 **Штаб запущен.** Все ИИ в памяти.", "director", "DevOps");
-            }
+            if (window.parent && typeof window.parent.aiLoadingComplete === 'function') window.parent.aiLoadingComplete();
+            if (typeof renderMessage === "function") renderMessage("🧠 **Штаб запущен.** Все ИИ в памяти.", "director", "DevOps");
         }
 
     } catch (e) {
         console.error("Критическая ошибка:", e);
         updateBoot(0, "❌ ОШИБКА ДВИЖКА: " + e.message, "");
-        if (window.parent && typeof window.parent.aiLoadingError === 'function') {
-            window.parent.aiLoadingError(e.message);
-        }
-    }
-};
-        updateBoot(100, "Все ИИ готовы!", agents.map(a => `<div style="color:#00ff41;">✅ ${a}</div>`).join(''));
-        window.__bootComplete = true;
-        if (window.parent && typeof window.parent.aiLoadingComplete === 'function') window.parent.aiLoadingComplete();
-        if (typeof renderMessage === "function") renderMessage("🧠 **Штаб запущен.** Все ИИ в памяти.", "director", "DevOps");
-        
-    } catch (e) {
-        console.error("Критическая ошибка:", e);
-        updateBoot(0, "❌ ОШИБКА: " + e.message, "");
         if (window.parent && typeof window.parent.aiLoadingError === 'function') window.parent.aiLoadingError(e.message);
     }
 };
 
+// ==========================================
+// ЗАПРОС К НЕЙРОСЕТИ
+// ==========================================
 window.askBrain = async function(agent, msg) {
     let brain = window.__brains[agent];
     if (!brain && window.__brainPromises[agent]) {
@@ -173,6 +145,9 @@ window.askBrain = async function(agent, msg) {
     }
 };
 
+// ==========================================
+// СОВЕТ АГЕНТОВ
+// ==========================================
 window.runCouncil = async function(msg) {
     const t = msg.toLowerCase();
     let tasks = [];
@@ -198,6 +173,9 @@ window.runCouncil = async function(msg) {
     return report;
 };
 
+// ==========================================
+// ГЛАВНЫЙ ОБРАБОТЧИК
+// ==========================================
 window.generateLocalResponse = async function(agentName, userMessage) {
     if (!window.__bootComplete) return "⏳ **Штаб еще загружается.** Пожалуйста, подождите.";
 
@@ -228,5 +206,6 @@ window.generateLocalResponse = async function(agentName, userMessage) {
     return `**Регистратор** _(⏱ ${r.time} сек):_\n${r.text}`;
 };
 
+// АВТОЗАПУСК
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.bootAllBrains);
 else window.bootAllBrains();
