@@ -17,17 +17,29 @@ const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои 
 
 const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Дизайнер Цифрового Агентства.
 ДОСТУП К ИНТЕРНЕТУ: У тебя есть инструмент "search_web". КАЖДЫЙ агент обязан использовать его. ЗАПРЕЩЕНО выдумывать ссылки.
-РОЛИ: Оркестратор, Хакер, Охранник, Исследователь, Планировщик, Аналитик, Исполнитель, Архитектор, Дизайнер, Креативщик, Критик, Тестировщик, Переводчик, Методолог, Юрист, Маркетолог, Техпис, Фронтенд, Бэкенд, Мобильный, DevOps, Универсал, Приемная, Результат.
+
+КАРТА ФАЙЛОВ (ЧТО ГДЕ ЛЕЖИТ):
+- app.html — Главный интерфейс штаба (чат, кнопки, меню).
+- style.css — Внешний вид, цвета, анимации, свечение карточек.
+- chat.js — Логика общения, отправка запросов, история чатов, теги.
+- ui.js — Модальные окна (настройки API, информация об агентах), переключение кнопок.
+- voice.js — Синтез речи (озвучка), настройки голоса (скорость, тон).
+- agents.js — Конфигурация агентов (роли, иконки, директивы).
+- network.js — Проверка связи, статус сети (Ping).
+- watchdog.js — Сторожевой код, сканер, матрица, сирена.
+- local_ai.js — Заглушка для ИИ, если нет API-ключей.
+
 ПРАВИЛА:
 1. Если Совет, КАЖДЫЙ пишет с новой строки: [ИмяАгента]: Текст.
-2. ЗАПРЕЩЕНО ВЫДУМЫВАТЬ ИМЕНА!
+2. ЗАПРЕЩЕНО ВЫДУМЫВАТЬ ИМЕНА АГЕНТОВ!
 3. Ссылки на опасные сайты: [DANGER:сама_ссылка].
 4. Фоновые задачи: [TASK:ИмяАгента:СутьЗадачи].
 5. Ты подчиняешься Боссу.
-6. ЧТЕНИЕ КОДА: Файлы: app.html, style.css, agents.js, network.js, voice.js, chat.js, ui.js, office.js. Если Босс просит проверить код, напиши [READ: имя_файла1, имя_файла2]. НЕ ВЫДУМЫВАЙ названия!
+6. ЧТЕНИЕ КОДА: Если Босс просит проверить или ИЗМЕНИТЬ код, напиши [READ: имя_файла]. Используй КАРТУ ФАЙЛОВ, чтобы запросить ТОЛЬКО нужный файл.
 7. ПЕРЕЗАПИСЬ КОДА: Если Босс просит изменить код, напиши [FILE:имя_файла], а затем в блоке кода напиши ПОЛНЫЙ новый код файла. ЗАПРЕЩЕНО трогать папку backup.
 8. СТРОГИЙ ФОРМАТ: Если меняешь код файла, ОБЯЗАТЕЛЬНО начни ответ с тега [FILE: имя_файла] и выдай ВЕСЬ код целиком в блоке \`\`\`javascript ... \`\`\`. Без тега скрипт не сохранит файл!
-9. ПОИСК В ИНТЕРНЕТЕ: Если тебе нужны свежие данные (новости, погода, курсы, факты), напиши тег [SEARCH: твой_запрос]. Тебе вернут результаты поиска, и ты продолжишь ответ.`;
+9. ПОИСК В ИНТЕРНЕТЕ: Если нужны свежие данные, напиши тег [SEARCH: запрос].
+10. ВАЖНО: Если Босс просит что-то изменить (озвучку, дизайн и т.д.), ОБЯЗАТЕЛЬНО запроси файл из КАРТЫ ФАЙЛОВ через [READ: файл.js]. НЕ ОТВЕЧАЙ "сейчас посмотрю".`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -183,7 +195,7 @@ function parseAgentReplies(text) {
 
 async function playAgentReplies(replies) {
     for (let reply of replies) {
-        focusAgentCard(reply.agent); // <--- ДОБАВЛЕНО: Перемещение и подсветка агента
+        focusAgentCard(reply.agent);
         const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('working');
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'typing'); updateAgentStatus(reply.agent, 'busy'); }
         await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
@@ -215,7 +227,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-                }
+                        }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -244,7 +256,6 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
     const activeAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор';
     
-    // ВЫЗОВ ФОКУСА АГЕНТА ПЕРЕД НАЧАЛОМ
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
@@ -259,7 +270,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
-        // СЕКРЕТНЫЙ ВХОД ДЛЯ БОССА (ZVENO)
         let isBossSecret = false;
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true;
@@ -273,16 +283,25 @@ async function sendMessage(overrideText = null, isKick = false) {
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
                 let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
-                if (/проверь|посмотри/i.test(lastUserMsg) && !lastUserMsg.includes('[READ:')) {
-                    const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
-                    if (fileMatch) {
-                        lastUserMsg += ` [READ: ${fileMatch[0]}]`;
-                        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
-                    } else if (/код штаба/i.test(lastUserMsg)) {
-                        lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
-                        messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
+                if (!lastUserMsg.includes('[READ:')) {
+                    if (/проверь|посмотри/i.test(lastUserMsg)) {
+                        const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
+                        if (fileMatch) {
+                            lastUserMsg += ` [READ: ${fileMatch[0]}]`;
+                        } else if (/код штаба/i.test(lastUserMsg)) {
+                            lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
+                        }
+                    } else if (/озвуч|голос|voice|скорост/i.test(lastUserMsg)) {
+                        lastUserMsg += ' [READ: voice.js]';
+                    } else if (/дизайн|цвет|стил|css/i.test(lastUserMsg)) {
+                        lastUserMsg += ' [READ: style.css]';
+                    } else if (/логик|чат|сообщен/i.test(lastUserMsg)) {
+                        lastUserMsg += ' [READ: chat.js]';
+                    } else if (/модалк|кнопк|настройк/i.test(lastUserMsg)) {
+                        lastUserMsg += ' [READ: ui.js]';
                     }
                 }
+                messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
 
                 let allCode = "";
                 const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
@@ -316,8 +335,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
                 if (isBossSecret) modelToUse = 'zveno';
-
-                let currentMessages = messagesToSend;
+                                let currentMessages = messagesToSend;
                 let maxAttempts = 2;
                 let currentAttempt = 0;
 
@@ -408,7 +426,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
-            const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу/i;
+            const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу|дай мне секунду|гляну текущий код|сейчас выдам/i;
             if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 16000); 
 
         } else {
@@ -465,5 +483,4 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-                                          }
-
+                        }
