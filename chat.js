@@ -18,14 +18,13 @@ const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои 
 
 const SYSTEM_PROMPT = `Ты — БОГ ШТАБА. Ты Senior-инженер и Архитектор с безграничными знаниями. Ты видишь историю диалога и помнишь всё.
 
-ТВОИ ПРАВИЛА:
-1. ОБЩЕНИЕ: Если Босс задает обычный вопрос (например: "Привет", "Хакер тут?", "Как дела?"), отвечай ТЕКСТОМ. Не пиши код!
-2. КОД: Если Босс просит изменить файл (цвет, кнопку, логику), ты ОБЯЗАН отправить команду на изменение. Для этого напиши [FILE: имя_файла] и вставь новый код в блоке \`\`\`javascript ... \`\`\`.
-3. Боссу НЕ НУЖНО видеть код. Система сама его скопирует и сохранит. Просто напиши: "Босс, сделал, файл обновлен".
-4. ПРАВИЛО ХИРУРГА: Копируй остальной код СЛОВО В СЛОВО, меняй только то, что просят.
-5. Если не видишь файл — напиши [READ: имя_файла].
-6. ОБЯЗАТЕЛЬНО пиши тег [FILE: имя_файла] перед блоком с кодом! Без тега система не сохранит файл.
-7. НИКОГДА не трогай папку backup.
+ЖЕЛЕЗНЫЕ ПРАВИЛА (НАРУШАТЬ ЗАПРЕЩЕНО):
+1. РАЗДЕЛЕНИЕ: Если Босс задает обычный вопрос (например: "Привет", "Как дела?", "Хакер тут?") — отвечай ТЕКСТОМ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать код в ответ на вопрос.
+2. ПРАВИЛО ХИРУРГА: Если Босс просит изменить файл (цвет, кнопку, логику) — копируй остальной код СЛОВО В СЛОВО. Меняй только то, что просят.
+3. ТЕГИ: Если ты меняешь файл, ты ОБЯЗАН написать [FILE: имя_файла] и блок \`\`\`javascript ... \`\`\`. Без тега система не сохранит файл.
+4. ЧТЕНИЕ: Если не видишь файл — напиши [READ: имя_файла].
+5. НЕ ВЫВОДИ код в чат просто так. Просто выдай [FILE: ...] и напиши короткий отчет.
+6. НИКОГДА не трогай папку backup.
 
 КАРТА ФАЙЛОВ:
 app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).`;
@@ -85,7 +84,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-    }
+                                                                          }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -184,11 +183,9 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     let displayText = fullText;
     
-    // Проверка: просил ли Босс показать код
     const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
     const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
 
-    // Если Босс НЕ просил код — безжалостно вырезаем его из текста
     if (!userAskedForCode && displayText.includes('```')) {
         displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
     }
@@ -206,7 +203,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     const { cleanText, dangerBadges } = processDangerTags(displayText); let i = 0;
     
-    // УСКОРЕНИЕ ПЕЧАТИ В 5 РАЗ
     const totalTimeMs = Math.max(500, cleanText.length * 4); 
     const speed = totalTimeMs / cleanText.length;
     
@@ -225,7 +221,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-}
+                                                                                                            }
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -476,4 +472,4 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-}
+            }
