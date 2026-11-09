@@ -1,6 +1,7 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
+let typingTimer = null; // Таймер для остановки печати
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
@@ -93,7 +94,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-}
+        }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -129,9 +130,7 @@ async function manualDeploy(file, code) {
         try {
             const res = await fetch(PROXY, {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    updateFile: true, path: file, content: code, message: `Auto-update: ${file}`
-                })
+                body: JSON.stringify({ updateFile: true, path: file, content: code, message: `Auto-update: ${file}` })
             });
             const data = await res.json();
             if (data.success) renderMessage(`✅ **Файл ${file} успешно обновлен!**`, 'director', 'DevOps');
@@ -198,10 +197,18 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
 
     const { cleanText, dangerBadges } = processDangerTags(displayText); let i = 0;
-    const totalTimeMs = Math.max(1500, cleanText.length * 20); const speed = totalTimeMs / cleanText.length;
+    
+    // УСКОРЕНИЕ ПЕЧАТИ В 5 РАЗ
+    const totalTimeMs = Math.max(500, cleanText.length * 4); 
+    const speed = totalTimeMs / cleanText.length;
     
     function type() {
-        if (i < cleanText.length) { contentDiv.innerText = cleanText.substring(0, i + 1); chatContainer.scrollTop = chatContainer.scrollHeight; i++; setTimeout(type, speed); }
+        if (i < cleanText.length) { 
+            contentDiv.innerText = cleanText.substring(0, i + 1); 
+            chatContainer.scrollTop = chatContainer.scrollHeight; 
+            i++; 
+            typingTimer = setTimeout(type, speed); 
+        }
         else {
             try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
             if (dangerBadges) contentDiv.innerHTML += dangerBadges;
@@ -210,8 +217,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-}
-
+        }
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -249,19 +255,30 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
     }, 15000);
 }
+
 function kickAI(agentName) {
-    if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
+    if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; clearTimeout(typingTimer); }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
 }
 
 function handleSendClick() {
-    if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; sendBtn.className = 'send-btn'; sendBtn.innerText = '➤'; }
+    if (isGenerating) { 
+        if (currentAbortController) currentAbortController.abort(); 
+        isGenerating = false; 
+        clearTimeout(typingTimer); // <--- МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
+        sendBtn.className = 'send-btn'; 
+        sendBtn.innerText = '➤'; 
+    }
     else sendMessage();
 }
 
 async function sendMessage(overrideText = null, isKick = false) {
-    if (isGenerating && !isKick) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
+    if (isGenerating && !isKick) { 
+        if (currentAbortController) currentAbortController.abort(); 
+        isGenerating = false; 
+        clearTimeout(typingTimer); 
+    }
     const text = overrideText || chatInputEl.value.trim(); if (!text) return;
     
     if (!overrideText && !isKick) {
@@ -294,8 +311,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
         }
-
-        if (hasAnyKeys) {
+                if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
@@ -386,17 +402,12 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         if (success) {
             playSound('receive'); 
-            
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
-                    fetch(PROXY, { 
-                        method: "POST", headers: { "Content-Type": "application/json" }, 
-                        body: JSON.stringify({ updateFile: true, path: targetFile, content: codeMatch[1], message: `Auto-update: ${targetFile}` }), 
-                        signal: currentAbortController.signal 
-                    })
+                    fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ updateFile: true, path: targetFile, content: codeMatch[1], message: `Auto-update: ${targetFile}` }), signal: currentAbortController.signal })
                     .then(res => res.json()).then(data => {
                         if (data.success) renderMessage(`✅ **Файл ${targetFile} обновлен автоматически!**`, 'director', 'DevOps');
                         else renderMessage(`❌ **Ошибка авто-внедрения:** ${data.error}`, 'director', 'DevOps');
@@ -457,5 +468,4 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-            }
-
+        }
