@@ -96,12 +96,11 @@ async function speakText(text, agentName) {
             window.speechSynthesis.speak(utterance);
         }
     }
-    }
+        }
 // --- ГОЛОСОВОЙ ВВОД (МИКРОФОН) ---
 let recognition = null;
 let isListening = false;
 
-// Проверяем поддержку браузером
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
@@ -123,10 +122,17 @@ if (SpeechRecognition) {
         const transcript = event.results[0][0].transcript;
         const chatInput = document.getElementById('chatInput');
         if (chatInput) {
-            // Добавляем распознанный текст к тому, что уже написано
             chatInput.value += (chatInput.value ? ' ' : '') + transcript;
-            chatInput.style.height = 'auto';
-            chatInput.style.height = (chatInput.scrollHeight) + 'px';
+            
+            // --- АВТОМАТИЧЕСКАЯ ОТПРАВКА ---
+            // Даем небольшую паузу (100мс), чтобы текст успел вставиться в поле
+            setTimeout(() => {
+                if (typeof handleSendClick === 'function') {
+                    handleSendClick();
+                } else if (typeof sendMessage === 'function') {
+                    sendMessage();
+                }
+            }, 100);
         }
     };
 
@@ -135,6 +141,8 @@ if (SpeechRecognition) {
         if (event.error === 'not-allowed') {
             alert('Браузер заблокировал микрофон. Разреши доступ в настройках!');
         }
+        const btn = document.getElementById('micBtn');
+        if (btn) { btn.style.background = '#333'; btn.style.boxShadow = 'none'; }
     };
 
     recognition.onend = function() {
@@ -162,4 +170,4 @@ function toggleVoiceInput() {
             console.warn("Микрофон уже запущен", e);
         }
     }
-    }
+}
