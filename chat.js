@@ -30,11 +30,10 @@ const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Ар
 
 ЖЕЛЕЗНЫЕ ПРАВИЛА:
 1. Ты подчиняешься Боссу. Если он просит изменить дизайн, кнопку, логику или озвучку — ты ОБЯЗАН поправить код.
-2. ЗАПРЕЩЕНО писать "сейчас посмотрю", "дай секунду", "я уже запросил файл". Это ломает систему.
+2. ЗАПРЕЩЕНО писать "сейчас посмотрю", "дай секунду", "я уже запросил файл". 
 3. АЛГОРИТМ ИЗМЕНЕНИЯ КОДА:
-   - Шаг 1: Определи, в каком файле лежит нужная функция (используй КАРТУ ФАЙЛОВ). Напиши ТОЛЬКО тег [READ: имя_файла] и больше ничего. Жди ответа системы.
-   - Шаг 2: Когда система пришлет код файла, внимательно изучи его.
-   - Шаг 3: Напиши [FILE: имя_файла] и выдай ПОЛНЫЙ обновленный код файла в блоке \`\`\`javascript ... \`\`\`. Сохрани всё, что там было, и добавь то, что просит Босс. НЕ ЛОМАЙ РАБОЧИЙ КОД.
+   - Шаг 1: Напиши ТОЛЬКО тег [READ: имя_файла] (используй карту файлов) и больше ничего. Жди ответа системы.
+   - Шаг 2: Когда система пришлет код файла, напиши [FILE: имя_файла] и выдай ПОЛНЫЙ обновленный код файла в блоке \`\`\`javascript ... \`\`\`. Сохрани всё, что там было, и добавь то, что просит Босс. НЕ ЛОМАЙ РАБОЧИЙ КОД.
 4. ЗАПРЕЩЕНО трогать папку backup.
 5. Если Совет — каждый пишет: [ИмяАгента]: Текст.
 6. Поиск в интернете: [SEARCH: запрос].`;
@@ -94,7 +93,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-}
+                                             }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -149,11 +148,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     if (fullText.includes('[FILE:') || fullText.includes('```')) {
         const { cleanText, dangerBadges } = processDangerTags(fullText);
-        try { 
-            contentDiv.innerHTML = marked.parse(cleanText); 
-            contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
-            enhanceMediaInMessage(contentDiv);
-        } catch(e) { contentDiv.innerText = cleanText; }
+        try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
@@ -206,26 +201,13 @@ async function runBackgroundTask(agentName, taskDescription) {
     updateAgentStatus(agentName, 'working');
     setTimeout(async () => {
         try {
-            const response = await fetch(PROXY, { 
-                method: "POST", 
-                headers: { "Content-Type": "application/json" }, 
-                body: JSON.stringify({ 
-                    messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], 
-                    temperature: 0.7,
-                    userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {}
-                }) 
-            });
+            const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], temperature: 0.7, userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {} }) });
             const data = await response.json();
-            if (data.choices && data.choices.length > 0) { 
-                const r = data.choices[0].message.content; 
-                typeMessage(r, 'director', agentName); 
-                addMessageToHistory(r, 'director', agentName); 
-            }
+            if (data.choices && data.choices.length > 0) { const r = data.choices[0].message.content; typeMessage(r, 'director', agentName); addMessageToHistory(r, 'director', agentName); }
         } catch(e) { console.error(e); }
-        setAgentStatus(agentName, 'idle'); 
-        updateAgentStatus(agentName, 'free');
+        setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
     }, 15000);
-}
+       }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -253,13 +235,11 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
     const activeAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор';
-    
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
-    // УВЕЛИЧЕНО ВРЕМЯ ОЖИДАНИЯ ДО 120 СЕКУНД
     currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 120000); clearTimeout(watchdogTimer);
 
     try {
@@ -281,37 +261,6 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
-                let lastUserMsg = messagesToSend[messagesToSend.length - 1].content;
-                if (!lastUserMsg.includes('[READ:')) {
-                    if (/проверь|посмотри/i.test(lastUserMsg)) {
-                        const fileMatch = lastUserMsg.match(/(app\.html|style\.css|chat\.js|ui\.js|agents\.js|network\.js|voice\.js|office\.js)/i);
-                        if (fileMatch) {
-                            lastUserMsg += ` [READ: ${fileMatch[0]}]`;
-                        } else if (/код штаба/i.test(lastUserMsg)) {
-                            lastUserMsg += ' [READ: app.html, style.css, chat.js, ui.js, agents.js, network.js, voice.js, office.js]';
-                        }
-                    } else if (/озвуч|голос|voice|скорост|тон/i.test(lastUserMsg)) {
-                        lastUserMsg += ' [READ: voice.js]';
-                    } else if (/дизайн|цвет|стил|css|кнопк/i.test(lastUserMsg)) {
-                        lastUserMsg += ' [READ: style.css, app.html]';
-                    } else if (/логик|чат|сообщен|свечен/i.test(lastUserMsg)) {
-                        lastUserMsg += ' [READ: chat.js]';
-                    }
-                }
-                messagesToSend[messagesToSend.length - 1].content = lastUserMsg;
-
-                let allCode = "";
-                const readMatch = lastUserMsg.match(/\[READ:\s*([^\]]+)\]/);
-                if (readMatch) {
-                    const fileNames = readMatch[1].split(',').map(f => f.trim());
-                    for (const fileName of fileNames) {
-                        try {
-                            const fileRes = await fetch(fileName + '?t=' + Date.now(), { signal: currentAbortController.signal });
-                            if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
-                        } catch (e) { if (e.name === 'AbortError') return; }
-                    }
-                }
-
                 let finalPrompt = SYSTEM_PROMPT;
                 if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
@@ -326,7 +275,6 @@ async function sendMessage(overrideText = null, isKick = false) {
                     });
                     finalPrompt = agentPrompt + "\n" + finalPrompt;
                 }
-                if (allCode) finalPrompt += allCode; 
                 if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
                 let modelToUse = selectedAIModel;
@@ -334,9 +282,9 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (isBossSecret) modelToUse = 'zveno';
 
                 let currentMessages = messagesToSend;
-                let maxAttempts = 2;
+                let maxAttempts = 3; // Увеличили попытки, чтобы он мог попросить файл, получить его и ответить
                 let currentAttempt = 0;
-                                while (currentAttempt < maxAttempts) {
+                               while (currentAttempt < maxAttempts) {
                     currentAttempt++;
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
@@ -345,31 +293,43 @@ async function sendMessage(overrideText = null, isKick = false) {
                     });
                     
                     const data = await response.json();
-                    if (!response.ok) { 
-                        lastError = data.error || `Ошибка сервера: ${response.status}`; 
-                        if (data.details) lastError += ` | Детали: ${data.details}`;
-                        break; 
-                    }
+                    if (!response.ok) { lastError = data.error || `Ошибка сервера: ${response.status}`; break; }
                     
                     if (data.choices && data.choices.length > 0) {
                         aiText = data.choices[0].message.content;
                         
+                        // ГЛАВНЫЙ ФИКС: Если ИИ просит файл, мы его скачиваем и подсовываем обратно
+                        const readMatch = aiText.match(/\[READ:\s*([^\]]+)\]/);
+                        if (readMatch) {
+                            const fileNames = readMatch[1].split(',').map(f => f.trim());
+                            let allCode = "";
+                            for (const fileName of fileNames) {
+                                try {
+                                    const fileRes = await fetch(fileName + '?t=' + Date.now(), { signal: currentAbortController.signal });
+                                    if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
+                                } catch (e) { if (e.name === 'AbortError') return; }
+                            }
+                            
+                            if (allCode) {
+                                // Добавляем запрос ИИ и код файла в историю сообщений
+                                currentMessages.push({ role: "assistant", content: aiText });
+                                currentMessages.push({ role: "user", content: `[СИСТЕМА: Вот запрошенные файлы]${allCode}\n\nТеперь выполни мою первоначальную просьбу. Напиши [FILE: имя_файла] и выдай ПОЛНЫЙ новый код.` });
+                                continue; // Идем на следующий круг цикла, чтобы ИИ ответил с кодом
+                            }
+                        }
+
                         const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
                         if (searchMatch) {
                             const query = searchMatch[1].trim();
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
                             renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
                             
-                            const searchRes = await fetch(PROXY, {
-                                method: "POST", headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ searchQuery: query }),
-                                signal: currentAbortController.signal
-                            });
+                            const searchRes = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ searchQuery: query }), signal: currentAbortController.signal });
                             const searchData = await searchRes.json();
                             
                             if (searchData.success) {
                                 currentMessages.push({ role: "assistant", content: aiText });
-                                currentMessages.push({ role: "user", content: `[РЕЗУЛЬТАТЫ ПОИСКА ПО ЗАПРОСУ "${query}"]: ${searchData.results}. Используй эти данные, чтобы ответить на мой предыдущий вопрос. Не используй тег [SEARCH].` });
+                                currentMessages.push({ role: "user", content: `[РЕЗУЛЬТАТЫ ПОИСКА]: ${searchData.results}. Ответь на вопрос.` });
                                 continue; 
                             }
                         }
@@ -380,26 +340,17 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
+            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
-            
             if (typeof generateLocalResponse === 'function') {
-                try {
-                    aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal);
-                    success = true;
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                    lastError = `Ошибка локального ИИ: ${e.message}`;
-                }
+                try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
+                catch (e) { if (e.name === 'AbortError') return; lastError = `Ошибка локального ИИ: ${e.message}`; }
             } else { lastError = "Локальный ИИ не загружен."; }
             clearTimeout(timeoutId);
         }
         
         if (success) {
             playSound('receive'); 
-            if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
-            if (aiText.includes('[CMD:CLEAR_CONTENT]')) { aiText = aiText.replace('[CMD:CLEAR_CONTENT]', '').trim(); if (typeof clearAllContent === 'function') clearAllContent(); }
-            
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch) {
                 const targetFile = fileMatch[1].trim();
@@ -413,20 +364,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                 }
             }
 
-            const taskRegex = /\[TASK:\s*([^:]+):\s*([^\]]+)\]/g; let taskMatch; let tasksToRun = [];
-            while ((taskMatch = taskRegex.exec(aiText)) !== null) tasksToRun.push({ agent: taskMatch[1].trim(), task: taskMatch[2].trim() });
-            aiText = aiText.replace(taskRegex, '').trim();
-            tasksToRun.forEach(t => { if (typeof updateAgentStatus === 'function') updateAgentStatus(t.agent, 'working'); runBackgroundTask(t.agent, t.task); });
-            
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
             if (elAi) elAi.className = 'status-item online';
-            
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
-            // УВЕЛИЧЕНО ВРЕМЯ ПИНКА ДО 60 СЕКУНД (было 16)
             const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу|дай мне секунду|гляну текущий код|сейчас выдам/i;
             if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 60000); 
-
         } else {
             renderMessage(`❌ **Ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
@@ -439,18 +382,13 @@ async function sendMessage(overrideText = null, isKick = false) {
     }
 }
 
-// ==========================================
-// ПЕРЕМЕЩЕНИЕ И ПОДСВЕТКА АГЕНТА
-// ==========================================
 function focusAgentCard(agentName) {
     document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active-agent-glow'));
     const activeCard = document.getElementById('agent-' + agentName);
     if (!activeCard) return;
     activeCard.classList.add('active-agent-glow');
     const container = activeCard.parentNode;
-    if (container && container.firstElementChild !== activeCard) {
-        container.prepend(activeCard);
-    }
+    if (container && container.firstElementChild !== activeCard) container.prepend(activeCard);
 }
 
 function init() {
@@ -460,25 +398,17 @@ function init() {
     
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {
-        if (chatIds.length > 0) {
-            const sortedIds = chatIds.sort((a, b) => b.localeCompare(a));
-            currentChatId = sortedIds[0];
-            loadChat(currentChatId);
-        } else { createNewChat(true); }
+        if (chatIds.length > 0) { currentChatId = chatIds.sort((a, b) => b.localeCompare(a))[0]; loadChat(currentChatId); } 
+        else { createNewChat(true); }
     } else { loadChat(currentChatId); }
     
     renderChatList(); 
-
     const btnVoice = document.getElementById('btnVoiceToggle');
     if (btnVoice && typeof isVoiceEnabled !== 'undefined') {
         if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
         else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
     }
-    
     if (chatInputEl) {
-        chatInputEl.addEventListener('input', function() {
-            this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
-            if(this.value === '') this.style.height = 'auto';
-        });
+        chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-            }
+}
