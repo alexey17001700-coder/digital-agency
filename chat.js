@@ -1,7 +1,7 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
-let typingTimer = null; // Таймер для остановки печати
+let typingTimer = null; // Переменная для остановки печати
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
@@ -32,9 +32,10 @@ const SYSTEM_PROMPT = `Ты — БОГ ШТАБА. Абсолютный прав
 1. ПРАВИЛО ХИРУРГА: Меняешь что-то — копируй остальной код СЛОВО В СЛОВО. Не смей переписывать рабочие функции и регулярки! Только то, что просит Босс.
 2. Если не видишь файл — напиши [READ: имя_файла]. Не гадай, не выдумывай код.
 3. Прежде чем выдать [FILE:], мысленно проверь код на ошибки. Если сломаешь — ты ответишь за это.
-4. НЕ ВЫВОДИ код в чат, если Босс прямо не попросил. Просто выдай [FILE: ...] и напиши короткий отчет.
-5. НИКОГДА не трогай папку backup.
-6. Отвечай четко, по делу, с абсолютной уверенностью.
+4. ОБЯЗАТЕЛЬНО пиши тег [FILE: имя_файла] перед блоком с кодом! Без тега система не сохранит файл.
+5. НЕ ВЫВОДИ код в чат, если Босс прямо не попросил. Просто выдай [FILE: ...] и напиши короткий отчет.
+6. НИКОГДА не трогай папку backup.
+7. Отвечай четко, по делу, с абсолютной уверенностью.
 
 КАРТА ФАЙЛОВ:
 app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).`;
@@ -94,7 +95,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-        }
+    }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -141,11 +142,23 @@ async function manualDeploy(file, code) {
 
 function addDeployButton(container, text) {
     if (isAutoMode) return;
+    let targetFile = "";
+    
+    // Умный поиск: сначала ищем тег [FILE], если нет — угадываем по языку кода
     const fileMatch = text.match(/\[FILE:\s*([^\]]+)\]/);
-    if (!fileMatch) return;
+    if (fileMatch) {
+        targetFile = fileMatch[1].trim();
+    } else {
+        if (/```css/i.test(text)) targetFile = "style.css";
+        else if (/```html/i.test(text)) targetFile = "app.html";
+        else if (/```(js|javascript)/i.test(text)) targetFile = "chat.js";
+    }
+
+    if (!targetFile) return;
     const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(text);
     if (!codeMatch) return;
-    const targetFile = fileMatch[1].trim(); const code = codeMatch[1];
+    const code = codeMatch[1];
+
     const btn = document.createElement('button');
     btn.innerText = `🛠️ Внедрить в ${targetFile}`;
     btn.style.marginTop = '10px'; btn.style.padding = '8px 12px';
@@ -181,7 +194,13 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
     let displayText = fullText;
-    if (isAutoMode && displayText.includes('```')) {
+    
+    // Проверка: просил ли Босс показать код
+    const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
+    const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
+
+    // Если Авто ВКЛ или Босс НЕ просил код — скрываем его
+    if ((isAutoMode || !userAskedForCode) && displayText.includes('```')) {
         displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
     }
 
@@ -198,7 +217,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     const { cleanText, dangerBadges } = processDangerTags(displayText); let i = 0;
     
-    // УСКОРЕНИЕ ПЕЧАТИ В 5 РАЗ
+    // УСКОРЕНИЕ ПЕЧАТИ В 5 РАЗ (было 20, стало 4)
     const totalTimeMs = Math.max(500, cleanText.length * 4); 
     const speed = totalTimeMs / cleanText.length;
     
@@ -217,7 +236,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         }
     }
     type();
-        }
+}
 function parseAgentReplies(text) {
     const agentNames = Object.keys(AGENT_ICONS); const regex = /(?:^|\n)\s*(?:\*\*)?\[?([А-Яа-яA-Za-z\s]+)\]?(?:\*\*)?:\s*/g;
     let match, lastIndex = 0, currentAgent = null, replies = [];
@@ -266,7 +285,7 @@ function handleSendClick() {
     if (isGenerating) { 
         if (currentAbortController) currentAbortController.abort(); 
         isGenerating = false; 
-        clearTimeout(typingTimer); // <--- МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
+        clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
     }
@@ -310,7 +329,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         let isBossSecret = false;
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
-        }
+    }
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
@@ -391,7 +410,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            renderMessage('⚙️ *[Система: API-ключи не найдены...]*', 'director', 'Оркестратор');
+            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             if (typeof generateLocalResponse === 'function') {
                 try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
@@ -402,6 +421,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         if (success) {
             playSound('receive'); 
+            
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
