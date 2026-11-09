@@ -84,7 +84,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-                                                            }
+}
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -214,7 +214,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-               }
+        }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -252,10 +252,17 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
-        const hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
+        let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
+
+        // === СЕКРЕТНЫЙ ВХОД ДЛЯ БОССА (ZVENO) ===
+        let isBossSecret = false;
+        if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
+            hasAnyKeys = true;
+            isBossSecret = true;
+            userKeys = {}; // Очищаем ключи, чтобы Deno использовал свой ZVENO_API_KEY
+        }
 
         if (hasAnyKeys) {
-            // === СЕТЕВОЙ РЕЖИМ (С КЛЮЧАМИ) ===
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
@@ -303,6 +310,9 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
+                
+                // Принудительно ставим Zveno, если это секретный вход
+                if (isBossSecret) modelToUse = 'zveno';
 
                 let currentMessages = messagesToSend;
                 let maxAttempts = 2;
@@ -355,7 +365,6 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            // === ЛОКАЛЬНЫЙ РЕЖИМ (БЕЗ КЛЮЧЕЙ) ===
             renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим «Мини-ИИ»...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             
@@ -373,7 +382,6 @@ async function sendMessage(overrideText = null, isKick = false) {
             clearTimeout(timeoutId);
         }
         
-        // Дальнейшая обработка ответа (как для сетевого, так и для локального)
         if (success) {
             playSound('receive'); 
             if (aiText.includes('[CMD:CLEAR_CHATS]')) { aiText = aiText.replace('[CMD:CLEAR_CHATS]', '').trim(); if (typeof clearAllChats === 'function') clearAllChats(); }
@@ -415,7 +423,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
     }
-                    }
+}
+
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -444,4 +453,5 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-}
+                }
+
