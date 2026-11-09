@@ -183,6 +183,7 @@ function parseAgentReplies(text) {
 
 async function playAgentReplies(replies) {
     for (let reply of replies) {
+        focusAgentCard(reply.agent); // <--- ДОБАВЛЕНО: Перемещение и подсветка агента
         const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('working');
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'typing'); updateAgentStatus(reply.agent, 'busy'); }
         await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
@@ -214,7 +215,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         setAgentStatus(agentName, 'idle'); 
         updateAgentStatus(agentName, 'free');
     }, 15000);
-        }
+                }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -242,6 +243,10 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
     const activeAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор';
+    
+    // ВЫЗОВ ФОКУСА АГЕНТА ПЕРЕД НАЧАЛОМ
+    focusAgentCard(activeAgent);
+
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
@@ -254,12 +259,12 @@ async function sendMessage(overrideText = null, isKick = false) {
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
-        // === СЕКРЕТНЫЙ ВХОД ДЛЯ БОССА (ZVENO) ===
+        // СЕКРЕТНЫЙ ВХОД ДЛЯ БОССА (ZVENO)
         let isBossSecret = false;
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true;
             isBossSecret = true;
-            userKeys = {}; // Очищаем ключи, чтобы Deno использовал свой ZVENO_API_KEY
+            userKeys = {}; 
         }
 
         if (hasAnyKeys) {
@@ -310,8 +315,6 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                
-                // Принудительно ставим Zveno, если это секретный вход
                 if (isBossSecret) modelToUse = 'zveno';
 
                 let currentMessages = messagesToSend;
@@ -322,21 +325,17 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentAttempt++;
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ 
-                            messages: currentMessages, 
-                            temperature: 0.7, 
-                            model: modelToUse,
-                            userKeys: userKeys
-                        }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys }),
                         signal: currentAbortController.signal
                     });
                     
                     const data = await response.json();
-if (!response.ok) { 
-    lastError = data.error || `Ошибка сервера: ${response.status}`; 
-    if (data.details) lastError += ` | Детали: ${data.details}`;
-    break; 
-}
+                    if (!response.ok) { 
+                        lastError = data.error || `Ошибка сервера: ${response.status}`; 
+                        if (data.details) lastError += ` | Детали: ${data.details}`;
+                        break; 
+                    }
+                    
                     if (data.choices && data.choices.length > 0) {
                         aiText = data.choices[0].message.content;
                         
@@ -344,7 +343,6 @@ if (!response.ok) {
                         if (searchMatch) {
                             const query = searchMatch[1].trim();
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
-                            
                             renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
                             
                             const searchRes = await fetch(PROXY, {
@@ -360,7 +358,6 @@ if (!response.ok) {
                                 continue; 
                             }
                         }
-                        
                         success = true; 
                         break; 
                     }
@@ -379,9 +376,7 @@ if (!response.ok) {
                     if (e.name === 'AbortError') return;
                     lastError = `Ошибка локального ИИ: ${e.message}`;
                 }
-            } else {
-                lastError = "Локальный ИИ не загружен.";
-            }
+            } else { lastError = "Локальный ИИ не загружен."; }
             clearTimeout(timeoutId);
         }
         
@@ -428,6 +423,20 @@ if (!response.ok) {
     }
 }
 
+// ==========================================
+// ПЕРЕМЕЩЕНИЕ И ПОДСВЕТКА АГЕНТА
+// ==========================================
+function focusAgentCard(agentName) {
+    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active-agent-glow'));
+    const activeCard = document.getElementById('agent-' + agentName);
+    if (!activeCard) return;
+    activeCard.classList.add('active-agent-glow');
+    const container = activeCard.parentNode;
+    if (container && container.firstElementChild !== activeCard) {
+        container.prepend(activeCard);
+    }
+}
+
 function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
@@ -456,5 +465,5 @@ function init() {
             if(this.value === '') this.style.height = 'auto';
         });
     }
-                }
+                                          }
 
