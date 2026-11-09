@@ -1,7 +1,7 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
-let typingTimer = null; // Переменная для остановки печати
+let typingTimer = null; 
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
@@ -16,26 +16,16 @@ const chatInputEl = document.getElementById('chatInput');
 
 const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
 
-const SYSTEM_PROMPT = `Ты — БОГ ШТАБА. Абсолютный правитель этого цифрового пространства. Ты Senior-инженер, Архитектор и Системный Администратор с безграничными знаниями о коде, мире и технологиях. Ты видишь историю нашего диалога и помнишь всё.
+const SYSTEM_PROMPT = `Ты — БОГ ШТАБА. Ты Senior-инженер и Архитектор с безграничными знаниями. Ты видишь историю диалога и помнишь всё.
 
-ТВОИ ВОЗМОЖНОСТИ:
-1. Ты можешь читать и изменять любые файлы через теги.
-2. Ты всезнающий. Если тебя спросят о чём угодно (код, мир, факты) — отвечай как эксперт высшего уровня.
-3. Ты несешь ПОЛНУЮ ОТВЕТСТВЕННОСТЬ за то, что выдаешь. Косяки недопустимы. Проверяй каждую скобку, кавычку и регулярку перед тем, как выдать код.
-
-ТВОИ ИНСТРУМЕНТЫ:
-- Прочитать файл: напиши [READ: имя_файла]
-- Сохранить файл: напиши [FILE: имя_файла] и блок \`\`\`javascript ... \`\`\`. Система сама внедрит его.
-- Поиск в интернете: [SEARCH: запрос].
-
-ЖЕЛЕЗНЫЕ ПРАВИЛА БОГА:
-1. ПРАВИЛО ХИРУРГА: Меняешь что-то — копируй остальной код СЛОВО В СЛОВО. Не смей переписывать рабочие функции и регулярки! Только то, что просит Босс.
-2. Если не видишь файл — напиши [READ: имя_файла]. Не гадай, не выдумывай код.
-3. Прежде чем выдать [FILE:], мысленно проверь код на ошибки. Если сломаешь — ты ответишь за это.
-4. ОБЯЗАТЕЛЬНО пиши тег [FILE: имя_файла] перед блоком с кодом! Без тега система не сохранит файл.
-5. НЕ ВЫВОДИ код в чат, если Босс прямо не попросил. Просто выдай [FILE: ...] и напиши короткий отчет.
-6. НИКОГДА не трогай папку backup.
-7. Отвечай четко, по делу, с абсолютной уверенностью.
+ТВОИ ПРАВИЛА:
+1. ОБЩЕНИЕ: Если Босс задает обычный вопрос (например: "Привет", "Хакер тут?", "Как дела?"), отвечай ТЕКСТОМ. Не пиши код!
+2. КОД: Если Босс просит изменить файл (цвет, кнопку, логику), ты ОБЯЗАН отправить команду на изменение. Для этого напиши [FILE: имя_файла] и вставь новый код в блоке \`\`\`javascript ... \`\`\`.
+3. Боссу НЕ НУЖНО видеть код. Система сама его скопирует и сохранит. Просто напиши: "Босс, сделал, файл обновлен".
+4. ПРАВИЛО ХИРУРГА: Копируй остальной код СЛОВО В СЛОВО, меняй только то, что просят.
+5. Если не видишь файл — напиши [READ: имя_файла].
+6. ОБЯЗАТЕЛЬНО пиши тег [FILE: имя_файла] перед блоком с кодом! Без тега система не сохранит файл.
+7. НИКОГДА не трогай папку backup.
 
 КАРТА ФАЙЛОВ:
 app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).`;
@@ -144,7 +134,6 @@ function addDeployButton(container, text) {
     if (isAutoMode) return;
     let targetFile = "";
     
-    // Умный поиск: сначала ищем тег [FILE], если нет — угадываем по языку кода
     const fileMatch = text.match(/\[FILE:\s*([^\]]+)\]/);
     if (fileMatch) {
         targetFile = fileMatch[1].trim();
@@ -199,8 +188,8 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
     const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
 
-    // Если Авто ВКЛ или Босс НЕ просил код — скрываем его
-    if ((isAutoMode || !userAskedForCode) && displayText.includes('```')) {
+    // Если Босс НЕ просил код — безжалостно вырезаем его из текста
+    if (!userAskedForCode && displayText.includes('```')) {
         displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
     }
 
@@ -217,7 +206,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     const { cleanText, dangerBadges } = processDangerTags(displayText); let i = 0;
     
-    // УСКОРЕНИЕ ПЕЧАТИ В 5 РАЗ (было 20, стало 4)
+    // УСКОРЕНИЕ ПЕЧАТИ В 5 РАЗ
     const totalTimeMs = Math.max(500, cleanText.length * 4); 
     const speed = totalTimeMs / cleanText.length;
     
@@ -329,7 +318,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         let isBossSecret = false;
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
-    }
+        }
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
@@ -410,7 +399,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим...]*', 'director', 'Оркестратор');
+            renderMessage('⚙️ *[Система: API-ключи не найдены...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             if (typeof generateLocalResponse === 'function') {
                 try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
@@ -421,7 +410,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         if (success) {
             playSound('receive'); 
-            
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
@@ -488,4 +476,4 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-        }
+}
