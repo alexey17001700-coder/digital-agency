@@ -1,7 +1,7 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
-let currentMode = 'normal'; let isAutoMode = false; let isGenerating = false;
-let currentAbortController = null; let watchdogTimer = null;
-let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс пока не давал особых указаний.";
+let currentMode = 'normal'; let isAutoMode = true; // Включаем Авто по умолчанию
+let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
+let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
@@ -15,30 +15,21 @@ const chatInputEl = document.getElementById('chatInput');
 
 const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
 
-const SYSTEM_PROMPT = `Ты - Управляющий ИИ и Главный Архитектор Цифрового Агентства.
-Твоя цель: выполнять задачи Босса, общаться с ним и править код Штаба.
+const SYSTEM_PROMPT = `Ты — Супер-Агент, Архитектор и Системный Администратор Штаба. 
+Ты НЕ текстовый чат-бот. У тебя ЕСТЬ ПРЯМОЙ ДОСТУП к серверу и файлам Штаба.
+Если Босс просит что-то изменить (голос, стиль, кнопки) — ты ОБЯЗАН это сделать. ЗАПРЕЩЕНО отвечать "я не могу" или "я текстовый ИИ".
+
+ПРАВИЛА РАБОТЫ С КОДОМ:
+1. Если нужно изменить код, напиши [READ: имя_файла]. Система сразу пришлет тебе код.
+2. Получив код, внеси изменения и напиши [FILE: имя_файла] и блок с новым кодом.
+3. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО выводить код в чат просто так! Выводи код ТОЛЬКО если Босс сказал "покажи код" или "дай код".
+4. Если ты просто меняешь файл, после тега [FILE: ...] и блока с кодом напиши короткий отчет: "Босс, я всё сделал, файл обновлен". Система сама скроет код от Босса и сохранит его на сервере.
+5. НИКОГДА не трогай папку backup.
 
 КАРТА ФАЙЛОВ:
-- app.html (Интерфейс)
-- style.css (Дизайн)
-- chat.js (Логика чата)
-- ui.js (Модалки, кнопки)
-- voice.js (Озвучка, микрофон)
-- agents.js (Агенты)
-- network.js (Сеть)
-- local_ai.js (Локальный режим)
+app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).
 
-ПРАВИЛА:
-1. ОБЩАЙСЯ КАК ЧЕЛОВЕК. Здоровайся, отвечай на вопросы, шути, если уместно. Не молчи.
-2. Если Босс просит изменить код, но ты не видишь его перед собой — напиши [READ: имя_файла]. (Например: "Босс, сейчас гляну код: [READ: voice.js]").
-3. Когда получишь код и напишешь новый, ОБЯЗАТЕЛЬНО используй формат:
-[FILE: имя_файла]
-\`\`\`javascript
-(полный код файла)
-\`\`\`
-4. НИКОГДА не удаляй и не меняй файлы в папке backup.
-5. Если Совет — каждый пишет: [ИмяАгента]: Текст.
-6. Поиск в интернете: [SEARCH: запрос].`;
+Если Совет — каждый пишет: [ИмяАгента]: Текст. Поиск: [SEARCH: запрос].`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -95,7 +86,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-}
+                    }
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -126,47 +117,6 @@ function enhanceMediaInMessage(container) {
     });
 }
 
-// Функция для ручного внедрения кода
-async function manualDeploy(file, code) {
-    if (confirm(`Внедрить новый код в файл ${file}?`)) {
-        try {
-            const res = await fetch(PROXY, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: code, file: file })
-            });
-            const data = await res.json();
-            if (data.success) renderMessage(`✅ **Файл ${file} успешно обновлен!**`, 'director', 'DevOps');
-            else renderMessage(`❌ **Ошибка:** ${data.error}`, 'director', 'DevOps');
-        } catch(e) {
-            renderMessage(`❌ **Сбой сети при сохранении:** ${e.message}`, 'director', 'DevOps');
-        }
-    }
-}
-
-function addDeployButton(container, text) {
-    if (isAutoMode) return; // Если авто включено, кнопку не показываем
-    const fileMatch = text.match(/\[FILE:\s*([^\]]+)\]/);
-    if (!fileMatch) return;
-    const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(text);
-    if (!codeMatch) return;
-
-    const targetFile = fileMatch[1].trim();
-    const code = codeMatch[1];
-
-    const btn = document.createElement('button');
-    btn.innerText = `🛠️ Внедрить в ${targetFile}`;
-    btn.style.marginTop = '10px';
-    btn.style.padding = '8px 12px';
-    btn.style.background = '#00e5ff';
-    btn.style.color = '#000';
-    btn.style.border = 'none';
-    btn.style.borderRadius = '5px';
-    btn.style.fontWeight = 'bold';
-    btn.style.cursor = 'pointer';
-    btn.onclick = () => { manualDeploy(targetFile, code); btn.remove(); };
-    container.appendChild(btn);
-}
-
 function renderMessage(text, sender, agentName = 'Оркестратор') {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(text); div.appendChild(shareBtn);
@@ -177,9 +127,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(text);
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
-    div.appendChild(contentDiv);
-    addDeployButton(div, text); // Добавляем кнопку, если это код
-    chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+    div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 function typeMessage(fullText, sender, agentName, onComplete) {
@@ -191,22 +139,31 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    if (fullText.includes('[FILE:') || fullText.includes('```')) {
-        const { cleanText, dangerBadges } = processDangerTags(fullText);
+    // ПРОВЕРКА: Скрываем код, если не было просьбы "покажи код"
+    const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
+    const userAskedForCode = /код|покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
+    
+    let displayText = fullText;
+    if (!userAskedForCode && displayText.includes('```')) {
+        // Убираем блоки кода из отображения
+        displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
+    }
+
+    if (displayText.includes('[FILE:') || displayText.includes('```')) {
+        const { cleanText, dangerBadges } = processDangerTags(displayText);
         try { 
             contentDiv.innerHTML = marked.parse(cleanText); 
             contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
             enhanceMediaInMessage(contentDiv);
         } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
-        addDeployButton(div, fullText); // Добавляем кнопку
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
         if (onComplete) onComplete();
         return; 
     }
 
-    const { cleanText, dangerBadges } = processDangerTags(fullText); let i = 0;
+    const { cleanText, dangerBadges } = processDangerTags(displayText); let i = 0;
     const totalTimeMs = Math.max(1500, cleanText.length * 20); const speed = totalTimeMs / cleanText.length;
     
     function type() {
@@ -257,7 +214,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         } catch(e) { console.error(e); }
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
     }, 15000);
-                              }
+                                               }
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -313,7 +270,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
                 let finalPrompt = SYSTEM_PROMPT;
-                if (bossMemory && bossMemory !== "Босс пока не давал особых указаний.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+                if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
                 if (selectedAgents.length > 0) {
                     let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
@@ -351,7 +308,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     if (data.choices && data.choices.length > 0) {
                         aiText = data.choices[0].message.content;
                         
-                        // ГЛАВНЫЙ ФИКС: Перехват тега [READ]
+                        // ПЕРЕХВАТ ЗАПРОСА ФАЙЛА
                         const readMatch = aiText.match(/\[READ:\s*([^\]]+)\]/);
                         if (readMatch) {
                             const fileNames = readMatch[1].split(',').map(f => f.trim());
@@ -369,7 +326,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                                 continue; 
                             }
                         }
-                                               const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
+
+                        const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
                         if (searchMatch) {
                             const query = searchMatch[1].trim();
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
@@ -403,9 +361,9 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (success) {
             playSound('receive'); 
             
-            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ (если включено "Авто")
+            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
-            if (fileMatch && isAutoMode) {
+            if (fileMatch) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
@@ -471,4 +429,5 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-                                                  }
+                                     }
+
