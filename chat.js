@@ -1,5 +1,5 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
-let currentMode = 'normal'; let isAutoMode = true; // Включаем Авто по умолчанию
+let currentMode = 'normal'; let isAutoMode = true;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
@@ -86,7 +86,7 @@ function addMessageToHistory(text, sender, agentName = null) {
         }
     }
     saveAll(); renderChatList();
-                    }
+}
 function processDangerTags(text) {
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -117,6 +117,48 @@ function enhanceMediaInMessage(container) {
     });
 }
 
+// Ручное внедрение (если Авто выключено)
+async function manualDeploy(file, code) {
+    if (confirm(`Внедрить новый код в файл ${file}?`)) {
+        try {
+            const res = await fetch(PROXY, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    updateFile: true, 
+                    path: file, 
+                    content: code,
+                    message: `Auto-update: ${file}`
+                })
+            });
+            const data = await res.json();
+            if (data.success) renderMessage(`✅ **Файл ${file} успешно обновлен!**`, 'director', 'DevOps');
+            else renderMessage(`❌ **Ошибка:** ${data.error}`, 'director', 'DevOps');
+        } catch(e) {
+            renderMessage(`❌ **Сбой сети:** ${e.message}`, 'director', 'DevOps');
+        }
+    }
+}
+
+function addDeployButton(container, text) {
+    if (isAutoMode) return;
+    const fileMatch = text.match(/\[FILE:\s*([^\]]+)\]/);
+    if (!fileMatch) return;
+    const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(text);
+    if (!codeMatch) return;
+
+    const targetFile = fileMatch[1].trim();
+    const code = codeMatch[1];
+
+    const btn = document.createElement('button');
+    btn.innerText = `🛠️ Внедрить в ${targetFile}`;
+    btn.style.marginTop = '10px'; btn.style.padding = '8px 12px';
+    btn.style.background = '#00e5ff'; btn.style.color = '#000';
+    btn.style.border = 'none'; btn.style.borderRadius = '5px';
+    btn.style.fontWeight = 'bold'; btn.style.cursor = 'pointer';
+    btn.onclick = () => { manualDeploy(targetFile, code); btn.remove(); };
+    container.appendChild(btn);
+}
+
 function renderMessage(text, sender, agentName = 'Оркестратор') {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(text); div.appendChild(shareBtn);
@@ -127,7 +169,9 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(text);
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
-    div.appendChild(contentDiv); chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+    div.appendChild(contentDiv);
+    addDeployButton(div, text);
+    chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 function typeMessage(fullText, sender, agentName, onComplete) {
@@ -139,24 +183,20 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    // ПРОВЕРКА: Скрываем код, если не было просьбы "покажи код"
+    // Скрываем код, если не просили
     const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
     const userAskedForCode = /код|покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
     
     let displayText = fullText;
     if (!userAskedForCode && displayText.includes('```')) {
-        // Убираем блоки кода из отображения
         displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
     }
 
     if (displayText.includes('[FILE:') || displayText.includes('```')) {
         const { cleanText, dangerBadges } = processDangerTags(displayText);
-        try { 
-            contentDiv.innerHTML = marked.parse(cleanText); 
-            contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); 
-            enhanceMediaInMessage(contentDiv);
-        } catch(e) { contentDiv.innerText = cleanText; }
+        try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+        addDeployButton(div, fullText);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
         if (onComplete) onComplete();
@@ -214,7 +254,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         } catch(e) { console.error(e); }
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
     }, 15000);
-                                               }
+}
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
@@ -242,7 +282,6 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
     const activeAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор';
-    
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
@@ -259,9 +298,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
         let isBossSecret = false;
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
-            hasAnyKeys = true;
-            isBossSecret = true;
-            userKeys = {}; 
+            hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
         }
 
         if (hasAnyKeys) {
@@ -308,7 +345,6 @@ async function sendMessage(overrideText = null, isKick = false) {
                     if (data.choices && data.choices.length > 0) {
                         aiText = data.choices[0].message.content;
                         
-                        // ПЕРЕХВАТ ЗАПРОСА ФАЙЛА
                         const readMatch = aiText.match(/\[READ:\s*([^\]]+)\]/);
                         if (readMatch) {
                             const fileNames = readMatch[1].split(',').map(f => f.trim());
@@ -319,7 +355,6 @@ async function sendMessage(overrideText = null, isKick = false) {
                                     if (fileRes.ok) { const fileCode = await fileRes.text(); allCode += `\n\nВОТ КОД ФАЙЛА ${fileName}:\n\`\`\`\n${fileCode}\n\`\`\``; }
                                 } catch (e) { if (e.name === 'AbortError') return; }
                             }
-                            
                             if (allCode) {
                                 currentMessages.push({ role: "assistant", content: aiText });
                                 currentMessages.push({ role: "user", content: `[СИСТЕМА: Вот запрошенные файлы]${allCode}\n\nТеперь выполни мою первоначальную просьбу. Напиши [FILE: имя_файла] и выдай ПОЛНЫЙ новый код.` });
@@ -332,24 +367,21 @@ async function sendMessage(overrideText = null, isKick = false) {
                             const query = searchMatch[1].trim();
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
                             renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
-                            
                             const searchRes = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ searchQuery: query }), signal: currentAbortController.signal });
                             const searchData = await searchRes.json();
-                            
                             if (searchData.success) {
                                 currentMessages.push({ role: "assistant", content: aiText });
                                 currentMessages.push({ role: "user", content: `[РЕЗУЛЬТАТЫ ПОИСКА]: ${searchData.results}. Ответь на вопрос.` });
                                 continue; 
                             }
                         }
-                        success = true; 
-                        break; 
+                        success = true; break; 
                     }
                 }
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            renderMessage('⚙️ *[Система: API-ключи не найдены. Переключаюсь на локальный режим...]*', 'director', 'Оркестратор');
+            renderMessage('⚙️ *[Система: API-ключи не найдены...]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             if (typeof generateLocalResponse === 'function') {
                 try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
@@ -361,13 +393,22 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (success) {
             playSound('receive'); 
             
-            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ
+            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ (Формат для Deno)
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
-                    fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: codeMatch[1], file: targetFile }), signal: currentAbortController.signal })
+                    fetch(PROXY, { 
+                        method: "POST", headers: { "Content-Type": "application/json" }, 
+                        body: JSON.stringify({ 
+                            updateFile: true, 
+                            path: targetFile, 
+                            content: codeMatch[1],
+                            message: `Auto-update: ${targetFile}`
+                        }), 
+                        signal: currentAbortController.signal 
+                    })
                     .then(res => res.json()).then(data => {
                         if (data.success) renderMessage(`✅ **Файл ${targetFile} обновлен автоматически!**`, 'director', 'DevOps');
                         else renderMessage(`❌ **Ошибка авто-внедрения:** ${data.error}`, 'director', 'DevOps');
@@ -382,7 +423,6 @@ async function sendMessage(overrideText = null, isKick = false) {
             
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
             if (elAi) elAi.className = 'status-item online';
-            
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
             const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу|дай мне секунду|гляну текущий код|сейчас выдам/i;
@@ -429,5 +469,4 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-                                     }
-
+}
