@@ -19,7 +19,7 @@ function json(data: unknown, status = 200) {
 async function callZvenoAI(messages: any[]): Promise<string> {
   const apiKey = Deno.env.get("ZVENO_API_KEY");
   if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
-  const payload = { model: ZVENO_MODEL, messages, temperature: 0.7, max_tokens: 100000, stream: false };
+  const payload = { model: ZVENO_MODEL, messages, temperature: 0.7, max_tokens: 8192 , stream: false };
   const res = await fetch(ZVENO_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify(payload), signal: AbortSignal.timeout(FETCH_TIMEOUT) });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error?.message || `Ошибка ZvenoAI: ${res.status}`);
