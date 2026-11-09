@@ -331,9 +331,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                         signal: currentAbortController.signal
                     });
                     
-                    if (!response.ok) { lastError = `Ошибка сервера: ${response.status}.`; break; }
-                    
                     const data = await response.json();
+if (!response.ok) { 
+    lastError = data.error || `Ошибка сервера: ${response.status}`; 
+    if (data.details) lastError += ` | Детали: ${data.details}`;
+    break; 
+}
                     if (data.choices && data.choices.length > 0) {
                         aiText = data.choices[0].message.content;
                         
