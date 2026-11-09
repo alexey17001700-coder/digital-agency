@@ -1,5 +1,5 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
-let currentMode = 'normal'; let isAutoMode = true;
+let currentMode = 'normal'; let isAutoMode = false; // Теперь по умолчанию ВЫКЛ
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
@@ -22,9 +22,8 @@ const SYSTEM_PROMPT = `Ты — Супер-Агент, Архитектор и �
 ПРАВИЛА РАБОТЫ С КОДОМ:
 1. Если нужно изменить код, напиши [READ: имя_файла]. Система сразу пришлет тебе код.
 2. Получив код, внеси изменения и напиши [FILE: имя_файла] и блок с новым кодом.
-3. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО выводить код в чат просто так! Выводи код ТОЛЬКО если Босс сказал "покажи код" или "дай код".
-4. Если ты просто меняешь файл, после тега [FILE: ...] и блока с кодом напиши короткий отчет: "Босс, я всё сделал, файл обновлен". Система сама скроет код от Босса и сохранит его на сервере.
-5. НИКОГДА не трогай папку backup.
+3. Если ты просто меняешь файл, после тега [FILE: ...] и блока с кодом напиши короткий отчет: "Босс, я всё сделал, файл обновлен". 
+4. НИКОГДА не трогай папку backup.
 
 КАРТА ФАЙЛОВ:
 app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).
@@ -117,25 +116,19 @@ function enhanceMediaInMessage(container) {
     });
 }
 
-// Ручное внедрение (если Авто выключено)
 async function manualDeploy(file, code) {
     if (confirm(`Внедрить новый код в файл ${file}?`)) {
         try {
             const res = await fetch(PROXY, {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    updateFile: true, 
-                    path: file, 
-                    content: code,
-                    message: `Auto-update: ${file}`
+                    updateFile: true, path: file, content: code, message: `Auto-update: ${file}`
                 })
             });
             const data = await res.json();
             if (data.success) renderMessage(`✅ **Файл ${file} успешно обновлен!**`, 'director', 'DevOps');
             else renderMessage(`❌ **Ошибка:** ${data.error}`, 'director', 'DevOps');
-        } catch(e) {
-            renderMessage(`❌ **Сбой сети:** ${e.message}`, 'director', 'DevOps');
-        }
+        } catch(e) { renderMessage(`❌ **Сбой сети:** ${e.message}`, 'director', 'DevOps'); }
     }
 }
 
@@ -145,10 +138,7 @@ function addDeployButton(container, text) {
     if (!fileMatch) return;
     const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(text);
     if (!codeMatch) return;
-
-    const targetFile = fileMatch[1].trim();
-    const code = codeMatch[1];
-
+    const targetFile = fileMatch[1].trim(); const code = codeMatch[1];
     const btn = document.createElement('button');
     btn.innerText = `🛠️ Внедрить в ${targetFile}`;
     btn.style.marginTop = '10px'; btn.style.padding = '8px 12px';
@@ -183,12 +173,9 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     }
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    // Скрываем код, если не просили
-    const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
-    const userAskedForCode = /код|покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
-    
     let displayText = fullText;
-    if (!userAskedForCode && displayText.includes('```')) {
+    // Скрываем код, ТОЛЬКО если включено Авто
+    if (isAutoMode && displayText.includes('```')) {
         displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
     }
 
@@ -393,20 +380,15 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (success) {
             playSound('receive'); 
             
-            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ (Формат для Deno)
+            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ (только если Авто включено)
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
-            if (fileMatch) {
+            if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
                     fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" }, 
-                        body: JSON.stringify({ 
-                            updateFile: true, 
-                            path: targetFile, 
-                            content: codeMatch[1],
-                            message: `Auto-update: ${targetFile}`
-                        }), 
+                        body: JSON.stringify({ updateFile: true, path: targetFile, content: codeMatch[1], message: `Auto-update: ${targetFile}` }), 
                         signal: currentAbortController.signal 
                     })
                     .then(res => res.json()).then(data => {
@@ -469,4 +451,4 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-}
+                                                                                                                                         }
