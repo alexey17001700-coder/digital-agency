@@ -8,8 +8,7 @@ try {
     if (sv) agentVoiceSettings = JSON.parse(sv); 
 } catch (e) {}
 
-let currentAudio = null; // Храним текущее аудио, чтобы останавливать старое
-
+let currentAudio = null; 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 // --- ЗВУКИ ИНТЕРФЕЙСА ---
@@ -59,7 +58,6 @@ async function speakText(text, agentName) {
     let cleanText = text.replace(/[*#_`]/g, '').replace(/\[.*?\]/g, '').trim();
     if (!cleanText) return;
 
-    // Останавливаем предыдущую озвучку
     if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
     if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
 
@@ -87,12 +85,10 @@ async function speakText(text, agentName) {
         }
     } catch (e) {
         console.error('Ошибка Яндекса, встроенный голос:', e);
-        // Запасной вариант (голос телефона)
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = 'ru-RU';
             
-            // Делаем голоса разными
             if (agentName === 'Хакер') { utterance.pitch = 0.5; utterance.rate = 0.9; }
             else if (agentName === 'Дизайнер') { utterance.pitch = 1.5; utterance.rate = 1.1; }
             else if (agentName === 'Охранник') { utterance.pitch = 0.8; utterance.rate = 1.0; }
@@ -100,4 +96,70 @@ async function speakText(text, agentName) {
             window.speechSynthesis.speak(utterance);
         }
     }
+    }
+// --- ГОЛОСОВОЙ ВВОД (МИКРОФОН) ---
+let recognition = null;
+let isListening = false;
+
+// Проверяем поддержку браузером
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = false; // Слушаем до первой паузы
+    recognition.interimResults = false; // Ждем финальный результат
+
+    recognition.onstart = function() {
+        isListening = true;
+        const btn = document.getElementById('micBtn');
+        if (btn) {
+            btn.style.background = '#ff0055'; // Красный, когда слушает
+            btn.style.boxShadow = '0 0 10px #ff0055';
+        }
+    };
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            // Добавляем распознанный текст к тому, что уже написано
+            chatInput.value += (chatInput.value ? ' ' : '') + transcript;
+            chatInput.style.height = 'auto';
+            chatInput.style.height = (chatInput.scrollHeight) + 'px';
+        }
+    };
+
+    recognition.onerror = function(event) {
+        console.error('Ошибка микрофона:', event.error);
+        if (event.error === 'not-allowed') {
+            alert('Браузер заблокировал микрофон. Разреши доступ в настройках!');
+        }
+    };
+
+    recognition.onend = function() {
+        isListening = false;
+        const btn = document.getElementById('micBtn');
+        if (btn) {
+            btn.style.background = '#333'; // Возвращаем стандартный цвет
+            btn.style.boxShadow = 'none';
+        }
+    };
 }
+
+function toggleVoiceInput() {
+    if (!recognition) {
+        alert('Твой браузер не поддерживает голосовой ввод. Используй Chrome или Safari.');
+        return;
+    }
+    
+    if (isListening) {
+        recognition.stop();
+    } else {
+        try {
+            recognition.start();
+        } catch (e) {
+            console.warn("Микрофон уже запущен", e);
+        }
+    }
+    }
