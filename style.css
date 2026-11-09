@@ -309,3 +309,11 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     animation: none !important;
     transition: none !important;
 }
+/* Подсветка активного агента */
+.agent-card.active-agent-glow {
+    border-color: #00ff41 !important;
+    box-shadow: 0 0 15px 5px rgba(0, 255, 65, 0.6) !important;
+    transform: scale(1.05);
+    transition: all 0.3s ease-in-out;
+    z-index: 10;
+}
