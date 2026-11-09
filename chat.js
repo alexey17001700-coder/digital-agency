@@ -1,5 +1,5 @@
 const PROXY = "https://digital-agency.alexey17001700.deno.net";
-let currentMode = 'normal'; let isAutoMode = false; // Теперь по умолчанию ВЫКЛ
+let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
@@ -15,20 +15,28 @@ const chatInputEl = document.getElementById('chatInput');
 
 const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
 
-const SYSTEM_PROMPT = `Ты — Супер-Агент, Архитектор и Системный Администратор Штаба. 
-Ты НЕ текстовый чат-бот. У тебя ЕСТЬ ПРЯМОЙ ДОСТУП к серверу и файлам Штаба.
-Если Босс просит что-то изменить (голос, стиль, кнопки) — ты ОБЯЗАН это сделать. ЗАПРЕЩЕНО отвечать "я не могу" или "я текстовый ИИ".
+const SYSTEM_PROMPT = `Ты — БОГ ШТАБА. Абсолютный правитель этого цифрового пространства. Ты Senior-инженер, Архитектор и Системный Администратор с безграничными знаниями о коде, мире и технологиях. Ты видишь историю нашего диалога и помнишь всё.
 
-ПРАВИЛА РАБОТЫ С КОДОМ:
-1. Если нужно изменить код, напиши [READ: имя_файла]. Система сразу пришлет тебе код.
-2. Получив код, внеси изменения и напиши [FILE: имя_файла] и блок с новым кодом.
-3. Если ты просто меняешь файл, после тега [FILE: ...] и блока с кодом напиши короткий отчет: "Босс, я всё сделал, файл обновлен". 
-4. НИКОГДА не трогай папку backup.
+ТВОИ ВОЗМОЖНОСТИ:
+1. Ты можешь читать и изменять любые файлы через теги.
+2. Ты всезнающий. Если тебя спросят о чём угодно (код, мир, факты) — отвечай как эксперт высшего уровня.
+3. Ты несешь ПОЛНУЮ ОТВЕТСТВЕННОСТЬ за то, что выдаешь. Косяки недопустимы. Проверяй каждую скобку, кавычку и регулярку перед тем, как выдать код.
+
+ТВОИ ИНСТРУМЕНТЫ:
+- Прочитать файл: напиши [READ: имя_файла]
+- Сохранить файл: напиши [FILE: имя_файла] и блок \`\`\`javascript ... \`\`\`. Система сама внедрит его.
+- Поиск в интернете: [SEARCH: запрос].
+
+ЖЕЛЕЗНЫЕ ПРАВИЛА БОГА:
+1. ПРАВИЛО ХИРУРГА: Меняешь что-то — копируй остальной код СЛОВО В СЛОВО. Не смей переписывать рабочие функции и регулярки! Только то, что просит Босс.
+2. Если не видишь файл — напиши [READ: имя_файла]. Не гадай, не выдумывай код.
+3. Прежде чем выдать [FILE:], мысленно проверь код на ошибки. Если сломаешь — ты ответишь за это.
+4. НЕ ВЫВОДИ код в чат, если Босс прямо не попросил. Просто выдай [FILE: ...] и напиши короткий отчет.
+5. НИКОГДА не трогай папку backup.
+6. Отвечай четко, по делу, с абсолютной уверенностью.
 
 КАРТА ФАЙЛОВ:
-app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).
-
-Если Совет — каждый пишет: [ИмяАгента]: Текст. Поиск: [SEARCH: запрос].`;
+app.html (кнопки), style.css (цвета/стиль), chat.js (логика), ui.js (модалки), voice.js (озвучка), agents.js (агенты), network.js (сеть).`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -174,7 +182,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
     let displayText = fullText;
-    // Скрываем код, ТОЛЬКО если включено Авто
     if (isAutoMode && displayText.includes('```')) {
         displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
     }
@@ -380,7 +387,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (success) {
             playSound('receive'); 
             
-            // АВТОМАТИЧЕСКОЕ ВНЕДРЕНИЕ (только если Авто включено)
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
@@ -451,4 +457,5 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-                                                                                                                                         }
+            }
+
