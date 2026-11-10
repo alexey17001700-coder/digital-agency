@@ -11,7 +11,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Credentials": "true"
 };
-const FETCH_TIMEOUT = 120000; // 2 минуты
+const FETCH_TIMEOUT = 120000;
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -66,8 +66,7 @@ async function updateFileInRepo(path: string, content: string) {
   const res = await gitAPI(`contents/${path}`, "PUT", payload);
   if (!res || !res.commit) throw new Error("GitHub не вернул commit");
   return true;
-}
-
+      }
 async function searchInternet(query: string) {
   let resultText = "";
   try {
@@ -92,6 +91,90 @@ async function searchInternet(query: string) {
   }
   return resultText.trim() || "По вашему запросу ничего не найдено.";
 }
+
+async function handleBackup(body: any) {
+  const ref = await gitAPI(`git/refs/heads/main`);
+  if (!ref) throw new Error("Ветка main не найдена");
+  const commit = await gitAPI(`git/commits/${ref.object.sha}`);
+  if (!commit) throw new Error("Коммит ветки main не найден");
+
+  let sourceFiles: { name: string, sha: string }[] = [];
+
+  if (body.isBackup) {
+    const rootContents = await gitAPI("contents/");
+    if (Array.isArray(rootContents)) {
+      sourceFiles = rootContents
+        .filter((item: any) => item.type === 'file')
+        .filter((item: any) => !['.gitignore', 'README.md', 'ai_brain.json'].includes(item.name))
+        .map((item: any) => ({ name: item.name, sha: item.sha }));
+    }
+  } else {
+    try {
+      const backupContents = await gitAPI("contents/backup");
+      if (Array.isArray(backupContents)) {
+        sourceFiles = backupContents
+          .filter((item: any) => item.type === 'file')
+          .map((item: any) => ({ name: item.name, sha: item.sha }));
+      }
+    } catch (e) {}
+  }
+
+  if (sourceFiles.length === 0) {
+    return json({ success: false, error: body.isBackup ? "Нет файлов в корне" : "Папка backup пуста" }, 400);
+  }
+
+  const tree: any[] = [];
+  for (const file of sourceFiles) {
+    const targetPath = body.isBackup ? `backup/${file.name}` : file.name;
+    tree.push({ path: targetPath, mode: "100644", type: "blob", sha: file.sha });
+  }
+
+  const newTree = await gitAPI("git/trees", "POST", { base_tree: commit.tree.sha, tree });
+  const newCommit = await gitAPI("git/commits", "POST", {
+    message: body.isBackup ? "Auto-backup" : "Rollback",
+    tree: newTree.sha,
+    parents: [ref.object.sha],
+  });
+  await gitAPI(`git/refs/heads/main`, "PATCH", { sha: newCommit.sha, force: true });
+
+  return json({
+    success: true,
+    message: body.isBackup ? `Эталон сохранен (${tree.length} файлов)!` : `Штаб откачен (${tree.length} файлов)!`
+  });
+}
+
+async function scanRepoFiles() {
+  const rootContents = await gitAPI("contents/");
+  if (!Array.isArray(rootContents)) throw new Error("Не удалось получить список файлов");
+
+  const allowedExt = [".js", ".html", ".css"];
+  const files = rootContents.filter(
+    (f: any) => f.type === "file" && allowedExt.some((ext) => f.name.endsWith(ext))
+  );
+
+  const issues: any[] = [];
+  for (const file of files) {
+    try {
+      const content = await getFileContent(file.name);
+      if (content === null) continue;
+      const opens = (content.match(/{/g) || []).length;
+      const closes = (content.match(/}/g) || []).length;
+      if (opens !== closes) {
+        const diff = opens - closes;
+        issues.push({
+          path: file.name,
+          opens,
+          closes,
+          diff,
+          content,
+          description: `Скобки: { = ${opens}, } = ${closes} (не хватает ${diff})`,
+        });
+      }
+    } catch (e) {}
+  }
+
+  return json({ success: true, scanned: files.length, issues });
+  }
 // ============================================
 // ОПИСАНИЕ ИНСТРУМЕНТОВ (TOOL CALLING)
 // ============================================
@@ -208,10 +291,12 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
         const fnArgs = JSON.parse(tc.function.arguments || "{}");
         console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
         const result = await executeTool(fnName, fnArgs);
+        
+        // ФИКС: Увеличили лимит с 10000 до 100000 символов
         currentMessages.push({
           role: "tool",
           tool_call_id: tc.id,
-          content: result.slice(0, 10000) // Ограничиваем размер
+          content: result.slice(0, 100000) 
         });
       }
       continue; // Снова к нейросети с результатами
@@ -222,7 +307,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
   }
 
   return "⚠️ Слишком много шагов. Задача прервана.";
-}
+        }
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
