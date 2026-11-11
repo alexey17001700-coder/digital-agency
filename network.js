@@ -89,3 +89,48 @@ async function runConnectionTest() {
     const aiEl = document.getElementById('t-ai-model');
     if (aiEl) aiEl.innerText = "yandexgpt";
                     }
+
+// --- ПОГОДА (Open-Meteo, без ключей) ---
+async function getWeather(city = 'Саратов') {
+    try {
+        const geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+            encodeURIComponent(city) + '&count=1&language=ru&format=json';
+        const geoRes = await fetch(geoUrl, { cache: 'no-store' });
+        if (!geoRes.ok) throw new Error('геокодинг недоступен');
+        const geoData = await geoRes.json();
+        const place = geoData && geoData.results && geoData.results[0];
+        if (!place) return 'Не нашёл город «' + city + '» в базе Open-Meteo.';
+
+        const lat = place.latitude;
+        const lon = place.longitude;
+        const placeName = place.name || city;
+
+        const forecastUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+            '&longitude=' + lon + '&current_weather=true';
+        const fcRes = await fetch(forecastUrl, { cache: 'no-store' });
+        if (!fcRes.ok) throw new Error('прогноз недоступен');
+        const fcData = await fcRes.json();
+        const cw = fcData && fcData.current_weather;
+        if (!cw) return 'Open-Meteo не отдал текущую погоду по ' + placeName + '.';
+
+        const temp = Math.round(cw.temperature);
+        const wind = Math.round(cw.windspeed);
+        const dirs = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+        const dir = dirs[Math.round((cw.winddirection || 0) / 45) % 8];
+        const codes = {
+            0: 'ясно', 1: 'почти ясно', 2: 'переменная облачность', 3: 'пасмурно',
+            45: 'туман', 48: 'изморозь',
+            51: 'слабая морось', 53: 'морось', 55: 'сильная морось',
+            61: 'слабый дождь', 63: 'дождь', 65: 'сильный дождь',
+            71: 'слабый снег', 73: 'снег', 75: 'сильный снег',
+            80: 'ливень', 81: 'сильный ливень', 82: 'очень сильный ливень',
+            95: 'гроза', 96: 'гроза с градом', 99: 'сильная гроза с градом'
+        };
+        const desc = codes[cw.weathercode] || 'без описания';
+
+        return 'Погода в ' + placeName + ': ' + temp + '°C, ' + desc +
+            '. Ветер ' + wind + ' км/ч, ' + dir + '.';
+    } catch (e) {
+        return 'Не удалось получить погоду: ' + e.message;
+    }
+}
