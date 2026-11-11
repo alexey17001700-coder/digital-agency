@@ -1,4 +1,4 @@
-const PROXY = "https://digital-agency.alexey17001700.deno.net";
+const PROXY = "https://low-tvs-manufacturer-drag.trycloudflare.com";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
