@@ -17,10 +17,21 @@ function playSound(type) {
     } catch (e) {}
 }
 
+function stopVoice() {
+    if (currentAudio) {
+        try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) {}
+        currentAudio = null;
+    }
+    if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+}
+
 function toggleVoice() {
     isVoiceEnabled = !isVoiceEnabled; localStorage.setItem('shtabVoiceEnabled', isVoiceEnabled);
     const btn = document.getElementById('btnVoiceToggle');
     if (btn) { btn.innerText = isVoiceEnabled ? '🗣️ Озвучка: ВКЛ' : '🗣️ Озвучка: ВЫКЛ'; btn.classList.toggle('active', isVoiceEnabled); }
+    if (!isVoiceEnabled) stopVoice();
 }
 
 async function speakText(text, agentName) {
@@ -35,10 +46,13 @@ async function speakText(text, agentName) {
 
     try {
         const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: cleanText, voice: v.voice, emotion: v.emotion }) });
+        if (!isVoiceEnabled) return;
         if (!res.ok) throw new Error("Сервер");
         const data = await res.json();
+        if (!isVoiceEnabled) return;
         if (data.audio) { currentAudio = new Audio("data:audio/mpeg;base64," + data.audio); await currentAudio.play(); } else throw new Error("Нет аудио");
     } catch (e) {
+        if (!isVoiceEnabled) return;
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(cleanText); utterance.lang = 'ru-RU';
             if (agentName === 'Хакер') { utterance.pitch = 0.5; utterance.rate = 0.9; }
