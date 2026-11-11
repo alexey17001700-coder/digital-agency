@@ -94,9 +94,8 @@
         </div>
         <button id="fab-trigger" onclick="toggleMenu()">🛠️</button>
     </div>
-
-    <script>
-        const PROXY = "https://early-amoeba-1705.alexey17001700.deno.net";
+        <script>
+        const PROXY = "https://shtab-boss.duckdns.org:8443";
         const fabMenu = document.getElementById('fab-menu');
         const fabOverlay = document.getElementById('fab-overlay');
         const appFrame = document.getElementById('app-frame');
@@ -167,8 +166,28 @@
         function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
         function clearSafePin() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; }
         function checkSafePin() { if (safePin === CORRECT_PIN) { document.getElementById('safe-display').innerText = "OK"; document.getElementById('safe-display').style.color = "#00ff00"; setTimeout(() => { document.getElementById('safe-lock-container').style.display = 'none'; document.getElementById('save-action-container').style.display = 'block'; }, 300); } else { document.getElementById('safe-display').innerText = "ERR"; document.getElementById('safe-display').style.color = "#ff0000"; setTimeout(clearSafePin, 1000); } }
-        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
-        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        
+        async function triggerBackup() { 
+            toggleMenu(); 
+            if (!confirm("💾 Сохранить эталон?")) return; 
+            try { 
+                const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); 
+                const d = await res.json(); 
+                if (d.success) alert("✅ Сохранено!"); 
+                else throw new Error(d.error); 
+            } catch (e) { alert("❌ " + e.message); } 
+        }
+        
+        async function triggerRollback() { 
+            toggleMenu(); 
+            if (!confirm("⚠️ Откатить Штаб?")) return; 
+            try { 
+                const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); 
+                const d = await res.json(); 
+                if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } 
+                else throw new Error(d.error); 
+            } catch (e) { alert("❌ " + e.message); } 
+        }
     </script>
 </body>
 </html>
