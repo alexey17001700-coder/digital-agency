@@ -1,4 +1,4 @@
-const PROXY = "https://a29391afd777ff.lhr.life";
+const PROXY = "https://3888202418975a.lhr.life";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
