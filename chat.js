@@ -1,4 +1,4 @@
-const PROXY = "http://95.31.207.191:8000";
+const PROXY = "https://shtab-boss.duckdns.org:8443";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
