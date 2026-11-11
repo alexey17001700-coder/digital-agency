@@ -11,7 +11,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Credentials": "true"
 };
-const FETCH_TIMEOUT = 120000;
+const FETCH_TIMEOUT = 300000;
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
