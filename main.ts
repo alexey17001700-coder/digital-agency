@@ -1,3 +1,4 @@
+// TEST AUTO UPDATE
 const GITHUB_TOKEN = Deno.env.get("GITHUB_TOKEN");
 const REPO_OWNER = Deno.env.get("GITHUB_OWNER");
 const REPO_NAME = Deno.env.get("GITHUB_REPO");
