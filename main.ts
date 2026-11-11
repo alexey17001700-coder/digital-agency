@@ -93,6 +93,18 @@ async function searchInternet(query: string) {
   return resultText.trim() || "По вашему запросу ничего не найдено.";
 }
 
+async function getWeather(city: string) {
+  const url = `https://wttr.in/${encodeURIComponent(city)}?format=3&lang=ru`;
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(30000),
+    headers: { "User-Agent": "curl" },
+  });
+  if (!res.ok) throw new Error(`wttr.in вернул ${res.status}`);
+  const text = (await res.text()).trim();
+  if (!text) throw new Error("Пустой ответ от wttr.in");
+  return text;
+}
+
 async function handleBackup(body: any) {
   const ref = await gitAPI(`git/refs/heads/main`);
   if (!ref) throw new Error("Ветка main не найдена");
@@ -222,6 +234,20 @@ const TOOLS = [
         required: ["query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_weather",
+      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает текст с температурой и ветром.",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: "Название города, например Саратов" }
+        },
+        required: ["city"]
+      }
+    }
   }
 ];
 
@@ -242,6 +268,9 @@ async function executeTool(name: string, args: any): Promise<string> {
     }
     if (name === "search_web") {
       return await searchInternet(args.query);
+    }
+    if (name === "get_weather") {
+      return await getWeather(args.city || "Саратов");
     }
     return `Ошибка: неизвестный инструмент ${name}`;
   } catch (e: any) {
