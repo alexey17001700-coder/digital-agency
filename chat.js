@@ -312,7 +312,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
-    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 120000); clearTimeout(watchdogTimer);
+    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 300000); clearTimeout(watchdogTimer);
 
     try {
         let success = false; let aiText = ""; let lastError = "";
