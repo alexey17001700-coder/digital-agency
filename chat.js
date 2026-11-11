@@ -21,6 +21,14 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 1. read_file(path) — читает код файла.
 2. write_file(path, content) — сохраняет новый код файла на GitHub.
 3. search_web(query) — ищет информацию в интернете.
+4. get_weather(city) — узнаёт текущую погоду в указанном городе через wttr.in. Возвращает текст с температурой и ветром. Используй его, когда Босс спрашивает погоду — не выдумывай цифры.
+
+ПРАВИЛА ВЫЗОВА ИНСТРУМЕНТОВ:
+- Не выдумывай инструменты, которых нет в списке выше. Если инструмента нет — честно скажи об этом.
+- Нужен код файла — сначала read_file, потом write_file. Никогда не пиши файл по памяти.
+- Нужен свежий факт из интернета — search_web.
+- Спрашивают погоду — get_weather(city), а не догадки.
+- Если инструмент недоступен в текущей сессии — скажи прямо, не имитируй вызов.
 
 ЖЕЛЕЗОБЕТОННЫЕ ПРАВИЛА (НАРУШАТЬ ЗАПРЕЩЕНО):
 1. ПРАВИЛО ХИРУРГА: Если Босс просит изменить цвет, кнопку или строчку — ты ОБЯЗАН сначала вызвать read_file, получить код, внести ТОЛЬКО нужные правки, скопировав остальной код СЛОВО В СЛОВО. Не смей переписывать рабочие функции!
@@ -37,7 +45,8 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 - ui.js (модалки, настройки ключей)
 - voice.js (озвучка, микрофон)
 - agents.js (агенты, иконки)
-- network.js (проверка связи)`;
+- network.js (проверка связи, getWeather через Open-Meteo)
+- main.ts (сервер: TOOLS, executeTool, getWeather через wttr.in)`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
