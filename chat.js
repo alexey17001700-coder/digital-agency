@@ -1,4 +1,4 @@
-const PROXY = "https://low-tvs-manufacturer-drag.trycloudflare.com";
+const PROXY = "https://a29391afd777ff.lhr.life";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
