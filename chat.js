@@ -433,6 +433,7 @@ function handleImageSelect(event) {
    по многоточию «…» и т.п. Теперь запрос проходит валидацию:
    заглушки из промпта, пустышки и дубли в сеть не пускаются. */
 let lastSearchQuery = "";
+function resetSearchGuard() { lastSearchQuery = ""; }
 function validSearchMatch(text) {
     const m = String(text || '').match(/\[SEARCH:\s*([^\]]+)\]/);
     if (!m) return null;
