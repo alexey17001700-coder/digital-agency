@@ -144,6 +144,24 @@ async function getWeather(city: string) {
   out += `☁️ Облачность: ${cloud}%\n`;
   if (parseFloat(precip) > 0) out += `🌧️ Осадки: ${precip} мм\n`;
 
+  // Данные для красивой карточки в чате
+  const cardData: any = {
+    city: placeName,
+    country: country,
+    temp: Number(temp),
+    feels: Number(feels),
+    desc: desc,
+    emoji: emoji,
+    wind: Number(wind),
+    dir: windDir,
+    hum: Number(hum),
+    press: Number(press),
+    visib: Number(visib),
+    cloud: Number(cloud),
+    precip: Number(precip) || 0,
+    daily: [] as any[]
+  };
+
   const days = data?.weather;
   if (Array.isArray(days) && days.length) {
     out += `━━━━━━━━━━━━━━━━━━\n📅 **Прогноз:**\n`;
@@ -152,10 +170,18 @@ async function getWeather(city: string) {
       const midHour = d.hourly?.[4] || d.hourly?.[0] || {};
       const dDesc = midHour.lang_ru?.[0]?.value || midHour.weatherDesc?.[0]?.value || "";
       out += `${weatherEmoji(dDesc)} ${labels[i] || ("День " + (i + 1))}: ${d.mintempC}…${d.maxtempC}°C, ${dDesc}\n`;
+      cardData.daily.push({
+        label: labels[i] || ("День " + (i + 1)),
+        emoji: weatherEmoji(dDesc),
+        min: Number(d.mintempC),
+        max: Number(d.maxtempC),
+        desc: dDesc
+      });
     });
   }
 
-  return out.trim();
+  const cardBlock = `[[WEATHER_CARD]]${JSON.stringify(cardData)}[[/WEATHER_CARD]]`;
+  return cardBlock + "\n" + out.trim();
 }
 
 async function handleBackup(body: any) {
@@ -292,7 +318,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "get_weather",
-      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает ПОЛНУЮ сводку: температура, ощущаемая температура, состояние погоды, ветер, влажность, давление, видимость, облачность, осадки и прогноз на 3 дня. ВАЖНО: Боссу выдавай ВСЮ сводку целиком, красиво оформленным сообщением с эмодзи и разбивкой по строкам. Не сокращай до одной строки.",
+      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает ПОЛНУЮ сводку: температура, ощущаемая температура, состояние погоды, ветер, влажность, давление, видимость, облачность, осадки и прогноз на 3 дня. ВАЖНО: полная сводка автоматически показывается Боссу красивой карточкой в чате, поэтому в ответе достаточно короткого человеческого комментария (1-3 предложения), без перечисления всех цифр заново.",
       parameters: {
         type: "object",
         properties: {
@@ -340,6 +366,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
 
   let currentMessages = [...messages];
   let maxLoops = 5;
+  let weatherCard = "";
 
   for (let loop = 0; loop < maxLoops; loop++) {
     const payload: any = {
@@ -374,19 +401,30 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
         const fnArgs = JSON.parse(tc.function.arguments || "{}");
         console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
         const result = await executeTool(fnName, fnArgs);
-        
+
+        // Погодную карточку вырезаем: она уйдёт Боссу отдельным красивым блоком
+        let toolResult = result;
+        if (fnName === "get_weather") {
+          const cardMatch = result.match(/\[\[WEATHER_CARD\]\][\s\S]*?\[\[\/WEATHER_CARD\]\]/);
+          if (cardMatch) {
+            weatherCard = cardMatch[0];
+            toolResult = result.replace(cardMatch[0], "").trim();
+          }
+        }
+
         // ФИКС: Увеличили лимит с 10000 до 100000 символов
         currentMessages.push({
           role: "tool",
           tool_call_id: tc.id,
-          content: result.slice(0, 100000) 
+          content: toolResult.slice(0, 100000) 
         });
       }
       continue; // Снова к нейросети с результатами
     }
 
     // Обычный текстовый ответ
-    return msg.content || "Пустой ответ";
+    const answer = msg.content || "Пустой ответ";
+    return weatherCard ? weatherCard + "\n\n" + answer : answer;
   }
 
   return "⚠️ Слишком много шагов. Задача прервана.";
