@@ -2,6 +2,7 @@ const PROXY = "https://shtab-boss.duckdns.org:8443";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
+let attachedImageBase64 = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
@@ -392,6 +393,18 @@ function handleSendClick() {
     }
     else sendMessage();
 }
+function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        attachedImageBase64 = e.target.result;
+        renderMessage("📷 Фото прикреплено. Напиши текст и жми отправить.", "boss");
+        playSound('send');
+    };
+    reader.readAsDataURL(file);
+    event.target.value = ''; // Сброс
+}
 
 async function sendMessage(overrideText = null, isKick = false) {
     if (isGenerating && !isKick) { 
@@ -465,7 +478,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentAttempt++;
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 }),
                         signal: currentAbortController.signal
                     });
                     
@@ -574,6 +587,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
     } finally {
         isGenerating = false; clearInterval(timerInterval); 
+        attachedImageBase64 = null;
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
