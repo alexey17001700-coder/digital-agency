@@ -401,14 +401,23 @@ function handleImageSelect(event) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 512; // Сжимаем до 512px
+            const MAX_WIDTH = 512;
             const scale = Math.min(1, MAX_WIDTH / img.width);
             canvas.width = Math.round(img.width * scale);
-            canvas.height = img.height * scale;
+            canvas.height = Math.round(img.height * scale);
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.7); // Сжимаем качество
-            renderMessage("📷 Фото прикреплено (сжато).", "boss");
+            attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            const div = document.createElement('div');
+            div.className = 'chat-msg msg-boss';
+            const imgEl = document.createElement('img');
+            imgEl.src = attachedImageBase64;
+            imgEl.className = 'chat-thumbnail';
+            imgEl.onclick = function() { this.classList.toggle('expanded'); };
+            div.appendChild(imgEl);
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
             playSound('send');
         };
         img.src = e.target.result;
