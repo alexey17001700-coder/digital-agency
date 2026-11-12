@@ -89,7 +89,7 @@ function createNewChat(force = false) {
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); renderChatList(); toggleSidebar(); loadChat(id);
 }
 
-function loadChat(id) {
+function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_' + id) || null;
     currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
     chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
     selectedAgents = []; document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
