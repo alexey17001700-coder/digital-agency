@@ -544,7 +544,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                             }
                         }
 
-                        const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
+                        const searchMatch = validSearchMatch(aiText);
                         if (searchMatch) {
                             const query = searchMatch[1].trim();
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
