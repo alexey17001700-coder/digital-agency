@@ -407,7 +407,7 @@ function handleImageSelect(event) {
             canvas.height = Math.round(img.height * scale);
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.7); currentChatImage = attachedImageBase64; localStorage.setItem('shtabChatImage_' + currentChatId, attachedImageBase64);
             
             const div = document.createElement('div');
             div.className = 'chat-msg msg-boss';
