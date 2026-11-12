@@ -6,19 +6,60 @@ const REPO_NAME = Deno.env.get("GITHUB_REPO");
 const ZVENO_URL = "https://api.zveno.ai/v1/chat/completions";
 const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 
+// 🔐 СЕКРЕТ ШТАБА. Если задать переменную окружения SHATAB_SECRET —
+// все запросы обязаны присылать заголовок X-Shtab-Token с этим значением.
+// Пока переменная не задана, сервер работает как раньше (обратная совместимость).
+const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
+
+// 🛡️ БЕЛЫЙ СПИСОК ЗАПИСИ. Через инструменты можно менять только файлы
+// интерфейса в корне репозитория. main.ts и папка backup — неприкосновенны.
+const WRITE_ALLOWED_EXT = [".js", ".css", ".html"];
+const WRITE_DENY_NAMES = ["main.ts"];
+const MAX_WRITE_SIZE = 400000;  // ~400 КБ на файл
+const MAX_TOOL_RESULT = 40000;  // сколько символов результата инструмента уходит в модель
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Credentials": "true"
+  "Access-Control-Allow-Headers": "Content-Type, X-Shtab-Token",
 };
 const FETCH_TIMEOUT = 300000;
+const SEARCH_TIMEOUT = 15000;
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
+}
+
+// ============================================
+// ЗАЩИТА ПУТЕЙ
+// ============================================
+function isWriteAllowed(path: unknown): boolean {
+  if (typeof path !== "string") return false;
+  const clean = path.trim().replace(/^\.\//, "");
+  if (!clean || clean.includes("..")) return false;
+  if (clean.includes("/") || clean.includes("\\")) return false;
+  const lower = clean.toLowerCase();
+  if (WRITE_DENY_NAMES.includes(lower)) return false;
+  if (lower.startsWith("backup")) return false;
+  return WRITE_ALLOWED_EXT.some((ext) => lower.endsWith(ext));
+}
+
+function isReadAllowed(path: unknown): boolean {
+  if (typeof path !== "string") return false;
+  const clean = path.trim().replace(/^\.\//, "");
+  if (!clean || clean.includes("..")) return false;
+  if (clean.includes("/") || clean.includes("\\")) return false;
+  if (clean.toLowerCase().startsWith("backup")) return false;
+  return true;
+}
+
+function checkSecret(request: Request): boolean {
+  if (!SHATAB_SECRET) return true;
+  const given = request.headers.get("X-Shtab-Token") || "";
+  return given === SHATAB_SECRET;
 }
 
 async function gitAPI(path: string, method = "GET", bodyData: any = null) {
@@ -55,42 +96,52 @@ function b64EncodeUnicode(str: string): string {
   return btoa(binStr);
 }
 
+// Обновляет существующий файл ИЛИ создаёт новый, если его ещё нет.
 async function updateFileInRepo(path: string, content: string) {
   const existing = await gitAPI(`contents/${path}`);
-  if (!existing || !existing.sha) throw new Error(`Файл "${path}" не найден`);
-  const payload = {
+  const payload: any = {
     message: `Auto-update: ${path}`,
     content: b64EncodeUnicode(content),
-    sha: existing.sha,
     branch: "main",
   };
+  if (existing && existing.sha) payload.sha = existing.sha;
   const res = await gitAPI(`contents/${path}`, "PUT", payload);
   if (!res || !res.commit) throw new Error("GitHub не вернул commit");
   return true;
-      }
+}
+
 async function searchInternet(query: string) {
-  let resultText = "";
+  const parts: string[] = [];
   try {
     const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-    const ddgRes = await fetch(ddgUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
+    const ddgRes = await fetch(ddgUrl, { signal: AbortSignal.timeout(SEARCH_TIMEOUT) });
     const ddgData = await ddgRes.json();
-    if (ddgData.AbstractText) resultText += `**${ddgData.Heading}**: ${ddgData.AbstractText}\n\n`;
+    if (ddgData.AbstractText) parts.push(`**${ddgData.Heading || query}**: ${ddgData.AbstractText}`);
+    if (Array.isArray(ddgData.RelatedTopics)) {
+      const flat: any[] = [];
+      const walk = (arr: any[]) => arr.forEach((t: any) => {
+        if (Array.isArray(t.Topics)) walk(t.Topics);
+        else if (t.Text) flat.push(t);
+      });
+      walk(ddgData.RelatedTopics);
+      flat.slice(0, 5).forEach((t: any) => parts.push(`- ${t.Text}${t.FirstURL ? ` (${t.FirstURL})` : ""}`));
+    }
   } catch (e) {}
-  if (!resultText.trim()) {
+  if (parts.length === 0) {
     try {
       const wikiUrl = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1&srlimit=3`;
-      const wikiRes = await fetch(wikiUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
+      const wikiRes = await fetch(wikiUrl, { signal: AbortSignal.timeout(SEARCH_TIMEOUT) });
       const wikiData = await wikiRes.json();
       if (wikiData.query?.search?.length) {
-        resultText += `Результаты поиска в Википедии по запросу "${query}":\n`;
+        parts.push(`Результаты поиска в Википедии по запросу "${query}":`);
         wikiData.query.search.forEach((item: any) => {
           const cleanSnippet = item.snippet.replace(/<[^>]+>/g, "");
-          resultText += `- **${item.title}**: ${cleanSnippet}\n`;
+          parts.push(`- **${item.title}**: ${cleanSnippet}`);
         });
       }
     } catch (e) {}
   }
-  return resultText.trim() || "По вашему запросу ничего не найдено.";
+  return parts.join("\n").trim() || "По вашему запросу ничего не найдено.";
 }
 
 function weatherEmoji(desc: string): string {
@@ -235,6 +286,31 @@ async function handleBackup(body: any) {
   });
 }
 
+// Убирает строки, шаблоны и комментарии, чтобы считать скобки по реальному коду,
+// а не по тексту внутри строк.
+function stripCodeNoise(src: string): string {
+  let out = "";
+  let i = 0;
+  const n = src.length;
+  while (i < n) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (c === "/" && next === "/") { while (i < n && src[i] !== "\n") i++; continue; }
+    if (c === "/" && next === "*") { i += 2; while (i < n && !(src[i] === "*" && src[i + 1] === "/")) i++; i += 2; continue; }
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c; i++;
+      while (i < n) {
+        if (src[i] === "\\") { i += 2; continue; }
+        if (src[i] === quote) { i++; break; }
+        i++;
+      }
+      continue;
+    }
+    out += c; i++;
+  }
+  return out;
+}
+
 async function scanRepoFiles() {
   const rootContents = await gitAPI("contents/");
   if (!Array.isArray(rootContents)) throw new Error("Не удалось получить список файлов");
@@ -249,8 +325,9 @@ async function scanRepoFiles() {
     try {
       const content = await getFileContent(file.name);
       if (content === null) continue;
-      const opens = (content.match(/{/g) || []).length;
-      const closes = (content.match(/}/g) || []).length;
+      const clean = stripCodeNoise(content);
+      const opens = (clean.match(/{/g) || []).length;
+      const closes = (clean.match(/}/g) || []).length;
       if (opens !== closes) {
         const diff = opens - closes;
         issues.push({
@@ -266,7 +343,8 @@ async function scanRepoFiles() {
   }
 
   return json({ success: true, scanned: files.length, issues });
-  }
+}
+
 // ============================================
 // ОПИСАНИЕ ИНСТРУМЕНТОВ (TOOL CALLING)
 // ============================================
@@ -336,12 +414,15 @@ const TOOLS = [
 async function executeTool(name: string, args: any): Promise<string> {
   try {
     if (name === "read_file") {
+      if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено (папка backup и служебные пути закрыты).`;
       const content = await getFileContent(args.path);
       if (content === null) return `Ошибка: файл "${args.path}" не найден.`;
       return content;
     }
     if (name === "write_file") {
+      if (!isWriteAllowed(args.path)) return `Ошибка: запись в "${args.path}" запрещена. Разрешены только .js/.css/.html в корне (кроме main.ts и backup/).`;
       if (!args.content || args.content.length < 10) return "Ошибка: пустой контент.";
+      if (args.content.length > MAX_WRITE_SIZE) return `Ошибка: файл слишком большой (${args.content.length} символов, лимит ${MAX_WRITE_SIZE}).`;
       await updateFileInRepo(args.path, args.content);
       return `Успех: файл "${args.path}" обновлён на GitHub.`;
     }
@@ -412,11 +493,11 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
           }
         }
 
-        // ФИКС: Увеличили лимит с 10000 до 100000 символов
+        // Ограничиваем размер результата, чтобы не съедать контекст модели
         currentMessages.push({
           role: "tool",
           tool_call_id: tc.id,
-          content: toolResult.slice(0, 100000) 
+          content: toolResult.slice(0, MAX_TOOL_RESULT)
         });
       }
       continue; // Снова к нейросети с результатами
@@ -428,10 +509,16 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
   }
 
   return "⚠️ Слишком много шагов. Задача прервана.";
-        }
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
+
+  // 🔐 Проверка секрета Штаба (если он задан в переменных окружения)
+  if (!checkSecret(request)) {
+    return json({ success: false, error: "Доступ запрещён: неверный секрет Штаба" }, 401);
+  }
 
   let body: any;
   try { body = await request.json(); } catch { return json({ success: false, error: "Некорректный JSON" }, 400); }
@@ -444,12 +531,16 @@ Deno.serve(async (request) => {
     }
     if (body.updateFile) {
       if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
+      if (!isWriteAllowed(body.path)) return json({ success: false, error: `Запись в "${body.path}" запрещена. Разрешены только .js/.css/.html в корне (кроме main.ts и backup/).` }, 403);
+      if (typeof body.content !== "string" || body.content.length < 10) return json({ success: false, error: "Пустой контент" }, 400);
+      if (body.content.length > MAX_WRITE_SIZE) return json({ success: false, error: `Файл слишком большой (${body.content.length} символов, лимит ${MAX_WRITE_SIZE})` }, 413);
       try {
         await updateFileInRepo(body.path, body.content);
         return json({ success: true, message: `✅ ${body.path} обновлён` });
       } catch(e: any) { return json({ success: false, error: e.message }, 500); }
     }
     if (body.readFile) {
+      if (!isReadAllowed(body.path)) return json({ success: false, error: "Чтение этого пути запрещено" }, 403);
       try {
         const content = await getFileContent(body.path);
         if (content === null) throw new Error("Файл не найден");
