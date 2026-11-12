@@ -563,11 +563,13 @@ async function sendMessage(overrideText = null, isKick = false) {
                             }
                         } else if (rawSearchTag) {
                             aiText = aiText.replace(rawSearchTag[0], '').trim();
-                            if (!aiText) {
+                            searchRejects++;
+                            if (!aiText && searchRejects < 2) {
                                 currentMessages.push({ role: "assistant", content: "[SEARCH отклонён]" });
                                 currentMessages.push({ role: "user", content: "[СИСТЕМА: Метка поиска отклонена — запрос пустой, шаблонный или повторный. Ответь Боссу БЕЗ поиска, своими знаниями.]" });
                                 continue;
                             }
+                            if (!aiText) aiText = "Босс, метка поиска пришла пустой или шаблонной (копия примера из промпта) — отвечаю своими знаниями. Сформулируй вопрос конкретнее, и я найду нужное в сети.";
                         }
 
                         const weatherMatch = aiText.match(/\[WEATHER:\s*([^\]]+)\]/);
