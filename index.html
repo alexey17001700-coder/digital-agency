@@ -161,7 +161,9 @@
             }
         }
 
-        let safePin = "", CORRECT_PIN = "8452"; 
+        let safePin = "";
+        const _K = 13, _P = [53, 57, 56, 63];
+        function _getPin() { return _P.map(c => String.fromCharCode(c ^ _K)).join(''); } 
         function forceRefresh() {
             if ('caches' in window) {
                 caches.keys().then((names) => {
