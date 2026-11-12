@@ -148,30 +148,45 @@ async function getWeather(city = 'Саратов') {
         const desc = codes[cur.weather_code] || 'без описания';
         const emoji = emojis[cur.weather_code] || '🌡️';
 
-        let out = emoji + ' **Погода — ' + placeName + country + '**\n';
-        out += '━━━━━━━━━━━━━━━━━━\n';
-        out += '🌡️ Температура: **' + temp + '°C** (ощущается как ' + feels + '°C)\n';
-        out += '☁️ Состояние: ' + desc + '\n';
-        out += '💨 Ветер: ' + wind + ' км/ч, ' + dir + '\n';
-        out += '💧 Влажность: ' + hum + '%\n';
-        out += '📊 Давление: ' + press + ' гПа\n';
-        out += '☁️ Облачность: ' + cloud + '%\n';
-        if (precip > 0) out += '🌧️ Осадки: ' + precip + ' мм\n';
+        const data = {
+            city: placeName,
+            country: place.country || '',
+            temp: temp,
+            feels: feels,
+            desc: desc,
+            emoji: emoji,
+            wind: wind,
+            dir: dir,
+            hum: hum,
+            press: press,
+            cloud: cloud,
+            precip: Math.round(precip * 10) / 10,
+            daily: []
+        };
 
         const daily = fcData.daily;
         if (daily && daily.time && daily.time.length) {
-            out += '━━━━━━━━━━━━━━━━━━\n📅 **Прогноз на 3 дня:**\n';
             const labels = ['Сегодня', 'Завтра', 'Послезавтра'];
             for (let i = 0; i < daily.time.length && i < 3; i++) {
-                const dEmoji = emojis[daily.weather_code[i]] || '🌡️';
-                const dDesc = codes[daily.weather_code[i]] || '';
-                out += dEmoji + ' ' + (labels[i] || ('День ' + (i + 1))) + ': ' +
-                    Math.round(daily.temperature_2m_min[i]) + '…' +
-                    Math.round(daily.temperature_2m_max[i]) + '°C, ' + dDesc + '\n';
+                data.daily.push({
+                    label: labels[i] || ('День ' + (i + 1)),
+                    emoji: emojis[daily.weather_code[i]] || '🌡️',
+                    min: Math.round(daily.temperature_2m_min[i]),
+                    max: Math.round(daily.temperature_2m_max[i]),
+                    desc: codes[daily.weather_code[i]] || ''
+                });
             }
         }
 
-        return out.trim();
+        let out = emoji + ' Погода — ' + placeName + country + ': ' + temp + '°C (ощущается как ' + feels + '°C), ' + desc + '.';
+        out += ' Ветер ' + wind + ' км/ч ' + dir + ', влажность ' + hum + '%, давление ' + press + ' гПа, облачность ' + cloud + '%';
+        if (precip > 0) out += ', осадки ' + precip + ' мм';
+        out += '.';
+        if (data.daily.length) {
+            out += ' Прогноз: ' + data.daily.map(d => d.label + ' ' + d.min + '…' + d.max + '°C, ' + d.desc).join('; ') + '.';
+        }
+
+        return '[[WEATHER_CARD]]' + JSON.stringify(data) + '[[/WEATHER_CARD]]\n' + out;
     } catch (e) {
         return 'Не удалось получить погоду: ' + e.message;
     }
