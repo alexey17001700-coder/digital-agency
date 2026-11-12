@@ -477,11 +477,24 @@ async function callZvenoVision(messages: any[], imageBase64: string): Promise<st
   const visionModel = "openai/gpt-4o-mini"; 
   
   let visionMessages = JSON.parse(JSON.stringify(messages)); 
+  
+  // ЖЕСТКО ПЕРЕБИВАЕМ ПРОМПТ ДЛЯ ЗРЕНИЯ
+  const systemIndex = visionMessages.findIndex((m: any) => m.role === 'system');
+  const visionPrompt = "Ты — зрячий ИИ-помощник. Ты ОБЯЗАН анализировать изображения. Если пользователь прислал фото и задал вопрос — опиши, что на нем изображено, в деталях. Не отказывайся от ответа.";
+  
+  if (systemIndex !== -1) {
+      visionMessages[systemIndex].content = visionPrompt;
+  } else {
+      visionMessages.unshift({ role: "system", content: visionPrompt });
+  }
+  
   let lastMsg = visionMessages[visionMessages.length - 1];
   
   if (lastMsg && lastMsg.role === 'user') {
+      // Если текст пустой, ставим дефолтный вопрос
+      const textPrompt = lastMsg.content || "Опиши, что изображено на этом фото.";
       lastMsg.content = [
-          { type: "text", text: lastMsg.content },
+          { type: "text", text: textPrompt },
           { type: "image_url", image_url: { url: imageBase64 } }
       ];
   }
