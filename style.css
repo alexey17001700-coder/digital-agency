@@ -30,7 +30,7 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 @keyframes pulse { to { opacity: 0.3; } }
 
 /* --- ТЕСТЕР --- */
-.tester-dropdown { display: none; position: fixed; top: 60px; right: 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: 250px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.8); font-size: 12px; }
+.tester-dropdown { display: none; position: static; margin: 8px 10px 0 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: auto; flex-shrink: 0; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 12px; }
 .tester-dropdown.open { display: block; }
 .tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
 .tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
