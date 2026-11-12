@@ -432,16 +432,18 @@ function handleImageSelect(event) {
    Раньше такой мусор реально уходил в сеть: «поиск» по слову «запрос»,
    по многоточию «…» и т.п. Теперь запрос проходит валидацию:
    заглушки из промпта, пустышки и дубли в сеть не пускаются. */
-let lastSearchQuery = "";
-function resetSearchGuard() { lastSearchQuery = ""; }
+let lastSearchQuery = ""; let searchRejects = 0;
+function resetSearchGuard() { lastSearchQuery = ""; searchRejects = 0; }
+const SEARCH_STUB_RE = /^(?:(?:твой|ваш|этот|мой)\s+)?запрос[а-яё]*$|^query$|^search$|^текст\s+запроса$|^пример$|^example$|^имя_файла$|^город$|^описание$|^[.…\-–—_]+$/iu;
 function validSearchMatch(text) {
     const m = String(text || '').match(/\[SEARCH:\s*([^\]]+)\]/);
     if (!m) return null;
-    const q = m[1].trim();
-    if (q.length < 2) return null;                                  // пусто или одна буква
+    const q = m[1].trim().replace(/^["'«»\s]+|["'«»\s]+$/g, '');
+    if (q.length < 2 || q.length > 120) return null;                // пусто/одна буква или простыня
     if (!/[\p{L}\p{N}]/u.test(q)) return null;                      // только точки/знаки — мусор
-    if (/^(?:(?:твой|ваш|этот|мой)\s+)?запрос$|^query$|^search$|^текст\s+запроса$|^\.+$|^…+$/iu.test(q)) return null;
-    if (q === lastSearchQuery) return null;                         // повтор того же запроса
+    if (SEARCH_STUB_RE.test(q)) return null;                        // заглушка из промпта ([SEARCH: твой запрос] и её варианты)
+    if (SYSTEM_PROMPT.includes('[SEARCH: ' + q + ']')) return null; // дословная копия примера из промпта
+    if (q.toLowerCase() === lastSearchQuery.toLowerCase()) return null; // повтор того же запроса
     lastSearchQuery = q;
     return m;
 }
