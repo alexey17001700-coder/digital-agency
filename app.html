@@ -167,6 +167,7 @@
             <button class="mode-btn" id="btnOffice" onclick="toggleOffice()">🏢 Офис</button>
             <button class="mode-btn" id="btnAIModel" onclick="toggleAIModel()">🧠 ИИ: Yandex</button>
             <button class="mode-btn" onclick="openApiSettings()">🔑 API Ключи</button>
+            <button class="mode-btn" id="btn-refresh" onclick="if(window.parent&&window.parent.forceRefresh){window.parent.forceRefresh();}else{location.reload();}" title="Обновить Штаб">🔄 Обновить</button>
         </div>
 
         <div class="chat-container" id="chatContainer"></div>
