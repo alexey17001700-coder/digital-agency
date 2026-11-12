@@ -498,7 +498,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentAttempt++;
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 || currentChatImage }),
                         signal: currentAbortController.signal
                     });
                     
