@@ -94,7 +94,8 @@ async function searchInternet(query: string) {
 }
 
 async function getWeather(city: string) {
-  const url = `https://wttr.in/${encodeURIComponent(city)}?format=3&lang=ru`;
+  const format = "%l: %c %t (ощущается как %f), ветер %w, влажность %h";
+  const url = `https://wttr.in/${encodeURIComponent(city)}?format=${encodeURIComponent(format)}&lang=ru`;
   const res = await fetch(url, {
     signal: AbortSignal.timeout(30000),
     headers: { "User-Agent": "curl" },
@@ -239,7 +240,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "get_weather",
-      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает текст с температурой и ветром.",
+      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает текст с температурой, ощущаемой температурой, ветром и влажностью, плюс эмодзи погоды (солнце, туча, дождь, снег). ВАЖНО: Боссу отвечай КРАТКО — одна-две строки: температура, состояние погоды, ветер. Без вступлений и лишних слов.",
       parameters: {
         type: "object",
         properties: {
