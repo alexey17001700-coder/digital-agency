@@ -93,17 +93,69 @@ async function searchInternet(query: string) {
   return resultText.trim() || "По вашему запросу ничего не найдено.";
 }
 
+function weatherEmoji(desc: string): string {
+  const d = (desc || "").toLowerCase();
+  if (d.includes("гроза") || d.includes("thunder")) return "⛈️";
+  if (d.includes("снег") || d.includes("snow") || d.includes("метель") || d.includes("blizzard")) return "🌨️";
+  if (d.includes("ливень") || d.includes("дождь") || d.includes("rain") || d.includes("морос") || d.includes("drizzle")) return "🌧️";
+  if (d.includes("туман") || d.includes("mist") || d.includes("fog") || d.includes("дымка")) return "🌫️";
+  if (d.includes("облач") || d.includes("cloud") || d.includes("пасмур") || d.includes("overcast")) return "☁️";
+  if (d.includes("солнеч") || d.includes("ясно") || d.includes("sunny") || d.includes("clear")) return "☀️";
+  return "🌡️";
+}
+
 async function getWeather(city: string) {
-  const format = "%l: %c %t (ощущается как %f), ветер %w, влажность %h";
-  const url = `https://wttr.in/${encodeURIComponent(city)}?format=${encodeURIComponent(format)}&lang=ru`;
+  const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1&lang=ru`;
   const res = await fetch(url, {
     signal: AbortSignal.timeout(30000),
     headers: { "User-Agent": "curl" },
   });
   if (!res.ok) throw new Error(`wttr.in вернул ${res.status}`);
-  const text = (await res.text()).trim();
-  if (!text) throw new Error("Пустой ответ от wttr.in");
-  return text;
+  const data = await res.json();
+
+  const cur = data?.current_condition?.[0];
+  if (!cur) throw new Error("wttr.in не отдал текущую погоду");
+
+  const area = data?.nearest_area?.[0];
+  const placeName = area?.areaName?.[0]?.value || city;
+  const country = area?.country?.[0]?.value || "";
+
+  const temp = cur.temp_C;
+  const feels = cur.FeelsLikeC;
+  const desc = cur.lang_ru?.[0]?.value || cur.weatherDesc?.[0]?.value || "без описания";
+  const hum = cur.humidity;
+  const wind = cur.windspeedKmph;
+  const windDir = cur.winddir16Point;
+  const press = cur.pressure;
+  const visib = cur.visibility;
+  const precip = cur.precipMM;
+  const cloud = cur.cloudcover;
+
+  const emoji = weatherEmoji(desc);
+
+  let out = `${emoji} **Погода — ${placeName}${country ? ", " + country : ""}**\n`;
+  out += `━━━━━━━━━━━━━━━━━━\n`;
+  out += `🌡️ Температура: **${temp}°C** (ощущается как ${feels}°C)\n`;
+  out += `☁️ Состояние: ${desc}\n`;
+  out += `💨 Ветер: ${wind} км/ч, ${windDir}\n`;
+  out += `💧 Влажность: ${hum}%\n`;
+  out += `📊 Давление: ${press} гПа\n`;
+  out += `👁️ Видимость: ${visib} км\n`;
+  out += `☁️ Облачность: ${cloud}%\n`;
+  if (parseFloat(precip) > 0) out += `🌧️ Осадки: ${precip} мм\n`;
+
+  const days = data?.weather;
+  if (Array.isArray(days) && days.length) {
+    out += `━━━━━━━━━━━━━━━━━━\n📅 **Прогноз:**\n`;
+    const labels = ["Сегодня", "Завтра", "Послезавтра"];
+    days.slice(0, 3).forEach((d: any, i: number) => {
+      const midHour = d.hourly?.[4] || d.hourly?.[0] || {};
+      const dDesc = midHour.lang_ru?.[0]?.value || midHour.weatherDesc?.[0]?.value || "";
+      out += `${weatherEmoji(dDesc)} ${labels[i] || ("День " + (i + 1))}: ${d.mintempC}…${d.maxtempC}°C, ${dDesc}\n`;
+    });
+  }
+
+  return out.trim();
 }
 
 async function handleBackup(body: any) {
@@ -240,7 +292,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "get_weather",
-      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает текст с температурой, ощущаемой температурой, ветром и влажностью, плюс эмодзи погоды (солнце, туча, дождь, снег). ВАЖНО: Боссу отвечай КРАТКО — одна-две строки: температура, состояние погоды, ветер. Без вступлений и лишних слов.",
+      description: "Узнаёт текущую погоду в указанном городе через wttr.in. Возвращает ПОЛНУЮ сводку: температура, ощущаемая температура, состояние погоды, ветер, влажность, давление, видимость, облачность, осадки и прогноз на 3 дня. ВАЖНО: Боссу выдавай ВСЮ сводку целиком, красиво оформленным сообщением с эмодзи и разбивкой по строкам. Не сокращай до одной строки.",
       parameters: {
         type: "object",
         properties: {
