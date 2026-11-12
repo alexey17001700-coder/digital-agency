@@ -432,19 +432,29 @@ function handleImageSelect(event) {
    Раньше такой мусор реально уходил в сеть: «поиск» по слову «запрос»,
    по многоточию «…» и т.п. Теперь запрос проходит валидацию:
    заглушки из промпта, пустышки и дубли в сеть не пускаются. */
-let lastSearchQuery = ""; let searchRejects = 0;
-function resetSearchGuard() { lastSearchQuery = ""; searchRejects = 0; }
+let lastSearchQuery = ""; let searchRejects = 0; let searchesThisTurn = 0;
+function resetSearchGuard() { lastSearchQuery = ""; searchRejects = 0; searchesThisTurn = 0; }
+// Чистим запрос: убираем невидимки, кавычки и лишние пробелы.
+// Так «твой запрос», «…» и прочий мусор нельзя замаскировать невидимым символом.
+function normalizeSearchQuery(raw) {
+    return String(raw || '')
+        .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+        .replace(/^["'«»\s]+|["'«»\s]+$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 const SEARCH_STUB_RE = /^(?:(?:твой|ваш|этот|мой)\s+)?запрос[а-яё]*$|^query$|^search$|^текст\s+запроса$|^пример$|^example$|^имя_файла$|^город$|^описание$|^[.…\-–—_]+$/iu;
 function validSearchMatch(text) {
     const m = String(text || '').match(/\[SEARCH:\s*([^\]]+)\]/);
     if (!m) return null;
-    const q = m[1].trim().replace(/^["'«»\s]+|["'«»\s]+$/g, '');
+    if (searchesThisTurn >= 1) return null;                         // один поиск на один вопрос Босса
+    const q = normalizeSearchQuery(m[1]);
     if (q.length < 2 || q.length > 120) return null;                // пусто/одна буква или простыня
-    if (!/[\p{L}\p{N}]/u.test(q)) return null;                      // только точки/знаки — мусор
+    if ((q.match(/[\p{L}\p{N}]/gu) || []).length < 2) return null;  // нет реальных слов (одни точки/знаки) — мусор
     if (SEARCH_STUB_RE.test(q)) return null;                        // заглушка из промпта ([SEARCH: твой запрос] и её варианты)
     if (SYSTEM_PROMPT.includes('[SEARCH: ' + q + ']')) return null; // дословная копия примера из промпта
     if (q.toLowerCase() === lastSearchQuery.toLowerCase()) return null; // повтор того же запроса
-    lastSearchQuery = q;
+    lastSearchQuery = q; searchesThisTurn++;
     return m;
 }
 
