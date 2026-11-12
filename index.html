@@ -93,6 +93,7 @@
             <button class="fab-btn btn-rollback" onclick="triggerRollback()"><span class="title">⏪ Откатить Штаб</span></button>
         </div>
         <button id="fab-trigger" onclick="toggleMenu()">🛠️</button>
+        <button id="btn-refresh" onclick="forceRefresh()" style="width: 40px; height: 40px; border-radius: 50%; background: #1e1e1e; border: 2px solid #00e5ff; color: #00e5ff; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-top: 10px;">🔄</button>
     </div>
         <script>
         const PROXY = "https://shtab-boss.duckdns.org:8443";
@@ -161,6 +162,14 @@
         }
 
         let safePin = "", CORRECT_PIN = "8452"; 
+        function forceRefresh() {
+            if ('caches' in window) {
+                caches.keys().then((names) => {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+            window.location.href = window.location.pathname + '?v=' + Date.now();
+        }
         function toggleMenu() { fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); if (fabMenu.classList.contains('open')) resetSafe(); }
         function resetSafe() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; document.getElementById('safe-lock-container').style.display = 'flex'; document.getElementById('save-action-container').style.display = 'none'; }
         function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
