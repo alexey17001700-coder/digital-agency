@@ -398,12 +398,23 @@ function handleImageSelect(event) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-        attachedImageBase64 = e.target.result;
-        renderMessage("📷 Фото прикреплено. Напиши текст и жми отправить.", "boss");
-        playSound('send');
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 512; // Сжимаем до 512px
+            const scale = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.7); // Сжимаем качество
+            renderMessage("📷 Фото прикреплено (сжато).", "boss");
+            playSound('send');
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
-    event.target.value = ''; // Сброс
+    event.target.value = '';
 }
 
 async function sendMessage(overrideText = null, isKick = false) {
