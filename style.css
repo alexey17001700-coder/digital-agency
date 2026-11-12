@@ -240,3 +240,10 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     .wc-grid { grid-template-columns: 1fr; }
     .wc-fname { min-width: 70px; }
 }
+
+/* =========================================
+   --- МИНИАТЮРЫ ФОТО В ЧАТЕ ---
+   ========================================= */
+.chat-thumbnail { max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; margin-top: 5px; border: 1px solid #555; transition: transform 0.2s; }
+.chat-thumbnail:hover { transform: scale(1.05); }
+.chat-thumbnail.expanded { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); max-width: 95vw; max-height: 95vh; z-index: 9999; box-shadow: 0 0 30px rgba(0,0,0,0.9); cursor: zoom-out; }
