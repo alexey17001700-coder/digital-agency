@@ -104,19 +104,19 @@ async function getWeather(city = 'Саратов') {
         const lat = place.latitude;
         const lon = place.longitude;
         const placeName = place.name || city;
+        const country = place.country ? ', ' + place.country : '';
 
         const forecastUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
-            '&longitude=' + lon + '&current_weather=true';
+            '&longitude=' + lon +
+            '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover' +
+            '&daily=weather_code,temperature_2m_max,temperature_2m_min' +
+            '&timezone=auto&forecast_days=3';
         const fcRes = await fetch(forecastUrl, { cache: 'no-store' });
         if (!fcRes.ok) throw new Error('прогноз недоступен');
         const fcData = await fcRes.json();
-        const cw = fcData && fcData.current_weather;
-        if (!cw) return 'Open-Meteo не отдал текущую погоду по ' + placeName + '.';
+        const cur = fcData && fcData.current;
+        if (!cur) return 'Open-Meteo не отдал текущую погоду по ' + placeName + '.';
 
-        const temp = Math.round(cw.temperature);
-        const wind = Math.round(cw.windspeed);
-        const dirs = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
-        const dir = dirs[Math.round((cw.winddirection || 0) / 45) % 8];
         const codes = {
             0: 'ясно', 1: 'почти ясно', 2: 'переменная облачность', 3: 'пасмурно',
             45: 'туман', 48: 'изморозь',
@@ -135,11 +135,43 @@ async function getWeather(city = 'Саратов') {
             80: '🌦️', 81: '🌧️', 82: '⛈️',
             95: '⛈️', 96: '⛈️', 99: '⛈️'
         };
-        const desc = codes[cw.weathercode] || 'без описания';
-        const emoji = emojis[cw.weathercode] || '🌡️';
 
-        return emoji + ' Погода в ' + placeName + ': ' + temp + '°C, ' + desc +
-            '.\n💨 Ветер ' + wind + ' км/ч, ' + dir + '.';
+        const temp = Math.round(cur.temperature_2m);
+        const feels = Math.round(cur.apparent_temperature);
+        const wind = Math.round(cur.wind_speed_10m);
+        const dirs = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+        const dir = dirs[Math.round((cur.wind_direction_10m || 0) / 45) % 8];
+        const hum = Math.round(cur.relative_humidity_2m);
+        const press = Math.round(cur.pressure_msl);
+        const cloud = Math.round(cur.cloud_cover);
+        const precip = cur.precipitation || 0;
+        const desc = codes[cur.weather_code] || 'без описания';
+        const emoji = emojis[cur.weather_code] || '🌡️';
+
+        let out = emoji + ' **Погода — ' + placeName + country + '**\n';
+        out += '━━━━━━━━━━━━━━━━━━\n';
+        out += '🌡️ Температура: **' + temp + '°C** (ощущается как ' + feels + '°C)\n';
+        out += '☁️ Состояние: ' + desc + '\n';
+        out += '💨 Ветер: ' + wind + ' км/ч, ' + dir + '\n';
+        out += '💧 Влажность: ' + hum + '%\n';
+        out += '📊 Давление: ' + press + ' гПа\n';
+        out += '☁️ Облачность: ' + cloud + '%\n';
+        if (precip > 0) out += '🌧️ Осадки: ' + precip + ' мм\n';
+
+        const daily = fcData.daily;
+        if (daily && daily.time && daily.time.length) {
+            out += '━━━━━━━━━━━━━━━━━━\n📅 **Прогноз на 3 дня:**\n';
+            const labels = ['Сегодня', 'Завтра', 'Послезавтра'];
+            for (let i = 0; i < daily.time.length && i < 3; i++) {
+                const dEmoji = emojis[daily.weather_code[i]] || '🌡️';
+                const dDesc = codes[daily.weather_code[i]] || '';
+                out += dEmoji + ' ' + (labels[i] || ('День ' + (i + 1))) + ': ' +
+                    Math.round(daily.temperature_2m_min[i]) + '…' +
+                    Math.round(daily.temperature_2m_max[i]) + '°C, ' + dDesc + '\n';
+            }
+        }
+
+        return out.trim();
     } catch (e) {
         return 'Не удалось получить погоду: ' + e.message;
     }
