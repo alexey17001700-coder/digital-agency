@@ -406,6 +406,22 @@ const TOOLS = [
       }
     }
   }
+  ,{
+  type: "function",
+  function: {
+    name: "replace_in_file",
+    description: "Точечная замена кода в файле.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        search: { type: "string" },
+        replace: { type: "string" }
+      },
+      required: ["path", "search", "replace"]
+    }
+  }
+  }
 ];
 
 // ============================================
@@ -431,6 +447,19 @@ async function executeTool(name: string, args: any): Promise<string> {
     }
     if (name === "get_weather") {
       return await getWeather(args.city || "Саратов");
+    }
+    if (name === "replace_in_file") {
+  if (args.path === "main.ts" || args.path.startsWith("backup/")) {
+    return "Ошибка: запись в этот файл запрещена системой безопасности.";
+  }
+  const oldCode = await getFileContent(args.path);
+  if (!oldCode) return `Ошибка: файл "${args.path}" не найден.`;
+  if (!oldCode.includes(args.search)) return `Ошибка: фрагмент для поиска не найден.`;
+  
+  const newCode = oldCode.split(args.search).join(args.replace);
+  
+  await updateFileInRepo(args.path, newCode);
+  return `Успех: файл "${args.path}" обновлен.`;
     }
     return `Ошибка: неизвестный инструмент ${name}`;
   } catch (e: any) {
