@@ -125,6 +125,85 @@ function processDangerTags(text) {
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
 }
 
+/* =========================================
+   --- ПОГОДНАЯ КАРТОЧКА (КРАСИВОЕ ОКНО) ---
+   ========================================= */
+const WEATHER_CARD_RE = /\[\[WEATHER_CARD\]\]([\s\S]*?)\[\[\/WEATHER_CARD\]\]/g;
+
+function extractWeatherCards(text) {
+    const cards = [];
+    const cleanText = String(text || '').replace(WEATHER_CARD_RE, (m, json) => {
+        try { cards.push(JSON.parse(json)); } catch (e) {}
+        return '';
+    });
+    return { cleanText: cleanText.trim(), cards: cards };
+}
+
+function buildWeatherCard(d) {
+    const wrap = document.createElement('div');
+    wrap.className = 'weather-card';
+    if (!d || typeof d !== 'object') return wrap;
+
+    const num = v => (v === undefined || v === null || v === '' || isNaN(v)) ? null : Number(v);
+    const fmtTemp = v => { const n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + Math.round(n) + '°'; };
+
+    const head = document.createElement('div'); head.className = 'wc-head';
+
+    const placeBox = document.createElement('div'); placeBox.className = 'wc-place';
+    const emojiEl = document.createElement('div'); emojiEl.className = 'wc-emoji'; emojiEl.textContent = d.emoji || '🌡️';
+    const placeText = document.createElement('div'); placeText.className = 'wc-place-text';
+    const cityEl = document.createElement('div'); cityEl.className = 'wc-city'; cityEl.textContent = d.city || '—';
+    placeText.appendChild(cityEl);
+    if (d.country) { const c = document.createElement('div'); c.className = 'wc-country'; c.textContent = d.country; placeText.appendChild(c); }
+    if (d.desc) { const ds = document.createElement('div'); ds.className = 'wc-desc'; ds.textContent = d.desc; placeText.appendChild(ds); }
+    placeBox.appendChild(emojiEl); placeBox.appendChild(placeText);
+
+    const tempBox = document.createElement('div'); tempBox.className = 'wc-tempbox';
+    const tempEl = document.createElement('div'); tempEl.className = 'wc-temp'; tempEl.textContent = fmtTemp(d.temp);
+    tempBox.appendChild(tempEl);
+    if (num(d.feels) !== null) { const f = document.createElement('div'); f.className = 'wc-feels'; f.textContent = 'ощущается ' + fmtTemp(d.feels); tempBox.appendChild(f); }
+
+    head.appendChild(placeBox); head.appendChild(tempBox);
+    wrap.appendChild(head);
+
+    const items = [];
+    if (num(d.wind) !== null) items.push(['💨', 'Ветер', Math.round(Number(d.wind)) + ' км/ч' + (d.dir ? ' ' + d.dir : '')]);
+    if (num(d.hum) !== null) items.push(['💧', 'Влажность', Math.round(Number(d.hum)) + '%']);
+    if (num(d.press) !== null) items.push(['📊', 'Давление', Math.round(Number(d.press)) + ' гПа']);
+    if (num(d.visib) !== null) items.push(['👁️', 'Видимость', Math.round(Number(d.visib)) + ' км']);
+    if (num(d.cloud) !== null) items.push(['☁️', 'Облачность', Math.round(Number(d.cloud)) + '%']);
+    if (num(d.precip) !== null) items.push(['🌧️', 'Осадки', (Math.round(Number(d.precip) * 10) / 10) + ' мм']);
+
+    if (items.length) {
+        const grid = document.createElement('div'); grid.className = 'wc-grid';
+        items.forEach(it => {
+            const cell = document.createElement('div'); cell.className = 'wc-item';
+            const ico = document.createElement('span'); ico.className = 'wc-ico'; ico.textContent = it[0];
+            const lab = document.createElement('span'); lab.className = 'wc-label'; lab.textContent = it[1];
+            const val = document.createElement('span'); val.className = 'wc-val'; val.textContent = it[2];
+            cell.appendChild(ico); cell.appendChild(lab); cell.appendChild(val);
+            grid.appendChild(cell);
+        });
+        wrap.appendChild(grid);
+    }
+
+    if (Array.isArray(d.daily) && d.daily.length) {
+        const fc = document.createElement('div'); fc.className = 'wc-forecast';
+        d.daily.slice(0, 3).forEach(day => {
+            const row = document.createElement('div'); row.className = 'wc-fday';
+            const name = document.createElement('span'); name.className = 'wc-fname'; name.textContent = day.label || '';
+            const em = document.createElement('span'); em.className = 'wc-femoji'; em.textContent = day.emoji || '🌡️';
+            const tg = document.createElement('span'); tg.className = 'wc-ftemp'; tg.textContent = fmtTemp(day.min) + '…' + fmtTemp(day.max);
+            const ds = document.createElement('span'); ds.className = 'wc-fdesc'; ds.textContent = day.desc || '';
+            row.appendChild(name); row.appendChild(em); row.appendChild(tg); row.appendChild(ds);
+            fc.appendChild(row);
+        });
+        wrap.appendChild(fc);
+    }
+
+    return wrap;
+}
+
 function shareMessage(text) {
     if (navigator.share) navigator.share({ title: 'Штаб', text: text }).catch(e => console.log(e));
     else navigator.clipboard.writeText(text).then(() => alert("Скопировано!"));
@@ -192,10 +271,13 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
         const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(text, agentName); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; header.onclick = () => speakText(text, agentName); div.appendChild(header);
     }
-    const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(text);
+    const wcParsed = extractWeatherCards(text);
+    if (wcParsed.cards.length) div.classList.add('has-weather');
+    const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(wcParsed.cleanText);
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
-    div.appendChild(contentDiv);
+    if (cleanText || dangerBadges) div.appendChild(contentDiv);
+    wcParsed.cards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
     addDeployButton(div, text);
     chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
@@ -207,9 +289,12 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(fullText, agentName); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
     }
+    const wcParsed = extractWeatherCards(fullText);
+    const weatherCards = wcParsed.cards;
+    if (weatherCards.length) div.classList.add('has-weather');
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    let displayText = fullText;
+    let displayText = wcParsed.cleanText;
     
     const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
     const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
@@ -222,6 +307,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const { cleanText, dangerBadges } = processDangerTags(displayText);
         try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+        weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
         addDeployButton(div, fullText);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
@@ -244,6 +330,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         else {
             try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
             if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+            weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
             if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
             if (onComplete) onComplete();
         }
@@ -427,8 +514,15 @@ async function sendMessage(overrideText = null, isKick = false) {
                             if (typeof getWeather === 'function') {
                                 try { weatherText = await getWeather(city); } catch (e) { weatherText = "Ошибка погоды: " + e.message; }
                             } else { weatherText = "Функция getWeather недоступна."; }
+                            const wcGot = extractWeatherCards(weatherText);
+                            wcGot.cards.forEach(cd => {
+                                const rawCard = '[[WEATHER_CARD]]' + JSON.stringify(cd) + '[[/WEATHER_CARD]]';
+                                renderMessage(rawCard, 'director', 'Оркестратор');
+                                addMessageToHistory(rawCard, 'director', 'Оркестратор');
+                            });
+                            const plainWeather = wcGot.cleanText || weatherText;
                             currentMessages.push({ role: "assistant", content: aiText });
-                            currentMessages.push({ role: "user", content: `[ПОГОДА]: ${weatherText}. Ответь Боссу.` });
+                            currentMessages.push({ role: "user", content: `[ПОГОДА]: ${plainWeather}. Босс уже видит красивую карточку с погодой. Ответь коротко, 1-3 предложения: прокомментируй погоду по-человечески. НЕ перечисляй все цифры заново.` });
                             continue;
                         }
                         success = true; break; 
