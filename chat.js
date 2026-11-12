@@ -561,7 +561,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                         const rawSearchTag = aiText.match(/\[SEARCH:\s*[^\]]+\]/);
                         const searchMatch = validSearchMatch(aiText);
                         if (searchMatch) {
-                            const query = searchMatch[1].trim();
+                            const query = normalizeSearchQuery(searchMatch[1]);
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
                             renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
                             const searchRes = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ searchQuery: query }), signal: currentAbortController.signal });
