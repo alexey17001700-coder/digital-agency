@@ -402,7 +402,7 @@ function handleImageSelect(event) {
         img.onload = function() {
             const canvas = document.createElement('canvas');
             const MAX_WIDTH = 512; // Сжимаем до 512px
-            const scale = MAX_WIDTH / img.width;
+            const scale = Math.min(1, MAX_WIDTH / img.width);
             canvas.width = MAX_WIDTH;
             canvas.height = img.height * scale;
             const ctx = canvas.getContext('2d');
