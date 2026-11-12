@@ -629,18 +629,17 @@ Deno.serve(async (request) => {
     // ПОИСК И ПОГОДА
     if (body.searchQuery) return json({ success: true, results: await searchInternet(String(body.searchQuery)) });
 
-    // ГЛАВНАЯ РУЧКА: ИИ (ZVENO С ИНСТРУМЕНТАМИ)
+        // ГЛАВНАЯ РУЧКА: ИИ (ZVENO С ИНСТРУМЕНТАМИ)
     if (body.messages) {
       const modelType = body.model || "yandex";
       const userKeys = body.userKeys || {};
       let aiText = "";
 
-    if (modelType === "zveno") 
-      {if (body.image) {
-      aiText = await callZvenoVision(body.messages, body.image);
-  } else {
-      aiText = await callZvenoAI(body.messages, userKeys);
-  }
+      // Любое фото — всегда в зрячую модель, независимо от выбранного движка
+      if (body.image) {
+        aiText = await callZvenoVision(body.messages, body.image);
+      } else if (modelType === "zveno") {
+        aiText = await callZvenoAI(body.messages, userKeys);
       } else if (modelType === "deepseek") {
         if (!userKeys.deepseekKey) throw new Error("Нет ключа DeepSeek");
         const res = await fetch("https://api.deepseek.com/chat/completions", {
