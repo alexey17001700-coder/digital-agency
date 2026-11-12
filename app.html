@@ -13,14 +13,17 @@
         const timestamp = new Date().getTime();
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
 
+        // Загрузка одного скрипта с честной очисткой таймера.
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = `${src}?v=${timestamp}`;
-                script.onload = () => resolve();
-                script.onerror = () => reject(new Error('Не загрузился: ' + src));
+                const timer = setTimeout(() => {
+                    reject(new Error('Таймаут загрузки: ' + src));
+                }, 15000);
+                script.onload = () => { clearTimeout(timer); resolve(); };
+                script.onerror = () => { clearTimeout(timer); reject(new Error('Не загрузился: ' + src)); };
                 document.body.appendChild(script);
-                setTimeout(() => reject(new Error('Таймаут загрузки: ' + src)), 15000);
             });
         }
 
@@ -34,10 +37,15 @@
         window.addEventListener('DOMContentLoaded', async () => {
             const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'chat.js', 'office.js', 'ui.js'];
             const failed = [];
-            for (const src of scripts) {
-                try { await loadScript(src); }
-                catch (e) { failed.push(src); console.error('Ошибка загрузки скрипта', src, e); }
-            }
+
+            // Грузим параллельно: один упавший файл не тормозит и не ломает остальные.
+            await Promise.all(scripts.map(src =>
+                loadScript(src).catch(e => {
+                    failed.push(src);
+                    console.error('Ошибка загрузки скрипта', src, e);
+                })
+            ));
+
             if (typeof init === 'function') {
                 try { init(); }
                 catch (e) { console.error('Ошибка init()', e); showBootError('Сбой запуска: ' + e.message); }
