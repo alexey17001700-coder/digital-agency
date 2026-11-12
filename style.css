@@ -182,3 +182,61 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .water-zone-mat { position: absolute; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.15); border: 2px dashed rgba(0, 229, 255, 0.5); border-radius: 50%; bottom: 10px; right: 10px; z-index: 0; }
 @keyframes blink-red-api { 0%, 100% { background-color: transparent; border: 2px solid #ff0055; color: #ff0055; } 50% { background-color: rgba(255, 0, 85, 0.3); border: 2px solid #ff0055; color: #ff0055; box-shadow: 0 0 10px #ff0055; } }
 #btnApiKeys.needs-keys { animation: blink-red-api 1s infinite !important; border: 2px solid #ff0055 !important; color: #ff0055 !important; }
+
+/* =========================================
+   --- ПОГОДНАЯ КАРТОЧКА ---
+   ========================================= */
+.chat-msg.has-weather { background: transparent; padding: 0; max-width: 92%; border-radius: 0; }
+.chat-msg.has-weather .msg-name { padding-left: 6px; }
+.weather-card {
+    position: relative; overflow: hidden; box-sizing: border-box; width: 100%;
+    padding: 16px 18px 14px 18px; border-radius: 18px;
+    background: linear-gradient(150deg, #10243a 0%, #173b4d 45%, #0c1a24 100%);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    color: #eaf6ff; font-size: 14px; animation: wcAppear 0.35s ease;
+    margin-top: 4px;
+}
+.weather-card::before {
+    content: ''; position: absolute; top: -60px; right: -50px; width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(0, 229, 255, 0.28) 0%, rgba(0, 229, 255, 0) 70%);
+    pointer-events: none;
+}
+@keyframes wcAppear { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.wc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; position: relative; z-index: 1; }
+.wc-place { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.wc-emoji { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.45)); flex-shrink: 0; }
+.wc-place-text { min-width: 0; }
+.wc-city { font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: 0.3px; }
+.wc-country { font-size: 11px; color: #7fb6c9; text-transform: uppercase; letter-spacing: 1px; margin-top: 1px; }
+.wc-desc { font-size: 12px; color: #9ad7e8; margin-top: 3px; text-transform: capitalize; }
+.wc-tempbox { text-align: right; flex-shrink: 0; }
+.wc-temp { font-size: 38px; font-weight: 800; line-height: 1; color: #00e5ff; text-shadow: 0 0 18px rgba(0, 229, 255, 0.55); }
+.wc-feels { font-size: 11px; color: #8fb9c7; margin-top: 3px; white-space: nowrap; }
+
+.wc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 14px; position: relative; z-index: 1; }
+.wc-item {
+    display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11.5px; min-width: 0;
+}
+.wc-ico { font-size: 13px; flex-shrink: 0; }
+.wc-label { color: #8fb9c7; flex-shrink: 0; }
+.wc-val { margin-left: auto; color: #ffffff; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.wc-forecast { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(0, 229, 255, 0.3); position: relative; z-index: 1; }
+.wc-fday { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; font-size: 12px; }
+.wc-fday + .wc-fday { margin-top: 3px; }
+.wc-fday:nth-child(odd) { background: rgba(255, 255, 255, 0.04); }
+.wc-fname { color: #9ad7e8; min-width: 82px; flex-shrink: 0; }
+.wc-femoji { font-size: 14px; flex-shrink: 0; }
+.wc-ftemp { font-weight: 800; color: #ffd700; white-space: nowrap; flex-shrink: 0; min-width: 70px; }
+.wc-fdesc { color: #8fb9c7; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 380px) {
+    .wc-temp { font-size: 32px; }
+    .wc-emoji { font-size: 28px; }
+    .wc-grid { grid-template-columns: 1fr; }
+    .wc-fname { min-width: 70px; }
+}
