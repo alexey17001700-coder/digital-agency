@@ -426,6 +426,25 @@ function handleImageSelect(event) {
     event.target.value = '';
 }
 
+/* --- ЗАЩИТА ОТ ФАНТОМНОГО ПОИСКА ---
+   Модель периодически копирует из системного промпта ПРИМЕР метки
+   ([SEARCH: твой запрос]) или гоняет один и тот же запрос по кругу.
+   Раньше такой мусор реально уходил в сеть: «поиск» по слову «запрос»,
+   по многоточию «…» и т.п. Теперь запрос проходит валидацию:
+   заглушки из промпта, пустышки и дубли в сеть не пускаются. */
+let lastSearchQuery = "";
+function validSearchMatch(text) {
+    const m = String(text || '').match(/\[SEARCH:\s*([^\]]+)\]/);
+    if (!m) return null;
+    const q = m[1].trim();
+    if (q.length < 2) return null;                                  // пусто или одна буква
+    if (!/[\p{L}\p{N}]/u.test(q)) return null;                      // только точки/знаки — мусор
+    if (/^(?:(?:твой|ваш|этот|мой)\s+)?запрос$|^query$|^search$|^текст\s+запроса$|^\.+$|^…+$/iu.test(q)) return null;
+    if (q === lastSearchQuery) return null;                         // повтор того же запроса
+    lastSearchQuery = q;
+    return m;
+}
+
 async function sendMessage(overrideText = null, isKick = false) {
     if (isGenerating && !isKick) { 
         if (currentAbortController) currentAbortController.abort(); 
