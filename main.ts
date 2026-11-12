@@ -12,7 +12,7 @@ const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 // 🛡️ БЕЛЫЙ СПИСОК ЗАПИСИ. Через инструменты можно менять только файлы
-// интерфейса в корне репозитория. main.ts и папка backup — неприкосновенны.
+// интерфейса в корне репозитория.папка backup — неприкосновенна.
 const WRITE_ALLOWED_EXT = [".js", ".css", ".html"];
 const WRITE_DENY_NAMES = ["main.ts"];
 const MAX_WRITE_SIZE = 400000;  // ~400 КБ на файл
