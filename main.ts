@@ -441,6 +441,43 @@ async function executeTool(name: string, args: any): Promise<string> {
 // ============================================
 // ЗАПРОС К ZVENO С ИНСТРУМЕНТАМИ
 // ============================================
+async function callZvenoVision(messages: any[], imageBase64: string): Promise<string> {
+  const apiKey = Deno.env.get("ZVENO_API_KEY");
+  if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
+  
+  const visionModel = "openai/gpt-4o-mini"; 
+  
+  let visionMessages = JSON.parse(JSON.stringify(messages)); 
+  let lastMsg = visionMessages[visionMessages.length - 1];
+  
+  if (lastMsg && lastMsg.role === 'user') {
+      lastMsg.content = [
+          { type: "text", text: lastMsg.content },
+          { type: "image_url", image_url: { url: imageBase64 } }
+      ];
+  }
+
+  const payload = {
+    model: visionModel,
+    messages: visionMessages,
+    max_tokens: 1024,
+    temperature: 0.7
+  };
+
+  const res = await fetch(ZVENO_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT)
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || `Ошибка Vision: ${res.status}`);
+  return data.choices?.[0]?.message?.content || "Пустой ответ";
+}
 async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string> {
   const apiKey = Deno.env.get("ZVENO_API_KEY");
   if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
@@ -569,9 +606,12 @@ Deno.serve(async (request) => {
       const userKeys = body.userKeys || {};
       let aiText = "";
 
-      if (modelType === "zveno") {
-        // НОВЫЙ РЕЖИМ: Tool Calling
-        aiText = await callZvenoAI(body.messages, userKeys);
+    if (modelType === "zveno") 
+      {if (body.image) {
+      aiText = await callZvenoVision(body.messages, body.image);
+  } else {
+      aiText = await callZvenoAI(body.messages, userKeys);
+  }
       } else if (modelType === "deepseek") {
         if (!userKeys.deepseekKey) throw new Error("Нет ключа DeepSeek");
         const res = await fetch("https://api.deepseek.com/chat/completions", {
