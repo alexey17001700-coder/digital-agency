@@ -100,6 +100,26 @@ function initOffice() {
         const bubble = document.createElement('div'); bubble.className = 'agent-bubble'; bubble.id = 'bubble-' + name;
         const nameTag = document.createElement('div'); nameTag.className = 'agent-name'; nameTag.innerText = name;
 
+        // --- СБОРКА ТЕЛА ЧЕЛОВЕЧКА ---
+        const head = document.createElement('div'); head.className = 'agent-head';
+        const face = document.createElement('div'); face.className = 'agent-face';
+        const eyeL = document.createElement('div'); eyeL.className = 'eye';
+        const eyeR = document.createElement('div'); eyeR.className = 'eye';
+        face.appendChild(eyeL); face.appendChild(eyeR);
+        head.appendChild(face);
+
+        const body = document.createElement('div'); body.className = 'agent-body';
+        const armL = document.createElement('div'); armL.className = 'agent-arm arm-left';
+        const armR = document.createElement('div'); armR.className = 'agent-arm arm-right';
+        body.appendChild(armL); body.appendChild(armR);
+
+        const legL = document.createElement('div'); legL.className = 'agent-leg leg-left';
+        const legR = document.createElement('div'); legR.className = 'agent-leg leg-right';
+
+        sprite.appendChild(head);
+        sprite.appendChild(body);
+        sprite.appendChild(legL);
+        sprite.appendChild(legR);
         sprite.appendChild(bubble);
         sprite.appendChild(nameTag);
         room.appendChild(sprite);

@@ -355,6 +355,26 @@ const TOOLS = [
     }
   }
   }
+  ,{
+  type: "function",
+  function: {
+    name: "list_github_repos",
+    description: "Возвращает список всех репозиториев пользователя на GitHub.",
+    parameters: { type: "object", properties: {} }
+  }
+}
+,{
+  type: "function",
+  function: {
+    name: "delete_github_repo",
+    description: "Удаляет репозиторий с GitHub. ЗАПРЕЩЕНО удалять digital-agency (Штаб).",
+    parameters: {
+      type: "object",
+      properties: { name: { type: "string", description: "Имя репозитория для удаления" } },
+      required: ["name"]
+    }
+  }
+}
 ];
 // ============================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
@@ -438,7 +458,34 @@ if (name === "create_github_repo") {
     return `Ошибка создания репозитория: ${e.message}`;
   }
 }
+if (name === "list_github_repos") {
+  try {
+    const res = await fetch(`https://api.github.com/user/repos?per_page=100&sort=updated`, {
+      headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
+    });
+    const repos = await res.json();
+    if (!Array.isArray(repos)) return "Ошибка получения списка.";
+    return repos.map((r: any) => `- ${r.name} (${r.private ? "приватный" : "публичный"})`).join("\n");
+  } catch (e: any) { return `Ошибка: ${e.message}`; }
+}
 
+if (name === "delete_github_repo") {
+  const repo = String(args.name).trim();
+  // ЖЕЛЕЗНАЯ ЗАЩИТА: Штаб и Калькулятор удалять нельзя
+  if (repo === REPO_NAME || repo === "window_calc") {
+    return `Ошибка: репозиторий "${repo}" защищён от удаления. Удалять можно только остальные.`;
+  }
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}`, {
+      method: "DELETE",
+      headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
+    });
+    if (res.status === 204) return `Успех: репозиторий "${repo}" удален.`;
+    const data = await res.json();
+    throw new Error(data.message || `HTTP ${res.status}`);
+  } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
+}
+    
     return `Ошибка: неизвестный инструмент ${name}`;
     
   } catch (e: any) {

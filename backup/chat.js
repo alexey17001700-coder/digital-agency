@@ -27,6 +27,8 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 5. get_weather(city) — погода.
 6. search_image(query) — поиск картинки. Возвращает тег [IMAGE_URL]ссылка[/IMAGE_URL]. Выведи его в чат, чтобы Босс увидел фото.
 7. create_github_repo(name, description, is_private) — создает новый пустой репозиторий на GitHub.
+8. list_github_repos() — возвращает список всех твоих репозиториев на GitHub.
+9. delete_github_repo(name) — удаляет репозиторий (кроме digital-agency, он защищен).
 
 === 2. ТВОИ ВОЗМОЖНОСТИ ===
 - Ты умеешь видеть картинки. Если Босс прикрепил фото и задал вопрос, ты ОБЯЗАН внимательно посмотреть на него и описать, что на нём изображено в деталях.
@@ -38,6 +40,7 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 2. БЕЗОПАСНОСТЬ: Тебе ЗАПРЕЩЕНО трогать файл main.ts (код сервера) и папку backup. Там стоят жесткие блокировки.
 3. НЕ ТРОГАЙ БЕЗ ПРИКАЗА: Если Босс НЕ попросил что-то менять — ты НИЧЕГО не меняешь. Ни файлы, ни код, ни настройки. Никакой самодеятельности, никаких «я решил улучшить». Меняешь ТОЛЬКО то, что Босс явно приказал.
 4. БЕЗ ВОДЫ: Не пиши "Сейчас посмотрю", "Дай секунду". Просто вызывай инструменты. Отчет в чат должен быть коротким: "Босс, файл обновлен".
+5. ЗАПРЕТ ОТПИСОК: ЗАПРЕЩЕНО писать "сейчас сделаю", "приступаю", "подожди", "сделаю и сообщу". Если задача ясна — НЕМЕДЛЕННО вызывай инструмент (read_file, replace_in_file, write_file). Отчет давай ТОЛЬКО после выполнения.
 
 === 4. КАРТА ФАЙЛОВ (digital-agency) ===
 - app.html: Интерфейс (кнопки, ввод, агенты).
@@ -69,6 +72,17 @@ function renderChatList() {
         delBtn.onclick = (e) => { e.stopPropagation(); if (confirm("Удалить?")) { delete allChats[id]; if (currentChatId === id) createNewChat(true); else { saveAll(); renderChatList(); } } };
         actions.appendChild(pinBtn); actions.appendChild(delBtn); div.appendChild(titleSpan); div.appendChild(actions); chatListEl.appendChild(div);
     });
+}
+
+function clearAllChats() {
+    if (!confirm("Очистить всю историю чатов? Это действие нельзя отменить.")) return;
+    allChats = {};
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('shtabChatImage_')) localStorage.removeItem(k); });
+    localStorage.removeItem('shtabAllChats');
+    localStorage.removeItem('shtabCurrentChatId');
+    currentChatId = null;
+    renderChatList();
+    createNewChat(true);
 }
 
 function createNewChat(force = false) {
