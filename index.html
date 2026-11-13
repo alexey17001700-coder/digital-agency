@@ -1,134 +1,152 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Цифровое Агентство — Штаб</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
-  #splash { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; align-items: center; justify-content: center; transition: opacity .6s; }
-  #matrix { position: absolute; inset: 0; display: block; }
-  .splash-logo { position: relative; z-index: 2; color: #00e5ff; font-size: 20px; letter-spacing: 6px; text-shadow: 0 0 20px #00e5ff; animation: pulse 1.4s ease-in-out infinite; text-align: center; }
-  @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
-  #frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #0a0a0a; }
-  #toolsBtn { position: fixed; right: 12px; bottom: 12px; z-index: 10001; width: 46px; height: 46px; border-radius: 50%; background: #0a0a0a; color: #00e5ff; border: 2px solid #00e5ff; font-size: 20px; cursor: pointer; box-shadow: 0 0 20px rgba(0,229,255,.5); }
-  #panel { display: none; position: fixed; right: 12px; bottom: 68px; z-index: 10001; width: 230px; background: #0a0a0a; border: 2px solid #00e5ff; border-radius: 12px; padding: 14px; color: #00e5ff; box-shadow: 0 0 25px rgba(0,229,255,.5); }
-  #panel.open { display: block; }
-  #panel h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 2px; text-align: center; }
-  #panel input { width: 100%; padding: 9px; background: #000; border: 1px solid #00e5ff; color: #00e5ff; border-radius: 6px; font-family: inherit; font-size: 14px; text-align: center; letter-spacing: 4px; }
-  #panel button { width: 100%; margin-top: 9px; padding: 10px; background: transparent; border: 1px solid #00e5ff; color: #00e5ff; border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer; transition: .15s; }
-  #panel button:active { background: #00e5ff; color: #000; }
-  #panel button.danger { border-color: #ff0055; color: #ff0055; }
-  #panel button.danger:active { background: #ff0055; color: #fff; }
-  #panelStatus { margin-top: 10px; font-size: 11px; color: #8fdfff; min-height: 14px; text-align: center; }
-  .hidden { display: none !important; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Штаб: Броня</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0a0a'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='60'>👑</text></svg>">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; position: fixed; top: 0; left: 0; }
+        #app-frame { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; border: none; display: block; }
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #0a0a0a; z-index: 9999999; overflow: hidden; display: flex; justify-content: center; align-items: center; transition: opacity 0.8s ease-out, visibility 0.8s; }
+        #splash-screen.hidden { opacity: 0; visibility: hidden; }
+        #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .splash-content { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .splash-logo { font-size: 80px; margin-bottom: 20px; animation: float-crown 2s infinite ease-in-out, glow-crown 1.5s infinite alternate; }
+        @keyframes float-crown { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes glow-crown { from { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); } to { filter: drop-shadow(0 0 30px rgba(255, 215, 0, 1)); } }
+        .splash-title { color: #00e5ff; font-size: 18px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 30px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); animation: pulse-text 2s infinite alternate; }
+        @keyframes pulse-text { from { opacity: 0.7; } to { opacity: 1; } }
+        .splash-loader-bar { width: 200px; height: 4px; background: #1e1e1e; border-radius: 10px; overflow: hidden; position: relative; }
+        .splash-loader-bar::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 50%; background: #00e5ff; border-radius: 10px; animation: loading 1.5s infinite ease-in-out; box-shadow: 0 0 10px #00e5ff; }
+        @keyframes loading { 0% { left: -50%; } 100% { left: 100%; } }
+        #ai-loading-status { margin-top: 15px; font-size: 13px; color: #00e5ff; text-align: center; font-family: monospace; font-weight: bold; }
+        #ai-loading-bar-container { width: 220px; height: 6px; background: #1e1e1e; border-radius: 4px; margin-top: 8px; }
+        #ai-loading-progress { height: 100%; width: 0%; background: #00e5ff; border-radius: 4px; transition: width 0.3s; }
+        #ai-model-list { font-size: 11px; color: #ccc; margin-top: 10px; text-align: left; width: 220px; font-family: monospace; line-height: 1.6; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 5px; }
+        #control-panel { position: fixed; top: 10px; right: 10px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        #fab-trigger { width: 40px; height: 40px; border-radius: 50%; background: #1e1e1e; border: 2px solid #ffd700; color: #ffd700; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; animation: pulse-ring 2s infinite; }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+        #fab-menu { display: none; flex-direction: column; gap: 10px; background: rgba(30, 30, 30, 0.95); border: 1px solid #444; border-radius: 16px; padding: 15px; width: 240px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); position: absolute; top: 50px; right: 0; }
+        #fab-menu.open { display: flex; }
+        .fab-btn { display: flex; flex-direction: column; align-items: flex-start; padding: 12px; border-radius: 10px; border: none; cursor: pointer; text-align: left; }
+        .btn-backup { background: rgba(0, 200, 100, 0.15); color: #00ff88; border: 1px solid rgba(0, 200, 100, 0.3); }
+        .btn-rollback { background: rgba(255, 0, 85, 0.15); color: #ff4477; border: 1px solid rgba(255, 0, 85, 0.3); margin-top: 5px; }
+        #safe-lock-container { display: flex; flex-direction: column; align-items: center; background: #121212; border-radius: 12px; padding: 10px; }
+        #safe-display { width: 100%; background: #000; color: #00e5ff; font-family: monospace; font-size: 20px; text-align: center; padding: 8px 0; border-radius: 5px; margin-bottom: 10px; border: 1px solid #333; letter-spacing: 5px; }
+        .safe-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 100%; }
+        .safe-key { background: #2a2a2a; color: #fff; border: none; border-radius: 5px; padding: 10px 0; font-size: 16px; cursor: pointer; }
+        .safe-key.ok { background: #005662; color: #00e5ff; font-weight: bold; font-size: 12px; }
+        .safe-key.clear { background: #662222; color: #ff8888; }
+        #fab-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99998; }
+        #fab-overlay.open { display: block; }
+    </style>
 </head>
 <body>
-  <div id="splash"><canvas id="matrix"></canvas><div class="splash-logo">ЦИФРОВОЕ АГЕНТСТВО</div></div>
-
-  <iframe id="frame" title="Штаб"></iframe>
-
-  <div id="panel">
-    <h3>🛠️ ПАНЕЛЬ ШТАБА</h3>
-    <div id="safeGate">
-      <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN">
-      <button onclick="checkPin()">🔓 Открыть сейф</button>
+    <div id="splash-screen">
+        <canvas id="matrix-canvas"></canvas>
+        <div class="splash-content">
+            <div class="splash-logo">👑</div>
+            <div class="splash-title">Цифровое Агентство</div>
+            <div class="splash-loader-bar"></div>
+            <div id="ai-loading-status">Инициализация...</div>
+            <div id="ai-loading-bar-container"><div id="ai-loading-progress"></div></div>
+            <div id="ai-model-list"></div>
+        </div>
     </div>
-    <div id="safeBox" class="hidden">
-      <button onclick="doBackup()">💾 Сохранить эталон</button>
-      <button class="danger" onclick="doRollback()">⏪ Откатить Штаб</button>
+    <iframe id="app-frame" src=""></iframe>
+    <div id="fab-overlay" onclick="toggleMenu()"></div>
+    <div id="control-panel">
+        <div id="fab-menu">
+            <div id="safe-lock-container">
+                <div id="safe-display">____</div>
+                <div class="safe-keypad">
+                    <button class="safe-key" onclick="pressSafeKey('1')">1</button>
+                    <button class="safe-key" onclick="pressSafeKey('2')">2</button>
+                    <button class="safe-key" onclick="pressSafeKey('3')">3</button>
+                    <button class="safe-key" onclick="pressSafeKey('4')">4</button>
+                    <button class="safe-key" onclick="pressSafeKey('5')">5</button>
+                    <button class="safe-key" onclick="pressSafeKey('6')">6</button>
+                    <button class="safe-key" onclick="pressSafeKey('7')">7</button>
+                    <button class="safe-key" onclick="pressSafeKey('8')">8</button>
+                    <button class="safe-key" onclick="pressSafeKey('9')">9</button>
+                    <button class="safe-key clear" onclick="clearSafePin()">C</button>
+                    <button class="safe-key" onclick="pressSafeKey('0')">0</button>
+                    <button class="safe-key ok" onclick="checkSafePin()">OK</button>
+                </div>
+            </div>
+            <div id="save-action-container" style="display:none;">
+                <button class="fab-btn btn-backup" onclick="triggerBackup()" style="width:100%;"><span class="title">💾 Сохранить эталон</span></button>
+            </div>
+            <button class="fab-btn btn-rollback" onclick="triggerRollback()"><span class="title">⏪ Откатить Штаб</span></button>
+        </div>
+        <button id="fab-trigger" onclick="toggleMenu()">🛠️</button>
+        <button id="btn-refresh" onclick="forceRefresh()" style="width: 40px; height: 40px; border-radius: 50%; background: #1e1e1e; border: 2px solid #00e5ff; color: #00e5ff; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-top: 10px;">🔄</button>
     </div>
-    <div id="panelStatus"></div>
-  </div>
-  <button id="toolsBtn" onclick="togglePanel()">🛠️</button>
-
-<script>
-  const PROXY = "https://shtab-boss.duckdns.org:8443";
-  const SAFE_PIN = "8452";
-
-  // Загружаем Штаб в iframe с защитой от кэша
-  (function () {
-    const frame = document.getElementById('frame');
-    frame.src = 'app.html?v=' + Date.now();
-  })();
-
-  function togglePanel() {
-    document.getElementById('panel').classList.toggle('open');
-  }
-
-  function setStatus(text) {
-    document.getElementById('panelStatus').textContent = text || '';
-  }
-
-  function checkPin() {
-    const val = document.getElementById('pinInput').value.trim();
-    if (val === SAFE_PIN) {
-      document.getElementById('safeGate').classList.add('hidden');
-      document.getElementById('safeBox').classList.remove('hidden');
-      setStatus('Сейф открыт ✅');
-    } else {
-      setStatus('Неверный PIN ❌');
-    }
-  }
-
-  async function callProxy(payload) {
-    setStatus('Связь с сервером...');
-    try {
-      const res = await fetch(PROXY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      setStatus(data.success ? 'Готово ✅' : ('Ошибка: ' + (data.error || 'неизвестно')));
-    } catch (e) {
-      setStatus('Сбой сети: ' + e.message);
-    }
-  }
-
-  function doBackup() { callProxy({ isBackup: true }); }
-
-  function doRollback() {
-    if (confirm('Откатить Штаб к сохранённому эталону?')) callProxy({ isRollback: true });
-  }
-
-  // Матрица на заставке
-  (function () {
-    const canvas = document.getElementById('matrix');
-    const ctx = canvas.getContext('2d');
-    const chars = '01アイウエオカキクケコサシスセソタチツテトABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let cols, drops;
-    function init() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      cols = Math.floor(canvas.width / 16);
-      drops = new Array(cols).fill(1);
-    }
-    init();
-    window.addEventListener('resize', init);
-    setInterval(function () {
-      ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#00e5ff';
-      ctx.font = '16px monospace';
-      for (let i = 0; i < drops.length; i++) {
-        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * 16, drops[i] * 16);
-        if (drops[i] * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
-        drops[i]++;
-      }
-    }, 50);
-  })();
-
-  // Прячем заставку
-  window.addEventListener('load', function () {
-    setTimeout(function () {
-      const s = document.getElementById('splash');
-      s.style.opacity = '0';
-      setTimeout(function () { s.remove(); }, 650);
-    }, 1600);
-  });
-</script>
+    <script>
+        const PROXY = "https://shtab-boss.duckdns.org:8443";
+        const fabMenu = document.getElementById('fab-menu');
+        const fabOverlay = document.getElementById('fab-overlay');
+        const appFrame = document.getElementById('app-frame');
+        const splashScreen = document.getElementById('splash-screen');
+        appFrame.src = "app.html?v=" + Date.now();
+        let matrixInterval;
+        function startMatrix() {
+            const canvas = document.getElementById('matrix-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            const chars = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*'.split('');
+            const fontSize = 14; const columns = canvas.width / fontSize; const drops = [];
+            for (let x = 0; x < columns; x++) drops[x] = 1;
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00e5ff'; ctx.font = fontSize + 'px monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }
+            matrixInterval = setInterval(draw, 33);
+        }
+        startMatrix();
+        let appLoaded = false, minTimePassed = false, aiReady = false;
+        setTimeout(() => { minTimePassed = true; hideSplashIfReady(); }, 6000); 
+        appFrame.onload = () => { appLoaded = true; hideSplashIfReady(); };
+        window.updateAILoading = function(pct, status, modelsHtml) {
+            const s = document.getElementById('ai-loading-status');
+            const p = document.getElementById('ai-loading-progress');
+            const l = document.getElementById('ai-model-list');
+            if (s) s.innerText = status;
+            if (p) p.style.width = pct + '%';
+            if (l && modelsHtml) l.innerHTML = modelsHtml;
+        };
+        window.aiLoadingComplete = function() { aiReady = true; hideSplashIfReady(); };
+        window.aiLoadingError = function(msg) {
+            const el = document.getElementById('ai-loading-status');
+            if (el) { el.innerText = "❌ ОШИБКА: " + msg; el.style.color = "#ff3333"; }
+        };
+        function hideSplashIfReady() {
+            if (appLoaded && minTimePassed && aiReady) { splashScreen.classList.add('hidden'); clearInterval(matrixInterval); }
+            else if (minTimePassed && !appLoaded) { document.querySelector('.splash-title').innerText = "Загрузка Штаба..."; }
+            else if (appLoaded && minTimePassed && !aiReady) { document.querySelector('.splash-title').innerText = "Загрузка нейросети..."; }
+        }
+        function forceRefresh() {
+            if ('caches' in window) { caches.keys().then((names) => { for (let name of names) caches.delete(name); }); }
+            window.location.href = window.location.pathname + '?v=' + Date.now();
+        }
+        let safePin = "", CORRECT_PIN = "8452"; 
+        function toggleMenu() { fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); if (fabMenu.classList.contains('open')) resetSafe(); }
+        function resetSafe() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; document.getElementById('safe-lock-container').style.display = 'flex'; document.getElementById('save-action-container').style.display = 'none'; }
+        function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
+        function clearSafePin() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; }
+        function checkSafePin() { if (safePin === CORRECT_PIN) { document.getElementById('safe-display').innerText = "OK"; document.getElementById('safe-display').style.color = "#00ff00"; setTimeout(() => { document.getElementById('safe-lock-container').style.display = 'none'; document.getElementById('save-action-container').style.display = 'block'; }, 300); } else { document.getElementById('safe-display').innerText = "ERR"; document.getElementById('safe-display').style.color = "#ff0000"; setTimeout(clearSafePin, 1000); } }
+        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+    </script>
 </body>
 </html>
