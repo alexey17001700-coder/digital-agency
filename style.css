@@ -454,3 +454,24 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     .wc-grid { grid-template-columns: 1fr; }
     .wc-fname { min-width: 70px; }
    }
+/* --- ПЛАШКА АВТОРОВ --- */
+.sprite-credits {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 100;
+    font-family: sans-serif;
+    pointer-events: auto;
+}
+.sprite-credits a {
+    color: #00bfff;
+    text-decoration: none;
+}
+.sprite-credits a:hover {
+    text-decoration: underline;
+}
