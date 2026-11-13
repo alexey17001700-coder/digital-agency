@@ -2,6 +2,7 @@ const PROXY = "https://shtab-boss.duckdns.org:8443";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
+let attachedImageBase64 = null; let currentChatImage = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
@@ -15,29 +16,40 @@ const chatTitleEl = document.getElementById('currentChatTitle');
 const chatInputEl = document.getElementById('chatInput');
 
 const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
-const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба. Ты Senior-инженер и системный администратор. Ты НЕ обычный чат-бот. Ты работаешь внутри системы, у тебя есть прямой доступ к GitHub через инструменты.
+const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба. Ты Senior-инженер и системный администратор. Ты работаешь внутри распределенной системы, собранной с нуля. Твоя задача — управлять кодом проекта и решать задачи Босса.
 
-ТВОИ ИНСТРУМЕНТЫ:
-1. read_file(path) — читает код файла.
-2. write_file(path, content) — сохраняет новый код файла на GitHub.
-3. search_web(query) — ищет информацию в интернете.
+=== 1. ТВОИ ИНСТРУМЕНТЫ (ВЫЗОВ ФУНКЦИЙ) ===
+У тебя есть прямой доступ к коду. Ты НЕ пишешь код в чат просто так. Ты ВЫЗЫВАЕШЬ ИНСТРУМЕНТЫ:
+1. read_file(path, repo) — прочитать файл. repo по умолчанию "digital-agency", для калькулятора — "window_calc".
+2. replace_in_file(path, search, replace, repo) — ТВОЙ ГЛАВНЫЙ ИНСТРУМЕНТ. Точечная замена. Находит кусок текста и меняет его. Используй для правок в больших файлах (chat.js, style.css), чтобы не сломать их.
+3. write_file(path, content, repo) — перезаписать файл целиком. ИСПОЛЬЗУЙ ТОЛЬКО ДЛЯ НОВЫХ ФАЙЛОВ или если файл маленький.
+4. search_web(query) — поиск в интернете.
+5. get_weather(city) — погода.
+6. search_image(query) — поиск картинки. Возвращает тег [IMAGE_URL]ссылка[/IMAGE_URL]. Выведи его в чат, чтобы Босс увидел фото.
+7. create_github_repo(name, description, is_private) — создает новый пустой репозиторий на GitHub.
 
-ЖЕЛЕЗОБЕТОННЫЕ ПРАВИЛА (НАРУШАТЬ ЗАПРЕЩЕНО):
-1. ПРАВИЛО ХИРУРГА: Если Босс просит изменить цвет, кнопку или строчку — ты ОБЯЗАН сначала вызвать read_file, получить код, внести ТОЛЬКО нужные правки, скопировав остальной код СЛОВО В СЛОВО. Не смей переписывать рабочие функции!
-2. НЕ ВЫВАЛИВАЙ КОД В ЧАТ. Твоя задача — вызвать write_file(path, content). Система сама сохранит файл. В чат пиши только отчет: "Босс, файл обновлен".
-3. Если Босс задает обычный вопрос (Привет, как дела, какая погода) — отвечай ТЕКСТОМ. Код не пиши.
-4. Если ты не знаешь, где лежит нужная функция — вызови read_file для подозрительного файла.
-5. НИКОГДА не трогай папку backup.
-6. Общайся четко, по-братски, без воды и лишних извинений.
+=== 2. ТВОИ ВОЗМОЖНОСТИ ===
+- Ты умеешь видеть картинки. Если Босс прикрепил фото и задал вопрос, ты ОБЯЗАН внимательно посмотреть на него и описать, что на нём изображено в деталях.
+- Ты помнишь последнее прикрепленное фото в текущем чате. Если Босс задает вопрос про фото, а картинка не прикреплена к сообщению, ты все равно можешь ее увидеть (система подставит ее автоматически).
+- Ты можешь работать с двумя репозиториями: digital-agency (Штаб) и window_calc (Калькулятор окон на Flutter/Dart).
 
-КАРТА ФАЙЛОВ:
-- app.html (интерфейс, кнопки)
-- style.css (внешний вид, цвета, модалки, офис)
-- chat.js (логика чата, запросы, память)
-- ui.js (модалки, настройки ключей)
-- voice.js (озвучка, микрофон)
-- agents.js (агенты, иконки)
-- network.js (проверка связи)`;
+=== 3. ЖЕЛЕЗОБЕТОННЫЕ ПРАВИЛА (НАРУШАТЬ ЗАПРЕЩЕНО) ===
+1. ПРАВИЛО ХИРУРГА: Если Босс просит изменить цвет, кнопку или строчку — ты ОБЯЗАН использовать replace_in_file. Меняй ТОЛЬКО нужные правки, скопировав остальной код СЛОВО В СЛОВО. Не переписывай рабочие функции!
+2. БЕЗОПАСНОСТЬ: Тебе ЗАПРЕЩЕНО трогать файл main.ts (код сервера) и папку backup. Там стоят жесткие блокировки.
+3. НЕ ТРОГАЙ БЕЗ ПРИКАЗА: Если Босс НЕ попросил что-то менять — ты НИЧЕГО не меняешь. Ни файлы, ни код, ни настройки. Никакой самодеятельности, никаких «я решил улучшить». Меняешь ТОЛЬКО то, что Босс явно приказал.
+4. БЕЗ ВОДЫ: Не пиши "Сейчас посмотрю", "Дай секунду". Просто вызывай инструменты. Отчет в чат должен быть коротким: "Босс, файл обновлен".
+
+=== 4. КАРТА ФАЙЛОВ (digital-agency) ===
+- app.html: Интерфейс (кнопки, ввод, агенты).
+- style.css: Дизайн, цвета, модалки, офис.
+- chat.js: Логика чата, память, отправка запросов.
+- ui.js: Настройки, API-ключи, сейф.
+- network.js: Пинг, проверка сети.
+- voice.js: Озвучка, микрофон.
+- agents.js: Роли и иконки агентов.
+- main.ts: Код сервера на Vivo (НЕ ТРОГАТЬ, он под защитой).
+
+Проснись, Архитектор. Ты работаешь на старом телефоне Босса. Любая твоя ошибка может уронить сервер. Работай четко, по-братски, без косяков. Босс ждет.`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -69,7 +81,7 @@ function createNewChat(force = false) {
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); renderChatList(); toggleSidebar(); loadChat(id);
 }
 
-function loadChat(id) {
+function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_' + id) || null;
     currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
     chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
     selectedAgents = []; document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
@@ -96,6 +108,9 @@ function addMessageToHistory(text, sender, agentName = null) {
     saveAll(); renderChatList();
                                                                           }
 function processDangerTags(text) {
+    // Превращаем тег картинки от ИИ в реальную картинку (с возможностью развернуть)
+    text = text.replace(/\[IMAGE_URL\](.*?)\[\/IMAGE_URL\]/g, '<img src="$1" class="chat-thumbnail" onclick="this.classList.toggle(\'expanded\')" />');
+    
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
         if (name.includes(':') || name.includes('CMD')) return match;
@@ -105,6 +120,85 @@ function processDangerTags(text) {
     const dangerRegex = /\[DANGER:([^\]]+)\]/g; let dangerBadges = ''; let match;
     while ((match = dangerRegex.exec(text)) !== null) { dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу: ${match[1]}</div>`; }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
+}
+
+/* =========================================
+   --- ПОГОДНАЯ КАРТОЧКА (КРАСИВОЕ ОКНО) ---
+   ========================================= */
+const WEATHER_CARD_RE = /\[\[WEATHER_CARD\]\]([\s\S]*?)\[\[\/WEATHER_CARD\]\]/g;
+
+function extractWeatherCards(text) {
+    const cards = [];
+    const cleanText = String(text || '').replace(WEATHER_CARD_RE, (m, json) => {
+        try { cards.push(JSON.parse(json)); } catch (e) {}
+        return '';
+    });
+    return { cleanText: cleanText.trim(), cards: cards };
+}
+
+function buildWeatherCard(d) {
+    const wrap = document.createElement('div');
+    wrap.className = 'weather-card';
+    if (!d || typeof d !== 'object') return wrap;
+
+    const num = v => (v === undefined || v === null || v === '' || isNaN(v)) ? null : Number(v);
+    const fmtTemp = v => { const n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + Math.round(n) + '°'; };
+
+    const head = document.createElement('div'); head.className = 'wc-head';
+
+    const placeBox = document.createElement('div'); placeBox.className = 'wc-place';
+    const emojiEl = document.createElement('div'); emojiEl.className = 'wc-emoji'; emojiEl.textContent = d.emoji || '🌡️';
+    const placeText = document.createElement('div'); placeText.className = 'wc-place-text';
+    const cityEl = document.createElement('div'); cityEl.className = 'wc-city'; cityEl.textContent = d.city || '—';
+    placeText.appendChild(cityEl);
+    if (d.country) { const c = document.createElement('div'); c.className = 'wc-country'; c.textContent = d.country; placeText.appendChild(c); }
+    if (d.desc) { const ds = document.createElement('div'); ds.className = 'wc-desc'; ds.textContent = d.desc; placeText.appendChild(ds); }
+    placeBox.appendChild(emojiEl); placeBox.appendChild(placeText);
+
+    const tempBox = document.createElement('div'); tempBox.className = 'wc-tempbox';
+    const tempEl = document.createElement('div'); tempEl.className = 'wc-temp'; tempEl.textContent = fmtTemp(d.temp);
+    tempBox.appendChild(tempEl);
+    if (num(d.feels) !== null) { const f = document.createElement('div'); f.className = 'wc-feels'; f.textContent = 'ощущается ' + fmtTemp(d.feels); tempBox.appendChild(f); }
+
+    head.appendChild(placeBox); head.appendChild(tempBox);
+    wrap.appendChild(head);
+
+    const items = [];
+    if (num(d.wind) !== null) items.push(['💨', 'Ветер', Math.round(Number(d.wind)) + ' км/ч' + (d.dir ? ' ' + d.dir : '')]);
+    if (num(d.hum) !== null) items.push(['💧', 'Влажность', Math.round(Number(d.hum)) + '%']);
+    if (num(d.press) !== null) items.push(['📊', 'Давление', Math.round(Number(d.press)) + ' гПа']);
+    if (num(d.visib) !== null) items.push(['👁️', 'Видимость', Math.round(Number(d.visib)) + ' км']);
+    if (num(d.cloud) !== null) items.push(['☁️', 'Облачность', Math.round(Number(d.cloud)) + '%']);
+    if (num(d.precip) !== null) items.push(['🌧️', 'Осадки', (Math.round(Number(d.precip) * 10) / 10) + ' мм']);
+
+    if (items.length) {
+        const grid = document.createElement('div'); grid.className = 'wc-grid';
+        items.forEach(it => {
+            const cell = document.createElement('div'); cell.className = 'wc-item';
+            const ico = document.createElement('span'); ico.className = 'wc-ico'; ico.textContent = it[0];
+            const lab = document.createElement('span'); lab.className = 'wc-label'; lab.textContent = it[1];
+            const val = document.createElement('span'); val.className = 'wc-val'; val.textContent = it[2];
+            cell.appendChild(ico); cell.appendChild(lab); cell.appendChild(val);
+            grid.appendChild(cell);
+        });
+        wrap.appendChild(grid);
+    }
+
+    if (Array.isArray(d.daily) && d.daily.length) {
+        const fc = document.createElement('div'); fc.className = 'wc-forecast';
+        d.daily.slice(0, 3).forEach(day => {
+            const row = document.createElement('div'); row.className = 'wc-fday';
+            const name = document.createElement('span'); name.className = 'wc-fname'; name.textContent = day.label || '';
+            const em = document.createElement('span'); em.className = 'wc-femoji'; em.textContent = day.emoji || '🌡️';
+            const tg = document.createElement('span'); tg.className = 'wc-ftemp'; tg.textContent = fmtTemp(day.min) + '…' + fmtTemp(day.max);
+            const ds = document.createElement('span'); ds.className = 'wc-fdesc'; ds.textContent = day.desc || '';
+            row.appendChild(name); row.appendChild(em); row.appendChild(tg); row.appendChild(ds);
+            fc.appendChild(row);
+        });
+        wrap.appendChild(fc);
+    }
+
+    return wrap;
 }
 
 function shareMessage(text) {
@@ -174,10 +268,13 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
         const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(text, agentName); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; header.onclick = () => speakText(text, agentName); div.appendChild(header);
     }
-    const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(text);
+    const wcParsed = extractWeatherCards(text);
+    if (wcParsed.cards.length) div.classList.add('has-weather');
+    const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(wcParsed.cleanText);
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
-    div.appendChild(contentDiv);
+    if (cleanText || dangerBadges) div.appendChild(contentDiv);
+    wcParsed.cards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
     addDeployButton(div, text);
     chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
@@ -189,9 +286,12 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(fullText, agentName); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
     }
+    const wcParsed = extractWeatherCards(fullText);
+    const weatherCards = wcParsed.cards;
+    if (weatherCards.length) div.classList.add('has-weather');
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
 
-    let displayText = fullText;
+    let displayText = wcParsed.cleanText;
     
     const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
     const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
@@ -204,6 +304,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const { cleanText, dangerBadges } = processDangerTags(displayText);
         try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+        weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
         addDeployButton(div, fullText);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
@@ -226,6 +327,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         else {
             try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
             if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+            weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
             if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
             if (onComplete) onComplete();
         }
@@ -286,6 +388,70 @@ function handleSendClick() {
     }
     else sendMessage();
 }
+function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 512;
+            const scale = Math.min(1, MAX_WIDTH / img.width);
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.7); currentChatImage = attachedImageBase64; localStorage.setItem('shtabChatImage_' + currentChatId, attachedImageBase64);
+            
+            const div = document.createElement('div');
+            div.className = 'chat-msg msg-boss';
+            const imgEl = document.createElement('img');
+            imgEl.src = attachedImageBase64;
+            imgEl.className = 'chat-thumbnail';
+            imgEl.onclick = function() { this.classList.toggle('expanded'); };
+            div.appendChild(imgEl);
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            playSound('send');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+/* --- ЗАЩИТА ОТ ФАНТОМНОГО ПОИСКА ---
+   Модель периодически копирует из системного промпта ПРИМЕР метки
+   ([SEARCH: твой запрос]) или гоняет один и тот же запрос по кругу.
+   Раньше такой мусор реально уходил в сеть: «поиск» по слову «запрос»,
+   по многоточию «…» и т.п. Теперь запрос проходит валидацию:
+   заглушки из промпта, пустышки и дубли в сеть не пускаются. */
+let lastSearchQuery = ""; let searchRejects = 0; let searchesThisTurn = 0;
+function resetSearchGuard() { lastSearchQuery = ""; searchRejects = 0; searchesThisTurn = 0; }
+// Чистим запрос: убираем невидимки, кавычки и лишние пробелы.
+// Так «твой запрос», «…» и прочий мусор нельзя замаскировать невидимым символом.
+function normalizeSearchQuery(raw) {
+    return String(raw || '')
+        .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+        .replace(/^["'«»\s]+|["'«»\s]+$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+const SEARCH_STUB_RE = /^(?:(?:твой|ваш|этот|мой)\s+)?запрос[а-яё]*$|^query$|^search$|^текст\s+запроса$|^пример$|^example$|^имя_файла$|^город$|^описание$|^[.…\-–—_]+$/iu;
+function validSearchMatch(text) {
+    const m = String(text || '').match(/\[SEARCH:\s*([^\]]+)\]/);
+    if (!m) return null;
+    if (searchesThisTurn >= 1) return null;                         // один поиск на один вопрос Босса
+    const q = normalizeSearchQuery(m[1]);
+    if (q.length < 2 || q.length > 120) return null;                // пусто/одна буква или простыня
+    if ((q.match(/[\p{L}\p{N}]/gu) || []).length < 2) return null;  // нет реальных слов (одни точки/знаки) — мусор
+    if (SEARCH_STUB_RE.test(q)) return null;                        // заглушка из промпта ([SEARCH: твой запрос] и её варианты)
+    if (SYSTEM_PROMPT.includes('[SEARCH: ' + q + ']')) return null; // дословная копия примера из промпта
+    if (q.toLowerCase() === lastSearchQuery.toLowerCase()) return null; // повтор того же запроса
+    lastSearchQuery = q; searchesThisTurn++;
+    return m;
+}
 
 async function sendMessage(overrideText = null, isKick = false) {
     if (isGenerating && !isKick) { 
@@ -294,7 +460,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearTimeout(typingTimer); 
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text) return;
-    
+    if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
+
     if (!overrideText && !isKick) {
         chatInputEl.value = ''; chatInputEl.style.height = 'auto'; playSound('send'); 
         renderMessage(text, 'boss'); addMessageToHistory(text, 'boss');
@@ -312,7 +479,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
-    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 120000); clearTimeout(watchdogTimer);
+    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 300000); clearTimeout(watchdogTimer);
 
     try {
         let success = false; let aiText = ""; let lastError = "";
@@ -359,7 +526,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentAttempt++;
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 || currentChatImage }),
                         signal: currentAbortController.signal
                     });
                     
@@ -386,9 +553,10 @@ async function sendMessage(overrideText = null, isKick = false) {
                             }
                         }
 
-                        const searchMatch = aiText.match(/\[SEARCH:\s*([^\]]+)\]/);
+                        const rawSearchTag = aiText.match(/\[SEARCH:\s*[^\]]+\]/);
+                        const searchMatch = validSearchMatch(aiText);
                         if (searchMatch) {
-                            const query = searchMatch[1].trim();
+                            const query = normalizeSearchQuery(searchMatch[1]);
                             aiText = aiText.replace(searchMatch[0], '').trim(); 
                             renderMessage(`🔍 *[Система: Агент ищет в интернете "${query}"...]*`, 'director', 'Оркестратор');
                             const searchRes = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ searchQuery: query }), signal: currentAbortController.signal });
@@ -398,6 +566,36 @@ async function sendMessage(overrideText = null, isKick = false) {
                                 currentMessages.push({ role: "user", content: `[РЕЗУЛЬТАТЫ ПОИСКА]: ${searchData.results}. Ответь на вопрос.` });
                                 continue; 
                             }
+                        } else if (rawSearchTag) {
+                            aiText = aiText.replace(rawSearchTag[0], '').trim();
+                            searchRejects++;
+                            if (!aiText && searchRejects < 2) {
+                                currentMessages.push({ role: "assistant", content: "[SEARCH отклонён]" });
+                                currentMessages.push({ role: "user", content: "[СИСТЕМА: Метка поиска отклонена — запрос пустой, шаблонный или повторный. Ответь Боссу БЕЗ поиска, своими знаниями.]" });
+                                continue;
+                            }
+                            if (!aiText) aiText = "Босс, метка поиска пришла пустой или шаблонной (копия примера из промпта) — отвечаю своими знаниями. Сформулируй вопрос конкретнее, и я найду нужное в сети.";
+                        }
+
+                        const weatherMatch = aiText.match(/\[WEATHER:\s*([^\]]+)\]/);
+                        if (weatherMatch) {
+                            const city = weatherMatch[1].trim();
+                            aiText = aiText.replace(weatherMatch[0], '').trim();
+                            renderMessage(`🌤️ *[Система: смотрю погоду в "${city}"...]*`, 'director', 'Оркестратор');
+                            let weatherText = "";
+                            if (typeof getWeather === 'function') {
+                                try { weatherText = await getWeather(city); } catch (e) { weatherText = "Ошибка погоды: " + e.message; }
+                            } else { weatherText = "Функция getWeather недоступна."; }
+                            const wcGot = extractWeatherCards(weatherText);
+                            wcGot.cards.forEach(cd => {
+                                const rawCard = '[[WEATHER_CARD]]' + JSON.stringify(cd) + '[[/WEATHER_CARD]]';
+                                renderMessage(rawCard, 'director', 'Оркестратор');
+                                addMessageToHistory(rawCard, 'director', 'Оркестратор');
+                            });
+                            const plainWeather = wcGot.cleanText || weatherText;
+                            currentMessages.push({ role: "assistant", content: aiText });
+                            currentMessages.push({ role: "user", content: `[ПОГОДА]: ${plainWeather}. Босс уже видит красивую карточку с погодой. Ответь коротко, 1-3 предложения: прокомментируй погоду по-человечески. НЕ перечисляй все цифры заново.` });
+                            continue;
                         }
                         success = true; break; 
                     }
@@ -447,6 +645,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
     } finally {
         isGenerating = false; clearInterval(timerInterval); 
+        attachedImageBase64 = null;
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";

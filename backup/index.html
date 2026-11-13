@@ -94,7 +94,8 @@
         </div>
         <button id="fab-trigger" onclick="toggleMenu()">🛠️</button>
     </div>
-        <script>
+
+    <script>
         const PROXY = "https://shtab-boss.duckdns.org:8443";
         const fabMenu = document.getElementById('fab-menu');
         const fabOverlay = document.getElementById('fab-overlay');
@@ -139,11 +140,7 @@
             if (l && modelsHtml) l.innerHTML = modelsHtml;
         };
 
-        window.aiLoadingComplete = function() {
-            aiReady = true;
-            hideSplashIfReady();
-        };
-
+        window.aiLoadingComplete = function() { aiReady = true; hideSplashIfReady(); };
         window.aiLoadingError = function(msg) {
             const el = document.getElementById('ai-loading-status');
             if (el) { el.innerText = "❌ ОШИБКА: " + msg; el.style.color = "#ff3333"; }
@@ -151,13 +148,19 @@
 
         function hideSplashIfReady() {
             if (appLoaded && minTimePassed && aiReady) {
-                splashScreen.classList.add('hidden');
-                clearInterval(matrixInterval); 
+                splashScreen.classList.add('hidden'); clearInterval(matrixInterval); 
             } else if (minTimePassed && !appLoaded) {
                 document.querySelector('.splash-title').innerText = "Загрузка Штаба...";
             } else if (appLoaded && minTimePassed && !aiReady) {
                 document.querySelector('.splash-title').innerText = "Загрузка нейросети...";
             }
+        }
+
+        function forceRefresh() {
+            if ('caches' in window) {
+                caches.keys().then((names) => { for (let name of names) caches.delete(name); });
+            }
+            window.location.href = window.location.pathname + '?v=' + Date.now();
         }
 
         let safePin = "", CORRECT_PIN = "8452"; 
@@ -166,28 +169,8 @@
         function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
         function clearSafePin() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; }
         function checkSafePin() { if (safePin === CORRECT_PIN) { document.getElementById('safe-display').innerText = "OK"; document.getElementById('safe-display').style.color = "#00ff00"; setTimeout(() => { document.getElementById('safe-lock-container').style.display = 'none'; document.getElementById('save-action-container').style.display = 'block'; }, 300); } else { document.getElementById('safe-display').innerText = "ERR"; document.getElementById('safe-display').style.color = "#ff0000"; setTimeout(clearSafePin, 1000); } }
-        
-        async function triggerBackup() { 
-            toggleMenu(); 
-            if (!confirm("💾 Сохранить эталон?")) return; 
-            try { 
-                const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); 
-                const d = await res.json(); 
-                if (d.success) alert("✅ Сохранено!"); 
-                else throw new Error(d.error); 
-            } catch (e) { alert("❌ " + e.message); } 
-        }
-        
-        async function triggerRollback() { 
-            toggleMenu(); 
-            if (!confirm("⚠️ Откатить Штаб?")) return; 
-            try { 
-                const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); 
-                const d = await res.json(); 
-                if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } 
-                else throw new Error(d.error); 
-            } catch (e) { alert("❌ " + e.message); } 
-        }
+        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
     </script>
 </body>
 </html>
