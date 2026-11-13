@@ -139,7 +139,7 @@ function processDangerTags(text) {
         return '';
     });
     const dangerRegex = /\[DANGER:([^\]]+)\]/g; let dangerBadges = ''; let match;
-    while ((match = dangerRegex.exec(text)) !== null) { dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу: ${match[1]}</div>`; }
+    while ((match = dangerRegex.exec(text)) !== null) { const safeMsg = String(match[1]).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу: ${safeMsg}</div>`; }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
 }
 
