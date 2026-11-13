@@ -471,7 +471,10 @@ if (name === "list_github_repos") {
 
 if (name === "delete_github_repo") {
   const repo = String(args.name).trim();
-  if (repo === REPO_NAME) return `Ошибка: репозиторий "${REPO_NAME}" (Штаб) защищен от удаления.`;
+  // ЖЕЛЕЗНАЯ ЗАЩИТА: Штаб и Калькулятор удалять нельзя
+  if (repo === REPO_NAME || repo === "window_calc") {
+    return `Ошибка: репозиторий "${repo}" защищён от удаления. Удалять можно только остальные.`;
+  }
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}`, {
       method: "DELETE",
@@ -481,7 +484,7 @@ if (name === "delete_github_repo") {
     const data = await res.json();
     throw new Error(data.message || `HTTP ${res.status}`);
   } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
-    }
+}
     
     return `Ошибка: неизвестный инструмент ${name}`;
     
