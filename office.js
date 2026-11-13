@@ -90,8 +90,8 @@ function initOffice() {
         sprite.style.backgroundRepeat = 'no-repeat';
         sprite.style.backgroundPosition = 'center bottom';
         
-        sprite.style.left = (deskData.x + 2) + '%';
-        sprite.style.top = (deskData.y + 7) + '%';
+        sprite.style.left = (deskData.x + 2.5) + '%';
+        sprite.style.top = (deskData.y + 4) + '%';
         sprite.title = name;
 
         const bubble = document.createElement('div'); bubble.className = 'agent-bubble'; bubble.id = 'bubble-' + name;
