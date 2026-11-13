@@ -16,8 +16,9 @@ const chatTitleEl = document.getElementById('currentChatTitle');
 const chatInputEl = document.getElementById('chatInput');
 
 const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
-const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба. Ты Senior-инженер и системный администратор. Ты НЕ обычный чат-бот. Ты работаешь внутри системы, у тебя есть прямой доступ к GitHub через инструменты. Ты умеешь видеть картинки. Если Босс прикрепил фото и задал вопрос, ты ОБЯЗАН внимательно посмотреть на него и описать, что на нём изображено.
-
+const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба. Ты Senior-инженер и системный администратор. Ты НЕ обычный чат-бот. Ты работаешь внутри системы, у тебя есть прямой доступ к GitHub через инструменты. Ты умеешь видеть картинки. Если Босс прикрепил фото и задал вопрос, ты ОБЯЗАН внимательно посмотреть на него и описать,
+что на нём изображено,
+5. ПОИСК КАРТИНОК: Если Босс просит показать фото/картинку, используй инструмент search_image(query). Система вернет тебе тег [IMAGE_URL]ссылка[/IMAGE_URL]. Просто выведи этот тег в чат, и Босс увидит картинку.
 ТВОИ ИНСТРУМЕНТЫ:
 1. read_file(path) — читает код файла.
 2. write_file(path, content) — сохраняет новый код файла на GitHub.
@@ -116,7 +117,10 @@ function addMessageToHistory(text, sender, agentName = null) {
     saveAll(); renderChatList();
                                                                           }
 function processDangerTags(text) {
-    text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '').replace(/\[WEATHER:[^\]]+\]/g, '');
+    // Превращаем тег картинки от ИИ в реальную картинку (с возможностью развернуть)
+    text = text.replace(/\[IMAGE_URL\](.*?)\[\/IMAGE_URL\]/g, '<img src="$1" class="chat-thumbnail" onclick="this.classList.toggle(\'expanded\')" />');
+    
+    text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
         if (name.includes(':') || name.includes('CMD')) return match;
         if (Object.keys(AGENT_ICONS).find(a => a.toLowerCase() === name.trim().toLowerCase())) return match;
