@@ -375,6 +375,14 @@ const TOOLS = [
     }
   }
 }
+  ,{
+  type: "function",
+  function: {
+    name: "list_repo_files",
+    description: "Возвращает список файлов в корне репозитория digital-agency.",
+    parameters: { type: "object", properties: {} }
+  }
+  }
 ];
 // ============================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
