@@ -380,7 +380,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .agent-sprite.face-up    { background-position: 0% 0%; }
 .agent-sprite.face-down  { background-position: 0% 66.67%; }
 .agent-sprite.face-left  { background-position: 0% 44.44%; }
-.agent-sprite.face-right { background-position: 0% 66.67%; }
+.agent-sprite.face-right { background-position: 0% 11.11%; }
 
 /* Анимация ходьбы (4 кадра: 0 -> 133.33% при steps(4) даёт 0/33.3/66.7/100) */
 .agent-sprite.walking.face-down  { animation: walkDown 0.6s steps(4) infinite; }
