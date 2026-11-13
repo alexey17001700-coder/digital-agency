@@ -388,7 +388,7 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .agent-sprite.walking.face-right { animation: walkRight 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-up    { animation: walkUp 0.6s steps(4) infinite; }
 
-@keyframes walkDown  { 0% { background-position: 0% 0%; } 100% { background-position: 133.33% 0%; } }
+@keyframes walkDown  { 0% { background-position: 0% 22.22%; } 100% { background-position: 133.33% 22.22%; } }
 @keyframes walkLeft  { 0% { background-position: 0% 11.11%; } 100% { background-position: 133.33% 11.11%; } }
 @keyframes walkRight { 0% { background-position: 0% 22.22%; } 100% { background-position: 133.33% 22.22%; } }
 @keyframes walkUp    { 0% { background-position: 0% 33.33%; } 100% { background-position: 133.33% 33.33%; } }
