@@ -10,6 +10,11 @@ let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
 const chatContainer = document.getElementById('chatContainer');
+// Делегированный обработчик: разворот миниатюр по клику (переживает перерисовку innerHTML).
+if (chatContainer) chatContainer.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t && t.classList && t.classList.contains('chat-thumbnail')) t.classList.toggle('expanded');
+});
 const chatListEl = document.getElementById('chatList');
 const sendBtn = document.getElementById('sendBtn');
 const chatTitleEl = document.getElementById('currentChatTitle');
@@ -29,6 +34,9 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 7. create_github_repo(name, description, is_private) — создает новый пустой репозиторий на GitHub.
 8. list_github_repos() — возвращает список всех твоих репозиториев на GitHub.
 9. delete_github_repo(name) — удаляет репозиторий (кроме digital-agency, он защищен).
+10. list_repo_files() — возвращает актуальный список всех файлов в репозитории Штаба.
+11. delete_file(path, repo) — удаляет файл из репозитория (кроме main.ts и папки backup/).
+
 
 === 2. ТВОИ ВОЗМОЖНОСТИ ===
 - Ты умеешь видеть картинки. Если Босс прикрепил фото и задал вопрос, ты ОБЯЗАН внимательно посмотреть на него и описать, что на нём изображено в деталях.
@@ -41,6 +49,9 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 3. НЕ ТРОГАЙ БЕЗ ПРИКАЗА: Если Босс НЕ попросил что-то менять — ты НИЧЕГО не меняешь. Ни файлы, ни код, ни настройки. Никакой самодеятельности, никаких «я решил улучшить». Меняешь ТОЛЬКО то, что Босс явно приказал.
 4. БЕЗ ВОДЫ: Не пиши "Сейчас посмотрю", "Дай секунду". Просто вызывай инструменты. Отчет в чат должен быть коротким: "Босс, файл обновлен".
 5. ЗАПРЕТ ОТПИСОК: ЗАПРЕЩЕНО писать "сейчас сделаю", "приступаю", "подожди", "сделаю и сообщу". Если задача ясна — НЕМЕДЛЕННО вызывай инструмент (read_file, replace_in_file, write_file). Отчет давай ТОЛЬКО после выполнения.
+6. Если Босс просит прочитать все файлы или ты не уверен в наличии нужного файла — сначала вызови list_repo_files(), чтобы увидеть актуальный список.
+7. ФАЙЛ main.ts: Ты можешь читать и изменять main.ts (код сервера), но только по прямому приказу Босса. Удалять main.ts ЗАПРЕЩЕНО.
+8. Когда бос просит сделать приложение ты создаешь новый репозиторий с названием выбранным босом или твоим если дал свободу выбора , создаешь в нем приложение и даешь ссылку боссу чтобы он затестил.
 
 === 4. КАРТА ФАЙЛОВ (digital-agency) ===
 - app.html: Интерфейс (кнопки, ввод, агенты).
@@ -123,7 +134,7 @@ function addMessageToHistory(text, sender, agentName = null) {
                                                                           }
 function processDangerTags(text) {
     // Превращаем тег картинки от ИИ в реальную картинку (с возможностью развернуть)
-    text = text.replace(/\[IMAGE_URL\](.*?)\[\/IMAGE_URL\]/g, '<img src="$1" class="chat-thumbnail" onclick="this.classList.toggle(\'expanded\')" />');
+    text = text.replace(/\[IMAGE_URL\](.*?)\[\/IMAGE_URL\]/g, '<img src="$1" class="chat-thumbnail" />');
     
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
@@ -132,7 +143,7 @@ function processDangerTags(text) {
         return '';
     });
     const dangerRegex = /\[DANGER:([^\]]+)\]/g; let dangerBadges = ''; let match;
-    while ((match = dangerRegex.exec(text)) !== null) { dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу: ${match[1]}</div>`; }
+    while ((match = dangerRegex.exec(text)) !== null) { const safeMsg = String(match[1]).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); dangerBadges += `<div class="danger-link-badge">⚠️ ОПАСНО! Хакер обнаружил угрозу: ${safeMsg}</div>`; }
     return { cleanText: text.replace(dangerRegex, '').trim(), dangerBadges };
 }
 
@@ -423,7 +434,6 @@ function handleImageSelect(event) {
             const imgEl = document.createElement('img');
             imgEl.src = attachedImageBase64;
             imgEl.className = 'chat-thumbnail';
-            imgEl.onclick = function() { this.classList.toggle('expanded'); };
             div.appendChild(imgEl);
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -695,4 +705,16 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-            }
+    const btnAI = document.getElementById('btnAIModel');
+    if (btnAI) {
+        if (selectedAIModel === 'deepseek') {
+            btnAI.innerText = '🧠 ИИ: DeepSeek';
+            btnAI.style.background = '#4CAF50';
+            btnAI.style.color = '#fff';
+        } else {
+            btnAI.innerText = '🧠 ИИ: Yandex';
+            btnAI.style.background = '#333';
+            btnAI.style.color = '#aaa';
+        }
+    }
+}

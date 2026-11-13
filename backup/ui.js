@@ -112,11 +112,6 @@ function toggleAutoMode() {
     else { btn.innerText = "⚡ Авто: ВЫКЛ"; btn.style.background = "#333"; btn.style.color = "#aaa"; }
 }
 
-function clearAllChats() {
-    allChats = {}; createNewChat(true);
-    renderMessage("🧹 История очищена.", 'director', 'Оркестратор');
-}
-
 async function clearAllContent() {
     renderMessage("🧹 Очищаю контент...", 'director', 'Оркестратор');
     try {
@@ -131,35 +126,6 @@ async function clearContentFromButton() {
         document.getElementById('contentModal').classList.remove('active');
         await clearAllContent();
         setTimeout(() => { location.reload(); }, 2000);
-    }
-}
-
-function init() {
-    if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
-    if (typeof updateNetStatus === 'function') updateNetStatus();
-    const chatIds = Object.keys(allChats);
-    if (!currentChatId || !allChats[currentChatId]) {
-        if (chatIds.length > 0) { currentChatId = chatIds.sort((a, b) => b.localeCompare(a))[0]; loadChat(currentChatId); }
-        else { createNewChat(true); }
-    } else { loadChat(currentChatId); }
-    renderChatList(); 
-    const btnVoice = document.getElementById('btnVoiceToggle');
-    if (btnVoice && typeof isVoiceEnabled !== 'undefined') {
-        if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
-        else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
-    }
-        if (chatInputEl) chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
-    const btnAI = document.getElementById('btnAIModel');
-    if (btnAI) {
-        if (selectedAIModel === 'deepseek') {
-            btnAI.innerText = '🧠 ИИ: DeepSeek';
-            btnAI.style.background = '#4CAF50';
-            btnAI.style.color = '#fff';
-        } else {
-            btnAI.innerText = '🧠 ИИ: Yandex';
-            btnAI.style.background = '#333';
-            btnAI.style.color = '#aaa';
-        }
     }
 }
 
