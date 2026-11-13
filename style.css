@@ -376,26 +376,26 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     image-rendering: pixelated;
 }
 
-/* Позиции в покое (шаг 10%) */
+/* Позиции в покое (шаг 11.11% = 100/9 для 10 строк) */
 .agent-sprite.face-up    { background-position: 0% 0%; }
-.agent-sprite.face-down  { background-position: 0% 10%; }
-.agent-sprite.face-left  { background-position: 0% 40%; }
-.agent-sprite.face-right { background-position: 0% 60%; }
+.agent-sprite.face-down  { background-position: 0% 11.11%; }
+.agent-sprite.face-left  { background-position: 0% 44.44%; }
+.agent-sprite.face-right { background-position: 0% 66.67%; }
 
-/* Анимация ходьбы */
+/* Анимация ходьбы (4 кадра: 0 -> 133.33% при steps(4) даёт 0/33.3/66.7/100) */
 .agent-sprite.walking.face-down  { animation: walkDown 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-left  { animation: walkLeft 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-right { animation: walkRight 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-up    { animation: walkUp 0.6s steps(4) infinite; }
 
-@keyframes walkDown  { 0% { background-position: 0% 10%; } 100% { background-position: 100% 10%; } }
-@keyframes walkLeft  { 0% { background-position: 0% 40%; } 100% { background-position: 100% 40%; } }
-@keyframes walkRight { 0% { background-position: 0% 60%; } 100% { background-position: 100% 60%; } }
-@keyframes walkUp    { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+@keyframes walkDown  { 0% { background-position: 0% 11.11%; } 100% { background-position: 133.33% 11.11%; } }
+@keyframes walkLeft  { 0% { background-position: 0% 44.44%; } 100% { background-position: 133.33% 44.44%; } }
+@keyframes walkRight { 0% { background-position: 0% 66.67%; } 100% { background-position: 133.33% 66.67%; } }
+@keyframes walkUp    { 0% { background-position: 0% 0%; } 100% { background-position: 133.33% 0%; } }
 
 .agent-sprite.sitting { z-index: 5 !important; }
-.agent-sprite.drinking { animation: none !important; background-position: 0% 80%; }
-.agent-sprite.typing { animation: none !important; background-position: 0% 90%; }
+.agent-sprite.drinking { animation: none !important; background-position: 0% 88.89%; }
+.agent-sprite.typing { animation: none !important; background-position: 0% 100%; }
 
 .agent-name { position: absolute; top: -20px; font-size: 9px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 4px; border-radius: 3px; white-space: nowrap; z-index: 30; }
 .agent-bubble { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; display: none; z-index: 50; border: 2px solid #000; }
