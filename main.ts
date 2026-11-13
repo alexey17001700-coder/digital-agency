@@ -11,7 +11,7 @@ const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 const WRITE_ALLOWED_EXT = [".js", ".css", ".html", ".dart", ".yaml"];
 const WRITE_DENY_NAMES = ["main.ts"];
 const MAX_WRITE_SIZE = 400000;  
-const MAX_TOOL_RESULT = 40000;  
+const MAX_TOOL_RESULT = 200000;  
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -462,7 +462,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
   if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
   let currentMessages = [...messages];
-  let maxLoops = 5;
+  let maxLoops = 20;
   let weatherCard = "";
 
   for (let loop = 0; loop < maxLoops; loop++) {
