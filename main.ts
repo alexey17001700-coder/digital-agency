@@ -339,6 +339,22 @@ const TOOLS = [
       }
     }
   }
+  ,{
+  type: "function",
+  function: {
+    name: "create_github_repo",
+    description: "Создает новый пустой репозиторий на GitHub. Используй только по прямому приказу Босса.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Имя репозитория латиницей (например, my_new_app)" },
+        description: { type: "string", description: "Краткое описание проекта" },
+        is_private: { type: "boolean", description: "Сделать репозиторий приватным? (по умолчанию false)" }
+      },
+      required: ["name"]
+    }
+  }
+  }
 ];
 // ============================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
@@ -395,6 +411,33 @@ async function executeTool(name: string, args: any): Promise<string> {
         return `Ошибка поиска картинки: ${e.message}`;
       }
     }
+if (name === "create_github_repo") {
+  try {
+    const payload = {
+      name: args.name,
+      description: args.description || "Created by Shtab AI",
+      private: args.is_private || false,
+      auto_init: true 
+    };
+    
+    const res = await fetch("https://api.github.com/user/repos", {
+      method: "POST",
+      headers: {
+        "Authorization": `token ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "DenoDeploy"
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Ошибка создания репозитория");
+    
+    return `Успех: Репозиторий "${args.name}" успешно создан! Ссылка: ${data.html_url}`;
+  } catch (e: any) {
+    return `Ошибка создания репозитория: ${e.message}`;
+  }
+}
 
     return `Ошибка: неизвестный инструмент ${name}`;
     
