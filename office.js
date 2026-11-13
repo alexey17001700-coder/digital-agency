@@ -14,8 +14,6 @@ const SAFE_SPOTS = [
 ];
 
 const AGENT_SPEED = 12; // % в секунду
-
-// Коридоры (свободные полосы между столами)
 const CORRIDOR_Y = [8, 22, 35, 48, 61, 74, 92];
 const CORRIDOR_X = [8, 25, 46, 67, 88];
 
@@ -29,7 +27,6 @@ function toggleOffice() {
         chat.style.display = 'none';
         office.style.display = 'block';
         if (btn) btn.classList.add('active');
-
         if (!office.innerHTML.trim()) initOffice();
         if (!officeLoop) officeLoop = setInterval(officeTick, 1000);
     } else {
@@ -75,12 +72,6 @@ function initOffice() {
             desk.innerHTML = '<div class="desk-monitor"></div><div class="desk-pc"></div>';
             room.appendChild(desk);
             officeDesks.push({ el: desk, x: left, y: top });
-
-            const chair = document.createElement('div');
-            chair.className = 'desk-chair';
-            chair.style.top = (top + 7) + '%';
-            chair.style.left = (left + 2) + '%';
-            room.appendChild(chair);
         });
     });
 
@@ -91,8 +82,14 @@ function initOffice() {
 
         const sprite = document.createElement('div');
         const spriteType = (index % 4) + 1;
+        
+        // ИСПОЛЬЗУЕМ КАРТИНКИ ИЗ РЕПОЗИТОРИЯ
         sprite.className = `agent-sprite sitting sprite-${spriteType}`;
-
+        sprite.style.backgroundImage = `url('char${spriteType}.png')`;
+        sprite.style.backgroundSize = 'contain';
+        sprite.style.backgroundRepeat = 'no-repeat';
+        sprite.style.backgroundPosition = 'center bottom';
+        
         sprite.style.left = (deskData.x + 2) + '%';
         sprite.style.top = (deskData.y + 7) + '%';
         sprite.title = name;
@@ -112,7 +109,6 @@ function initOffice() {
     });
     container.appendChild(room);
 }
-
 function setAgentFacing(agent, dx, dy) {
     agent.el.classList.remove('face-up', 'face-down', 'face-left', 'face-right');
     if (Math.abs(dx) >= Math.abs(dy)) {
@@ -200,11 +196,9 @@ function moveAgentTo(name, targetX, targetY, callback) {
     const endY = targetY;
 
     const path = buildPath(startX, startY, endX, endY);
-    // заменяем последнюю точку на точную цель (коридоры могут чуть сместить)
     path[path.length - 1] = {x: endX, y: endY};
     moveAlongPath(agent, path, 0, callback);
-}
-
+                                            }
 function updateAgentInOffice(name, status) {
     agentStatuses[name] = status;
     if (!officeSprites[name] || !isOfficeOpen) return;
@@ -296,4 +290,4 @@ function officeTick() {
             }, 5000);
         });
     });
-    }
+                }
