@@ -10,6 +10,11 @@ let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
 const chatContainer = document.getElementById('chatContainer');
+// Делегированный обработчик: разворот миниатюр по клику (переживает перерисовку innerHTML).
+if (chatContainer) chatContainer.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t && t.classList && t.classList.contains('chat-thumbnail')) t.classList.toggle('expanded');
+});
 const chatListEl = document.getElementById('chatList');
 const sendBtn = document.getElementById('sendBtn');
 const chatTitleEl = document.getElementById('currentChatTitle');
