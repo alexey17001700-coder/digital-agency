@@ -128,7 +128,10 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>📂 История чатов</h2>
-            <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <span style="cursor:pointer; font-size: 18px;" title="Очистить всю историю" onclick="clearAllChats()">🗑️</span>
+                <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
+            </div>
         </div>
         <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
         <div class="chat-list" id="chatList"></div>
