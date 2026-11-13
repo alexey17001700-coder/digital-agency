@@ -177,6 +177,15 @@ function toggleAIModel() {
         btn.style.color = '#aaa';
     }
 }
+function refreshShtab() {
+    if (!confirm("🔄 Обновить Штаб? Страница перезагрузится.")) return;
+    if ('caches' in window) {
+        caches.keys().then(names => { for (let name of names) caches.delete(name); });
+    }
+    try { window.top.location.href = window.top.location.pathname + '?v=' + Date.now(); }
+    catch (e) { location.reload(); }
+}
+
 function openApiSettings() {
     const keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {};
     document.getElementById('userYandexKey').value = keys.yandexKey || '';
