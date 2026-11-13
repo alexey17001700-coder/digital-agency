@@ -705,4 +705,16 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-            }
+    const btnAI = document.getElementById('btnAIModel');
+    if (btnAI) {
+        if (selectedAIModel === 'deepseek') {
+            btnAI.innerText = '🧠 ИИ: DeepSeek';
+            btnAI.style.background = '#4CAF50';
+            btnAI.style.color = '#fff';
+        } else {
+            btnAI.innerText = '🧠 ИИ: Yandex';
+            btnAI.style.background = '#333';
+            btnAI.style.color = '#aaa';
+        }
+    }
+}
