@@ -130,7 +130,7 @@ function addMessageToHistory(text, sender, agentName = null) {
                                                                           }
 function processDangerTags(text) {
     // Превращаем тег картинки от ИИ в реальную картинку (с возможностью развернуть)
-    text = text.replace(/\[IMAGE_URL\](.*?)\[\/IMAGE_URL\]/g, '<img src="$1" class="chat-thumbnail" onclick="this.classList.toggle(\'expanded\')" />');
+    text = text.replace(/\[IMAGE_URL\](.*?)\[\/IMAGE_URL\]/g, '<img src="$1" class="chat-thumbnail" />');
     
     text = text.replace(/\[SEARCH:[^\]]+\]/g, '').replace(/\[FUNCTION:[^\]]+\]/g, '').replace(/\[READ:[^\]]+\]/g, '').replace(/\[FILE:[^\]]+\]/g, '').replace(/\[TASK:[^\]]+\]/g, '');
     text = text.replace(/\[([^\]]+)\]/g, (match, name) => {
