@@ -485,6 +485,13 @@ if (name === "delete_github_repo") {
     throw new Error(data.message || `HTTP ${res.status}`);
   } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
 }
+    if (name === "list_repo_files") {
+  try {
+    const res = await gitAPI("contents/");
+    if (!Array.isArray(res)) return "Не удалось получить список файлов.";
+    return res.filter((f: any) => f.type === 'file').map((f: any) => `- ${f.name}`).join("\n");
+  } catch (e: any) { return `Ошибка: ${e.message}`; }
+    }
     
     return `Ошибка: неизвестный инструмент ${name}`;
     
