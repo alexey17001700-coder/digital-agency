@@ -9,7 +9,7 @@ const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 const WRITE_ALLOWED_EXT = [".js", ".css", ".html", ".dart", ".yaml"];
-const WRITE_DENY_NAMES = ["main.ts"];
+const WRITE_DENY_NAMES = []; // Разрешено всё, кроме удаления
 const MAX_WRITE_SIZE = 400000;  
 const MAX_TOOL_RESULT = 200000;  
 
@@ -387,56 +387,74 @@ const TOOLS = [
 // ============================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
 // ============================================
+вестный инструмент ${name}`;
+    
+  } catch (e: any) {
+    return `Ошибка выполнения ${name}: ${e.message}`;
+  }
+    }
+// ============================================
+// ЗАПРОС К ZVENO (ЗРЕНИЕ)
+// ============================================
 async function executeTool(name: string, args: any): Promise<string> {
   try {
     // Определяем репозиторий (любой, который укажет ИИ)
-const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;    if (name === "read_file") {
+    const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
+    const isProtected = targetRepo === REPO_NAME;
+
+    if (name === "read_file") {
       if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
       const content = await getFileContent(args.path, targetRepo);
       if (content === null) return `Ошибка: файл "${args.path}" не найден.`;
       return content;
     }
+
     if (name === "write_file") {
-      if (!isWriteAllowed(args.path)) return `Ошибка: запись в "${args.path}" запрещена. Разрешены только .js/.css/.html/.dart/.yaml в корне (кроме main.ts и backup/).`;
+      // Разрешаем писать в main.ts, но проверяем размер и контент
       if (!args.content || args.content.length < 10) return "Ошибка: пустой контент.";
       if (args.content.length > MAX_WRITE_SIZE) return `Ошибка: файл слишком большой (${args.content.length} символов, лимит ${MAX_WRITE_SIZE}).`;
       await updateFileInRepo(args.path, args.content, targetRepo);
       return `Успех: файл "${args.path}" обновлён в репозитории ${targetRepo}.`;
     }
-    if (name === "search_web") {
-      return await searchInternet(args.query);
-    }
-    if (name === "get_weather") {
-      return await getWeather(args.city || "Саратов");
-    }
+
     if (name === "replace_in_file") {
-      if (args.path === "main.ts" || args.path.startsWith("backup/")) {
-        return "Ошибка: запись в этот файл запрещена системой безопасности.";
+      // Запрещаем только backup, main.ts разрешаем
+      if (isProtected && args.path.startsWith("backup/")) {
+        return "Ошибка: запись в папку backup запрещена.";
       }
       const oldCode = await getFileContent(args.path, targetRepo);
       if (!oldCode) return `Ошибка: файл "${args.path}" не найден.`;
       if (!oldCode.includes(args.search)) return `Ошибка: фрагмент для поиска не найден.`;
       
       const newCode = oldCode.split(args.search).join(args.replace);
-      
       await updateFileInRepo(args.path, newCode, targetRepo);
       return `Успех: файл "${args.path}" обновлен в репозитории ${targetRepo}.`;
     }
-    if (name === "search_image") {
-      try {
-        const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(args.query)}&page_size=1`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-        const data = await res.json();
-        
-        if (data.results && data.results.length > 0) {
-          const image = data.results[0];
-          return `[IMAGE_URL]${image.url}[/IMAGE_URL]`;
-        }
-        return `Ошибка: по запросу "${args.query}" ничего не найдено.`;
-      } catch (e: any) {
-        return `Ошибка поиска картинки: ${e.message}`;
-      }
+    if (name === "search_web") {
+  return await searchInternet(args.query);
+}
+
+if (name === "get_weather") {
+  return await getWeather(args.city || "Саратов");
+}
+
+if (name === "search_image") {
+  try {
+    // Используем LoremFlickr (работает без ключей и стабильнее Openverse)
+    const url = `https://loremflickr.com/json/800/600/${encodeURIComponent(args.query)}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    
+    const data = await res.json();
+    if (data.file) {
+      return `[IMAGE_URL]${data.file}[/IMAGE_URL]`;
     }
+    return `Ошибка: по запросу "${args.query}" ничего не найдено.`;
+  } catch (e: any) {
+    return `Ошибка поиска картинки: ${e.message}`;
+  }
+}
+
 if (name === "create_github_repo") {
   try {
     const payload = {
@@ -463,98 +481,71 @@ if (name === "create_github_repo") {
   } catch (e: any) {
     return `Ошибка создания репозитория: ${e.message}`;
   }
-}
-if (name === "list_github_repos") {
-  try {
-    const res = await fetch(`https://api.github.com/user/repos?per_page=100&sort=updated`, {
-      headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
-    });
-    const repos = await res.json();
-    if (!Array.isArray(repos)) return "Ошибка получения списка.";
-    return repos.map((r: any) => `- ${r.name} (${r.private ? "приватный" : "публичный"})`).join("\n");
-  } catch (e: any) { return `Ошибка: ${e.message}`; }
-}
-
-if (name === "delete_github_repo") {
-  const repo = String(args.name).trim();
-  // ЖЕЛЕЗНАЯ ЗАЩИТА: Штаб и Калькулятор удалять нельзя
-  if (repo === REPO_NAME || repo === "window_calc") {
-    return `Ошибка: репозиторий "${repo}" защищён от удаления. Удалять можно только остальные.`;
   }
-  try {
-    const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}`, {
-      method: "DELETE",
-      headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
-    });
-    if (res.status === 204) return `Успех: репозиторий "${repo}" удален.`;
-    const data = await res.json();
-    throw new Error(data.message || `HTTP ${res.status}`);
-  } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
-}
-    if (name === "list_repo_files") {
-  try {
-    const res = await gitAPI("contents/");
-    if (!Array.isArray(res)) return "Не удалось получить список файлов.";
-    return res.filter((f: any) => f.type === 'file').map((f: any) => `- ${f.name}`).join("\n");
-  } catch (e: any) { return `Ошибка: ${e.message}`; }
+    if (name === "list_github_repos") {
+      try {
+        const res = await fetch(`https://api.github.com/user/repos?per_page=100&sort=updated`, {
+          headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
+        });
+        const repos = await res.json();
+        if (!Array.isArray(repos)) return "Ошибка получения списка.";
+        if (repos.length === 0) return "У вас пока нет репозиториев.";
+        return repos.map((r: any) => `- ${r.name} (${r.private ? "приватный" : "публичный"})`).join("\n");
+      } catch (e: any) { return `Ошибка: ${e.message}`; }
     }
-    
+
+    if (name === "delete_github_repo") {
+      const repo = String(args.name).trim();
+      // ЖЕЛЕЗНАЯ ЗАЩИТА: Штаб и Калькулятор удалять нельзя
+      if (repo === REPO_NAME || repo === "window_calc") {
+        return `Ошибка: репозиторий "${repo}" защищён от удаления. Удалять можно только остальные.`;
+      }
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}`, {
+          method: "DELETE",
+          headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
+        });
+        if (res.status === 204) return `Успех: репозиторий "${repo}" удален.`;
+        const data = await res.json();
+        throw new Error(data.message || `HTTP ${res.status}`);
+      } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
+    }
+
+    if (name === "list_repo_files") {
+      try {
+        const repoToList = args.repo || REPO_NAME;
+        const res = await gitAPI("contents/", "GET", null, repoToList);
+        if (!Array.isArray(res)) return "Не удалось получить список файлов.";
+        return res.filter((f: any) => f.type === 'file').map((f: any) => `- ${f.name}`).join("\n");
+      } catch (e: any) { return `Ошибка: ${e.message}`; }
+    }
+
+    if (name === "delete_file") {
+      const repo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
+      // ЖЕЛЕЗНАЯ ЗАЩИТА: main.ts и backup удалять нельзя
+      if (repo === REPO_NAME && (args.path === "main.ts" || args.path.startsWith("backup/"))) {
+        return "Ошибка: удаление этого файла запрещено.";
+      }
+      try {
+        const existing = await gitAPI(`contents/${args.path}`, "GET", null, repo);
+        if (!existing || !existing.sha) return `Ошибка: файл "${args.path}" не найден.`;
+        const res = await gitAPI(`contents/${args.path}`, "DELETE", {
+          message: `Delete ${args.path} by AI`,
+          sha: existing.sha,
+          branch: "main"
+        }, repo);
+        if (res && res.commit) return `Успех: файл "${args.path}" удален из ${repo}.`;
+        throw new Error("GitHub не вернул commit.");
+      } catch (e: any) {
+        return `Ошибка удаления: ${e.message}`;
+      }
+    }
+
     return `Ошибка: неизвестный инструмент ${name}`;
     
   } catch (e: any) {
     return `Ошибка выполнения ${name}: ${e.message}`;
   }
-    }
-// ============================================
-// ЗАПРОС К ZVENO (ЗРЕНИЕ)
-// ============================================
-async function callZvenoVision(messages: any[], imageBase64: string): Promise<string> {
-  const apiKey = Deno.env.get("ZVENO_API_KEY");
-  if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
-  
-  const visionModel = "openai/gpt-4o-mini"; 
-  
-  let visionMessages = JSON.parse(JSON.stringify(messages)); 
-  
-  const systemIndex = visionMessages.findIndex((m: any) => m.role === 'system');
-  const visionPrompt = "Ты — зрячий ИИ-помощник. Ты ОБЯЗАН анализировать изображения. Если пользователь прислал фото и задал вопрос — опиши, что на нем изображено, в деталях. Не отказывайся от ответа.";
-  
-  if (systemIndex !== -1) {
-      visionMessages[systemIndex].content = visionPrompt;
-  } else {
-      visionMessages.unshift({ role: "system", content: visionPrompt });
-  }
-  
-  let lastMsg = visionMessages[visionMessages.length - 1];
-  
-  if (lastMsg && lastMsg.role === 'user') {
-      const textPrompt = lastMsg.content || "Опиши, что изображено на этом фото.";
-      lastMsg.content = [
-          { type: "text", text: textPrompt },
-          { type: "image_url", image_url: { url: imageBase64 } }
-      ];
-  }
-
-  const payload = {
-    model: visionModel,
-    messages: visionMessages,
-    max_tokens: 1024,
-    temperature: 0.7
-  };
-
-  const res = await fetch(ZVENO_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(FETCH_TIMEOUT)
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `Ошибка Vision: ${res.status}`);
-  return data.choices?.[0]?.message?.content || "Пустой ответ";
 }
 
 // ============================================
