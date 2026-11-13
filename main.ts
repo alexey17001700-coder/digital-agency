@@ -441,6 +441,20 @@ const TOOLS = [
       }
     }
   }
+  ,{
+  type: "function",
+  function: {
+    name: "enable_github_pages",
+    description: "Включает GitHub Pages для репозитория, чтобы сайт стал доступен по ссылке.",
+    parameters: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "Имя репозитория" }
+      },
+      required: ["repo"]
+    }
+  }
+  }
 ];
 // ============================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
@@ -583,7 +597,32 @@ async function executeTool(name: string, args: any): Promise<string> {
         throw new Error("GitHub не вернул commit.");
       } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
     }
-
+if (name === "enable_github_pages") {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${args.repo}/pages`, {
+      method: "POST",
+      headers: {
+        "Authorization": `token ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "DenoDeploy"
+      },
+      body: JSON.stringify({
+        source: { branch: "main", path: "/" }
+      })
+    });
+    
+    // 201 - создано, 409 - уже включено (это тоже успех)
+    if (res.status === 201 || res.status === 409) {
+       const link = `https://${REPO_OWNER.toLowerCase()}.github.io/${args.repo}/`;
+       return `Успех: GitHub Pages включен! Сайт будет доступен через 1-2 минуты по ссылке: ${link}`;
+    }
+    
+    const data = await res.json();
+    throw new Error(data.message || `HTTP ${res.status}`);
+  } catch (e: any) {
+    return `Ошибка включения Pages: ${e.message}. Возможно, нужно включить вручную в настройках репозитория.`;
+  }
+}
     return `Ошибка: неизвестный инструмент ${name}`;
   } catch (e: any) {
     return `Ошибка выполнения ${name}: ${e.message}`;
