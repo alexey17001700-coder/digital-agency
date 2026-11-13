@@ -2,310 +2,133 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🐍 Змейка</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Цифровое Агентство — Штаб</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    height: 100%;
-    background: #0a0a0a;
-    color: #00e5ff;
-    font-family: 'Courier New', monospace;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    user-select: none;
-  }
-  h1 {
-    font-size: 22px;
-    letter-spacing: 4px;
-    margin-bottom: 10px;
-    text-shadow: 0 0 12px #00e5ff;
-  }
-  #score {
-    font-size: 16px;
-    margin-bottom: 12px;
-    letter-spacing: 2px;
-  }
-  #score b { color: #39ff14; text-shadow: 0 0 10px #39ff14; }
-  #wrap {
-    position: relative;
-    border: 2px solid #00e5ff;
-    border-radius: 10px;
-    box-shadow: 0 0 25px rgba(0,229,255,.5), inset 0 0 25px rgba(0,229,255,.15);
-    background: #050505;
-  }
-  canvas { display: block; border-radius: 8px; }
-  #overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,.82);
-    border-radius: 8px;
-    text-align: center;
-    padding: 20px;
-    gap: 14px;
-  }
-  #overlay.hidden { display: none; }
-  #overlay h2 { font-size: 20px; letter-spacing: 3px; text-shadow: 0 0 12px #00e5ff; }
-  #overlay p { font-size: 13px; color: #8fdfff; line-height: 1.6; }
-  button {
-    background: transparent;
-    color: #00e5ff;
-    border: 2px solid #00e5ff;
-    padding: 10px 26px;
-    font-family: inherit;
-    font-size: 15px;
-    letter-spacing: 2px;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 0 15px rgba(0,229,255,.4);
-    transition: .15s;
-  }
-  button:active { background: #00e5ff; color: #000; }
-  #controls {
-    margin-top: 16px;
-    display: grid;
-    grid-template-columns: repeat(3, 60px);
-    grid-template-rows: repeat(2, 60px);
-    gap: 8px;
-  }
-  #controls button {
-    width: 60px; height: 60px;
-    padding: 0;
-    font-size: 22px;
-    border-radius: 12px;
-  }
-  .up { grid-column: 2; grid-row: 1; }
-  .left { grid-column: 1; grid-row: 2; }
-  .down { grid-column: 2; grid-row: 2; }
-  .right { grid-column: 3; grid-row: 2; }
-  @media (min-width: 700px) { #controls { display: none; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+  #splash { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; align-items: center; justify-content: center; transition: opacity .6s; }
+  #matrix { position: absolute; inset: 0; display: block; }
+  .splash-logo { position: relative; z-index: 2; color: #00e5ff; font-size: 20px; letter-spacing: 6px; text-shadow: 0 0 20px #00e5ff; animation: pulse 1.4s ease-in-out infinite; text-align: center; }
+  @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  #frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #0a0a0a; }
+  #toolsBtn { position: fixed; right: 12px; bottom: 12px; z-index: 10001; width: 46px; height: 46px; border-radius: 50%; background: #0a0a0a; color: #00e5ff; border: 2px solid #00e5ff; font-size: 20px; cursor: pointer; box-shadow: 0 0 20px rgba(0,229,255,.5); }
+  #panel { display: none; position: fixed; right: 12px; bottom: 68px; z-index: 10001; width: 230px; background: #0a0a0a; border: 2px solid #00e5ff; border-radius: 12px; padding: 14px; color: #00e5ff; box-shadow: 0 0 25px rgba(0,229,255,.5); }
+  #panel.open { display: block; }
+  #panel h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 2px; text-align: center; }
+  #panel input { width: 100%; padding: 9px; background: #000; border: 1px solid #00e5ff; color: #00e5ff; border-radius: 6px; font-family: inherit; font-size: 14px; text-align: center; letter-spacing: 4px; }
+  #panel button { width: 100%; margin-top: 9px; padding: 10px; background: transparent; border: 1px solid #00e5ff; color: #00e5ff; border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer; transition: .15s; }
+  #panel button:active { background: #00e5ff; color: #000; }
+  #panel button.danger { border-color: #ff0055; color: #ff0055; }
+  #panel button.danger:active { background: #ff0055; color: #fff; }
+  #panelStatus { margin-top: 10px; font-size: 11px; color: #8fdfff; min-height: 14px; text-align: center; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
-  <h1>🐍 SNAKE</h1>
-  <div id="score">СЧЁТ: <b id="scoreVal">0</b> &nbsp; РЕКОРД: <b id="bestVal">0</b></div>
-  <div id="wrap">
-    <canvas id="game"></canvas>
-    <div id="overlay">
-      <h2>ЗМЕЙКА</h2>
-      <p>Управление: стрелки / WASD<br>На телефоне — кнопки внизу или свайп</p>
-      <button id="startBtn">СТАРТ</button>
+  <div id="splash"><canvas id="matrix"></canvas><div class="splash-logo">ЦИФРОВОЕ АГЕНТСТВО</div></div>
+
+  <iframe id="frame" title="Штаб"></iframe>
+
+  <div id="panel">
+    <h3>🛠️ ПАНЕЛЬ ШТАБА</h3>
+    <div id="safeGate">
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN">
+      <button onclick="checkPin()">🔓 Открыть сейф</button>
     </div>
+    <div id="safeBox" class="hidden">
+      <button onclick="doBackup()">💾 Сохранить эталон</button>
+      <button class="danger" onclick="doRollback()">⏪ Откатить Штаб</button>
+    </div>
+    <div id="panelStatus"></div>
   </div>
-  <div id="controls">
-    <button class="up" data-dir="up">▲</button>
-    <button class="left" data-dir="left">◀</button>
-    <button class="down" data-dir="down">▼</button>
-    <button class="right" data-dir="right">▶</button>
-  </div>
+  <button id="toolsBtn" onclick="togglePanel()">🛠️</button>
 
 <script>
-(function () {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const overlay = document.getElementById('overlay');
-  const startBtn = document.getElementById('startBtn');
-  const scoreVal = document.getElementById('scoreVal');
-  const bestVal = document.getElementById('bestVal');
+  const PROXY = "https://shtab-boss.duckdns.org:8443";
+  const SAFE_PIN = "8452";
 
-  const COLS = 20, ROWS = 20;
-  let CELL = 20;
+  // Загружаем Штаб в iframe с защитой от кэша
+  (function () {
+    const frame = document.getElementById('frame');
+    frame.src = 'app.html?v=' + Date.now();
+  })();
 
-  function resize() {
-    const maxW = Math.min(window.innerWidth - 40, 420);
-    const maxH = window.innerHeight - 260;
-    const size = Math.max(200, Math.min(maxW, maxH));
-    CELL = Math.floor(size / COLS);
-    canvas.width = CELL * COLS;
-    canvas.height = CELL * ROWS;
-    draw();
+  function togglePanel() {
+    document.getElementById('panel').classList.toggle('open');
   }
 
-  let snake, dir, nextDir, food, score, best, running, tick, speed, lastTime, acc;
-
-  best = parseInt(localStorage.getItem('snake_best') || '0', 10);
-  bestVal.textContent = best;
-
-  function reset() {
-    snake = [{x: 9, y: 10}, {x: 8, y: 10}, {x: 7, y: 10}];
-    dir = {x: 1, y: 0};
-    nextDir = {x: 1, y: 0};
-    score = 0;
-    speed = 140;
-    acc = 0;
-    lastTime = 0;
-    scoreVal.textContent = 0;
-    placeFood();
+  function setStatus(text) {
+    document.getElementById('panelStatus').textContent = text || '';
   }
 
-  function placeFood() {
-    let ok = false;
-    while (!ok) {
-      food = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
-      ok = !snake.some(s => s.x === food.x && s.y === food.y);
-    }
-  }
-
-  function draw() {
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // сетка
-    ctx.strokeStyle = 'rgba(0,229,255,.08)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= COLS; i++) {
-      ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
-    }
-    for (let j = 0; j <= ROWS; j++) {
-      ctx.beginPath(); ctx.moveTo(0, j * CELL); ctx.lineTo(canvas.width, j * CELL); ctx.stroke();
-    }
-
-    if (!snake) return;
-
-    // еда
-    ctx.fillStyle = '#ff2e63';
-    ctx.shadowColor = '#ff2e63';
-    ctx.shadowBlur = 15;
-    ctx.beginPath();
-    ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.34, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // змейка
-    snake.forEach((s, i) => {
-      const t = i / snake.length;
-      ctx.fillStyle = i === 0 ? '#39ff14' : `rgba(0,229,255,${1 - t * 0.6})`;
-      ctx.shadowColor = i === 0 ? '#39ff14' : '#00e5ff';
-      ctx.shadowBlur = i === 0 ? 18 : 6;
-      const pad = i === 0 ? 1 : 2;
-      roundRect(s.x * CELL + pad, s.y * CELL + pad, CELL - pad * 2, CELL - pad * 2, 5);
-      ctx.fill();
-    });
-    ctx.shadowBlur = 0;
-  }
-
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  function step() {
-    dir = nextDir;
-    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
-
-    // стены
-    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return gameOver();
-    // хвост
-    if (snake.some((s, i) => i < snake.length - 1 && s.x === head.x && s.y === head.y)) return gameOver();
-
-    snake.unshift(head);
-
-    if (head.x === food.x && head.y === food.y) {
-      score += 10;
-      scoreVal.textContent = score;
-      if (speed > 60) speed -= 4;
-      placeFood();
+  function checkPin() {
+    const val = document.getElementById('pinInput').value.trim();
+    if (val === SAFE_PIN) {
+      document.getElementById('safeGate').classList.add('hidden');
+      document.getElementById('safeBox').classList.remove('hidden');
+      setStatus('Сейф открыт ✅');
     } else {
-      snake.pop();
+      setStatus('Неверный PIN ❌');
     }
-    draw();
   }
 
-  function loop(time) {
-    if (!running) return;
-    if (!lastTime) lastTime = time;
-    acc += time - lastTime;
-    lastTime = time;
-    if (acc >= speed) {
-      acc = 0;
-      step();
-      if (!running) return;
+  async function callProxy(payload) {
+    setStatus('Связь с сервером...');
+    try {
+      const res = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      setStatus(data.success ? 'Готово ✅' : ('Ошибка: ' + (data.error || 'неизвестно')));
+    } catch (e) {
+      setStatus('Сбой сети: ' + e.message);
     }
-    requestAnimationFrame(loop);
   }
 
-  function start() {
-    reset();
-    overlay.classList.add('hidden');
-    running = true;
-    lastTime = 0;
-    acc = 0;
-    requestAnimationFrame(loop);
+  function doBackup() { callProxy({ isBackup: true }); }
+
+  function doRollback() {
+    if (confirm('Откатить Штаб к сохранённому эталону?')) callProxy({ isRollback: true });
   }
 
-  function gameOver() {
-    running = false;
-    if (score > best) {
-      best = score;
-      localStorage.setItem('snake_best', best);
-      bestVal.textContent = best;
+  // Матрица на заставке
+  (function () {
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    const chars = '01アイウエオカキクケコサシスセソタチツテトABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let cols, drops;
+    function init() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      cols = Math.floor(canvas.width / 16);
+      drops = new Array(cols).fill(1);
     }
-    overlay.innerHTML =
-      '<h2>ИГРА ОКОНЧЕНА</h2>' +
-      '<p>Твой счёт: <b style="color:#39ff14">' + score + '</b><br>Рекорд: ' + best + '</p>' +
-      '<button id="startBtn">ЗАНОВО</button>';
-    overlay.classList.remove('hidden');
-    document.getElementById('startBtn').addEventListener('click', start);
-  }
+    init();
+    window.addEventListener('resize', init);
+    setInterval(function () {
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = '16px monospace';
+      for (let i = 0; i < drops.length; i++) {
+        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * 16, drops[i] * 16);
+        if (drops[i] * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }, 50);
+  })();
 
-  function setDir(d) {
-    const map = {
-      up: {x: 0, y: -1}, down: {x: 0, y: 1},
-      left: {x: -1, y: 0}, right: {x: 1, y: 0}
-    };
-    const nd = map[d];
-    if (!nd) return;
-    if (nd.x === -dir.x && nd.y === -dir.y) return; // назад нельзя
-    nextDir = nd;
-  }
-
-  // клавиатура
-  document.addEventListener('keydown', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'arrowup' || k === 'w') setDir('up');
-    else if (k === 'arrowdown' || k === 's') setDir('down');
-    else if (k === 'arrowleft' || k === 'a') setDir('left');
-    else if (k === 'arrowright' || k === 'd') setDir('right');
-    else if (k === ' ' && !running) start();
-    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  // Прячем заставку
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      const s = document.getElementById('splash');
+      s.style.opacity = '0';
+      setTimeout(function () { s.remove(); }, 650);
+    }, 1600);
   });
-
-  // кнопки
-  document.querySelectorAll('#controls button').forEach(b => {
-    b.addEventListener('click', () => setDir(b.dataset.dir));
-  });
-
-  // свайпы
-  let tsx = 0, tsy = 0;
-  canvas.addEventListener('touchstart', e => {
-    tsx = e.touches[0].clientX; tsy = e.touches[0].clientY;
-  }, { passive: true });
-  canvas.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - tsx;
-    const dy = e.changedTouches[0].clientY - tsy;
-    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
-    if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 'right' : 'left');
-    else setDir(dy > 0 ? 'down' : 'up');
-  }, { passive: true });
-
-  startBtn.addEventListener('click', start);
-  window.addEventListener('resize', resize);
-
-  reset();
-  resize();
-})();
 </script>
 </body>
 </html>
