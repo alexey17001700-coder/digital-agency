@@ -430,7 +430,6 @@ function handleImageSelect(event) {
             const imgEl = document.createElement('img');
             imgEl.src = attachedImageBase64;
             imgEl.className = 'chat-thumbnail';
-            imgEl.onclick = function() { this.classList.toggle('expanded'); };
             div.appendChild(imgEl);
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
