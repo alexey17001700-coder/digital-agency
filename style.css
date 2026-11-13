@@ -1,12 +1,66 @@
 /* --- БАЗА --- */
-body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100dvh; overflow: hidden; touch-action: pan-y; }
-.sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
+body {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    display: flex;
+    height: 100dvh;
+    overflow: hidden;
+    touch-action: pan-y;
+}
+
+/* --- БОКОВАЯ ПАНЕЛЬ (САЙДБАР) --- */
+.sidebar {
+    width: 260px;
+    background-color: #121212;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    position: absolute;
+    height: 100%;
+    z-index: 100;
+    transform: translateX(-100%);
+}
 .sidebar.open { transform: translateX(0); }
-.sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+.sidebar-header {
+    padding: 15px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 .sidebar-header h2 { font-size: 16px; margin: 0; color: #00e5ff; }
-.new-chat-btn { background: #00e5ff; color: #000; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: calc(100% - 20px); margin: 10px; }
-.chat-list { flex-grow: 1; overflow-y: auto; padding: 0 10px 10px 10px; display: flex; flex-direction: column; gap: 5px; }
-.chat-item { padding: 10px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: #1e1e1e; }
+.new-chat-btn {
+    background: #00e5ff;
+    color: #000;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    width: calc(100% - 20px);
+    margin: 10px;
+}
+.chat-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 10px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.chat-item {
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    background: #1e1e1e;
+}
 .chat-item:hover { background: #2c3e50; }
 .chat-item.pinned { border-left: 3px solid #ffd700; }
 .chat-item-actions { display: flex; gap: 5px; opacity: 0.5; }
@@ -14,50 +68,224 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
 
 /* --- ОСНОВНАЯ ЗОНА --- */
-.main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
-.top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: relative; }
-.menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
-.top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+.top-bar {
+    padding: 10px;
+    background: #121212;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    position: relative;
+}
+.menu-btn {
+    background: none;
+    border: none;
+    color: #00e5ff;
+    font-size: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.top-bar h1 {
+    font-size: 15px;
+    margin: 0;
+    color: #00e5ff;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
 
 /* --- СТАТУС-БАР --- */
-.status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
-.status-item { display: flex; align-items: center; gap: 3px; background: #1e1e1e; padding: 3px 6px; border-radius: 10px; border: 1px solid #333; transition: all 0.3s; }
-.status-item .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
+.status-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 5px;
+    font-size: 9px;
+    font-family: monospace;
+    flex-shrink: 0;
+}
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: #1e1e1e;
+    padding: 3px 6px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    transition: all 0.3s;
+}
+.status-item .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #555;
+}
 .status-item.online .dot { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
 .status-item.offline .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
 .status-item.loading .dot { background: #ffaa00; box-shadow: 0 0 5px #ffaa00; animation: pulse 1s infinite alternate; }
 .status-item.alarm-active .dot { background: #ff0000; box-shadow: 0 0 5px #ff0000; animation: pulse 0.5s infinite alternate; }
 @keyframes pulse { to { opacity: 0.3; } }
-
 /* --- ТЕСТЕР --- */
-.tester-dropdown { display: none; position: static; margin: 8px 10px 0 10px; background: #1e1e1e; border: 1px solid #ffd700; border-radius: 8px; padding: 15px; width: auto; flex-shrink: 0; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 12px; }
+.tester-dropdown {
+    display: none;
+    position: static;
+    margin: 8px 10px 0 10px;
+    background: #1e1e1e;
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    padding: 15px;
+    width: auto;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    font-size: 12px;
+}
 .tester-dropdown.open { display: block; }
-.tester-title { font-weight: bold; color: #ffd700; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; }
-.tester-item { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; }
-.tester-item span:last-child { font-weight: bold; color: #fff; text-align: right; }
+.tester-title {
+    font-weight: bold;
+    color: #ffd700;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+    text-align: center;
+}
+.tester-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: #ccc;
+}
+.tester-item span:last-child {
+    font-weight: bold;
+    color: #fff;
+    text-align: right;
+}
 
 /* --- КНОПКИ РЕЖИМОВ --- */
-.mode-switch { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-shrink: 0; flex-wrap: wrap; }
-.mode-btn { padding: 6px 12px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; background: #333; color: #aaa; font-size: 12px;}
+.mode-switch {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.mode-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #333;
+    color: #aaa;
+    font-size: 12px;
+}
 .mode-btn.active { background: #00e5ff; color: #000; }
 .mode-btn.hacker-active { background: #ff0055; color: #fff; }
 
 /* --- ЧАТ --- */
-.chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
-.chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; -webkit-user-select: text; position: relative; touch-action: pan-y; }
-.msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
-.msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
-.chat-msg table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 12px; }
-.chat-msg th, .chat-msg td { border: 1px solid #555; padding: 5px; }
+.chat-container {
+    background: #0a0a0a;
+    padding: 15px;
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overscroll-behavior-y: contain;
+}
+.chat-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    user-select: text;
+    -webkit-user-select: text;
+    position: relative;
+    touch-action: pan-y;
+}
+.msg-director {
+    background: #2c3e50;
+    color: #ffd700;
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+.msg-boss {
+    background: #005662;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+.chat-msg table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10px;
+    font-size: 12px;
+}
+.chat-msg th, .chat-msg td {
+    border: 1px solid #555;
+    padding: 5px;
+}
 .chat-msg th { background-color: #1a252f; }
-.chat-msg pre { background: #1a1a1a; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px; }
-.chat-msg code { font-family: monospace; color: #00e5ff; }
-.chat-msg a { color: #00e5ff; text-decoration: underline; word-break: break-all; }
-.msg-avatar { display: inline-block; margin-right: 5px; font-size: 16px; vertical-align: middle; }
-.msg-name { font-weight: bold; font-size: 11px; margin-bottom: 4px; display: block; color: #aaa; cursor: pointer; }
+.chat-msg pre {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin-top: 10px;
+}
+.chat-msg code {
+    font-family: monospace;
+    color: #00e5ff;
+}
+.chat-msg a {
+    color: #00e5ff;
+    text-decoration: underline;
+    word-break: break-all;
+}
+.msg-avatar {
+    display: inline-block;
+    margin-right: 5px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+.msg-name {
+    font-weight: bold;
+    font-size: 11px;
+    margin-bottom: 4px;
+    display: block;
+    color: #aaa;
+    cursor: pointer;
+}
 
 /* --- КНОПКИ В СООБЩЕНИЯХ --- */
-.share-btn { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; padding: 2px 6px; border-radius: 5px; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 5; }
+.share-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #555;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 5;
+}
 .chat-msg:hover .share-btn { opacity: 1; }
 /* --- МЕДИА --- */
 .chat-media { max-width: 100%; border-radius: 8px; margin-top: 8px; display: block; }
@@ -65,7 +293,7 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .chat-video-container { position: relative; width: 100%; padding-bottom: 56.25%; margin-top: 8px; border-radius: 8px; overflow: hidden; background: #000; }
 .chat-video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
-/* --- МИНИАТЮРЫ ФОТО В ЧАТЕ --- */
+/* --- МИНИАТЮРЫ ФОТО --- */
 .chat-thumbnail { max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; margin-top: 5px; border: 1px solid #555; transition: transform 0.2s; }
 .chat-thumbnail:hover { transform: scale(1.05); }
 .chat-thumbnail.expanded { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); max-width: 95vw; max-height: 95vh; z-index: 9999; box-shadow: 0 0 30px rgba(0,0,0,0.9); cursor: zoom-out; }
@@ -133,77 +361,47 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .desk-monitor { width: 34px; height: 22px; background: #111; border: 1px solid #444; border-radius: 2px; position: absolute; top: -12px; left: 6px; }
 .desk-pc { width: 10px; height: 14px; background: #333; position: absolute; bottom: -12px; left: 18px; }
 .desk-monitor.active { background: #001a00 !important; border-color: #00ff00 !important; box-shadow: 0 0 10px #00ff00; overflow: hidden; }
-.desk-monitor.active::after { 
-    content: '01010 11010 00101 11001 11100 00011 10101 01010'; 
-    color: #00ff00; font-size: 6px; font-family: monospace; line-height: 1.1; 
-    display: block; width: 100%; height: 100%; padding: 2px;
-    animation: scrollCode 1.5s linear infinite; 
-}
+.desk-monitor.active::after { content: '01010 11010 00101 11001 11100 00011 10101 01010'; color: #00ff00; font-size: 6px; font-family: monospace; line-height: 1.1; display: block; width: 100%; height: 100%; padding: 2px; animation: scrollCode 1.5s linear infinite; }
 @keyframes scrollCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 
-/* --- СПРАЙТЫ АГЕНТОВ (С НАРЕЗКОЙ 4x8) --- */
+/* --- СПРАЙТЫ АГЕНТОВ (СЕТКА 4x10 - ИСПРАВЛЕНО) --- */
 .agent-sprite { 
     position: absolute; 
-    width: 50px; 
-    height: 70px; 
+    width: 48px; /* Квадратный размер, чтобы не плющило */
+    height: 48px; 
     z-index: 20; 
     transform: translate(-50%, -100%); 
-    background-size: 400% 800%; /* 4 колонки, 8 строк */
+    background-size: 400% 1000%; /* 4 колонки, 10 строк */
     background-repeat: no-repeat; 
     image-rendering: pixelated;
 }
 
-/* Стоячие позиции (смотрит вниз, влево, вправо, вверх) */
-.agent-sprite.face-down  { background-position: 0% 0%; }
-.agent-sprite.face-left  { background-position: 0% 14.2%; }
-.agent-sprite.face-right { background-position: 0% 28.5%; }
-.agent-sprite.face-up    { background-position: 0% 42.8%; }
+/* Позиции в покое (шаг 10%) */
+.agent-sprite.face-up    { background-position: 0% 0%; }
+.agent-sprite.face-down  { background-position: 0% 10%; }
+.agent-sprite.face-left  { background-position: 0% 40%; }
+.agent-sprite.face-right { background-position: 0% 60%; }
 
-/* Анимация ходьбы (перебирает кадры 1-4 в строке) */
+/* Анимация ходьбы */
 .agent-sprite.walking.face-down  { animation: walkDown 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-left  { animation: walkLeft 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-right { animation: walkRight 0.6s steps(4) infinite; }
 .agent-sprite.walking.face-up    { animation: walkUp 0.6s steps(4) infinite; }
 
-@keyframes walkDown  { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
-@keyframes walkLeft  { 0% { background-position: 0% 14.2%; } 100% { background-position: 100% 14.2%; } }
-@keyframes walkRight { 0% { background-position: 0% 28.5%; } 100% { background-position: 100% 28.5%; } }
-@keyframes walkUp    { 0% { background-position: 0% 42.8%; } 100% { background-position: 100% 42.8%; } }
+@keyframes walkDown  { 0% { background-position: 0% 10%; } 100% { background-position: 100% 10%; } }
+@keyframes walkLeft  { 0% { background-position: 0% 40%; } 100% { background-position: 100% 40%; } }
+@keyframes walkRight { 0% { background-position: 0% 60%; } 100% { background-position: 100% 60%; } }
+@keyframes walkUp    { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
 
 .agent-sprite.sitting { z-index: 5 !important; }
+.agent-sprite.drinking { animation: none !important; background-position: 0% 80%; }
+.agent-sprite.typing { animation: none !important; background-position: 0% 90%; }
 
-.agent-name { 
-    position: absolute; 
-    top: -20px; 
-    font-size: 9px; 
-    color: #fff; 
-    background: rgba(0,0,0,0.8); 
-    padding: 1px 4px; 
-    border-radius: 3px; 
-    white-space: nowrap; 
-    z-index: 30; 
-}
-
-.agent-bubble { 
-    position: absolute; 
-    top: -35px; 
-    left: 50%; 
-    transform: translateX(-50%); 
-    background: #fff; 
-    color: #000; 
-    padding: 4px 8px; 
-    border-radius: 8px; 
-    font-size: 10px; 
-    font-weight: bold; 
-    white-space: nowrap; 
-    display: none; 
-    z-index: 50; 
-    border: 2px solid #000; 
-}
+.agent-name { position: absolute; top: -20px; font-size: 9px; color: #fff; background: rgba(0,0,0,0.8); padding: 1px 4px; border-radius: 3px; white-space: nowrap; z-index: 30; }
+.agent-bubble { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; display: none; z-index: 50; border: 2px solid #000; }
 .agent-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #000 transparent transparent; }
 .agent-bubble.show { display: block; animation: blink 1s infinite alternate; }
 @keyframes blink { from { opacity: 1; } to { opacity: 0.4; } }
-
 /* --- ДЕКОР ОФИСА --- */
 .water-cooler { position: absolute; width: 14px; height: 22px; background: #e0e0e0; border-radius: 3px; z-index: 15; border: 1px solid #999; }
 .water-cooler::after { content: ''; position: absolute; top: -10px; left: 1px; width: 8px; height: 10px; background: #00e5ff; border-radius: 50% 50% 0 0; opacity: 0.8; }
@@ -227,7 +425,6 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .weather-card { position: relative; overflow: hidden; box-sizing: border-box; width: 100%; padding: 16px 18px 14px 18px; border-radius: 18px; background: linear-gradient(150deg, #10243a 0%, #173b4d 45%, #0c1a24 100%); border: 1px solid rgba(0, 229, 255, 0.35); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.07); color: #eaf6ff; font-size: 14px; animation: wcAppear 0.35s ease; margin-top: 4px; }
 .weather-card::before { content: ''; position: absolute; top: -60px; right: -50px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(0, 229, 255, 0.28) 0%, rgba(0, 229, 255, 0) 70%); pointer-events: none; }
 @keyframes wcAppear { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-
 .wc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; position: relative; z-index: 1; }
 .wc-place { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .wc-emoji { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.45)); flex-shrink: 0; }
@@ -238,13 +435,11 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .wc-tempbox { text-align: right; flex-shrink: 0; }
 .wc-temp { font-size: 38px; font-weight: 800; line-height: 1; color: #00e5ff; text-shadow: 0 0 18px rgba(0, 229, 255, 0.55); }
 .wc-feels { font-size: 11px; color: #8fb9c7; margin-top: 3px; white-space: nowrap; }
-
 .wc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 14px; position: relative; z-index: 1; }
 .wc-item { display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 11.5px; min-width: 0; }
 .wc-ico { font-size: 13px; flex-shrink: 0; }
 .wc-label { color: #8fb9c7; flex-shrink: 0; }
 .wc-val { margin-left: auto; color: #ffffff; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
 .wc-forecast { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(0, 229, 255, 0.3); position: relative; z-index: 1; }
 .wc-fday { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; font-size: 12px; }
 .wc-fday + .wc-fday { margin-top: 3px; }
@@ -253,10 +448,9 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .wc-femoji { font-size: 14px; flex-shrink: 0; }
 .wc-ftemp { font-weight: 800; color: #ffd700; white-space: nowrap; flex-shrink: 0; min-width: 70px; }
 .wc-fdesc { color: #8fb9c7; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 @media (max-width: 380px) {
     .wc-temp { font-size: 32px; }
     .wc-emoji { font-size: 28px; }
     .wc-grid { grid-template-columns: 1fr; }
     .wc-fname { min-width: 70px; }
-}
+   }
