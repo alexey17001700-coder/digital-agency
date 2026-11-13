@@ -463,35 +463,38 @@ async function executeTool(name: string, args: any): Promise<string> {
       return await getWeather(args.city || "Саратов");
     }
     if (name === "replace_in_file") {
-  if (args.path === "main.ts" || args.path.startsWith("backup/")) {
-    return "Ошибка: запись в этот файл запрещена системой безопасности.";
-  }
-  const oldCode = await getFileContent(args.path);
-  if (!oldCode) return `Ошибка: файл "${args.path}" не найден.`;
-  if (!oldCode.includes(args.search)) return `Ошибка: фрагмент для поиска не найден.`;
-  
-  const newCode = oldCode.split(args.search).join(args.replace);
-  
-  await updateFileInRepo(args.path, newCode);
-  return `Успех: файл "${args.path}" обновлен.`;
+      if (args.path === "main.ts" || args.path.startsWith("backup/")) {
+        return "Ошибка: запись в этот файл запрещена системой безопасности.";
+      }
+      const oldCode = await getFileContent(args.path);
+      if (!oldCode) return `Ошибка: файл "${args.path}" не найден.`;
+      if (!oldCode.includes(args.search)) return `Ошибка: фрагмент для поиска не найден.`;
+      
+      const newCode = oldCode.split(args.search).join(args.replace);
+      
+      await updateFileInRepo(args.path, newCode);
+      return `Успех: файл "${args.path}" обновлен.`;
     }
-    return `Ошибка: неизвестный инструмент ${name}`;
     if (name === "search_image") {
-  try {
-    // Используем Openverse (без ключа, работает на РФ IP)
-    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(args.query)}&page_size=1`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    const data = await res.json();
-    
-    if (data.results && data.results.length > 0) {
-      const image = data.results[0];
-      return `[IMAGE_URL]${image.url}[/IMAGE_URL]`;
+      try {
+        // Используем Openverse (без ключа, работает на РФ IP)
+        const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(args.query)}&page_size=1`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        const data = await res.json();
+        
+        if (data.results && data.results.length > 0) {
+          const image = data.results[0];
+          return `[IMAGE_URL]${image.url}[/IMAGE_URL]`;
+        }
+        return `Ошибка: по запросу "${args.query}" ничего не найдено.`;
+      } catch (e: any) {
+        return `Ошибка поиска картинки: ${e.message}`;
+      }
     }
-    return `Ошибка: по запросу "${args.query}" ничего не найдено.`;
-  } catch (e: any) {
-    return `Ошибка поиска картинки: ${e.message}`;
-  }
-  }
+
+    // Если ни один инструмент не совпал, возвращаем ошибку
+    return `Ошибка: неизвестный инструмент ${name}`;
+    
   } catch (e: any) {
     return `Ошибка выполнения ${name}: ${e.message}`;
   }
