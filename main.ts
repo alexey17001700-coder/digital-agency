@@ -389,10 +389,8 @@ const TOOLS = [
 // ============================================
 async function executeTool(name: string, args: any): Promise<string> {
   try {
-    // Определяем репозиторий (по умолчанию digital-agency)
-    const targetRepo = args.repo === "window_calc" ? "window_calc" : REPO_NAME;
-
-    if (name === "read_file") {
+    // Определяем репозиторий (любой, который укажет ИИ)
+const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;    if (name === "read_file") {
       if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
       const content = await getFileContent(args.path, targetRepo);
       if (content === null) return `Ошибка: файл "${args.path}" не найден.`;
