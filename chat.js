@@ -71,6 +71,17 @@ function renderChatList() {
     });
 }
 
+function clearAllChats() {
+    if (!confirm("Очистить всю историю чатов? Это действие нельзя отменить.")) return;
+    allChats = {};
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('shtabChatImage_')) localStorage.removeItem(k); });
+    localStorage.removeItem('shtabAllChats');
+    localStorage.removeItem('shtabCurrentChatId');
+    currentChatId = null;
+    renderChatList();
+    createNewChat(true);
+}
+
 function createNewChat(force = false) {
     if (Object.keys(allChats).length >= 10 && !force) { if (confirm("Лимит 10 чатов. Удалить старые?")) toggleSidebar(); return; }
     const id = 'chat_' + Date.now();
