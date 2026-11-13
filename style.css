@@ -154,10 +154,9 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
     flex-direction: column; 
     align-items: center; 
     transform: translate(-50%, -100%); 
-    background-size: contain; 
-    background-repeat: no-repeat; 
+    background-size: 100% 100%; /* Жестко фиксируем размер */
+    background-repeat: no-repeat; /* Запрещаем размножение */
     background-position: center bottom; 
-    transition: left 0.3s, top 0.3s;
 }
 .agent-sprite.sitting { z-index: 5 !important; }
 
