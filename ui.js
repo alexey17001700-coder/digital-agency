@@ -112,11 +112,6 @@ function toggleAutoMode() {
     else { btn.innerText = "⚡ Авто: ВЫКЛ"; btn.style.background = "#333"; btn.style.color = "#aaa"; }
 }
 
-function clearAllChats() {
-    allChats = {}; createNewChat(true);
-    renderMessage("🧹 История очищена.", 'director', 'Оркестратор');
-}
-
 async function clearAllContent() {
     renderMessage("🧹 Очищаю контент...", 'director', 'Оркестратор');
     try {
