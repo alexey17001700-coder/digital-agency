@@ -43,9 +43,12 @@ function isReadAllowed(path: unknown): boolean {
   if (typeof path !== "string") return false;
   const clean = path.trim().replace(/^\.\//, "");
   if (!clean || clean.includes("..")) return false;
-  if (clean.includes("/") || clean.includes("\\")) return false;
-  if (clean.toLowerCase().startsWith("backup")) return false;
-  return true;
+  const lower = clean.toLowerCase();
+  if (lower.startsWith("backup") || lower === "main.ts") return false;
+  
+  // Разрешаем безопасные расширения (включая вложенные папки lib/)
+  const allowedReadExt = [".js", ".css", ".html", ".dart", ".yaml", ".json", ".md"];
+  return allowedReadExt.some(ext => lower.endsWith(ext));
 }
 
 function checkSecret(request: Request): boolean {
