@@ -751,55 +751,73 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
 }
 // ============================================
 // WEBSOCKET ЧАТ (свой транспорт на Vivo)
-// Топик-модель как в MQTT: sub / pub / msg / batch.
+// Протокол комнат: wss://<host>/ws?room=<канал>
+//   клиент → сервер: {t:'msg', m} | {t:'typ', m} | {t:'dir', items}
+//   сервер → клиент: {t:'hist', items:[...]} | {t:'msg', m} | {t:'typ', m} | {t:'dir', items}
 // ============================================
-const chatClients = new Set<any>();
-const chatTopics = new Map<any, Set<string>>();
-const chatHistory = new Map<string, any[]>();
+const wsRooms = new Map<string, Set<any>>();   // room -> сокеты
+const wsHist = new Map<string, string[]>();    // room -> последние сообщения (JSON-строки)
+let wsDir = "";                                // последний справочник каналов
 
 function wsSend(ws: any, obj: any) {
   try { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); } catch (e) {}
 }
 
+function wsRoomBroadcast(room: string, obj: any, except: any = null) {
+  const set = wsRooms.get(room);
+  if (!set) return;
+  for (const ws of set) { if (ws !== except) wsSend(ws, obj); }
+}
+
 function handleChatSocket(request: Request): Response {
+  let room = "general";
+  try {
+    const u = new URL(request.url);
+    room = u.searchParams.get("room") || "general";
+  } catch (e) {}
+  room = String(room).slice(0, 64);
+
   const { socket, response } = Deno.upgradeWebSocket(request);
-  socket.onopen = () => { chatClients.add(socket); chatTopics.set(socket, new Set()); };
-  socket.onclose = () => { chatClients.delete(socket); chatTopics.delete(socket); };
-  socket.onerror = () => { chatClients.delete(socket); chatTopics.delete(socket); };
-  socket.onmessage = (ev: any) => {
-    let msg: any;
-    try { msg = JSON.parse(ev.data); } catch (e) { return; }
-    if (!msg || typeof msg !== "object") return;
 
-    if (msg.type === "sub") {
-      const t = String(msg.topic || "");
-      if (!t) return;
-      const set = chatTopics.get(socket);
-      if (set) set.add(t);
-      const hist = chatHistory.get(t);
-      if (hist && hist.length) wsSend(socket, { type: "batch", topic: t, items: hist });
-      return;
-    }
-
-    if (msg.type === "pub") {
-      const t = String(msg.topic || "");
-      if (!t) return;
-      const payload = msg.payload;
-      if (t.indexOf("hist_") >= 0 || t.indexOf("directory") >= 0) {
-        const arr = chatHistory.get(t) || [];
-        arr.push(payload);
-        if (arr.length > 5) arr.splice(0, arr.length - 5);
-        chatHistory.set(t, arr);
-      }
-      for (const ws of chatClients) {
-        const set = chatTopics.get(ws);
-        if (set && set.has(t)) wsSend(ws, { type: "msg", topic: t, payload });
-      }
-      return;
-    }
-
-    if (msg.type === "ping") { wsSend(socket, { type: "pong" }); return; }
+  socket.onopen = () => {
+    let set = wsRooms.get(room);
+    if (!set) { set = new Set(); wsRooms.set(room, set); }
+    set.add(socket);
+    if (wsDir) { try { wsSend(socket, { t: "dir", items: JSON.parse(wsDir) }); } catch (e) {} }
+    const hist = wsHist.get(room);
+    if (hist && hist.length) wsSend(socket, { t: "hist", items: hist });
   };
+
+  const drop = () => {
+    const set = wsRooms.get(room);
+    if (set) { set.delete(socket); if (!set.size) wsRooms.delete(room); }
+  };
+  socket.onclose = drop;
+  socket.onerror = drop;
+
+  socket.onmessage = (ev: any) => {
+    let d: any;
+    try { d = JSON.parse(ev.data); } catch (e) { return; }
+    if (!d || typeof d !== "object") return;
+
+    if (d.t === "msg") {
+      const raw = JSON.stringify(d);
+      const arr = wsHist.get(room) || [];
+      arr.push(raw);
+      if (arr.length > 40) arr.splice(0, arr.length - 40);
+      wsHist.set(room, arr);
+      wsRoomBroadcast(room, d);
+      return;
+    }
+    if (d.t === "typ") { wsRoomBroadcast(room, d, socket); return; }
+    if (d.t === "dir") {
+      try { wsDir = JSON.stringify(d.items || []); } catch (e) {}
+      for (const set of wsRooms.values()) for (const ws of set) wsSend(ws, d);
+      return;
+    }
+    if (d.t === "ping") { wsSend(socket, { t: "pong" }); return; }
+  };
+
   return response;
 }
 
