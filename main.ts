@@ -802,6 +802,11 @@ Deno.serve(async (request) => {
   if (upgrade === "websocket") {
     return handleChatSocket(request);
   }
+  // Свой WebSocket для Nexus Chat (wss://, проходит там, где MQTT и ntfy заблокированы)
+  if ((request.headers.get("upgrade") || "").toLowerCase() === "websocket") {
+    try { return handleWebSocket(request); }
+    catch (e: any) { return json({ success: false, error: "WS: " + e.message }, 500); }
+  }
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
 
