@@ -442,6 +442,20 @@ const TOOLS = [
                 required: ["path"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "enable_github_pages",
+            description: "Включает GitHub Pages для указанного репозитория, чтобы сайт стал доступен в интернете.",
+            parameters: {
+                type: "object",
+                properties: {
+                    repo: { type: "string", description: "Имя репозитория (например, nexus_chat)" }
+                },
+                required: ["repo"]
+            }
+        }
     }
 ];
 
