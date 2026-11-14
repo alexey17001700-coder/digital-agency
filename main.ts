@@ -797,6 +797,72 @@ function handleChatSocket(request: Request): Response {
   return response;
 }
 
+// ============================================
+// WEBSOCKET-РЕЛЕЙ (Nexus Chat) — свой транспорт на Vivo
+// ============================================
+const wsRooms = new Map<string, Set<WebSocket>>();
+const wsHistory = new Map<string, string[]>();
+const WS_MAX_HISTORY = 80;
+
+function wsJoin(room: string, ws: WebSocket) {
+  if (!wsRooms.has(room)) wsRooms.set(room, new Set());
+  wsRooms.get(room)!.add(ws);
+}
+function wsLeave(room: string, ws: WebSocket) {
+  const set = wsRooms.get(room);
+  if (!set) return;
+  set.delete(ws);
+  if (!set.size) wsRooms.delete(room);
+}
+function wsBroadcast(room: string, data: string, except?: WebSocket) {
+  const set = wsRooms.get(room);
+  if (!set) return 0;
+  let n = 0;
+  for (const s of set) {
+    if (s === except) continue;
+    try {
+      if (s.readyState === WebSocket.OPEN) { s.send(data); n++; }
+    } catch (e) {}
+  }
+  return n;
+}
+function wsPush(room: string, raw: string) {
+  const arr = wsHistory.get(room) || [];
+  arr.push(raw);
+  if (arr.length > WS_MAX_HISTORY) arr.splice(0, arr.length - WS_MAX_HISTORY);
+  wsHistory.set(room, arr);
+}
+function handleWebSocket(request: Request): Response {
+  const url = new URL(request.url);
+  const room = (url.searchParams.get("room") || "general").replace(/[^A-Za-z0-9_\-]/g, "").slice(0, 64) || "general";
+  const { socket, response } = Deno.upgradeWebSocket(request);
+  let joined = false;
+  socket.onopen = () => {
+    joined = true;
+    wsJoin(room, socket);
+    const hist = wsHistory.get(room) || [];
+    if (hist.length) {
+      try { socket.send(JSON.stringify({ t: "hist", room, items: hist })); } catch (e) {}
+    }
+    console.log("[WS] + " + room + " (в комнате: " + (wsRooms.get(room) || new Set()).size + ")");
+  };
+  socket.onmessage = (ev) => {
+    const raw = typeof ev.data === "string" ? ev.data : "";
+    if (!raw || raw.length > 400000) return;
+    let msg: any;
+    try { msg = JSON.parse(raw); } catch (e) { return; }
+    if (msg && msg.t === "ping") {
+      try { socket.send(JSON.stringify({ t: "pong" })); } catch (e) {}
+      return;
+    }
+    wsPush(room, raw);
+    wsBroadcast(room, raw, socket);
+  };
+  socket.onclose = () => { if (joined) wsLeave(room, socket); };
+  socket.onerror = () => { if (joined) wsLeave(room, socket); };
+  return response;
+}
+
 Deno.serve(async (request) => {
   const upgrade = (request.headers.get("upgrade") || "").toLowerCase();
   if (upgrade === "websocket") {
