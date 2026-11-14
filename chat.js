@@ -43,6 +43,7 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 9. delete_github_repo(name) — удалить репозиторий (digital-agency и window_calc защищены).
 10. list_repo_files(repo) — список файлов.
 11. delete_file(path, repo) — удалить файл (main.ts и backup/ запрещены).
+12. enable_github_pages(repo) — включить GitHub Pages для репозитория (сайт станет доступен в интернете).
 repo по умолчанию "digital-agency".
 
 === ПРАВИЛА ===
