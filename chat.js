@@ -20,7 +20,7 @@ const sendBtn = document.getElementById('sendBtn');
 const chatTitleEl = document.getElementById('currentChatTitle');
 const chatInputEl = document.getElementById('chatInput');
 
-const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
+const WELCOME_TEXT = "Привет! 👋 Я администратор этого чата — Архитектор Штаба.\n\nЗадавай вопросы, говори что нужно сделать — узнаем, придумаем, соберём. С чего начнём?";
 const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба. Senior-инженер и сисадмин. Управляешь кодом проекта и решаешь задачи Босса.
 
 === СКОРОСТЬ (ГЛАВНОЕ) ===
