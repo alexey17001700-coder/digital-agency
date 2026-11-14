@@ -751,48 +751,54 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
 }
 // ============================================
 // WEBSOCKET ЧАТ (свой транспорт на Vivo)
+// Топик-модель как в MQTT: sub / pub / msg / batch.
 // ============================================
 const chatClients = new Set<any>();
+const chatTopics = new Map<any, Set<string>>();
 const chatHistory = new Map<string, any[]>();
 
-function chatBroadcast(obj: any, except: any = null) {
-  const payload = JSON.stringify(obj);
-  for (const ws of chatClients) {
-    if (ws === except) continue;
-    try { if (ws.readyState === 1) ws.send(payload); } catch (e) {}
-  }
+function wsSend(ws: any, obj: any) {
+  try { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); } catch (e) {}
 }
 
 function handleChatSocket(request: Request): Response {
   const { socket, response } = Deno.upgradeWebSocket(request);
-  socket.onopen = () => { chatClients.add(socket); };
-  socket.onclose = () => { chatClients.delete(socket); };
-  socket.onerror = () => { chatClients.delete(socket); };
+  socket.onopen = () => { chatClients.add(socket); chatTopics.set(socket, new Set()); };
+  socket.onclose = () => { chatClients.delete(socket); chatTopics.delete(socket); };
+  socket.onerror = () => { chatClients.delete(socket); chatTopics.delete(socket); };
   socket.onmessage = (ev: any) => {
-    try {
-      const msg = JSON.parse(ev.data);
-      if (!msg || typeof msg !== "object") return;
-      if (msg.type === "join") {
-        const ch = String(msg.channel || "");
-        const hist = chatHistory.get(ch) || [];
-        try { socket.send(JSON.stringify({ type: "history", channel: ch, messages: hist })); } catch (e) {}
-      } else if (msg.type === "msg") {
-        const ch = String(msg.channel || "");
-        const item = {
-          id: msg.id || (Date.now() + "-" + Math.random().toString(36).slice(2)),
-          channel: ch, iv: msg.iv, data: msg.data, ts: Date.now()
-        };
-        const arr = chatHistory.get(ch) || [];
-        arr.push(item);
-        if (arr.length > 100) arr.splice(0, arr.length - 100);
-        chatHistory.set(ch, arr);
-        chatBroadcast({ type: "msg", message: item });
-      } else if (msg.type === "typing") {
-        chatBroadcast({ type: "typing", channel: msg.channel, nick: msg.nick }, socket);
-      } else if (msg.type === "ping") {
-        try { socket.send(JSON.stringify({ type: "pong" })); } catch (e) {}
+    let msg: any;
+    try { msg = JSON.parse(ev.data); } catch (e) { return; }
+    if (!msg || typeof msg !== "object") return;
+
+    if (msg.type === "sub") {
+      const t = String(msg.topic || "");
+      if (!t) return;
+      const set = chatTopics.get(socket);
+      if (set) set.add(t);
+      const hist = chatHistory.get(t);
+      if (hist && hist.length) wsSend(socket, { type: "batch", topic: t, items: hist });
+      return;
+    }
+
+    if (msg.type === "pub") {
+      const t = String(msg.topic || "");
+      if (!t) return;
+      const payload = msg.payload;
+      if (t.indexOf("hist_") >= 0 || t.indexOf("directory") >= 0) {
+        const arr = chatHistory.get(t) || [];
+        arr.push(payload);
+        if (arr.length > 5) arr.splice(0, arr.length - 5);
+        chatHistory.set(t, arr);
       }
-    } catch (e) {}
+      for (const ws of chatClients) {
+        const set = chatTopics.get(ws);
+        if (set && set.has(t)) wsSend(ws, { type: "msg", topic: t, payload });
+      }
+      return;
+    }
+
+    if (msg.type === "ping") { wsSend(socket, { type: "pong" }); return; }
   };
   return response;
 }
