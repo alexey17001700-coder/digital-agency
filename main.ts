@@ -600,6 +600,30 @@ if (name === "create_github_repo") {
             } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
         }
 
+        if (name === "enable_github_pages") {
+            const repo = args.repo || REPO_NAME;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}/pages`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `token ${GITHUB_TOKEN}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "DenoDeploy"
+                    },
+                    body: JSON.stringify({
+                        source: { branch: "main", path: "/" }
+                    })
+                });
+                const data = await res.json();
+                // 409 означает, что Pages уже включен
+                if (res.status === 201) return `Успех: GitHub Pages включен для ${repo}. Сайт скоро будет доступен.`;
+                if (res.status === 409) return `GitHub Pages уже включен для ${repo}.`;
+                throw new Error(data.message || `HTTP ${res.status}`);
+            } catch (e: any) {
+                return `Ошибка включения GitHub Pages: ${e.message}`;
+            }
+        }
+
         return `Ошибка: неизвестный инструмент "${name}".`;
     } catch (e: any) {
         return `Ошибка выполнения ${name}: ${e.message}`;
