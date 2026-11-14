@@ -749,7 +749,59 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
 
   return "⚠️ Слишком много шагов. Задача прервана.";
 }
+// ============================================
+// WEBSOCKET ЧАТ (свой транспорт на Vivo)
+// ============================================
+const chatClients = new Set<any>();
+const chatHistory = new Map<string, any[]>();
+
+function chatBroadcast(obj: any, except: any = null) {
+  const payload = JSON.stringify(obj);
+  for (const ws of chatClients) {
+    if (ws === except) continue;
+    try { if (ws.readyState === 1) ws.send(payload); } catch (e) {}
+  }
+}
+
+function handleChatSocket(request: Request): Response {
+  const { socket, response } = Deno.upgradeWebSocket(request);
+  socket.onopen = () => { chatClients.add(socket); };
+  socket.onclose = () => { chatClients.delete(socket); };
+  socket.onerror = () => { chatClients.delete(socket); };
+  socket.onmessage = (ev: any) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "join") {
+        const ch = String(msg.channel || "");
+        const hist = chatHistory.get(ch) || [];
+        try { socket.send(JSON.stringify({ type: "history", channel: ch, messages: hist })); } catch (e) {}
+      } else if (msg.type === "msg") {
+        const ch = String(msg.channel || "");
+        const item = {
+          id: msg.id || (Date.now() + "-" + Math.random().toString(36).slice(2)),
+          channel: ch, iv: msg.iv, data: msg.data, ts: Date.now()
+        };
+        const arr = chatHistory.get(ch) || [];
+        arr.push(item);
+        if (arr.length > 100) arr.splice(0, arr.length - 100);
+        chatHistory.set(ch, arr);
+        chatBroadcast({ type: "msg", message: item });
+      } else if (msg.type === "typing") {
+        chatBroadcast({ type: "typing", channel: msg.channel, nick: msg.nick }, socket);
+      } else if (msg.type === "ping") {
+        try { socket.send(JSON.stringify({ type: "pong" })); } catch (e) {}
+      }
+    } catch (e) {}
+  };
+  return response;
+}
+
 Deno.serve(async (request) => {
+  const upgrade = (request.headers.get("upgrade") || "").toLowerCase();
+  if (upgrade === "websocket") {
+    return handleChatSocket(request);
+  }
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
 
