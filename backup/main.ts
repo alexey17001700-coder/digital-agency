@@ -140,7 +140,7 @@ async function searchInternet(query: string) {
         } catch (e) {}
     }
     return parts.join("\n").trim() || "По вашему запросу ничего не найдено.";
-}
+    }
 function weatherEmoji(desc: string): string {
     const d = (desc || "").toLowerCase();
     if (d.includes("rpoza") || d.includes("thunder")) return "⛈️";
@@ -235,7 +235,7 @@ async function handleBackup(body: any) {
                 sourceFiles = backupContents.filter((item: any) => item.type === 'file').map((item: any) => ({ name: item.name, sha: item.sha }));
             }
         } catch (e) {}
-    }
+              }
       if (sourceFiles.length === 0) return json({ success: false, error: body.isBackup ? "Нет файлов в корне" : "Папка backup пуста" }, 400);
 
     const tree: any[] = [];
@@ -520,7 +520,7 @@ if (name === "create_github_repo") {
         if (!res.ok) throw new Error(data.message || `Ошибка создания репозитория`);
         return `Успех: репозиторий "${args.name}" создан! Ссылка: ${data.html_url}`;
     } catch (e: any) { return `Ошибка создания репозитория: ${e.message}`; }
-          }
+}
               if (name === "list_github_repos") {
             try {
                 const res = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", {
@@ -590,7 +590,7 @@ if (name === "create_github_repo") {
     } catch (e: any) {
         return `Ошибка выполнения ${name}: ${e.message}`;
     }
-}
+        }
 // =========================================
 // ЗАПРОС К ZVENO (ЗРЕНИЕ)
 // =========================================
