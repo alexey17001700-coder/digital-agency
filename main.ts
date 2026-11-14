@@ -711,7 +711,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             model: ZVENO_MODEL,
             messages: currentMessages,
             temperature: 0.5,
-            tools: TOOLS,
+            tools: activeTools,
             tool_choice: "auto"
         };
 
