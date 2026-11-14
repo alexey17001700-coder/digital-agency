@@ -994,3 +994,4 @@ Deno.serve(async (request) => {
     return json({ success: false, error: msg, choices: [{ message: { content: `❌ **Ошибка:** ${msg}` } }] }, 500);
   }
 });
+
