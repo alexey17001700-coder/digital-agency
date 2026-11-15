@@ -572,15 +572,25 @@ function hideOffice() {
 /*  ПЕРЕХВАТ КНОПКИ «ОФИС»                                             */
 /* ------------------------------------------------------------------ */
 function install() {
-    if (typeof window.toggleOffice === 'function' && !window.toggleOffice.__o3d) {
-        origToggle = window.toggleOffice;
-        const fn = function () {
-            isOpen = !isOpen;
-            if (isOpen) showOffice(); else hideOffice();
-        };
-        fn.__o3d = true;
-        window.toggleOffice = fn;
-    }
+    // Скрипты грузятся параллельно — ждём, пока office.js определит toggleOffice
+    let tries = 0;
+    const hook = () => {
+        if (typeof window.toggleOffice === 'function') {
+            if (!window.toggleOffice.__o3d) {
+                origToggle = window.toggleOffice;
+                const fn = function () {
+                    isOpen = !isOpen;
+                    if (isOpen) showOffice(); else hideOffice();
+                };
+                fn.__o3d = true;
+                window.toggleOffice = fn;
+            }
+            return;
+        }
+        if (tries++ < 60) setTimeout(hook, 100);
+        else console.warn('[office3d] toggleOffice не найден — 3D-офис не подключён');
+    };
+    hook();
     loadThree().catch(() => console.warn('[office3d] 3D недоступен, останется 2D-офис'));
 }
 
