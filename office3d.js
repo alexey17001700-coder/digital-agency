@@ -902,7 +902,7 @@ function agentBreak(a, dt) {
     if (a.breakTimer > 0) return;
     a.breakTimer = 25 + Math.random() * 20;
     const s = BREAK_SPOTS[(Math.random() * BREAK_SPOTS.length) | 0];
-    goTo(a, routeTo(s.x, s.z, a.model.position.z), () => {
+    goTo(a, routeOut(a.model.position.z, s.x, s.z), () => {
         a.state = 'idle';
         a.waitTimer = 5;
     });
