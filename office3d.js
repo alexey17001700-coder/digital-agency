@@ -941,6 +941,7 @@ function buildAgents(scene, spots) {
         tag.scale.set(1.9, 0.48, 1);
         tag.position.y = 2.0;
         tag.renderOrder = 2;
+        tag.userData.agentName = def.name;
         model.add(tag);
 
         // облачко-реплика
