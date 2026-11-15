@@ -1653,6 +1653,10 @@ function hideOffice() {
     GEO = null;
     toiletCount = 0;
     toiletTimer = 60 + Math.random() * 60;
+    bossCount = 0;
+    bossTimer = 18 + Math.random() * 20;
+    delete window.office3dSay;
+    delete window.office3dTask;
     if (office) { office.innerHTML = ''; office.style.display = 'none'; }
     if (chat) chat.style.display = 'flex';
     if (btn) btn.classList.remove('active');
