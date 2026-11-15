@@ -832,25 +832,53 @@ function goHome(a) {
     });
 }
 
-function routeTo(destX, destZ, fromZ) {
-    const z = clamp(fromZ, -16, 16);
-    if (destZ < -5) {
-        return [
-            new THREE.Vector3(CORRIDOR_X, 0, z),
-            new THREE.Vector3(CORRIDOR_X, 0, CORRIDOR_Z_BOT),
-            new THREE.Vector3(destX, 0, CORRIDOR_Z_BOT),
-            new THREE.Vector3(destX, 0, destZ)
-        ];
-    }
-    if (destZ > 5) {
-        return [
-            new THREE.Vector3(CORRIDOR_X, 0, z),
-            new THREE.Vector3(CORRIDOR_X, 0, CORRIDOR_Z_TOP),
-            new THREE.Vector3(destX, 0, CORRIDOR_Z_TOP),
-            new THREE.Vector3(destX, 0, destZ)
-        ];
-    }
-    return [new THREE.Vector3(destX, 0, destZ)];
+/* --- МАРШРУТИЗАЦИЯ ПО КОРИДОРАМ --------------------------------------
+   Агенты ходят только по коридорам, а в комнаты заходят через проходы
+   в стеклянных перегородках (единственные «двери»). Сквозь стены — нельзя.
+   Возвращает [узел в коридоре, узел внутри комнаты]. */
+function roomPath(destX, destZ) {
+    if (destX > 22) return [{ x: 25.7, z: CORRIDOR_Z_TOP }, { x: 25.7, z: 4.0 }];  // санузел
+    if (destZ > 7)  return [{ x: 10, z: CORRIDOR_Z_TOP }, { x: 10, z: 8.5 }];     // приемная
+    if (destZ < -7) return [{ x: 10, z: CORRIDOR_Z_BOT }, { x: 10, z: -8.5 }];    // серверная
+    if (destZ > 5)  return [{ x: 10, z: CORRIDOR_Z_TOP }, { x: 10, z: 5.8 }];     // переговорная ↑
+    if (destZ < -5) return [{ x: 10, z: CORRIDOR_Z_BOT }, { x: 10, z: -5.8 }];    // переговорная ↓
+    return [{ x: destX, z: destZ }, null];
+}
+
+/* Ближайший проход в стене опенспейса (x=3) */
+function exitGapZ(z) {
+    return Math.abs(z - CORRIDOR_Z_TOP) < Math.abs(z - CORRIDOR_Z_BOT) ? CORRIDOR_Z_TOP : CORRIDOR_Z_BOT;
+}
+
+/* Из опенспейса к цели */
+function routeOut(homeZ, destX, destZ) {
+    const exitZ = exitGapZ(homeZ);
+    const [corr, inside] = roomPath(destX, destZ);
+    const path = [
+        new THREE.Vector3(2.2, 0, homeZ + 1.0),       // выйти в проход за креслами
+        new THREE.Vector3(2.2, 0, exitZ),             // к проходу в стене x=3
+        new THREE.Vector3(CORRIDOR_X, 0, exitZ)       // вертикальный коридор
+    ];
+    if (Math.abs(corr.z - exitZ) > 0.4) path.push(new THREE.Vector3(CORRIDOR_X, 0, corr.z));
+    path.push(new THREE.Vector3(corr.x, 0, corr.z));
+    if (inside) path.push(new THREE.Vector3(inside.x, 0, inside.z));
+    path.push(new THREE.Vector3(destX, 0, destZ));
+    return path;
+}
+
+/* Из цели обратно в опенспейс */
+function routeBack(destX, destZ, homeX, homeZ) {
+    const exitZ = exitGapZ(homeZ);
+    const [corr] = roomPath(destX, destZ);
+    const path = [
+        new THREE.Vector3(corr.x, 0, corr.z),
+        new THREE.Vector3(CORRIDOR_X, 0, corr.z)
+    ];
+    if (Math.abs(exitZ - corr.z) > 0.4) path.push(new THREE.Vector3(CORRIDOR_X, 0, exitZ));
+    path.push(new THREE.Vector3(2.2, 0, exitZ));
+    path.push(new THREE.Vector3(2.2, 0, homeZ + 1.0));
+    path.push(new THREE.Vector3(homeX, 0, homeZ));
+    return path;
 }
 
 const BREAK_SPOTS = [
