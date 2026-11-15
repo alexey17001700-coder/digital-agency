@@ -904,6 +904,7 @@ const BREAK_SPOTS = [
 ];
 
 let toiletCount = 0;
+let toiletTimer = 60 + Math.random() * 60;
 
 function agentBreak(a, dt) {
     if (a.state !== 'sit' || a.working) return;
