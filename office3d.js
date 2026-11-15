@@ -1554,6 +1554,28 @@ function startScene(office) {
             screens[i].material.emissiveIntensity = 1.35 + Math.sin(t * 3 + i) * 0.18;
         }
 
+        // голо-панель Босса вспыхивает при докладе
+        const bh = scene.userData.bossHolo;
+        if (bh) {
+            bh.userData.flash = Math.max(0, bh.userData.flash - dt * 0.8);
+            bh.material.opacity = 0.45 + bh.userData.flash * 0.5;
+            bh.material.emissiveIntensity = 1.4 + bh.userData.flash * 2.2;
+        }
+
+        // ЭТАП 3: агенты ходят с докладом к Боссу
+        bossTimer -= dt;
+        if (bossTimer <= 0) {
+            bossTimer = 22 + Math.random() * 28;
+            if (bossCount < 2) {
+                const freeB = [];
+                for (let i = 0; i < agents.length; i++) {
+                    const a = agents[i];
+                    if (a.state === 'sit' && !a.working) freeB.push(a);
+                }
+                if (freeB.length) sendToBoss(freeB[(Math.random() * freeB.length) | 0]);
+            }
+        }
+
         // АГЕНТЫ: анимация + перемещение + потребности
         toiletTimer -= dt;
         if (toiletTimer <= 0) {
