@@ -593,6 +593,9 @@ function buildScene() {
         scene.add(pl);
     });
 
+    // АГЕНТЫ (ЭТАП 2)
+    const { agents, groups } = buildAgents(scene, M, desks);
+
     // СВЕТ: ровно 2 источника (без теней — экономия FPS)
     scene.add(new THREE.AmbientLight(0x8fa8c8, 1.15));
     const dir = new THREE.DirectionalLight(0xffffff, 1.7);
