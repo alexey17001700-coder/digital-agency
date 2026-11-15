@@ -1508,6 +1508,17 @@ function startScene(office) {
 
     const unbindPick = setupPick(renderer, cam, groups, selectAgent);
 
+    // ВНЕШНИЙ API (ЭТАП 3): другие модули могут заставить агента говорить
+    // и сходить с докладом к Боссу.
+    window.office3dSay = function (name, text, ms) {
+        const a = agentByName[name];
+        if (a) say(a, text, ms || 3500);
+    };
+    window.office3dTask = function (name, text) {
+        const a = agentByName[name];
+        if (a) sendToBoss(a, text);
+    };
+
     // СИНХРОНИЗАЦИЯ С СИСТЕМОЙ (статусы из ui.js → 3D-агенты)
     const prevUpdate = window.updateAgentInOffice;
     window.updateAgentInOffice = function (name, status) {
