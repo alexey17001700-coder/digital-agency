@@ -34,20 +34,59 @@ let origToggle = null; // оригинальный 2D toggleOffice
 /* ------------------------------------------------------------------ */
 /*  ЗАГРУЗКА THREE.JS                                                  */
 /* ------------------------------------------------------------------ */
+function esc(s) {
+    return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+function withTimeout(p, ms) {
+    return Promise.race([
+        p,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('таймаут ' + ms + ' мс')), ms))
+    ]);
+}
+
+/* Диагностика локального файла: статус, тип, размер, первые байты.
+   Нужна, чтобы понять, ЧТО именно лежит в three.module.js. */
+async function probeLocal() {
+    try {
+        const r = await fetch('./three.module.js', { cache: 'no-store' });
+        const ct = r.headers.get('content-type') || '?';
+        const len = r.headers.get('content-length') || '?';
+        let head = '';
+        try { head = (await r.text()).slice(0, 60).replace(/\s+/g, ' '); } catch (e) { head = '(не прочитан)'; }
+        return 'HTTP ' + r.status + ' · ' + ct + ' · ' + len + ' байт · начало: "' + head + '"';
+    } catch (e) {
+        return 'fetch не удался: ' + ((e && e.message) || e);
+    }
+}
+
+/* Загрузка Three.js. Пробуем по очереди все источники.
+   Поддерживаем ДВА формата файла:
+   1) ES-модуль (export class WebGLRenderer ...) — обычный three.module.js
+   2) UMD/глобальная сборка (three.min.js) — модуль ничего не экспортирует,
+      но создаёт window.THREE. Такой файл тоже подхватываем. */
 function loadThree() {
     if (THREE) return Promise.resolve(THREE);
     if (loadPromise) return loadPromise;
     loadPromise = (async () => {
+        const errs = [];
         for (const url of THREE_URLS) {
             try {
-                const mod = await import(url);
-                THREE = mod;
-                return THREE;
+                const mod = await withTimeout(import(url), 8000);
+                if (mod && mod.WebGLRenderer) { THREE = mod; return THREE; }
+                const g = (typeof window !== 'undefined') ? window.THREE : null;
+                if (g && g.WebGLRenderer) { THREE = g; return THREE; }
+                errs.push(url + ' → загрузился, но это не Three.js (нет WebGLRenderer)');
             } catch (e) {
-                console.warn('[office3d] Three.js не загрузился:', url);
+                const m = (e && e.message) ? e.message : String(e);
+                errs.push(url + ' → ' + m);
+                console.warn('[office3d] Three.js не загрузился:', url, m);
             }
         }
-        throw new Error('Three.js недоступен');
+        loadPromise = null; // разрешаем повторную попытку при следующем открытии
+        const err = new Error('Three.js недоступен');
+        err.details = errs;
+        throw err;
     })();
     return loadPromise;
 }
