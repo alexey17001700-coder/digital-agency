@@ -183,7 +183,7 @@ function buildDesk(M, screenTex) {
     const seat = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.14, 0.9), M.plastic);
     seat.position.y = 0.62; chair.add(seat);
     const back = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.85, 0.14), M.plastic);
-    back.position.set(0, 1.05, -0.42); chair.add(back);
+    back.position.set(0, 1.05, 0.42); chair.add(back);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.55, 8), M.metal);
     pole.position.y = 0.32; chair.add(pole);
     const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.07, 12), M.metal);
