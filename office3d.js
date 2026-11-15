@@ -999,6 +999,63 @@ function routeBack(destX, destZ, homeX, homeZ) {
     return path;
 }
 
+/* --- ЭТАП 3: доклад Боссу -------------------------------------------
+   Маршрут внутри опенспейса: за креслами → передний проход → стол Босса. */
+function routeToBoss(homeX, homeZ) {
+    return [
+        new THREE.Vector3(2.2, 0, homeZ + 1.0),
+        new THREE.Vector3(2.2, 0, BOSS_AISLE_Z),
+        new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_AISLE_Z),
+        new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_SPOT.z)
+    ];
+}
+
+function routeFromBoss(homeX, homeZ) {
+    return [
+        new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_AISLE_Z),
+        new THREE.Vector3(2.2, 0, BOSS_AISLE_Z),
+        new THREE.Vector3(2.2, 0, homeZ + 1.0),
+        new THREE.Vector3(homeX, 0, homeZ)
+    ];
+}
+
+/* Реплика над головой агента */
+function say(a, text, ms, color) {
+    const col = color || ('#' + new THREE.Color(a.color).getHexString());
+    if (a.bubble.material.map) a.bubble.material.map.dispose();
+    a.bubble.material.map = texBubble(text, col);
+    a.bubble.material.needsUpdate = true;
+    a.bubble.visible = true;
+    a.bubbleTimer = (ms || 3200) / 1000;
+}
+
+const TASK_TEXTS = [
+    'Проверить логи сервера', 'Собрать отчёт по заявкам', 'Обновить карту уровней',
+    'Протестировать сборку', 'Ответить клиенту', 'Проверить замер окон',
+    'Свести смету по кондиционерам', 'Проверить связь с сервером',
+    'Разобрать очередь задач', 'Подготовить сводку дня'
+];
+const DONE_TEXTS = ['Готово, Босс!', 'Выполнено!', 'Задача закрыта', 'Есть результат!'];
+
+let bossCount = 0;
+let bossTimer = 18 + Math.random() * 20;
+
+function sendToBoss(a, taskText) {
+    if (a.state !== 'sit' || a.working) return false;
+    bossCount++;
+    a.task = taskText || TASK_TEXTS[(Math.random() * TASK_TEXTS.length) | 0];
+    a.taskCube.visible = true;
+    say(a, a.task, 6000);
+    goTo(a, routeToBoss(a.home.x, a.home.z), () => {
+        a.state = 'report';
+        a.waitTimer = 4 + Math.random() * 3;
+        a.taskCube.visible = false;
+        say(a, DONE_TEXTS[(Math.random() * DONE_TEXTS.length) | 0], 5200, '#00ff88');
+        if (S && S.scene && S.scene.userData.bossHolo) S.scene.userData.bossHolo.userData.flash = 1;
+    });
+    return true;
+}
+
 const BREAK_SPOTS = [
     { x: 9.6, z: 11.4 },   // кулер (приемная)
     { x: 10.4, z: -13.6 }, // серверная стойка
