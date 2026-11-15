@@ -825,7 +825,14 @@ function goTo(a, path, onDone) {
 }
 
 function goHome(a) {
-    goTo(a, [a.home.clone()], () => {
+    const p = a.model.position;
+    if (Math.hypot(p.x - a.home.x, p.z - a.home.z) < 0.8) {
+        a.state = 'sit';
+        a.model.rotation.y = a.homeYaw;
+        poseSit(a);
+        return;
+    }
+    goTo(a, routeBack(p.x, p.z, a.home.x, a.home.z), () => {
         a.state = 'sit';
         a.model.rotation.y = a.homeYaw;
         poseSit(a);
