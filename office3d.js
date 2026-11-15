@@ -14,7 +14,10 @@
 const OFFICE3D_VERSION = 'v1.6 · build 9';
 
 const THREE_URLS = [
-    'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+    './lib/three.module.js',
+      'https://rawcdn.githack.com/mrdoob/three.js/r160/build/three.module.js',
+      'https://cdn.statically.io/gh/mrdoob/three.js/r160/build/three.module.js',
+      'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
     'https://unpkg.com/three@0.160.0/build/three.module.js',
     'https://fastly.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
     'https://esm.sh/three@0.160.0',
