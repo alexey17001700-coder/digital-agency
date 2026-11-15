@@ -42,7 +42,7 @@
 
             // Грузим параллельно: один упавший файл не тормозит и не ломает остальные.
             await Promise.all(scripts.map(src =>
-                loadScript(src).catch(e => {
+                loadScript(src, src === 'office3d.js').catch(e => {
                     failed.push(src);
                     console.error('Ошибка загрузки скрипта', src, e);
                 })
