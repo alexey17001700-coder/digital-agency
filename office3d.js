@@ -1337,6 +1337,7 @@ function hideOffice() {
     }
     GEO = null;
     toiletCount = 0;
+    toiletTimer = 60 + Math.random() * 60;
     if (office) { office.innerHTML = ''; office.style.display = 'none'; }
     if (chat) chat.style.display = 'flex';
     if (btn) btn.classList.remove('active');
