@@ -851,6 +851,9 @@ function buildScene() {
     // ЗОНЫ + ПЕРЕГОРОДКИ
     buildZones(scene, M);
 
+    // СТОЛ БОССА
+    buildBossDesk(scene, M, screenMats[2].map);
+
     // СЕРВЕРНАЯ
     [[9.5, -15.6], [11.4, -15.6], [13.3, -15.6], [15.2, -15.6]].forEach(p => {
         const r = buildRack(M, screenMats[1].map);
