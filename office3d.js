@@ -871,18 +871,40 @@ function buildAgents(scene, spots) {
         }));
         tag.scale.set(1.9, 0.48, 1);
         tag.position.y = 2.0;
+        tag.renderOrder = 2;
         model.add(tag);
+
+        // облачко-реплика
+        const bubble = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: texBubble('…', '#00e5ff'), transparent: true, depthTest: false, depthWrite: false
+        }));
+        bubble.scale.set(3.5, 1.4, 1);
+        bubble.position.y = 2.85;
+        bubble.renderOrder = 3;
+        bubble.visible = false;
+        model.add(bubble);
+
+        // «задача» в руках — светящийся куб
+        const taskCube = new THREE.Mesh(
+            new THREE.BoxGeometry(0.34, 0.34, 0.34),
+            new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.8, metalness: 0.3, roughness: 0.3 })
+        );
+        taskCube.position.set(0, 1.0, 0.52);
+        taskCube.visible = false;
+        model.add(taskCube);
 
         scene.add(model);
         groups.push(model);
 
         agents.push({
-            name: def.name, model, rig: model.userData.rig, tag,
+            name: def.name, color: def.color, model, rig: model.userData.rig, tag,
+            bubble, taskCube, bubbleTimer: 0, task: null,
             home, homeYaw: Math.PI,
             state: 'sit', working: false, highlight: false,
             path: null, pi: 0, onDone: null,
             breakTimer: 12 + Math.random() * 25,
             toiletTimer: 45 + Math.random() * 75,
+            taskTimer: 25 + Math.random() * 45,
             waitTimer: 0,
             phase: Math.random() * 6.283
         });
