@@ -442,6 +442,11 @@ const CORRIDOR_Z_BOT = -6.0; // горизонтальный коридор z -7
 const BATH_DOOR = { x: 25.7, z: 6.2 };
 const BATH_IN = { x: 25.7, z: 3.4 };
 
+/* Стол Босса и точка доклада (ЭТАП 3) */
+const BOSS_DESK = { x: -8, z: 9.6 };
+const BOSS_SPOT = { x: -8, z: 6.6 };
+const BOSS_AISLE_Z = 4.4;
+
 function roundRect(x, px, py, w, h, r) {
     x.beginPath();
     x.moveTo(px + r, py);
