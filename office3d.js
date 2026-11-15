@@ -1216,8 +1216,11 @@ function showOffice() {
                 'background:#3a2a00;color:#ffd700;border:1px solid #ffd700;border-radius:8px;' +
                 'padding:10px 14px;font:11px monospace;max-width:92vw;text-align:left;line-height:1.5;' +
                 'word-break:break-word;';
-            b.innerHTML = '<b>⚠️ 3D-офис: Three.js не загрузился.</b><br>' +
+            const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 5).join('  ⟶  ') : '—';
+            b.innerHTML = '<b>⚠️ 3D-офис: сбой.</b><br>' +
+                'Этап: ' + esc((err && err.__stage) || 'загрузка Three.js') + '<br>' +
                 'Причина: ' + esc(first) + '<br>' +
+                'Стек: ' + esc(stack) + '<br>' +
                 'Локальный файл: ' + esc(probe) + '<br>' +
                 '<span style="opacity:.75">Показан 2D-офис. Пришли этот текст — починю точно.</span>';
             document.body.appendChild(b);
