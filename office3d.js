@@ -706,6 +706,8 @@ function injectStyles() {
     .o3d-reset:active { background:rgba(0,229,255,.2); }
     .o3d-load { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
         font:14px monospace; color:#00e5ff; background:#070a10; z-index:4; }
+    /* карточка агента должна быть поверх 3D-канваса */
+    #agentModal.modal-overlay { z-index: 9999; }
     `;
     document.head.appendChild(s);
 }
