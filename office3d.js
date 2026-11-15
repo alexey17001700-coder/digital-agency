@@ -1358,25 +1358,43 @@ function hideOffice() {
 /*  ПЕРЕХВАТ КНОПКИ «ОФИС»                                             */
 /* ------------------------------------------------------------------ */
 function install() {
-    // Скрипты грузятся параллельно — ждём, пока office.js определит toggleOffice
+    // Скрипты грузятся ПАРАЛЛЕЛЬНО — порядок не гарантирован.
+    // 1) Ждём, пока office.js определит toggleOffice.
+    // 2) Держим перехват: если кто-то (ui.js и т.п.) переопределит toggleOffice
+    //    позже — оборачиваем заново.
     let tries = 0;
     const hook = () => {
-        if (typeof window.toggleOffice === 'function') {
-            if (!window.toggleOffice.__o3d) {
-                origToggle = window.toggleOffice;
-                const fn = function () {
-                    isOpen = !isOpen;
-                    if (isOpen) showOffice(); else hideOffice();
-                };
-                fn.__o3d = true;
-                window.toggleOffice = fn;
-            }
-            return;
+        if (typeof window.toggleOffice === 'function' && !window.toggleOffice.__o3d) {
+            origToggle = window.toggleOffice;
+            const fn = function () {
+                isOpen = !isOpen;
+                if (isOpen) showOffice(); else hideOffice();
+            };
+            fn.__o3d = true;
+            window.toggleOffice = fn;
         }
-        if (tries++ < 60) setTimeout(hook, 100);
+        if (tries++ < 120) setTimeout(hook, 500);
         else console.warn('[office3d] toggleOffice не найден — 3D-офис не подключён');
     };
     hook();
+
+    // СТРАХОВКА: перехватываем сам клик по кнопке «🏢 Офис» в capture-фазе
+    // на document — срабатывает РАНЬШЕ inline onclick и не даёт открыться 2D-офису.
+    const grab = () => {
+        if (!document.getElementById('btnOffice')) { setTimeout(grab, 300); return; }
+        if (document.__o3dGrab) return;
+        document.__o3dGrab = true;
+        document.addEventListener('click', (e) => {
+            const t = e.target && e.target.closest ? e.target.closest('#btnOffice') : null;
+            if (!t) return;
+            e.stopPropagation();
+            e.preventDefault();
+            isOpen = !isOpen;
+            if (isOpen) showOffice(); else hideOffice();
+        }, true);
+    };
+    grab();
+
     loadThree().catch(() => console.warn('[office3d] 3D недоступен, останется 2D-офис'));
 }
 
