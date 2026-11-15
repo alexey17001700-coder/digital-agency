@@ -238,6 +238,266 @@ function buildPlant(M) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  АГЕНТЫ (ЭТАП 2): модели, анимация, перемещение, клик               */
+/* ------------------------------------------------------------------ */
+const AGENT_3D = [
+    { name: 'Оркестратор',   color: 0xffd700, accent: 0xfff0a8 },
+    { name: 'Хакер',         color: 0xff0055, accent: 0xff86b0 },
+    { name: 'Охранник',      color: 0x2196f3, accent: 0x9ad4ff },
+    { name: 'GigaChat',      color: 0x21a038, accent: 0x9cf0b0 },
+    { name: 'Исследователь', color: 0x00e5ff, accent: 0xb0f6ff },
+    { name: 'Дизайнер',      color: 0x9c27b0, accent: 0xe0b0ff }
+];
+
+const AGENT_WALK_SPOTS = [
+    { x: -10.0, z: -7.4 },
+    { x: -10.0, z: 3.5 },
+    { x: 8.6,   z: -8.4 }
+];
+
+const BUSY_STATES = ['busy', 'working', 'thinking', 'typing'];
+
+function roundRect(x, px, py, w, h, r) {
+    x.beginPath();
+    x.moveTo(px + r, py);
+    x.lineTo(px + w - r, py);
+    x.quadraticCurveTo(px + w, py, px + w, py + r);
+    x.lineTo(px + w, py + h - r);
+    x.quadraticCurveTo(px + w, py + h, px + w - r, py + h);
+    x.lineTo(px + r, py + h);
+    x.quadraticCurveTo(px, py + h, px, py + h - r);
+    x.lineTo(px, py + r);
+    x.quadraticCurveTo(px, py, px + r, py);
+    x.closePath();
+}
+
+function texNameTag(text, color) {
+    const { c, x } = cv(256, 64);
+    x.clearRect(0, 0, 256, 64);
+    x.fillStyle = 'rgba(6,10,16,0.74)';
+    x.strokeStyle = color; x.lineWidth = 3;
+    roundRect(x, 5, 10, 246, 44, 12);
+    x.fill(); x.stroke();
+    x.fillStyle = color; x.font = 'bold 25px monospace';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(text, 128, 33);
+    return new THREE.CanvasTexture(c);
+}
+
+/* Низкополигональная модель агента: капсулы + сфера, ~1.7 м */
+function createAgentModel(color, accent) {
+    const g = new THREE.Group();
+
+    const suit = new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.55 });
+    const suitDark = new THREE.MeshStandardMaterial({ color: 0x1b2028, metalness: 0.5, roughness: 0.6 });
+    const glow = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.5, metalness: 0.2, roughness: 0.4 });
+    const visorMat = new THREE.MeshStandardMaterial({ color: 0x0a1018, emissive: accent, emissiveIntensity: 0.45, metalness: 0.9, roughness: 0.15 });
+
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.30, 0.50, 4, 10), suit);
+    torso.position.y = 0.55; g.add(torso);
+
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.20, 0.10), glow);
+    chest.position.set(0, 0.62, 0.28); g.add(chest);
+
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.10, 12), suitDark);
+    belt.position.y = 0.06; g.add(belt);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), suit);
+    head.position.y = 1.24; g.add(head);
+
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.16, 0.10), visorMat);
+    visor.position.set(0, 1.26, 0.22); g.add(visor);
+
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.22, 6), suitDark);
+    ant.position.set(0.14, 1.52, 0); g.add(ant);
+    const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), glow);
+    antTip.position.set(0.14, 1.64, 0); g.add(antTip);
+
+    const armGeo = new THREE.CapsuleGeometry(0.095, 0.40, 4, 8);
+    const mkArm = (side) => {
+        const p = new THREE.Group();
+        p.position.set(side * 0.36, 0.92, 0);
+        const a = new THREE.Mesh(armGeo, suit);
+        a.position.y = -0.28; p.add(a);
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), suitDark);
+        hand.position.y = -0.55; p.add(hand);
+        g.add(p);
+        return p;
+    };
+    const armL = mkArm(-1), armR = mkArm(1);
+
+    const legGeo = new THREE.CapsuleGeometry(0.115, 0.42, 4, 8);
+    const mkLeg = (side) => {
+        const p = new THREE.Group();
+        p.position.set(side * 0.15, -0.04, 0);
+        const l = new THREE.Mesh(legGeo, suit);
+        l.position.y = -0.33; p.add(l);
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.10, 0.32), suitDark);
+        foot.position.set(0, -0.62, 0.06); p.add(foot);
+        g.add(p);
+        return p;
+    };
+    const legL = mkLeg(-1), legR = mkLeg(1);
+
+    g.userData.rig = { torso, head, armL, armR, legL, legR, glow };
+    return g;
+}
+
+function buildAgents(scene, M, desks) {
+    const agents = [];
+    const groups = [];
+
+    AGENT_3D.forEach((def, i) => {
+        const desk = desks[i];
+        if (!desk) return;
+
+        const model = createAgentModel(def.color, def.accent);
+        const home = new THREE.Vector3(desk.position.x, 0, desk.position.z + 1.35);
+        model.position.copy(home);
+        model.position.y = 0.72;
+        model.rotation.y = Math.PI; // лицом к столу (-Z)
+        model.traverse(o => { o.userData.agentName = def.name; });
+
+        const tag = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: texNameTag(def.name, '#' + def.color.toString(16).padStart(6, '0')),
+            transparent: true, depthTest: false, depthWrite: false
+        }));
+        tag.scale.set(2.0, 0.5, 1);
+        tag.position.y = 2.05;
+        model.add(tag);
+
+        scene.add(model);
+        groups.push(model);
+
+        agents.push({
+            name: def.name, model, rig: model.userData.rig, tag,
+            home, homeYaw: Math.PI,
+            state: 'sit', working: false, highlight: false,
+            target: null, spot: null,
+            breakTimer: 10 + Math.random() * 20,
+            waitTimer: 0,
+            phase: Math.random() * 6.283
+        });
+    });
+
+    return { agents, groups };
+}
+
+function poseSit(a) {
+    a.model.position.y = 0.72;
+    a.rig.legL.rotation.x = -1.45;
+    a.rig.legR.rotation.x = -1.45;
+}
+
+function poseStand(a) {
+    a.model.position.y = 0.86;
+    a.rig.legL.rotation.x = 0;
+    a.rig.legR.rotation.x = 0;
+}
+
+function agentTick(a, dt, t) {
+    const rig = a.rig;
+
+    if (a.state === 'walk') {
+        const to = a.target;
+        const dx = to.x - a.model.position.x;
+        const dz = to.z - a.model.position.z;
+        const d = Math.hypot(dx, dz);
+
+        if (d < 0.12) {
+            a.model.position.x = to.x;
+            a.model.position.z = to.z;
+            if (a.spot) {
+                a.state = 'idle';
+                a.waitTimer = 5;
+                poseStand(a);
+            } else {
+                a.state = 'sit';
+                poseSit(a);
+                a.model.rotation.y = a.homeYaw;
+            }
+        } else {
+            const step = Math.min(1.7 * dt, d);
+            a.model.position.x += (dx / d) * step;
+            a.model.position.z += (dz / d) * step;
+            a.model.rotation.y = Math.atan2(dx, dz);
+
+            const s = Math.sin(t * 9 + a.phase);
+            rig.legL.rotation.x = s * 0.55;
+            rig.legR.rotation.x = -s * 0.55;
+            rig.armL.rotation.x = -s * 0.45;
+            rig.armR.rotation.x = s * 0.45;
+            a.model.position.y = 0.86 + Math.abs(s) * 0.05;
+            rig.torso.rotation.x = 0.06;
+        }
+    } else if (a.state === 'sit') {
+        poseSit(a);
+        rig.torso.rotation.x = 0.12 + Math.sin(t * 2.2 + a.phase) * 0.03;
+        rig.armL.rotation.x = -0.95 + Math.sin(t * 7 + a.phase) * 0.10;
+        rig.armR.rotation.x = -0.95 + Math.sin(t * 7 + a.phase + 1.6) * 0.10;
+        rig.head.rotation.y = Math.sin(t * 0.7 + a.phase) * 0.25;
+    } else {
+        poseStand(a);
+        const s = Math.sin(t * 1.8 + a.phase);
+        rig.torso.rotation.x = s * 0.04;
+        rig.armL.rotation.x = s * 0.10;
+        rig.armR.rotation.x = -s * 0.10;
+        rig.head.rotation.y = Math.sin(t * 0.9 + a.phase) * 0.35;
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            a.spot = null;
+            a.target = a.home.clone();
+            a.state = 'walk';
+        }
+    }
+
+    const pulse = 1.3 + Math.sin(t * 2.5 + a.phase) * 0.35;
+    rig.glow.emissiveIntensity = a.highlight ? pulse + 1.8 : pulse;
+}
+
+function agentBreak(a, dt) {
+    if (a.state !== 'sit' || a.working) return;
+    a.breakTimer -= dt;
+    if (a.breakTimer > 0) return;
+
+    a.breakTimer = 20 + Math.random() * 10;
+    const spot = AGENT_WALK_SPOTS[(Math.random() * AGENT_WALK_SPOTS.length) | 0];
+    a.spot = spot;
+    a.target = new THREE.Vector3(spot.x, 0, spot.z);
+    a.state = 'walk';
+}
+
+/* Тап по агенту → карточка. Драг камеры не считается тапом. */
+function setupPick(renderer, cam, groups, onPick) {
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const el = renderer.domElement;
+    let x0 = 0, y0 = 0, t0 = 0, moved = false;
+
+    const onDown = (e) => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); moved = false; };
+    const onMove = (e) => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 9) moved = true; };
+    const onUp = (e) => {
+        if (moved || performance.now() - t0 > 700) return;
+        const r = el.getBoundingClientRect();
+        ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+        ray.setFromCamera(ndc, cam);
+        const hits = ray.intersectObjects(groups, true);
+        onPick(hits.length ? (hits[0].object.userData.agentName || null) : null);
+    };
+
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+
+    return () => {
+        el.removeEventListener('pointerdown', onDown);
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onUp);
+    };
+}
+
+/* ------------------------------------------------------------------ */
 /*  СБОРКА СЦЕНЫ                                                       */
 /* ------------------------------------------------------------------ */
 function buildScene() {
