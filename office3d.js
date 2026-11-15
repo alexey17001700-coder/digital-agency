@@ -1167,6 +1167,15 @@ function agentTick(a, dt, t) {
         if (a.waitTimer <= 0) goHome(a);
     }
 
+    if (a.bubbleTimer > 0) {
+        a.bubbleTimer -= dt;
+        if (a.bubbleTimer <= 0) a.bubble.visible = false;
+    }
+    if (a.taskCube.visible) {
+        a.taskCube.rotation.y += dt * 1.8;
+        a.taskCube.rotation.x += dt * 0.9;
+    }
+
     const pulse = 1.3 + Math.sin(t * 2.5 + a.phase) * 0.35;
     rig.glow.emissiveIntensity = a.highlight ? pulse + 1.8 : pulse;
 }
