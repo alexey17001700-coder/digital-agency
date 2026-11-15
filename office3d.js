@@ -1199,18 +1199,24 @@ function showOffice() {
         loadThree().then(() => {
             if (!isOpen) return;
             startScene(office);
-        }).catch(() => {
-            console.warn('[office3d] Three.js недоступен — фолбэк на 2D-офис');
+        }).catch(async (err) => {
+            console.warn('[office3d] Three.js недоступен — фолбэк на 2D-офис', err);
             isOpen = false;
             office.innerHTML = '';
             if (origToggle) origToggle();
+            const probe = await probeLocal();
+            const first = (err && err.details && err.details[0]) ? err.details[0] : ((err && err.message) || '?');
             const b = document.createElement('div');
             b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:99999;' +
                 'background:#3a2a00;color:#ffd700;border:1px solid #ffd700;border-radius:8px;' +
-                'padding:8px 14px;font:12px monospace;max-width:92vw;text-align:center;';
-            b.textContent = '⚠️ 3D-офис: Three.js не загрузился (нет доступа к CDN). Показан 2D-офис.';
+                'padding:10px 14px;font:11px monospace;max-width:92vw;text-align:left;line-height:1.5;' +
+                'word-break:break-word;';
+            b.innerHTML = '<b>⚠️ 3D-офис: Three.js не загрузился.</b><br>' +
+                'Причина: ' + esc(first) + '<br>' +
+                'Локальный файл: ' + esc(probe) + '<br>' +
+                '<span style="opacity:.75">Показан 2D-офис. Пришли этот текст — починю точно.</span>';
             document.body.appendChild(b);
-            setTimeout(() => b.remove(), 7000);
+            setTimeout(() => b.remove(), 25000);
         });
     }
 }
