@@ -11,11 +11,15 @@
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v1.5 · build 8';
+const OFFICE3D_VERSION = 'v1.6 · build 9';
 
 const THREE_URLS = [
     'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
-    'https://unpkg.com/three@0.160.0/build/three.module.js'
+    'https://unpkg.com/three@0.160.0/build/three.module.js',
+    'https://fastly.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+    'https://esm.sh/three@0.160.0',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js',
+    'https://cdn.statically.io/gh/mrdoob/three.js/r160/build/three.module.js'
 ];
 
 let THREE = null;
