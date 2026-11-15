@@ -728,6 +728,72 @@ function buildBathroom(scene, M) {
     scene.add(strip);
 }
 
+/* --- СТОЛ БОССА (ЭТАП 3) --- */
+function buildBossDesk(scene, M, screenTex) {
+    const g = new THREE.Group();
+
+    const top = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 2.2), M.desk);
+    top.position.y = 1.05; g.add(top);
+    const legGeo = new THREE.BoxGeometry(0.18, 1.0, 0.18);
+    [[-2.1, -0.95], [2.1, -0.95], [-2.1, 0.95], [2.1, 0.95]].forEach(p => {
+        const l = new THREE.Mesh(legGeo, M.dark);
+        l.position.set(p[0], 0.5, p[1]); g.add(l);
+    });
+
+    // два монитора (экраны смотрят на Босса, т.е. в +z)
+    [-1.15, 1.15].forEach(x => {
+        const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, 0.5, 8), M.plastic);
+        stand.position.set(x, 1.4, -0.5); g.add(stand);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.95, 1.2, 0.1), M.plastic);
+        body.position.set(x, 2.15, -0.5); g.add(body);
+        const scr = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.76, 1.0),
+            new THREE.MeshStandardMaterial({ map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 1.7 })
+        );
+        scr.position.set(x, 2.15, -0.44); g.add(scr);
+    });
+
+    // голо-панель задач (вспыхивает при докладе)
+    const holo = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.0, 1.0, 0.06, 24),
+        new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 1.4, transparent: true, opacity: 0.45 })
+    );
+    holo.position.set(0, 1.22, 0.25);
+    holo.userData.flash = 0;
+    g.add(holo);
+    scene.userData.bossHolo = holo;
+
+    // кресло Босса
+    const chair = buildChair(M);
+    chair.position.set(0, 0, 1.5);
+    g.add(chair);
+
+    // табличка
+    const plate = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texZone('СТОЛ БОССА', '#ffd700'), transparent: true, depthWrite: false
+    }));
+    plate.scale.set(5.6, 1.4, 1);
+    plate.position.set(0, 3.6, 0);
+    g.add(plate);
+
+    g.position.set(BOSS_DESK.x, 0, BOSS_DESK.z);
+    scene.add(g);
+
+    // маркер точки доклада
+    const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.72, 1.02, 28),
+        new THREE.MeshBasicMaterial({
+            color: 0xffd700, transparent: true, opacity: 0.5,
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+        })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(BOSS_SPOT.x, 0.03, BOSS_SPOT.z);
+    scene.add(ring);
+
+    return g;
+}
+
 function buildScene() {
     const M = mats();
     const scene = new THREE.Scene();
