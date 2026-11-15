@@ -1158,10 +1158,17 @@ function showOffice() {
             if (!isOpen) return;
             startScene(office);
         }).catch(() => {
-            console.warn('[office3d] фолбэк на 2D-офис');
+            console.warn('[office3d] Three.js недоступен — фолбэк на 2D-офис');
             isOpen = false;
             office.innerHTML = '';
             if (origToggle) origToggle();
+            const b = document.createElement('div');
+            b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:99999;' +
+                'background:#3a2a00;color:#ffd700;border:1px solid #ffd700;border-radius:8px;' +
+                'padding:8px 14px;font:12px monospace;max-width:92vw;text-align:center;';
+            b.textContent = '⚠️ 3D-офис: Three.js не загрузился (нет доступа к CDN). Показан 2D-офис.';
+            document.body.appendChild(b);
+            setTimeout(() => b.remove(), 7000);
         });
     }
 }
