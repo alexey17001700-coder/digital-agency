@@ -613,6 +613,15 @@ function buildBathroom(scene, M) {
     floor.position.set((BATH.x0 + BATH.x1) / 2, 0.01, (BATH.z0 + BATH.z1) / 2);
     scene.add(floor);
 
+    // «апрон» перед дверью санузла — агент идёт по полу, а не по пустоте
+    const apron = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, 2.8),
+        new THREE.MeshStandardMaterial({ map: texFloor(), metalness: 0.45, roughness: 0.55 })
+    );
+    apron.rotation.x = -Math.PI / 2;
+    apron.position.set((BATH.x0 + BATH.x1) / 2, 0.005, BATH.z1 + 1.4);
+    scene.add(apron);
+
     const toilet = buildToilet(M); toilet.position.set(23.6, 0, 1.0); toilet.rotation.y = Math.PI / 2; scene.add(toilet);
     const sink = buildSink(M); sink.position.set(28.6, 0, 0.2); sink.rotation.y = -Math.PI / 2; scene.add(sink);
     const shower = buildShower(M); shower.position.set(27.4, 0, 3.2); scene.add(shower);
