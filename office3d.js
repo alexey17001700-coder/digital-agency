@@ -1070,7 +1070,7 @@ function bindControls(el, cam, st) {
     const onUp = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
     const onWheel = (e) => {
         e.preventDefault();
-        st.dist = clamp(st.dist * (1 + e.deltaY * 0.0012), 20, 95);
+        st.dist = clamp(st.dist * (1 + e.deltaY * 0.0012), 24, 130);
         applyCam(cam, st);
     };
     function pinchDist() {
