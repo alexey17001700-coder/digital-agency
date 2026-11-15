@@ -14,7 +14,7 @@
 const OFFICE3D_VERSION = 'v1.7 · build 10';
 
 const THREE_URLS = [
-    './lib/three.module.js',
+    './three.module.js',
       'https://rawcdn.githack.com/mrdoob/three.js/r160/build/three.module.js',
       'https://cdn.statically.io/gh/mrdoob/three.js/r160/build/three.module.js',
       'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
