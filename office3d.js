@@ -880,6 +880,8 @@ function hideOffice() {
     if (S) {
         cancelAnimationFrame(S.raf);
         S.unbind();
+        if (S.unbindPick) S.unbindPick();
+        if (S.prevUpdate !== undefined) window.updateAgentInOffice = S.prevUpdate;
         window.removeEventListener('resize', S.onResize);
         window.removeEventListener('orientationchange', S.onResize);
         S.scene.traverse(o => {
