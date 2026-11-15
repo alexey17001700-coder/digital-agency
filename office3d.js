@@ -962,6 +962,7 @@ function buildAgents(scene, spots) {
         );
         taskCube.position.set(0, 1.0, 0.52);
         taskCube.visible = false;
+        taskCube.userData.agentName = def.name;
         model.add(taskCube);
 
         scene.add(model);
