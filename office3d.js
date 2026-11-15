@@ -1,13 +1,17 @@
 /* ============================================================================
    office3d.js — 3D-ОФИС ШТАБА (Three.js)
    ЭТАП 1: Интерьер. Изометрия, комната, мебель, атмосферный свет.
+   ЭТАП 2: 3D-агенты, анимация, перемещение, клик (Raycaster).
+   ЭТАП 3 (v1.5): масштабирование до 25 агентов, зонирование с стеклянными
+                  перегородками, санузел с душем, логика «туалет», оптимизация
+                  (InstancedMesh для столов, общие геометрии/материалы).
    ВАЖНО: office.js (2D-версия) НЕ тронут и работает как фолбэк,
           если Three.js не загрузился.
    ============================================================================ */
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v1.1 · build 2';
+const OFFICE3D_VERSION = 'v1.5 · build 6';
 
 const THREE_URLS = [
     'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
@@ -72,7 +76,24 @@ function texFloor() {
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(5, 4);
+    t.repeat.set(8, 6);
+    return t;
+}
+
+function texTile() {
+    const { c, x } = cv(256, 256);
+    x.fillStyle = '#dfe9f2'; x.fillRect(0, 0, 256, 256);
+    const T = 32;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const v = 210 + Math.random() * 30;
+            x.fillStyle = `rgb(${v},${v + 4},${v + 10})`;
+            x.fillRect(i * T + 1, j * T + 1, T - 2, T - 2);
+        }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(4, 3.5);
     return t;
 }
 
@@ -93,7 +114,7 @@ function texWall() {
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(4, 1.6);
+    t.repeat.set(7, 1.6);
     return t;
 }
 
@@ -123,6 +144,25 @@ function texSign(text, color) {
     return new THREE.CanvasTexture(c);
 }
 
+function texZone(text, color) {
+    const { c, x } = cv(512, 128);
+    x.clearRect(0, 0, 512, 128);
+    x.fillStyle = 'rgba(6,12,20,0.62)';
+    x.strokeStyle = color; x.lineWidth = 5;
+    x.beginPath();
+    const r = 22, px = 6, py = 14, w = 500, h = 100;
+    x.moveTo(px + r, py);
+    x.lineTo(px + w - r, py); x.quadraticCurveTo(px + w, py, px + w, py + r);
+    x.lineTo(px + w, py + h - r); x.quadraticCurveTo(px + w, py + h, px + w - r, py + h);
+    x.lineTo(px + r, py + h); x.quadraticCurveTo(px, py + h, px, py + h - r);
+    x.lineTo(px, py + r); x.quadraticCurveTo(px, py, px + r, py);
+    x.closePath(); x.fill(); x.stroke();
+    x.fillStyle = color; x.font = 'bold 54px monospace';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(text, 256, 66);
+    return new THREE.CanvasTexture(c);
+}
+
 /* ------------------------------------------------------------------ */
 /*  МАТЕРИАЛЫ                                                          */
 /* ------------------------------------------------------------------ */
@@ -132,65 +172,58 @@ function mats() {
         dark: new THREE.MeshStandardMaterial({ color: 0x2b3240, metalness: 0.6, roughness: 0.5 }),
         desk: new THREE.MeshStandardMaterial({ color: 0x3b4657, metalness: 0.55, roughness: 0.45 }),
         plastic: new THREE.MeshStandardMaterial({ color: 0x1a1f28, metalness: 0.2, roughness: 0.7 }),
+        white: new THREE.MeshStandardMaterial({ color: 0xe8eef5, metalness: 0.15, roughness: 0.35 }),
+        soft: new THREE.MeshStandardMaterial({ color: 0x39445a, metalness: 0.15, roughness: 0.85 }),
         neon: (col) => new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 2.2, metalness: 0.2, roughness: 0.4 }),
-        glass: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.35, metalness: 0.1, roughness: 0.1 })
+        glass: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.35, metalness: 0.1, roughness: 0.1 }),
+        glassWall: new THREE.MeshStandardMaterial({
+            color: 0x7fd4ff, transparent: true, opacity: 0.14,
+            metalness: 0.05, roughness: 0.08, side: THREE.DoubleSide, depthWrite: false
+        })
     };
+}
+
+/* ------------------------------------------------------------------ */
+/*  ОБЩИЕ ГЕОМЕТРИИ (переиспользуются всеми объектами)                 */
+/* ------------------------------------------------------------------ */
+let GEO = null;
+function geos() {
+    if (GEO) return GEO;
+    GEO = {
+        box: new THREE.BoxGeometry(1, 1, 1),
+        cyl: new THREE.CylinderGeometry(1, 1, 1, 12),
+        sph: new THREE.SphereGeometry(1, 12, 10),
+        plane: new THREE.PlaneGeometry(1, 1),
+        chairSeat: new THREE.BoxGeometry(0.95, 0.14, 0.9),
+        chairBack: new THREE.BoxGeometry(0.95, 0.85, 0.14),
+        chairPole: new THREE.CylinderGeometry(0.09, 0.09, 0.55, 8),
+        chairFoot: new THREE.CylinderGeometry(0.42, 0.42, 0.07, 12),
+        // агент
+        aTorso: new THREE.CapsuleGeometry(0.30, 0.50, 4, 10),
+        aChest: new THREE.BoxGeometry(0.30, 0.20, 0.10),
+        aBelt: new THREE.CylinderGeometry(0.32, 0.32, 0.10, 12),
+        aHead: new THREE.SphereGeometry(0.26, 12, 10),
+        aVisor: new THREE.BoxGeometry(0.30, 0.16, 0.10),
+        aAnt: new THREE.CylinderGeometry(0.015, 0.015, 0.22, 6),
+        aAntTip: new THREE.SphereGeometry(0.045, 8, 6),
+        aArm: new THREE.CapsuleGeometry(0.095, 0.40, 4, 8),
+        aHand: new THREE.SphereGeometry(0.10, 8, 6),
+        aLeg: new THREE.CapsuleGeometry(0.115, 0.42, 4, 8),
+        aFoot: new THREE.BoxGeometry(0.20, 0.10, 0.32)
+    };
+    return GEO;
 }
 
 /* ------------------------------------------------------------------ */
 /*  МЕБЕЛЬ                                                             */
 /* ------------------------------------------------------------------ */
-function buildDesk(M, screenTex) {
+function buildChair(M) {
+    const G = geos();
     const g = new THREE.Group();
-
-    const top = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.16, 1.7), M.desk);
-    top.position.y = 1.05; g.add(top);
-
-    const legGeo = new THREE.BoxGeometry(0.14, 1.0, 0.14);
-    [[-1.55, -0.72], [1.55, -0.72], [-1.55, 0.72], [1.55, 0.72]].forEach(p => {
-        const l = new THREE.Mesh(legGeo, M.dark);
-        l.position.set(p[0], 0.5, p[1]); g.add(l);
-    });
-
-    // монитор
-    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, 0.5, 8), M.plastic);
-    stand.position.set(0, 1.38, -0.45); g.add(stand);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 12), M.plastic);
-    base.position.set(0, 1.16, -0.45); g.add(base);
-
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.75, 1.05, 0.1), M.plastic);
-    frame.position.set(0, 2.05, -0.45); g.add(frame);
-
-    const screen = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.6, 0.9),
-        new THREE.MeshStandardMaterial({ map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 1.5, metalness: 0, roughness: 1 })
-    );
-    screen.position.set(0, 2.05, -0.39); g.add(screen);
-    g.userData.screen = screen;
-
-    // клавиатура + мышь
-    const kb = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.06, 0.36), M.plastic);
-    kb.position.set(0, 1.16, 0.35); g.add(kb);
-    const mouse = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), M.plastic);
-    mouse.scale.set(1, 0.6, 1.4); mouse.position.set(0.85, 1.18, 0.35); g.add(mouse);
-
-    // кружка
-    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.22, 10), M.metal);
-    cup.position.set(-1.3, 1.24, 0.3); g.add(cup);
-
-    // кресло
-    const chair = new THREE.Group();
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.14, 0.9), M.plastic);
-    seat.position.y = 0.62; chair.add(seat);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.85, 0.14), M.plastic);
-    back.position.set(0, 1.05, 0.42); chair.add(back);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.55, 8), M.metal);
-    pole.position.y = 0.32; chair.add(pole);
-    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.07, 12), M.metal);
-    foot.position.y = 0.05; chair.add(foot);
-    chair.position.set(0, 0, 1.35);
-    g.add(chair);
-
+    const seat = new THREE.Mesh(G.chairSeat, M.plastic); seat.position.y = 0.62; g.add(seat);
+    const back = new THREE.Mesh(G.chairBack, M.plastic); back.position.set(0, 1.05, 0.42); g.add(back);
+    const pole = new THREE.Mesh(G.chairPole, M.metal); pole.position.y = 0.32; g.add(pole);
+    const foot = new THREE.Mesh(G.chairFoot, M.metal); foot.position.y = 0.05; g.add(foot);
     return g;
 }
 
@@ -227,8 +260,9 @@ function buildPlant(M) {
     const g = new THREE.Group();
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.5, 12), M.dark);
     pot.position.y = 0.25; g.add(pot);
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f7a4a, roughness: 0.9 });
     for (let i = 0; i < 5; i++) {
-        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.85, 6), new THREE.MeshStandardMaterial({ color: 0x2f7a4a, roughness: 0.9 }));
+        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.85, 6), leafMat);
         leaf.position.set(Math.cos(i * 1.3) * 0.16, 0.85, Math.sin(i * 1.3) * 0.16);
         leaf.rotation.z = Math.cos(i * 1.3) * 0.4;
         leaf.rotation.x = Math.sin(i * 1.3) * 0.4;
@@ -237,25 +271,130 @@ function buildPlant(M) {
     return g;
 }
 
+function buildSofa(M) {
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.5, 1.3), M.soft);
+    base.position.y = 0.35; g.add(base);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.9, 0.35), M.soft);
+    back.position.set(0, 0.95, -0.48); g.add(back);
+    [-1.55, 1.55].forEach(x => {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.62, 1.3), M.soft);
+        arm.position.set(x, 0.72, 0); g.add(arm);
+    });
+    for (let i = 0; i < 3; i++) {
+        const cush = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.16, 1.05), M.dark);
+        cush.position.set(-1.0 + i * 1.0, 0.68, 0.05); g.add(cush);
+    }
+    return g;
+}
+
+function buildMeetingTable(M) {
+    const g = new THREE.Group();
+    const top = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.18, 3.0), M.desk);
+    top.position.y = 1.05; g.add(top);
+    const legGeo = new THREE.BoxGeometry(0.2, 1.0, 0.2);
+    [[-3.3, -1.25], [3.3, -1.25], [-3.3, 1.25], [3.3, 1.25]].forEach(p => {
+        const l = new THREE.Mesh(legGeo, M.dark);
+        l.position.set(p[0], 0.5, p[1]); g.add(l);
+    });
+    const holo = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.9, 0.9, 0.06, 24),
+        new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.6, transparent: true, opacity: 0.55 })
+    );
+    holo.position.y = 1.18; g.add(holo);
+    return g;
+}
+
+/* --- САНУЗЕЛ --- */
+function buildToilet(M) {
+    const g = new THREE.Group();
+    const tank = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.75, 0.26), M.white);
+    tank.position.set(0, 0.72, -0.32); g.add(tank);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.26, 0.45, 14), M.white);
+    bowl.position.set(0, 0.42, 0.06); g.add(bowl);
+    const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.09, 14), M.white);
+    seat.position.set(0, 0.68, 0.06); g.add(seat);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.05, 14), M.soft);
+    lid.position.set(0, 0.74, 0.06); lid.rotation.x = -0.35; g.add(lid);
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 10), M.neon(0x00e5ff));
+    btn.position.set(0.18, 1.11, -0.32); g.add(btn);
+    return g;
+}
+
+function buildSink(M) {
+    const g = new THREE.Group();
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.85, 12), M.white);
+    ped.position.y = 0.42; g.add(ped);
+    const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 0.24, 16), M.white);
+    basin.position.y = 0.95; g.add(basin);
+    const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 8), M.metal);
+    tap.position.set(0, 1.18, -0.22); g.add(tap);
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.24, 8), M.metal);
+    spout.rotation.x = Math.PI / 2; spout.position.set(0, 1.32, -0.12); g.add(spout);
+    const mirror = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.95), M.glass);
+    mirror.position.set(0, 1.85, -0.36); g.add(mirror);
+    return g;
+}
+
+function buildShower(M) {
+    const g = new THREE.Group();
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.14, 1.5), M.white);
+    tray.position.y = 0.07; g.add(tray);
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: 0xbfe9ff, transparent: true, opacity: 0.22, metalness: 0.05, roughness: 0.05, side: THREE.DoubleSide
+    });
+    const p1 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.1), glassMat);
+    p1.position.set(0, 1.12, 0.75); g.add(p1);
+    const p2 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.1), glassMat);
+    p2.rotation.y = Math.PI / 2; p2.position.set(0.75, 1.12, 0); g.add(p2);
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.0, 8), M.metal);
+    pipe.position.set(-0.6, 1.1, -0.6); g.add(pipe);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.12, 12), M.metal);
+    head.position.set(-0.35, 2.05, -0.35); head.rotation.z = 0.5; g.add(head);
+    const drain = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 10), M.metal);
+    drain.position.set(0, 0.15, 0); g.add(drain);
+    return g;
+}
+
 /* ------------------------------------------------------------------ */
-/*  АГЕНТЫ (ЭТАП 2): модели, анимация, перемещение, клик               */
+/*  АГЕНТЫ: 25 моделей                                                 */
 /* ------------------------------------------------------------------ */
 const AGENT_3D = [
-    { name: 'Оркестратор',   color: 0xffd700, accent: 0xfff0a8 },
-    { name: 'Хакер',         color: 0xff0055, accent: 0xff86b0 },
-    { name: 'Охранник',      color: 0x2196f3, accent: 0x9ad4ff },
-    { name: 'GigaChat',      color: 0x21a038, accent: 0x9cf0b0 },
-    { name: 'Исследователь', color: 0x00e5ff, accent: 0xb0f6ff },
-    { name: 'Дизайнер',      color: 0x9c27b0, accent: 0xe0b0ff }
-];
-
-const AGENT_WALK_SPOTS = [
-    { x: -10.0, z: -7.4 },
-    { x: -10.0, z: 3.5 },
-    { x: 8.6,   z: -8.4 }
+    { name: 'Оркестратор',   color: 0xffd700 },
+    { name: 'Хакер',         color: 0xff0055 },
+    { name: 'Охранник',      color: 0x2196f3 },
+    { name: 'GigaChat',      color: 0x21a038 },
+    { name: 'Исследователь', color: 0x00e5ff },
+    { name: 'Дизайнер',      color: 0x9c27b0 },
+    { name: 'Аналитик',      color: 0xff8c00 },
+    { name: 'Копирайтер',    color: 0xff69b4 },
+    { name: 'Тестировщик',   color: 0x9acd32 },
+    { name: 'Архивариус',    color: 0x008080 },
+    { name: 'Навигатор',     color: 0x4dabf7 },
+    { name: 'Инженер',       color: 0xffb300 },
+    { name: 'Логист',        color: 0xff7f50 },
+    { name: 'Переводчик',    color: 0x8a2be2 },
+    { name: 'Бухгалтер',     color: 0x3ddc97 },
+    { name: 'Маркетолог',    color: 0xff4d6d },
+    { name: 'Юрист',         color: 0x5c6bc0 },
+    { name: 'Сметчик',       color: 0xd2b48c },
+    { name: 'Оператор',      color: 0x29b6f6 },
+    { name: 'Куратор',       color: 0xe040fb },
+    { name: 'Прогнозист',    color: 0x1de9b6 },
+    { name: 'Связист',       color: 0x00c853 },
+    { name: 'Механик',       color: 0xcd7f32 },
+    { name: 'Диспетчер',     color: 0x90a4ae },
+    { name: 'Стажёр',        color: 0xeceff1 }
 ];
 
 const BUSY_STATES = ['busy', 'working', 'thinking', 'typing'];
+
+/* Коридоры и точки интереса */
+const CORRIDOR_X = 5.0;      // вертикальный коридор x 3..7
+const CORRIDOR_Z_TOP = 6.2;  // горизонтальный коридор z 5..7
+const CORRIDOR_Z_BOT = -6.0; // горизонтальный коридор z -7..-5
+const BATH_DOOR = { x: 25.7, z: 6.2 };
+const BATH_IN = { x: 25.7, z: 3.4 };
 
 function roundRect(x, px, py, w, h, r) {
     x.beginPath();
@@ -284,55 +423,55 @@ function texNameTag(text, color) {
     return new THREE.CanvasTexture(c);
 }
 
-/* Низкополигональная модель агента: капсулы + сфера, ~1.7 м */
-function createAgentModel(color, accent) {
+/* Низкополигональная модель агента (~1.7 м). Геометрии — общие. */
+function createAgentModel(color) {
+    const G = geos();
     const g = new THREE.Group();
 
+    const accent = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45);
     const suit = new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.55 });
     const suitDark = new THREE.MeshStandardMaterial({ color: 0x1b2028, metalness: 0.5, roughness: 0.6 });
     const glow = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.5, metalness: 0.2, roughness: 0.4 });
     const visorMat = new THREE.MeshStandardMaterial({ color: 0x0a1018, emissive: accent, emissiveIntensity: 0.45, metalness: 0.9, roughness: 0.15 });
 
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.30, 0.50, 4, 10), suit);
+    const torso = new THREE.Mesh(G.aTorso, suit);
     torso.position.y = 0.55; g.add(torso);
 
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.20, 0.10), glow);
+    const chest = new THREE.Mesh(G.aChest, glow);
     chest.position.set(0, 0.62, 0.28); g.add(chest);
 
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.10, 12), suitDark);
+    const belt = new THREE.Mesh(G.aBelt, suitDark);
     belt.position.y = 0.06; g.add(belt);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), suit);
+    const head = new THREE.Mesh(G.aHead, suit);
     head.position.y = 1.24; g.add(head);
 
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.16, 0.10), visorMat);
+    const visor = new THREE.Mesh(G.aVisor, visorMat);
     visor.position.set(0, 1.26, 0.22); g.add(visor);
 
-    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.22, 6), suitDark);
+    const ant = new THREE.Mesh(G.aAnt, suitDark);
     ant.position.set(0.14, 1.52, 0); g.add(ant);
-    const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), glow);
+    const antTip = new THREE.Mesh(G.aAntTip, glow);
     antTip.position.set(0.14, 1.64, 0); g.add(antTip);
 
-    const armGeo = new THREE.CapsuleGeometry(0.095, 0.40, 4, 8);
     const mkArm = (side) => {
         const p = new THREE.Group();
         p.position.set(side * 0.36, 0.92, 0);
-        const a = new THREE.Mesh(armGeo, suit);
+        const a = new THREE.Mesh(G.aArm, suit);
         a.position.y = -0.28; p.add(a);
-        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), suitDark);
+        const hand = new THREE.Mesh(G.aHand, suitDark);
         hand.position.y = -0.55; p.add(hand);
         g.add(p);
         return p;
     };
     const armL = mkArm(-1), armR = mkArm(1);
 
-    const legGeo = new THREE.CapsuleGeometry(0.115, 0.42, 4, 8);
     const mkLeg = (side) => {
         const p = new THREE.Group();
         p.position.set(side * 0.15, -0.04, 0);
-        const l = new THREE.Mesh(legGeo, suit);
+        const l = new THREE.Mesh(G.aLeg, suit);
         l.position.y = -0.33; p.add(l);
-        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.10, 0.32), suitDark);
+        const foot = new THREE.Mesh(G.aFoot, suitDark);
         foot.position.set(0, -0.62, 0.06); p.add(foot);
         g.add(p);
         return p;
@@ -343,27 +482,306 @@ function createAgentModel(color, accent) {
     return g;
 }
 
-function buildAgents(scene, M, desks) {
+/* ------------------------------------------------------------------ */
+/*  СБОРКА СЦЕНЫ                                                       */
+/* ------------------------------------------------------------------ */
+const ROOM_W = 44, ROOM_D = 34, ROOM_H = 6.4;
+const BATH = { x0: 22, x1: 30, z0: -2, z1: 5 };
+
+function buildDesks(scene, M, screenMats) {
+    const COLS = [-18.5, -14.1, -9.7, -5.3, -0.9];
+    const ROWS = [-13.2, -9.4, -5.6, -1.8, 2.0];
+    const spots = [];
+    ROWS.forEach(z => COLS.forEach(x => spots.push({ x, z })));
+    const N = spots.length;
+
+    const m4 = new THREE.Matrix4();
+    const parts = [
+        { geo: new THREE.BoxGeometry(3.4, 0.16, 1.7), mat: M.desk, offs: [[0, 1.05, 0]] },
+        { geo: new THREE.BoxGeometry(0.14, 1.0, 0.14), mat: M.dark, offs: [[-1.55, 0.5, -0.72], [1.55, 0.5, -0.72], [-1.55, 0.5, 0.72], [1.55, 0.5, 0.72]] },
+        { geo: new THREE.CylinderGeometry(0.09, 0.14, 0.5, 8), mat: M.plastic, offs: [[0, 1.38, -0.45]] },
+        { geo: new THREE.CylinderGeometry(0.32, 0.32, 0.06, 12), mat: M.plastic, offs: [[0, 1.16, -0.45]] },
+        { geo: new THREE.BoxGeometry(1.75, 1.05, 0.1), mat: M.plastic, offs: [[0, 2.05, -0.45]] },
+        { geo: new THREE.BoxGeometry(1.1, 0.06, 0.36), mat: M.plastic, offs: [[0, 1.16, 0.35]] },
+        { geo: new THREE.SphereGeometry(0.09, 10, 8), mat: M.plastic, offs: [[0.85, 1.18, 0.35]], scale: [1, 0.6, 1.4] },
+        { geo: new THREE.CylinderGeometry(0.11, 0.09, 0.22, 10), mat: M.metal, offs: [[-1.3, 1.24, 0.3]] },
+        { geo: geos().chairSeat, mat: M.plastic, offs: [[0, 0.62, 1.35]] },
+        { geo: geos().chairBack, mat: M.plastic, offs: [[0, 1.05, 1.77]] },
+        { geo: geos().chairPole, mat: M.metal, offs: [[0, 0.32, 1.35]] },
+        { geo: geos().chairFoot, mat: M.metal, offs: [[0, 0.05, 1.35]] }
+    ];
+
+    parts.forEach(p => {
+        const total = N * p.offs.length;
+        const im = new THREE.InstancedMesh(p.geo, p.mat, total);
+        im.frustumCulled = false;
+        let k = 0;
+        const sc = p.scale || [1, 1, 1];
+        spots.forEach(s => p.offs.forEach(o => {
+            m4.makeScale(sc[0], sc[1], sc[2]);
+            m4.setPosition(s.x + o[0], o[1], s.z + o[2]);
+            im.setMatrixAt(k++, m4);
+        }));
+        im.instanceMatrix.needsUpdate = true;
+        scene.add(im);
+    });
+
+    // экраны — отдельные меши (нужна индивидуальная пульсация), но 3 общих материала
+    const screens = [];
+    const screenGeo = new THREE.PlaneGeometry(1.6, 0.9);
+    spots.forEach((s, i) => {
+        const m = new THREE.Mesh(screenGeo, screenMats[i % 3]);
+        m.position.set(s.x, 2.05, s.z - 0.39);
+        scene.add(m);
+        screens.push(m);
+    });
+
+    return { spots, screens };
+}
+
+function glassWall(scene, M, x1, z1, x2, z2, h) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.05) return;
+    const rot = Math.atan2(-dz, dx);
+    const g = new THREE.BoxGeometry(len, h, 0.08);
+    const m = new THREE.Mesh(g, M.glassWall);
+    m.position.set((x1 + x2) / 2, h / 2, (z1 + z2) / 2);
+    m.rotation.y = rot;
+    scene.add(m);
+    const r = new THREE.Mesh(new THREE.BoxGeometry(len, 0.09, 0.16), M.metal);
+    r.position.set((x1 + x2) / 2, h + 0.045, (z1 + z2) / 2);
+    r.rotation.y = rot;
+    scene.add(r);
+}
+
+function buildZones(scene, M) {
+    const H = 1.8;
+    // Опенспейс — правая граница x=3 с проходами
+    glassWall(scene, M, 3, -17, 3, -6.5, H);
+    glassWall(scene, M, 3, -4.5, 3, 4.5, H);
+    glassWall(scene, M, 3, 6.5, 3, 17, H);
+    // Серверная
+    glassWall(scene, M, 7, -17, 7, -12, H);
+    glassWall(scene, M, 7, -10, 7, -7, H);
+    glassWall(scene, M, 7, -7, 9, -7, H);
+    glassWall(scene, M, 11, -7, 22, -7, H);
+    // Переговорная
+    glassWall(scene, M, 7, -5, 9, -5, H);
+    glassWall(scene, M, 11, -5, 22, -5, H);
+    glassWall(scene, M, 7, -5, 7, -1, H);
+    glassWall(scene, M, 7, 1, 7, 5, H);
+    glassWall(scene, M, 7, 5, 9, 5, H);
+    glassWall(scene, M, 11, 5, 22, 5, H);
+    // Приемная
+    glassWall(scene, M, 7, 7, 9, 7, H);
+    glassWall(scene, M, 11, 7, 22, 7, H);
+    glassWall(scene, M, 7, 7, 7, 11, H);
+    glassWall(scene, M, 7, 13, 7, 17, H);
+    // Санузел (низкие прозрачные стены)
+    glassWall(scene, M, BATH.x0, BATH.z0, BATH.x0, BATH.z1, H);
+    glassWall(scene, M, BATH.x0, BATH.z0, BATH.x1, BATH.z0, H);
+    glassWall(scene, M, BATH.x1, BATH.z0, BATH.x1, BATH.z1, H);
+    glassWall(scene, M, BATH.x0, BATH.z1, 24.8, BATH.z1, H);
+    glassWall(scene, M, 26.6, BATH.z1, BATH.x1, BATH.z1, H);
+
+    // Таблички зон
+    const zones = [
+        { t: 'ОПЕНСПЕЙС',   c: '#00e5ff', x: -10, z: 0 },
+        { t: 'СЕРВЕРНАЯ',   c: '#00ff88', x: 14,  z: -12 },
+        { t: 'ПЕРЕГОВОРНАЯ', c: '#ffd700', x: 14, z: 0 },
+        { t: 'ПРИЕМНАЯ',    c: '#ff69b4', x: 14,  z: 12 },
+        { t: 'САНУЗЕЛ',     c: '#9fd8ff', x: 26,  z: 1.5 }
+    ];
+    zones.forEach(z => {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: texZone(z.t, z.c), transparent: true, depthWrite: false
+        }));
+        sp.scale.set(5.2, 1.3, 1);
+        sp.position.set(z.x, 3.7, z.z);
+        scene.add(sp);
+    });
+}
+
+function buildBathroom(scene, M) {
+    const w = BATH.x1 - BATH.x0, d = BATH.z1 - BATH.z0;
+    const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, d),
+        new THREE.MeshStandardMaterial({ map: texTile(), metalness: 0.15, roughness: 0.5 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set((BATH.x0 + BATH.x1) / 2, 0.01, (BATH.z0 + BATH.z1) / 2);
+    scene.add(floor);
+
+    const toilet = buildToilet(M); toilet.position.set(23.6, 0, 1.0); toilet.rotation.y = Math.PI / 2; scene.add(toilet);
+    const sink = buildSink(M); sink.position.set(28.6, 0, 0.2); sink.rotation.y = -Math.PI / 2; scene.add(sink);
+    const shower = buildShower(M); shower.position.set(27.4, 0, 3.2); scene.add(shower);
+
+    // дверь
+    const doorG = new THREE.Group();
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.4, 0.16), M.metal);
+    frame.position.y = 1.2; doorG.add(frame);
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.15, 0.1), M.dark);
+    leaf.position.set(0, 1.08, 0.1); doorG.add(leaf);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8), M.metal);
+    handle.rotation.z = Math.PI / 2; handle.position.set(0.75, 1.1, 0.2); doorG.add(handle);
+    const sign = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.1, 0.42),
+        new THREE.MeshStandardMaterial({ map: texSign('WC', '#9fd8ff'), emissive: 0xffffff, emissiveMap: texSign('WC', '#9fd8ff'), emissiveIntensity: 1.4 })
+    );
+    sign.position.set(0, 2.75, 0.14); doorG.add(sign);
+    doorG.position.set(BATH_DOOR.x, 0, BATH.z1);
+    scene.add(doorG);
+
+    // светящаяся полоса над входом
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 0.08), M.neon(0x9fd8ff));
+    strip.position.set(BATH_DOOR.x, 2.5, BATH.z1 + 0.12);
+    scene.add(strip);
+}
+
+function buildScene() {
+    const M = mats();
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070a10);
+    scene.fog = new THREE.Fog(0x070a10, 62, 140);
+
+    // ПОЛ
+    const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(ROOM_W, ROOM_D),
+        new THREE.MeshStandardMaterial({ map: texFloor(), metalness: 0.45, roughness: 0.55 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // СТЕНЫ (задняя + левая — открытый вид для изометрии)
+    const wallMat = new THREE.MeshStandardMaterial({ map: texWall(), metalness: 0.35, roughness: 0.7 });
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_W, ROOM_H), wallMat);
+    back.position.set(0, ROOM_H / 2, -ROOM_D / 2);
+    scene.add(back);
+
+    const left = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_D, ROOM_H), wallMat);
+    left.position.set(-ROOM_W / 2, ROOM_H / 2, 0);
+    left.rotation.y = Math.PI / 2;
+    scene.add(left);
+
+    // плинтус-подсветка
+    const stripMat = M.neon(0x00b8d4);
+    const stripB = new THREE.Mesh(new THREE.BoxGeometry(ROOM_W, 0.1, 0.1), stripMat);
+    stripB.position.set(0, 0.12, -ROOM_D / 2 + 0.06); scene.add(stripB);
+    const stripL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, ROOM_D), stripMat);
+    stripL.position.set(-ROOM_W / 2 + 0.06, 0.12, 0); scene.add(stripL);
+
+    // потолочные балки + светильники
+    const lampMat = M.neon(0xdff3ff);
+    scene.userData.lamps = [];
+    for (let i = 0; i < 6; i++) {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(ROOM_W, 0.22, 0.3), M.dark);
+        beam.position.set(0, ROOM_H - 0.2, -14 + i * 5.6);
+        scene.add(beam);
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.6), lampMat);
+        lamp.position.set(0, ROOM_H - 0.36, -14 + i * 5.6);
+        scene.add(lamp);
+        lamp.userData.pulse = Math.random() * 6;
+        scene.userData.lamps.push(lamp);
+    }
+
+    // СТОЛЫ + МОНИТОРЫ (InstancedMesh)
+    const screenMats = [
+        new THREE.MeshStandardMaterial({ map: texScreen('#00ff9d'), emissive: 0xffffff, emissiveMap: texScreen('#00ff9d'), emissiveIntensity: 1.5, metalness: 0, roughness: 1 }),
+        new THREE.MeshStandardMaterial({ map: texScreen('#00e5ff'), emissive: 0xffffff, emissiveMap: texScreen('#00e5ff'), emissiveIntensity: 1.5, metalness: 0, roughness: 1 }),
+        new THREE.MeshStandardMaterial({ map: texScreen('#ffd700'), emissive: 0xffffff, emissiveMap: texScreen('#ffd700'), emissiveIntensity: 1.5, metalness: 0, roughness: 1 })
+    ];
+    const { spots, screens } = buildDesks(scene, M, screenMats);
+
+    // ЗОНЫ + ПЕРЕГОРОДКИ
+    buildZones(scene, M);
+
+    // СЕРВЕРНАЯ
+    [[9.5, -15.6], [11.4, -15.6], [13.3, -15.6], [15.2, -15.6]].forEach(p => {
+        const r = buildRack(M, screenMats[1]);
+        r.position.set(p[0], 0, p[1]);
+        scene.add(r);
+    });
+
+    // ПЕРЕГОВОРНАЯ
+    const mt = buildMeetingTable(M);
+    mt.position.set(14, 0, 0);
+    scene.add(mt);
+    [[10.6, -1.6], [12.6, -1.6], [14.6, -1.6], [16.6, -1.6], [10.6, 1.6], [12.6, 1.6], [14.6, 1.6], [16.6, 1.6]].forEach((p, i) => {
+        const c = buildChair(M);
+        c.position.set(p[0], 0, p[1]);
+        c.rotation.y = i < 4 ? 0 : Math.PI;
+        scene.add(c);
+    });
+
+    // ПРИЕМНАЯ
+    const sofa = buildSofa(M);
+    sofa.position.set(15.5, 0, 15.4);
+    scene.add(sofa);
+    const cooler = buildCooler(M);
+    cooler.position.set(9.6, 0, 12.6);
+    scene.add(cooler);
+    const ctable = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.9), M.desk);
+    ctable.position.set(15.5, 0.5, 12.4);
+    scene.add(ctable);
+    [[9.4, 15.6], [20.6, 15.6], [20.6, 8.4]].forEach(p => {
+        const pl = buildPlant(M);
+        pl.position.set(p[0], 0, p[1]);
+        scene.add(pl);
+    });
+
+    // САНУЗЕЛ
+    buildBathroom(scene, M);
+
+    // ДВЕРЬ «ВЫХОД» (в серверной, на задней стене)
+    const doorG = new THREE.Group();
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 4.2, 0.25), M.metal);
+    frame.position.y = 2.1; doorG.add(frame);
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.8, 0.14), M.dark);
+    leaf.position.set(0, 2.0, 0.14); doorG.add(leaf);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), M.metal);
+    handle.rotation.z = Math.PI / 2; handle.position.set(0.85, 2.0, 0.24); doorG.add(handle);
+    const exitTex = texSign('ВЫХОД', '#00ff88');
+    const sign = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.5, 0.56),
+        new THREE.MeshStandardMaterial({ map: exitTex, emissive: 0xffffff, emissiveMap: exitTex, emissiveIntensity: 1.6 })
+    );
+    sign.position.set(0, 4.6, 0.16); doorG.add(sign);
+    doorG.position.set(18.5, 0, -ROOM_D / 2 + 0.2);
+    scene.add(doorG);
+
+    // АГЕНТЫ (25)
+    const { agents, groups } = buildAgents(scene, spots);
+
+    // СВЕТ: ровно 2 источника (без теней — экономия FPS)
+    scene.add(new THREE.AmbientLight(0x8fa8c8, 1.15));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.7);
+    dir.position.set(9, 15, 8);
+    scene.add(dir);
+
+    return { scene, spots, screens, agents, groups };
+}
+
+function buildAgents(scene, spots) {
     const agents = [];
     const groups = [];
 
     AGENT_3D.forEach((def, i) => {
-        const desk = desks[i];
+        const desk = spots[i];
         if (!desk) return;
 
-        const model = createAgentModel(def.color, def.accent);
-        const home = new THREE.Vector3(desk.position.x, 0, desk.position.z + 1.35);
-        model.position.copy(home);
-        model.position.y = 0.72;
-        model.rotation.y = Math.PI; // лицом к столу (-Z)
+        const model = createAgentModel(def.color);
+        const home = new THREE.Vector3(desk.x, 0, desk.z + 1.35);
+        model.position.set(home.x, 0.66, home.z);
+        model.rotation.y = Math.PI;
         model.traverse(o => { o.userData.agentName = def.name; });
 
         const tag = new THREE.Sprite(new THREE.SpriteMaterial({
             map: texNameTag(def.name, '#' + def.color.toString(16).padStart(6, '0')),
             transparent: true, depthTest: false, depthWrite: false
         }));
-        tag.scale.set(2.0, 0.5, 1);
-        tag.position.y = 2.05;
+        tag.scale.set(1.9, 0.48, 1);
+        tag.position.y = 2.0;
         model.add(tag);
 
         scene.add(model);
@@ -373,8 +791,9 @@ function buildAgents(scene, M, desks) {
             name: def.name, model, rig: model.userData.rig, tag,
             home, homeYaw: Math.PI,
             state: 'sit', working: false, highlight: false,
-            target: null, spot: null,
-            breakTimer: 10 + Math.random() * 20,
+            path: null, pi: 0, onDone: null,
+            breakTimer: 12 + Math.random() * 25,
+            toiletTimer: 45 + Math.random() * 75,
             waitTimer: 0,
             phase: Math.random() * 6.283
         });
@@ -383,41 +802,113 @@ function buildAgents(scene, M, desks) {
     return { agents, groups };
 }
 
+/* ------------------------------------------------------------------ */
+/*  ПОВЕДЕНИЕ АГЕНТОВ                                                  */
+/* ------------------------------------------------------------------ */
 function poseSit(a) {
-    a.model.position.y = 0.72;
+    a.model.position.y = 0.66;
     a.rig.legL.rotation.x = -1.45;
     a.rig.legR.rotation.x = -1.45;
 }
 
 function poseStand(a) {
-    a.model.position.y = 0.86;
+    a.model.position.y = 0.68;
     a.rig.legL.rotation.x = 0;
     a.rig.legR.rotation.x = 0;
+}
+
+function goTo(a, path, onDone) {
+    a.path = path;
+    a.pi = 0;
+    a.onDone = onDone || null;
+    a.state = 'walk';
+}
+
+function goHome(a) {
+    goTo(a, [a.home.clone()], () => {
+        a.state = 'sit';
+        a.model.rotation.y = a.homeYaw;
+        poseSit(a);
+    });
+}
+
+function routeTo(destX, destZ, fromZ) {
+    const z = clamp(fromZ, -16, 16);
+    if (destZ < -5) {
+        return [
+            new THREE.Vector3(CORRIDOR_X, 0, z),
+            new THREE.Vector3(CORRIDOR_X, 0, CORRIDOR_Z_BOT),
+            new THREE.Vector3(destX, 0, CORRIDOR_Z_BOT),
+            new THREE.Vector3(destX, 0, destZ)
+        ];
+    }
+    if (destZ > 5) {
+        return [
+            new THREE.Vector3(CORRIDOR_X, 0, z),
+            new THREE.Vector3(CORRIDOR_X, 0, CORRIDOR_Z_TOP),
+            new THREE.Vector3(destX, 0, CORRIDOR_Z_TOP),
+            new THREE.Vector3(destX, 0, destZ)
+        ];
+    }
+    return [new THREE.Vector3(destX, 0, destZ)];
+}
+
+const BREAK_SPOTS = [
+    { x: 9.6, z: 11.4 },   // кулер (приемная)
+    { x: 10.4, z: -13.6 }, // серверная стойка
+    { x: 18.5, z: -15.4 }  // дверь «ВЫХОД»
+];
+
+let toiletCount = 0;
+
+function agentBreak(a, dt) {
+    if (a.state !== 'sit' || a.working) return;
+    a.breakTimer -= dt;
+    if (a.breakTimer > 0) return;
+    a.breakTimer = 25 + Math.random() * 20;
+    const s = BREAK_SPOTS[(Math.random() * BREAK_SPOTS.length) | 0];
+    goTo(a, routeTo(s.x, s.z, a.model.position.z), () => {
+        a.state = 'idle';
+        a.waitTimer = 5;
+    });
+}
+
+function agentToilet(a, dt) {
+    if (a.state !== 'sit' || a.working) return;
+    a.toiletTimer -= dt;
+    if (a.toiletTimer > 0) return;
+    if (toiletCount >= 2) { a.toiletTimer = 10; return; }
+    a.toiletTimer = 60 + Math.random() * 60;
+    toiletCount++;
+    const path = routeTo(BATH_DOOR.x, BATH_DOOR.z, a.model.position.z);
+    path.push(new THREE.Vector3(BATH_IN.x, 0, BATH_IN.z));
+    goTo(a, path, () => {
+        a.state = 'hidden';
+        a.model.visible = false;
+        a.waitTimer = 5 + Math.random() * 5;
+    });
 }
 
 function agentTick(a, dt, t) {
     const rig = a.rig;
 
-    if (a.state === 'walk') {
-        const to = a.target;
+    if (a.state === 'walk' && a.path) {
+        const to = a.path[a.pi];
         const dx = to.x - a.model.position.x;
         const dz = to.z - a.model.position.z;
         const d = Math.hypot(dx, dz);
 
-        if (d < 0.12) {
-            a.model.position.x = to.x;
-            a.model.position.z = to.z;
-            if (a.spot) {
-                a.state = 'idle';
-                a.waitTimer = 5;
-                poseStand(a);
-            } else {
-                a.state = 'sit';
-                poseSit(a);
-                a.model.rotation.y = a.homeYaw;
+        if (d < 0.16) {
+            a.pi++;
+            if (a.pi >= a.path.length) {
+                const cb = a.onDone;
+                a.onDone = null;
+                a.path = null;
+                if (cb) cb();
+                else goHome(a);
             }
         } else {
-            const step = Math.min(1.7 * dt, d);
+            const step = Math.min(2.0 * dt, d);
             a.model.position.x += (dx / d) * step;
             a.model.position.z += (dz / d) * step;
             a.model.rotation.y = Math.atan2(dx, dz);
@@ -427,7 +918,7 @@ function agentTick(a, dt, t) {
             rig.legR.rotation.x = -s * 0.55;
             rig.armL.rotation.x = -s * 0.45;
             rig.armR.rotation.x = s * 0.45;
-            a.model.position.y = 0.86 + Math.abs(s) * 0.05;
+            a.model.position.y = 0.68 + Math.abs(s) * 0.05;
             rig.torso.rotation.x = 0.06;
         }
     } else if (a.state === 'sit') {
@@ -436,6 +927,20 @@ function agentTick(a, dt, t) {
         rig.armL.rotation.x = -0.95 + Math.sin(t * 7 + a.phase) * 0.10;
         rig.armR.rotation.x = -0.95 + Math.sin(t * 7 + a.phase + 1.6) * 0.10;
         rig.head.rotation.y = Math.sin(t * 0.7 + a.phase) * 0.25;
+    } else if (a.state === 'hidden') {
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            a.model.visible = true;
+            toiletCount = Math.max(0, toiletCount - 1);
+            goTo(a, [new THREE.Vector3(BATH_DOOR.x, 0, BATH_DOOR.z),
+                     new THREE.Vector3(CORRIDOR_X, 0, CORRIDOR_Z_TOP),
+                     new THREE.Vector3(CORRIDOR_X, 0, clamp(a.home.z, -16, 16)),
+                     a.home.clone()], () => {
+                a.state = 'sit';
+                a.model.rotation.y = a.homeYaw;
+                poseSit(a);
+            });
+        }
     } else {
         poseStand(a);
         const s = Math.sin(t * 1.8 + a.phase);
@@ -444,27 +949,11 @@ function agentTick(a, dt, t) {
         rig.armR.rotation.x = -s * 0.10;
         rig.head.rotation.y = Math.sin(t * 0.9 + a.phase) * 0.35;
         a.waitTimer -= dt;
-        if (a.waitTimer <= 0) {
-            a.spot = null;
-            a.target = a.home.clone();
-            a.state = 'walk';
-        }
+        if (a.waitTimer <= 0) goHome(a);
     }
 
     const pulse = 1.3 + Math.sin(t * 2.5 + a.phase) * 0.35;
     rig.glow.emissiveIntensity = a.highlight ? pulse + 1.8 : pulse;
-}
-
-function agentBreak(a, dt) {
-    if (a.state !== 'sit' || a.working) return;
-    a.breakTimer -= dt;
-    if (a.breakTimer > 0) return;
-
-    a.breakTimer = 20 + Math.random() * 10;
-    const spot = AGENT_WALK_SPOTS[(Math.random() * AGENT_WALK_SPOTS.length) | 0];
-    a.spot = spot;
-    a.target = new THREE.Vector3(spot.x, 0, spot.z);
-    a.state = 'walk';
 }
 
 /* Тап по агенту → карточка. Драг камеры не считается тапом. */
@@ -498,121 +987,15 @@ function setupPick(renderer, cam, groups, onPick) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  СБОРКА СЦЕНЫ                                                       */
-/* ------------------------------------------------------------------ */
-function buildScene() {
-    const M = mats();
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x070a10);
-    scene.fog = new THREE.Fog(0x070a10, 34, 78);
-
-    const ROOM_W = 26, ROOM_D = 20, ROOM_H = 6.4;
-
-    // ПОЛ
-    const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(ROOM_W, ROOM_D),
-        new THREE.MeshStandardMaterial({ map: texFloor(), metalness: 0.45, roughness: 0.55 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-
-    // СТЕНЫ (задняя + левая — открытый вид для изометрии)
-    const wallMat = new THREE.MeshStandardMaterial({ map: texWall(), metalness: 0.35, roughness: 0.7 });
-    const back = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_W, ROOM_H), wallMat);
-    back.position.set(0, ROOM_H / 2, -ROOM_D / 2);
-    scene.add(back);
-
-    const left = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_D, ROOM_H), wallMat);
-    left.position.set(-ROOM_W / 2, ROOM_H / 2, 0);
-    left.rotation.y = Math.PI / 2;
-    scene.add(left);
-
-    // плинтус-подсветка
-    const stripMat = M.neon(0x00b8d4);
-    const stripB = new THREE.Mesh(new THREE.BoxGeometry(ROOM_W, 0.1, 0.1), stripMat);
-    stripB.position.set(0, 0.12, -ROOM_D / 2 + 0.06); scene.add(stripB);
-    const stripL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, ROOM_D), stripMat);
-    stripL.position.set(-ROOM_W / 2 + 0.06, 0.12, 0); scene.add(stripL);
-
-    // потолочные балки + светильники
-    const lampMat = M.neon(0xdff3ff);
-    for (let i = 0; i < 4; i++) {
-        const beam = new THREE.Mesh(new THREE.BoxGeometry(ROOM_W, 0.22, 0.3), M.dark);
-        beam.position.set(0, ROOM_H - 0.2, -7.5 + i * 5);
-        scene.add(beam);
-        const lamp = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.6), lampMat);
-        lamp.position.set(0, ROOM_H - 0.36, -7.5 + i * 5);
-        scene.add(lamp);
-        lamp.userData.pulse = Math.random() * 6;
-        if (!scene.userData.lamps) scene.userData.lamps = [];
-        scene.userData.lamps.push(lamp);
-    }
-
-    // СТОЛЫ + МОНИТОРЫ
-    const screenTexes = [texScreen('#00ff9d'), texScreen('#00e5ff'), texScreen('#ffd700')];
-    const desks = [];
-    const COLS = [-8, 0, 8], ROWS = [-4.2, 3.4];
-    ROWS.forEach((z, ri) => {
-        COLS.forEach((x, ci) => {
-            const d = buildDesk(M, screenTexes[(ri + ci) % 3]);
-            d.position.set(x, 0, z);
-            scene.add(d);
-            desks.push(d);
-        });
-    });
-
-    // КУЛЕР
-    const cooler = buildCooler(M);
-    cooler.position.set(-11.2, 0, -8.2);
-    scene.add(cooler);
-
-    // ДВЕРЬ «ВЫХОД»
-    const doorG = new THREE.Group();
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 4.2, 0.25), M.metal);
-    frame.position.y = 2.1; doorG.add(frame);
-    const leaf = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.8, 0.14), M.dark);
-    leaf.position.set(0, 2.0, 0.14); doorG.add(leaf);
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), M.metal);
-    handle.rotation.z = Math.PI / 2; handle.position.set(0.85, 2.0, 0.24); doorG.add(handle);
-    const sign = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.5, 0.56),
-        new THREE.MeshStandardMaterial({ map: texSign('ВЫХОД', '#00ff88'), emissive: 0xffffff, emissiveMap: texSign('ВЫХОД', '#00ff88'), emissiveIntensity: 1.6 })
-    );
-    sign.position.set(0, 4.6, 0.16); doorG.add(sign);
-    doorG.position.set(9.5, 0, -ROOM_D / 2 + 0.2);
-    scene.add(doorG);
-
-    // СЕРВЕРНАЯ СТОЙКА + РАСТЕНИЯ
-    const rack = buildRack(M, screenTexes[1]);
-    rack.position.set(-11.4, 0, 3.5);
-    scene.add(rack);
-
-    [[-11.5, 8.2], [11.5, 8.2], [11.5, -8.2]].forEach(p => {
-        const pl = buildPlant(M);
-        pl.position.set(p[0], 0, p[1]);
-        scene.add(pl);
-    });
-
-    // АГЕНТЫ (ЭТАП 2)
-    const { agents, groups } = buildAgents(scene, M, desks);
-
-    // СВЕТ: ровно 2 источника (без теней — экономия FPS)
-    scene.add(new THREE.AmbientLight(0x8fa8c8, 1.15));
-    const dir = new THREE.DirectionalLight(0xffffff, 1.7);
-    dir.position.set(9, 15, 8);
-    scene.add(dir);
-
-    return { scene, desks, agents, groups };
-}
-
-/* ------------------------------------------------------------------ */
 /*  КАМЕРА + УПРАВЛЕНИЕ (изометрия, drag / pinch / wheel)              */
 /* ------------------------------------------------------------------ */
+const CAM_HOME = { yaw: Math.PI * 0.25, pitch: 0.62, dist: 50, tx: 4, ty: 1.6, tz: 0 };
+
 function makeCamera(container) {
     const w = Math.max(container.clientWidth, 1);
     const h = Math.max(container.clientHeight, 1);
-    const cam = new THREE.PerspectiveCamera(42, w / h, 0.1, 300);
-    const st = { yaw: Math.PI * 0.25, pitch: 0.62, dist: 30, tx: 0, ty: 1.4, tz: 0 };
+    const cam = new THREE.PerspectiveCamera(42, w / h, 0.1, 400);
+    const st = Object.assign({}, CAM_HOME);
     applyCam(cam, st);
     return { cam, st };
 }
@@ -644,7 +1027,7 @@ function bindControls(el, cam, st) {
 
         if (pts.size >= 2) {
             const d = pinchDist();
-            if (pinch > 0 && d > 0) st.dist = clamp(st.dist * (pinch / d), 13, 58);
+            if (pinch > 0 && d > 0) st.dist = clamp(st.dist * (pinch / d), 20, 95);
             pinch = d;
         } else {
             st.yaw -= dx * 0.006;
@@ -655,7 +1038,7 @@ function bindControls(el, cam, st) {
     const onUp = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
     const onWheel = (e) => {
         e.preventDefault();
-        st.dist = clamp(st.dist * (1 + e.deltaY * 0.0012), 13, 58);
+        st.dist = clamp(st.dist * (1 + e.deltaY * 0.0012), 20, 95);
         applyCam(cam, st);
     };
     function pinchDist() {
@@ -766,7 +1149,7 @@ function startScene(office) {
     renderer.shadowMap.enabled = false;
     office.appendChild(renderer.domElement);
 
-    const { scene, desks, agents, groups } = buildScene();
+    const { scene, screens, agents, groups } = buildScene();
     const { cam, st } = makeCamera(office);
     const unbind = bindControls(renderer.domElement, cam, st);
 
@@ -812,16 +1195,13 @@ function startScene(office) {
         if (!a) return;
         const busy = BUSY_STATES.includes(status);
         a.working = busy;
-        if (busy) {
-            a.spot = null;
-            a.target = a.home.clone();
-            a.state = 'walk';
-            a.waitTimer = 0;
+        if (busy && a.state !== 'walk' && a.state !== 'hidden') {
+            goHome(a);
         }
     };
 
     reset.onclick = () => {
-        st.yaw = Math.PI * 0.25; st.pitch = 0.62; st.dist = 30;
+        Object.assign(st, CAM_HOME);
         applyCam(cam, st);
     };
 
@@ -849,15 +1229,15 @@ function startScene(office) {
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].material.emissiveIntensity = 2.0 + Math.sin(t * 1.4 + lamps[i].userData.pulse) * 0.35;
         }
-        for (let i = 0; i < desks.length; i++) {
-            const sc = desks[i].userData.screen;
-            if (sc) sc.material.emissiveIntensity = 1.35 + Math.sin(t * 3 + i) * 0.18;
+        for (let i = 0; i < screens.length; i++) {
+            screens[i].material.emissiveIntensity = 1.35 + Math.sin(t * 3 + i) * 0.18;
         }
 
-        // АГЕНТЫ: анимация + перемещение
+        // АГЕНТЫ: анимация + перемещение + потребности
         for (let i = 0; i < agents.length; i++) {
             const a = agents[i];
             agentBreak(a, dt);
+            agentToilet(a, dt);
             agentTick(a, dt, t);
         }
 
@@ -904,6 +1284,8 @@ function hideOffice() {
         S.renderer.dispose();
         S = null;
     }
+    GEO = null;
+    toiletCount = 0;
     if (office) { office.innerHTML = ''; office.style.display = 'none'; }
     if (chat) chat.style.display = 'flex';
     if (btn) btn.classList.remove('active');
