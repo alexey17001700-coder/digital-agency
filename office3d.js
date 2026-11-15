@@ -643,7 +643,7 @@ function buildScene() {
     const M = mats();
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x070a10);
-    scene.fog = new THREE.Fog(0x070a10, 62, 140);
+    scene.fog = new THREE.Fog(0x070a10, 90, 200);
 
     // ПОЛ
     const floor = new THREE.Mesh(
