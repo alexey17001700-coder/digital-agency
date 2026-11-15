@@ -11,7 +11,7 @@
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v1.5 · build 6';
+const OFFICE3D_VERSION = 'v1.5 · build 7';
 
 const THREE_URLS = [
     'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
