@@ -11,7 +11,7 @@
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v1.7 · build 10';
+const OFFICE3D_VERSION = 'v1.8 · build 11';
 
 const THREE_URLS = [
     './three.module.js',
