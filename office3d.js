@@ -834,10 +834,13 @@ function startScene(office) {
 
     const clock = new THREE.Clock();
     let raf = 0;
+    let elapsed = 0;
 
     const tick = () => {
         raf = requestAnimationFrame(tick);
-        const t = clock.getElapsedTime();
+        const dt = Math.min(clock.getDelta(), 0.05);
+        elapsed += dt;
+        const t = elapsed;
 
         // лёгкое «дыхание» светильников и мерцание экранов — бесплатно для GPU
         const lamps = scene.userData.lamps || [];
@@ -849,11 +852,24 @@ function startScene(office) {
             if (sc) sc.material.emissiveIntensity = 1.35 + Math.sin(t * 3 + i) * 0.18;
         }
 
+        // АГЕНТЫ: анимация + перемещение
+        for (let i = 0; i < agents.length; i++) {
+            const a = agents[i];
+            agentBreak(a, dt);
+            agentTick(a, dt, t);
+        }
+
+        // кольцо выделения следует за агентом
+        if (ring.visible && selectedName) {
+            const a = agentByName[selectedName];
+            if (a) { ring.position.x = a.model.position.x; ring.position.z = a.model.position.z; }
+        }
+
         renderer.render(scene, cam);
     };
     tick();
 
-    S = { renderer, scene, cam, st, raf, unbind, onResize, office };
+    S = { renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office };
 }
 
 function hideOffice() {
