@@ -1247,7 +1247,14 @@ function startScene(office) {
     renderer.shadowMap.enabled = false;
     office.appendChild(renderer.domElement);
 
-    const { scene, screens, agents, groups } = buildScene();
+    let built;
+    try {
+        built = buildScene();
+    } catch (e) {
+        if (e && !e.__stage) e.__stage = 'buildScene';
+        throw e;
+    }
+    const { scene, screens, agents, groups } = built;
     const { cam, st } = makeCamera(office);
     const unbind = bindControls(renderer.domElement, cam, st);
 
