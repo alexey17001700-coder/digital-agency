@@ -1273,10 +1273,22 @@ function startScene(office) {
         }
 
         // АГЕНТЫ: анимация + перемещение + потребности
+        toiletTimer -= dt;
+        if (toiletTimer <= 0) {
+            toiletTimer = 60 + Math.random() * 60;
+            if (toiletCount < 2) {
+                const free = [];
+                for (let i = 0; i < agents.length; i++) {
+                    const a = agents[i];
+                    if (a.state === 'sit' && !a.working) free.push(a);
+                }
+                if (free.length) sendToToilet(free[(Math.random() * free.length) | 0]);
+            }
+        }
+
         for (let i = 0; i < agents.length; i++) {
             const a = agents[i];
             agentBreak(a, dt);
-            agentToilet(a, dt);
             agentTick(a, dt, t);
         }
 
