@@ -1139,6 +1139,23 @@ function agentTick(a, dt, t) {
                 poseSit(a);
             });
         }
+    } else if (a.state === 'report') {
+        poseStand(a);
+        rig.torso.rotation.x = -0.10 + Math.sin(t * 2.0 + a.phase) * 0.03;
+        rig.armL.rotation.x = -0.55 + Math.sin(t * 6 + a.phase) * 0.28;
+        rig.armR.rotation.x = -0.55 + Math.sin(t * 6 + a.phase + 1.2) * 0.28;
+        rig.head.rotation.y = Math.sin(t * 1.1 + a.phase) * 0.16;
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            bossCount = Math.max(0, bossCount - 1);
+            a.task = null;
+            goTo(a, routeFromBoss(a.home.x, a.home.z), () => {
+                a.state = 'sit';
+                a.model.rotation.y = a.homeYaw;
+                poseSit(a);
+                say(a, 'На месте', 2000);
+            });
+        }
     } else {
         poseStand(a);
         const s = Math.sin(t * 1.8 + a.phase);
