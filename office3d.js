@@ -967,10 +967,7 @@ function agentTick(a, dt, t) {
         if (a.waitTimer <= 0) {
             a.model.visible = true;
             toiletCount = Math.max(0, toiletCount - 1);
-            goTo(a, [new THREE.Vector3(BATH_DOOR.x, 0, BATH_DOOR.z),
-                     new THREE.Vector3(CORRIDOR_X, 0, CORRIDOR_Z_TOP),
-                     new THREE.Vector3(CORRIDOR_X, 0, clamp(a.home.z, -16, 16)),
-                     a.home.clone()], () => {
+            goTo(a, routeBack(BATH_IN.x, BATH_IN.z, a.home.x, a.home.z), () => {
                 a.state = 'sit';
                 a.model.rotation.y = a.homeYaw;
                 poseSit(a);
