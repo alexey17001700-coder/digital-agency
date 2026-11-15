@@ -918,18 +918,17 @@ function agentBreak(a, dt) {
     });
 }
 
-function agentToilet(a, dt) {
-    if (a.state !== 'sit' || a.working) return;
-    a.toiletTimer -= dt;
-    if (a.toiletTimer > 0) return;
-    if (toiletCount >= 2) { a.toiletTimer = 10; return; }
-    a.toiletTimer = 60 + Math.random() * 60;
+/* Раз в 1-2 минуты ОДИН случайный агент идёт в санузел.
+   Внутри одновременно не больше двух (BATH_MAX). */
+function sendToToilet(a) {
+    if (a.state !== 'sit' || a.working) return false;
     toiletCount++;
     goTo(a, routeOut(a.model.position.z, BATH_IN.x, BATH_IN.z), () => {
         a.state = 'hidden';
         a.model.visible = false;
         a.waitTimer = 5 + Math.random() * 5;
     });
+    return true;
 }
 
 function agentTick(a, dt, t) {
