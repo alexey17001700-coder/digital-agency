@@ -474,6 +474,35 @@ function texNameTag(text, color) {
     return new THREE.CanvasTexture(c);
 }
 
+/* Облачко-реплика над агентом (ЭТАП 3) */
+function texBubble(text, color) {
+    const { c, x } = cv(320, 128);
+    x.clearRect(0, 0, 320, 128);
+    x.fillStyle = 'rgba(6,12,20,0.9)';
+    x.strokeStyle = color; x.lineWidth = 4;
+    roundRect(x, 8, 8, 304, 86, 18);
+    x.fill(); x.stroke();
+    x.beginPath();
+    x.moveTo(142, 92); x.lineTo(178, 92); x.lineTo(160, 120);
+    x.closePath();
+    x.fillStyle = 'rgba(6,12,20,0.9)'; x.fill();
+    x.strokeStyle = color; x.lineWidth = 3; x.stroke();
+    x.fillStyle = color; x.font = 'bold 22px monospace';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    const words = String(text).split(' ');
+    const lines = []; let cur = '';
+    for (let i = 0; i < words.length; i++) {
+        const test = cur ? cur + ' ' + words[i] : words[i];
+        if (x.measureText(test).width > 276 && cur) { lines.push(cur); cur = words[i]; }
+        else cur = test;
+    }
+    if (cur) lines.push(cur);
+    const shown = lines.slice(0, 3);
+    const y0 = 51 - (shown.length - 1) * 13;
+    shown.forEach((l, i) => x.fillText(l, 160, y0 + i * 26));
+    return new THREE.CanvasTexture(c);
+}
+
 /* Низкополигональная модель агента (~1.7 м). Геометрии — общие. */
 function createAgentModel(color) {
     const G = geos();
