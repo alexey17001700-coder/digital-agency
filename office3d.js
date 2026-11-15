@@ -753,7 +753,7 @@ function buildScene() {
 
     // СЕРВЕРНАЯ
     [[9.5, -15.6], [11.4, -15.6], [13.3, -15.6], [15.2, -15.6]].forEach(p => {
-        const r = buildRack(M, screenMats[1]);
+        const r = buildRack(M, screenMats[1].map);
         r.position.set(p[0], 0, p[1]);
         scene.add(r);
     });
