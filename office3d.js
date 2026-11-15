@@ -1059,7 +1059,7 @@ function bindControls(el, cam, st) {
 
         if (pts.size >= 2) {
             const d = pinchDist();
-            if (pinch > 0 && d > 0) st.dist = clamp(st.dist * (pinch / d), 20, 95);
+            if (pinch > 0 && d > 0) st.dist = clamp(st.dist * (pinch / d), 24, 130);
             pinch = d;
         } else {
             st.yaw -= dx * 0.006;
