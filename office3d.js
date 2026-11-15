@@ -887,6 +887,14 @@ function hideOffice() {
         window.removeEventListener('resize', S.onResize);
         window.removeEventListener('orientationchange', S.onResize);
         S.scene.traverse(o => {
+            // у Sprite геометрия общая для всех — её трогать нельзя
+            if (o.isSprite) {
+                if (o.material) {
+                    if (o.material.map) o.material.map.dispose();
+                    o.material.dispose();
+                }
+                return;
+            }
             if (o.geometry) o.geometry.dispose();
             if (o.material) {
                 const list = Array.isArray(o.material) ? o.material : [o.material];
