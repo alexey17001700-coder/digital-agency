@@ -764,9 +764,59 @@ function startScene(office) {
     renderer.shadowMap.enabled = false;
     office.appendChild(renderer.domElement);
 
-    const { scene, desks } = buildScene();
+    const { scene, desks, agents, groups } = buildScene();
     const { cam, st } = makeCamera(office);
     const unbind = bindControls(renderer.domElement, cam, st);
+
+    // КОЛЬЦО ВЫДЕЛЕНИЯ АГЕНТА
+    const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.52, 0.78, 28),
+        new THREE.MeshBasicMaterial({
+            color: 0x00e5ff, transparent: true, opacity: 0.75,
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+        })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.03;
+    ring.visible = false;
+    scene.add(ring);
+
+    const agentByName = {};
+    agents.forEach(a => { agentByName[a.name] = a; });
+    let selectedName = null;
+
+    const selectAgent = (name) => {
+        selectedName = name;
+        agents.forEach(a => { a.highlight = (a.name === name); });
+        if (name && agentByName[name]) {
+            const m = agentByName[name].model;
+            ring.position.set(m.position.x, 0.03, m.position.z);
+            ring.visible = true;
+            if (typeof window.showAgentInfo === 'function') window.showAgentInfo(name);
+        } else {
+            ring.visible = false;
+        }
+        const info = document.getElementById('o3d-selected');
+        if (info) info.textContent = name ? ('👤 ' + name) : '';
+    };
+
+    const unbindPick = setupPick(renderer, cam, groups, selectAgent);
+
+    // СИНХРОНИЗАЦИЯ С СИСТЕМОЙ (статусы из ui.js → 3D-агенты)
+    const prevUpdate = window.updateAgentInOffice;
+    window.updateAgentInOffice = function (name, status) {
+        if (typeof prevUpdate === 'function') prevUpdate(name, status);
+        const a = agentByName[name];
+        if (!a) return;
+        const busy = BUSY_STATES.includes(status);
+        a.working = busy;
+        if (busy) {
+            a.spot = null;
+            a.target = a.home.clone();
+            a.state = 'walk';
+            a.waitTimer = 0;
+        }
+    };
 
     reset.onclick = () => {
         st.yaw = Math.PI * 0.25; st.pitch = 0.62; st.dist = 30;
