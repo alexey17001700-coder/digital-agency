@@ -915,7 +915,9 @@ function agentToilet(a, dt) {
     if (toiletCount >= 2) { a.toiletTimer = 10; return; }
     a.toiletTimer = 60 + Math.random() * 60;
     toiletCount++;
-    goTo(a, routeOut(a.model.position.z, BATH_IN.x, BATH_IN.z), () => {
+    const path = routeTo(BATH_DOOR.x, BATH_DOOR.z, a.model.position.z);
+    path.push(new THREE.Vector3(BATH_IN.x, 0, BATH_IN.z));
+    goTo(a, path, () => {
         a.state = 'hidden';
         a.model.visible = false;
         a.waitTimer = 5 + Math.random() * 5;
