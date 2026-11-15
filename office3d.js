@@ -952,6 +952,7 @@ function buildAgents(scene, spots) {
         bubble.position.y = 2.85;
         bubble.renderOrder = 3;
         bubble.visible = false;
+        bubble.userData.agentName = def.name;
         model.add(bubble);
 
         // «задача» в руках — светящийся куб
