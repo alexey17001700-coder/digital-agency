@@ -602,7 +602,7 @@ function buildScene() {
     dir.position.set(9, 15, 8);
     scene.add(dir);
 
-    return { scene, desks };
+    return { scene, desks, agents, groups };
 }
 
 /* ------------------------------------------------------------------ */
