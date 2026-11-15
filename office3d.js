@@ -1198,7 +1198,12 @@ function showOffice() {
         office.innerHTML = '<div class="o3d-load">ЗАГРУЗКА 3D-ОФИСА…</div>';
         loadThree().then(() => {
             if (!isOpen) return;
-            startScene(office);
+            try {
+                startScene(office);
+            } catch (e) {
+                if (e && !e.__stage) e.__stage = 'startScene';
+                throw e;
+            }
         }).catch(async (err) => {
             console.warn('[office3d] Three.js недоступен — фолбэк на 2D-офис', err);
             isOpen = false;
