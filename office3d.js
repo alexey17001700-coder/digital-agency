@@ -1327,7 +1327,7 @@ const TASK_TEXTS = [
 const DONE_TEXTS = ['Готово, Босс!', 'Выполнено!', 'Задача закрыта', 'Есть результат!'];
 
 let bossCount = 0;
-let bossTimer = 6 + Math.random() * 8;
+let bossTimer = 12 + Math.random() * 10;
 
 function sendToBoss(a, taskText) {
     if (a.state !== 'sit' || a.working) return false;
