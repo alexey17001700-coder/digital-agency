@@ -31,6 +31,15 @@
             });
         }
 
+        // Кнопка «Офис»: сначала 3D, и только если 3D-модуль реально не поднялся —
+        // 2D-фолбэк. Раньше при сбое office3d.js кнопка МОЛЧА открывала 2D-офис,
+        // и было непонятно, что 3D не загрузился.
+        window.openOffice = function () {
+            if (typeof window.openOffice3D === 'function') { window.openOffice3D(); return; }
+            if (typeof window.toggleOffice === 'function') { window.toggleOffice(); return; }
+            showBootError('3D-офис недоступен: office3d.js не выполнился. Обнови страницу.');
+        };
+
         function showBootError(msg) {
             const box = document.createElement('div');
             box.style.cssText = 'position:fixed;bottom:10px;left:10px;right:10px;z-index:99999;background:#440000;color:#ff8888;border:1px solid #ff0055;border-radius:8px;padding:10px;font:12px monospace;';
