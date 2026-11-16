@@ -1154,15 +1154,19 @@ function buildAgents(scene, spots) {
 /*  ПОВЕДЕНИЕ АГЕНТОВ                                                  */
 /* ------------------------------------------------------------------ */
 function poseSit(a) {
-    a.model.position.y = 0.66;
+    a.model.position.y = 0.52;
     a.rig.legL.rotation.x = -1.45;
     a.rig.legR.rotation.x = -1.45;
+    a.rig.kneeL.rotation.x = 1.40;
+    a.rig.kneeR.rotation.x = 1.40;
 }
 
 function poseStand(a) {
-    a.model.position.y = 0.71;
+    a.model.position.y = 0.90;
     a.rig.legL.rotation.x = 0;
     a.rig.legR.rotation.x = 0;
+    a.rig.kneeL.rotation.x = 0;
+    a.rig.kneeR.rotation.x = 0;
 }
 
 function goTo(a, path, onDone) {
