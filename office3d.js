@@ -1095,7 +1095,7 @@ function buildAgents(scene, spots) {
 
         const model = createAgentModel(def.color);
         const home = new THREE.Vector3(desk.x, 0, desk.z + 1.35);
-        model.position.set(home.x, 0.66, home.z);
+        model.position.set(home.x, 0.52, home.z);
         model.rotation.y = Math.PI;
         model.traverse(o => { o.userData.agentName = def.name; });
 
