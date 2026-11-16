@@ -293,7 +293,8 @@ let SHARED_M = null;
 function sharedMats() {
     if (SHARED_M) return SHARED_M;
     SHARED_M = {
-        skin: new THREE.MeshStandardMaterial({ color: 0xffcc99, metalness: 0.05, roughness: 0.78 }),
+        skin: new THREE.MeshStandardMaterial({ color: 0xf2c49b, metalness: 0.04, roughness: 0.72 }),
+        hair: new THREE.MeshStandardMaterial({ color: 0x2a1f1a, metalness: 0.05, roughness: 0.9 }),
         shoe: new THREE.MeshStandardMaterial({ color: 0x14181f, metalness: 0.35, roughness: 0.65 }),
         dark: new THREE.MeshStandardMaterial({ color: 0x1b2028, metalness: 0.5, roughness: 0.6 })
     };
