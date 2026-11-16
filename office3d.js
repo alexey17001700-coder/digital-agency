@@ -1592,15 +1592,22 @@ function bindControls(el, cam, st) {
             pan(dx, dy);
         }
     };
-    const onUp = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
+    const onUp = (e) => { pts.delete(e.pointerId); if (pts.size < 2) { pinch0 = 0; pinchBase = 0; } };
     const onWheel = (e) => {
         e.preventDefault();
-        st.dist = clamp(st.dist * (1 + e.deltaY * 0.0012), 24, 130);
-        applyCam(cam, st);
+        zoomAt(el, cam, st, st.distT * (1 + e.deltaY * 0.0012), e.clientX, e.clientY);
+    };
+    const onKey = (e) => {
+        if (e.key === '+' || e.key === '=') zoomAt(el, cam, st, st.distT * 0.85);
+        else if (e.key === '-' || e.key === '_') zoomAt(el, cam, st, st.distT * 1.18);
     };
     function pinchDist() {
         const a = [...pts.values()];
         return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+    }
+    function pinchMid() {
+        const a = [...pts.values()];
+        return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2 };
     }
 
     el.addEventListener('pointerdown', onDown);
