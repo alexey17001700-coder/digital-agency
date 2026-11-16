@@ -2082,18 +2082,8 @@ function install() {
     };
     grab();
 
-    // ПРЯМОЙ ВХОД: кнопка «Офис» в app.html вызывает window.openOffice3D().
-    // Не зависит от порядка загрузки скриптов и от перехвата toggleOffice.
-    window.openOffice3D = function () {
-        if (isOpen) return;
-        isOpen = true;
-        showOffice();
-    };
-    window.closeOffice3D = function () {
-        if (!isOpen) return;
-        isOpen = false;
-        hideOffice();
-    };
+    // (window.openOffice3D / closeOffice3D определены в начале модуля —
+    //  так они работают даже если install() упадёт)
 
     // ПРЯМОЙ ВХОД ПО ССЫЛКЕ: app.html?office3d=1 — 3D-офис открывается сам,
     // без кнопки. Удобно и для проверки, и как обход, если кнопка не сработала.
