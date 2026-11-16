@@ -1049,7 +1049,7 @@ function poseSit(a) {
 }
 
 function poseStand(a) {
-    a.model.position.y = 0.68;
+    a.model.position.y = 0.71;
     a.rig.legL.rotation.x = 0;
     a.rig.legR.rotation.x = 0;
 }
