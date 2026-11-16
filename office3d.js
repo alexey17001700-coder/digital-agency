@@ -668,21 +668,26 @@ function buildZones(scene, M) {
     glassWall(scene, M, BATH.x0, BATH.z1, 24.8, BATH.z1, H);
     glassWall(scene, M, 26.6, BATH.z1, BATH.x1, BATH.z1, H);
 
-    // Таблички зон
+    // Таблички зон — «приклеены» к полу (плоские декали, а не парящие спрайты)
     const zones = [
-        { t: 'ОПЕНСПЕЙС',   c: '#00e5ff', x: -10, z: 0 },
-        { t: 'СЕРВЕРНАЯ',   c: '#00ff88', x: 14,  z: -12 },
-        { t: 'ПЕРЕГОВОРНАЯ', c: '#ffd700', x: 14, z: 0 },
-        { t: 'ПРИЕМНАЯ',    c: '#ff69b4', x: 14,  z: 12 },
-        { t: 'САНУЗЕЛ',     c: '#9fd8ff', x: 26,  z: 1.5 }
+        { t: 'ОПЕНСПЕЙС',    c: '#00e5ff', x: -15, z: 4.6,  w: 7.0, h: 1.75 },
+        { t: 'СЕРВЕРНАЯ',    c: '#00ff88', x: 14,  z: -11.6, w: 6.4, h: 1.6 },
+        { t: 'ПЕРЕГОВОРНАЯ', c: '#ffd700', x: 14,  z: 3.4,  w: 7.4, h: 1.85 },
+        { t: 'ПРИЕМНАЯ',     c: '#ff69b4', x: 14,  z: 9.8,  w: 6.4, h: 1.6 },
+        { t: 'САНУЗЕЛ',      c: '#9fd8ff', x: 26,  z: 1.5,  w: 3.8, h: 1.0 }
     ];
     zones.forEach(z => {
-        const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: texZone(z.t, z.c), transparent: true, depthWrite: false
-        }));
-        sp.scale.set(5.2, 1.3, 1);
-        sp.position.set(z.x, 3.7, z.z);
-        scene.add(sp);
+        const decal = new THREE.Mesh(
+            new THREE.PlaneGeometry(z.w, z.h),
+            new THREE.MeshBasicMaterial({
+                map: texZone(z.t, z.c), transparent: true, depthWrite: false,
+                blending: THREE.AdditiveBlending
+            })
+        );
+        decal.rotation.x = -Math.PI / 2;
+        decal.position.set(z.x, 0.035, z.z);
+        decal.renderOrder = 1;
+        scene.add(decal);
     });
 }
 
