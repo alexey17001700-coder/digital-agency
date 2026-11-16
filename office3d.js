@@ -1772,7 +1772,17 @@ function showOffice() {
 
     if (!S) {
         office.innerHTML = '<div class="o3d-load">ЗАГРУЗКА 3D-ОФИСА…</div>';
+        // СТОРОЖ: если загрузка не завершилась за 25 с — показываем причину,
+        // а не бесконечный спиннер.
+        const wd = setTimeout(() => {
+            if (isOpen && !S) {
+                const e = new Error('загрузка Three.js не завершилась за 25 с');
+                e.details = ['проверь доступность ./three.module.js в корне репозитория'];
+                showFail(e, 'таймаут загрузки');
+            }
+        }, 25000);
         loadThree().then(() => {
+            clearTimeout(wd);
             if (!isOpen) return;
             try {
                 startScene(office);
@@ -1781,6 +1791,7 @@ function showOffice() {
                 throw e;
             }
         }).catch((err) => {
+            clearTimeout(wd);
             // НИКАКОГО молчаливого фолбэка: показываем полноэкранную диагностику
             console.warn('[office3d] 3D-офис не запустился', err);
             showFail(err, (err && err.__stage) || 'загрузка Three.js');
