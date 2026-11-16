@@ -247,20 +247,35 @@ function geos() {
         chairBack: new THREE.BoxGeometry(0.95, 0.85, 0.14),
         chairPole: new THREE.CylinderGeometry(0.09, 0.09, 0.55, 8),
         chairFoot: new THREE.CylinderGeometry(0.42, 0.42, 0.07, 12),
-        // агент
-        aTorso: new THREE.CapsuleGeometry(0.30, 0.50, 4, 10),
-        aChest: new THREE.BoxGeometry(0.30, 0.20, 0.10),
-        aBelt: new THREE.CylinderGeometry(0.32, 0.32, 0.10, 12),
-        aHead: new THREE.SphereGeometry(0.26, 12, 10),
-        aVisor: new THREE.BoxGeometry(0.30, 0.16, 0.10),
-        aAnt: new THREE.CylinderGeometry(0.015, 0.015, 0.22, 6),
-        aAntTip: new THREE.SphereGeometry(0.045, 8, 6),
-        aArm: new THREE.CapsuleGeometry(0.095, 0.40, 4, 8),
-        aHand: new THREE.SphereGeometry(0.10, 8, 6),
-        aLeg: new THREE.CapsuleGeometry(0.115, 0.42, 4, 8),
-        aFoot: new THREE.BoxGeometry(0.20, 0.10, 0.32)
+        // агент — человеческие пропорции (origin модели — на уровне бёдер)
+        aTorso: new THREE.CylinderGeometry(0.27, 0.19, 0.58, 10),  // плечи шире талии
+        aChest: new THREE.BoxGeometry(0.24, 0.16, 0.08),
+        aBelt: new THREE.CylinderGeometry(0.20, 0.20, 0.08, 12),
+        aNeck: new THREE.CylinderGeometry(0.075, 0.085, 0.13, 8),  // шея
+        aHead: new THREE.SphereGeometry(0.175, 12, 10),            // голова меньше в 1.5 раза
+        aVisor: new THREE.BoxGeometry(0.26, 0.08, 0.06),           // тёмные очки/визор
+        aAnt: new THREE.CylinderGeometry(0.012, 0.012, 0.18, 6),
+        aAntTip: new THREE.SphereGeometry(0.032, 8, 6),
+        aShoulder: new THREE.SphereGeometry(0.10, 8, 6),
+        aArm: new THREE.CapsuleGeometry(0.058, 0.40, 4, 8),        // тоньше и длиннее
+        aHand: new THREE.SphereGeometry(0.072, 8, 6),
+        aLeg: new THREE.CapsuleGeometry(0.078, 0.48, 4, 8),        // тоньше и длиннее
+        aFoot: new THREE.BoxGeometry(0.16, 0.09, 0.28)             // обувь
     };
     return GEO;
+}
+
+/* Общие материалы агентов (телесный, обувь, тёмный) — создаются ОДИН раз
+   на всех 25 агентов, а не по копии на каждого. */
+let SHARED_M = null;
+function sharedMats() {
+    if (SHARED_M) return SHARED_M;
+    SHARED_M = {
+        skin: new THREE.MeshStandardMaterial({ color: 0xffcc99, metalness: 0.05, roughness: 0.78 }),
+        shoe: new THREE.MeshStandardMaterial({ color: 0x14181f, metalness: 0.35, roughness: 0.65 }),
+        dark: new THREE.MeshStandardMaterial({ color: 0x1b2028, metalness: 0.5, roughness: 0.6 })
+    };
+    return SHARED_M;
 }
 
 /* ------------------------------------------------------------------ */
