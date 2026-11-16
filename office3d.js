@@ -2079,6 +2079,14 @@ function install() {
         hideOffice();
     };
 
+    // ПРЯМОЙ ВХОД ПО ССЫЛКЕ: app.html?office3d=1 — 3D-офис открывается сам,
+    // без кнопки. Удобно и для проверки, и как обход, если кнопка не сработала.
+    try {
+        if (/[?&]office3d=1/.test(location.search)) {
+            setTimeout(() => { if (!isOpen) { isOpen = true; showOffice(); } }, 900);
+        }
+    } catch (e) {}
+
     // ЛЮБАЯ ошибка внутри 3D-офиса становится видимой, а не молча ломает запуск
     window.addEventListener('error', (ev) => {
         if (!isOpen) return;
