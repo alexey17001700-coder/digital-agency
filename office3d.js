@@ -2014,6 +2014,29 @@ function install() {
     };
     grab();
 
+    // ПРЯМОЙ ВХОД: кнопка «Офис» в app.html вызывает window.openOffice3D().
+    // Не зависит от порядка загрузки скриптов и от перехвата toggleOffice.
+    window.openOffice3D = function () {
+        if (isOpen) return;
+        isOpen = true;
+        showOffice();
+    };
+    window.closeOffice3D = function () {
+        if (!isOpen) return;
+        isOpen = false;
+        hideOffice();
+    };
+
+    // ЛЮБАЯ ошибка внутри 3D-офиса становится видимой, а не молча ломает запуск
+    window.addEventListener('error', (ev) => {
+        if (!isOpen) return;
+        showFail(ev.error || new Error(ev.message || 'неизвестная ошибка'), 'runtime');
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+        if (!isOpen) return;
+        showFail(ev.reason || new Error('promise rejected'), 'promise');
+    });
+
     loadThree().catch(() => console.warn('[office3d] 3D недоступен, останется 2D-офис'));
 }
 
