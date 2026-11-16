@@ -1288,7 +1288,7 @@ function setupPick(renderer, cam, groups, onPick) {
 /* ------------------------------------------------------------------ */
 /*  КАМЕРА + УПРАВЛЕНИЕ (изометрия, drag / pinch / wheel)              */
 /* ------------------------------------------------------------------ */
-const CAM_HOME = { yaw: Math.PI * 0.25, pitch: 0.62, dist: 64, tx: 5, ty: 1.6, tz: 0.5 };
+const CAM_HOME = { yaw: Math.PI * 0.25, pitch: 0.62, dist: 64, tx: -3, ty: 1.6, tz: 1.5 };
 
 function makeCamera(container) {
     const w = Math.max(container.clientWidth, 1);
