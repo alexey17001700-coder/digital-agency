@@ -1466,13 +1466,64 @@ function setupPick(renderer, cam, groups, onPick) {
 /* ------------------------------------------------------------------ */
 const CAM_HOME = { yaw: Math.PI * 0.25, pitch: 0.62, dist: 64, tx: -3, ty: 1.6, tz: 1.5 };
 
+/* Пределы зума и панорамирования */
+const ZOOM_MIN = 16, ZOOM_MAX = 150;
+const CAM_PAN_LIMIT = { x: 26, z: 21 };
+
 function makeCamera(container) {
     const w = Math.max(container.clientWidth, 1);
     const h = Math.max(container.clientHeight, 1);
     const cam = new THREE.PerspectiveCamera(42, w / h, 0.1, 400);
-    const st = Object.assign({}, CAM_HOME);
+    /* st.* — текущее состояние, st.*T — цель. К цели идёт плавное сглаживание
+       (в tick), поэтому зум и возврат вида выглядят мягко, без рывков. */
+    const st = {
+        yaw: CAM_HOME.yaw, pitch: CAM_HOME.pitch, ty: CAM_HOME.ty,
+        dist: CAM_HOME.dist, tx: CAM_HOME.tx, tz: CAM_HOME.tz,
+        distT: CAM_HOME.dist, txT: CAM_HOME.tx, tzT: CAM_HOME.tz
+    };
     applyCam(cam, st);
     return { cam, st };
+}
+
+/* --- ЗУМ «В ТОЧКУ» ---------------------------------------------------
+   Точка пола под пальцем (или курсором) остаётся на месте при зуме.
+   Объекты Three.js создаются ЛЕНИВО: на момент загрузки модуля THREE ещё
+   не подтянут, поэтому в module-scope их создавать нельзя. */
+let _zoomPlane = null, _zoomRay = null, _zoomNdc = null, _zoomHit = null;
+
+function groundUnder(el, cam, st, clientX, clientY) {
+    if (!_zoomPlane) {
+        _zoomPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        _zoomRay = new THREE.Raycaster();
+        _zoomNdc = new THREE.Vector2();
+        _zoomHit = new THREE.Vector3();
+    }
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    _zoomNdc.x = ((clientX - r.left) / r.width) * 2 - 1;
+    _zoomNdc.y = -((clientY - r.top) / r.height) * 2 + 1;
+    _zoomRay.setFromCamera(_zoomNdc, cam);
+    _zoomPlane.constant = -st.ty;
+    return _zoomRay.ray.intersectPlane(_zoomPlane, _zoomHit) ? _zoomHit.clone() : null;
+}
+
+/* Меняет ЦЕЛЕВУЮ дистанцию и, если задана точка экрана, сдвигает цель
+   камеры так, чтобы точка пола под пальцем осталась под пальцем. */
+function zoomAt(el, cam, st, newDist, clientX, clientY) {
+    const before = (clientX != null) ? groundUnder(el, cam, st, clientX, clientY) : null;
+    st.distT = clamp(newDist, ZOOM_MIN, ZOOM_MAX);
+    if (before) {
+        const keep = st.dist;
+        st.dist = st.distT;
+        applyCam(cam, st);
+        const after = groundUnder(el, cam, st, clientX, clientY);
+        if (after) {
+            st.txT = clamp(st.tx + (before.x - after.x), -CAM_PAN_LIMIT.x, CAM_PAN_LIMIT.x);
+            st.tzT = clamp(st.tz + (before.z - after.z), -CAM_PAN_LIMIT.z, CAM_PAN_LIMIT.z);
+        }
+        st.dist = keep;
+        applyCam(cam, st);
+    }
 }
 
 function applyCam(cam, st) {
