@@ -57,7 +57,19 @@
                 showBootError('Не загрузилось ядро (chat.js/ui.js). Проверь связь и обнови страницу.');
             }
             if (failed.length) showBootError('Не загрузились файлы: ' + failed.join(', '));
-            if (!window.OFFICE3D_VERSION) showBootError('office3d.js не выполнился — 3D-офис недоступен, откроется 2D.');
+
+            // СТРАХОВКА: если 3D-модуль не выполнился — пробуем загрузить его ещё раз,
+            // и только потом сообщаем о проблеме (без этого кнопка «Офис» молча
+            // открывала старый 2D-офис и было непонятно, что случилось).
+            if (!window.OFFICE3D_VERSION) {
+                console.warn('office3d.js не выполнился — повторная загрузка');
+                try { await loadScript('office3d.js', false); } catch (e) { console.error(e); }
+                if (!window.OFFICE3D_VERSION) {
+                    showBootError('office3d.js не загрузился — 3D-офис недоступен. Обнови страницу.');
+                } else {
+                    console.log('office3d.js загружен со второй попытки');
+                }
+            }
         });
     </script>
 </head>
