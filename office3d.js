@@ -1356,18 +1356,24 @@ function agentTick(a, dt, t) {
             a.model.rotation.y = Math.atan2(dx, dz);
 
             const s = Math.sin(t * 9 + a.phase);
-            rig.legL.rotation.x = s * 0.55;
-            rig.legR.rotation.x = -s * 0.55;
-            rig.armL.rotation.x = -s * 0.45;
-            rig.armR.rotation.x = s * 0.45;
-            a.model.position.y = 0.71 + Math.abs(s) * 0.05;
+            rig.legL.rotation.x = s * 0.52;
+            rig.legR.rotation.x = -s * 0.52;
+            rig.kneeL.rotation.x = Math.max(0, s) * 0.95;      // колено сгибается на заднем шаге
+            rig.kneeR.rotation.x = Math.max(0, -s) * 0.95;
+            rig.armL.rotation.x = -s * 0.42;
+            rig.armR.rotation.x = s * 0.42;
+            rig.elbowL.rotation.x = -0.12 - Math.max(0, -s) * 0.45;
+            rig.elbowR.rotation.x = -0.12 - Math.max(0, s) * 0.45;
+            a.model.position.y = 0.90 + Math.abs(s) * 0.045;
             rig.torso.rotation.x = 0.06;
         }
     } else if (a.state === 'sit') {
         poseSit(a);
         rig.torso.rotation.x = 0.12 + Math.sin(t * 2.2 + a.phase) * 0.03;
-        rig.armL.rotation.x = -1.36 + Math.sin(t * 7 + a.phase) * 0.10;
-        rig.armR.rotation.x = -1.36 + Math.sin(t * 7 + a.phase + 1.6) * 0.10;
+        rig.armL.rotation.x = -1.30 + Math.sin(t * 7 + a.phase) * 0.10;
+        rig.armR.rotation.x = -1.30 + Math.sin(t * 7 + a.phase + 1.6) * 0.10;
+        rig.elbowL.rotation.x = -0.55;
+        rig.elbowR.rotation.x = -0.55;
         rig.head.rotation.y = Math.sin(t * 0.7 + a.phase) * 0.25;
     } else if (a.state === 'hidden') {
         a.waitTimer -= dt;
