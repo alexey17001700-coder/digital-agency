@@ -2106,8 +2106,15 @@ function install() {
     loadThree().catch(() => console.warn('[office3d] 3D недоступен, останется 2D-офис'));
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
-else install();
+function boot() {
+    try { install(); }
+    catch (e) {
+        console.error('[office3d] install() упал:', e);
+        window.__office3dBootError = (e && e.message) || String(e);
+    }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
 
 window.OFFICE3D_VERSION = OFFICE3D_VERSION;
 })();
