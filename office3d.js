@@ -1741,6 +1741,7 @@ function hideOffice() {
         S = null;
     }
     GEO = null;
+    SHARED_M = null;
     toiletCount = 0;
     toiletTimer = 60 + Math.random() * 60;
     bossCount = 0;
