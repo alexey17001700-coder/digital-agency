@@ -1411,6 +1411,8 @@ function agentTick(a, dt, t) {
         rig.torso.rotation.x = s * 0.04;
         rig.armL.rotation.x = s * 0.10;
         rig.armR.rotation.x = -s * 0.10;
+        rig.elbowL.rotation.x = -0.16;
+        rig.elbowR.rotation.x = -0.16;
         rig.head.rotation.y = Math.sin(t * 0.9 + a.phase) * 0.35;
         a.waitTimer -= dt;
         if (a.waitTimer <= 0) goHome(a);
