@@ -264,7 +264,7 @@ function geos() {
         ], 12),
         aChest: new THREE.BoxGeometry(0.15, 0.10, 0.05),
         aBelt: new THREE.CylinderGeometry(0.172, 0.172, 0.055, 12),
-        aNeck: new THREE.CylinderGeometry(0.052, 0.062, 0.09, 8),
+        aNeck: new THREE.CylinderGeometry(0.052, 0.082, 0.09, 8),
         aHead: new THREE.SphereGeometry(0.115, 14, 12),
         aHair: new THREE.SphereGeometry(0.118, 12, 10),
         aEar: new THREE.SphereGeometry(0.028, 6, 5),
