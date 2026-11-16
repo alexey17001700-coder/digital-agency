@@ -18,7 +18,9 @@
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = `${src}?v=${timestamp}`;
-                // office3d.js содержит import() — грузим его как ES-модуль
+                // Обычный (classic) скрипт: office3d.js использует только
+                // динамический import(), которому type="module" не нужен.
+                // Classic-скрипт грузится надёжнее — без ограничений модулей.
                 if (isModule) script.type = 'module';
                 const timer = setTimeout(() => {
                     reject(new Error('Таймаут загрузки: ' + src));
