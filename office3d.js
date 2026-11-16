@@ -1706,19 +1706,41 @@ function injectStyles() {
    а не молча ломает запуск. */
 function showFail(err, stage) {
     const first = (err && err.details && err.details[0]) ? err.details[0] : ((err && err.message) || String(err) || '?');
-    const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 6).join('  ⟶  ') : '—';
-    const b = document.createElement('div');
-    b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:99999;' +
-        'background:#3a2a00;color:#ffd700;border:1px solid #ffd700;border-radius:8px;' +
-        'padding:10px 14px;font:11px monospace;max-width:92vw;text-align:left;line-height:1.5;' +
-        'word-break:break-word;';
-    b.innerHTML = '<b>⚠️ 3D-офис: сбой.</b><br>' +
-        'Этап: ' + esc(stage || 'неизвестно') + '<br>' +
-        'Причина: ' + esc(first) + '<br>' +
-        'Стек: ' + esc(stack) + '<br>' +
-        '<span style="opacity:.75">Показан 2D-офис. Пришли этот текст — починю точно.</span>';
-    document.body.appendChild(b);
-    setTimeout(() => b.remove(), 30000);
+    const all = (err && err.details) ? err.details.join('\n') : '';
+    const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 6).join('\n') : '—';
+    const office = document.getElementById('office-container');
+
+    const box = document.createElement('div');
+    box.style.cssText = 'position:absolute;inset:0;z-index:99999;background:#0b0f16;color:#ffd700;' +
+        'font:12px/1.6 monospace;padding:18px;overflow:auto;white-space:pre-wrap;word-break:break-word;';
+    box.textContent =
+        '⚠️ 3D-ОФИС НЕ ЗАПУСТИЛСЯ\n\n' +
+        'Этап: ' + (stage || 'неизвестно') + '\n' +
+        'Причина: ' + first + '\n\n' +
+        'Стек:\n' + stack + '\n\n' +
+        (all ? 'Все попытки загрузки:\n' + all + '\n\n' : '') +
+        'Версия модуля: ' + OFFICE3D_VERSION;
+
+    const again = document.createElement('button');
+    again.textContent = '⟲ Повторить';
+    again.style.cssText = 'margin-top:16px;padding:11px 18px;font:13px monospace;border-radius:8px;' +
+        'background:#00e5ff;color:#000;border:none;font-weight:bold;cursor:pointer;';
+    again.onclick = () => {
+        box.remove();
+        hideOffice();
+        setTimeout(() => { isOpen = true; showOffice(); }, 80);
+    };
+    box.appendChild(again);
+
+    const two = document.createElement('button');
+    two.textContent = 'Открыть 2D-офис';
+    two.style.cssText = 'margin:16px 0 0 10px;padding:11px 18px;font:13px monospace;border-radius:8px;' +
+        'background:#1a1f28;color:#ffd700;border:1px solid #ffd700;cursor:pointer;';
+    two.onclick = () => { box.remove(); hideOffice(); if (origToggle) origToggle(); };
+    box.appendChild(two);
+
+    if (office) { office.style.display = 'block'; office.appendChild(box); }
+    else document.body.appendChild(box);
 }
 
 function showOffice() {
