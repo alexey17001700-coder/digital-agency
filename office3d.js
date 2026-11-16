@@ -33,6 +33,22 @@ let isOpen = false;
 let S = null;          // активная сцена-контекст
 let origToggle = null; // оригинальный 2D toggleOffice
 
+/* ПРЯМОЙ ВХОД В 3D-ОФИС — определяется СРАЗУ при выполнении модуля, ещё ДО
+   install(). Если install() по любой причине упадёт (или ui.js переопределит
+   что-то позже), кнопка «Офис» всё равно откроет 3D-офис, а не молча
+   свалится в старый 2D. */
+window.openOffice3D = function () {
+    if (isOpen) return;
+    isOpen = true;
+    try { showOffice(); }
+    catch (e) { isOpen = false; showFail(e, 'открытие офиса'); }
+};
+window.closeOffice3D = function () {
+    if (!isOpen) return;
+    isOpen = false;
+    hideOffice();
+};
+
 /* ------------------------------------------------------------------ */
 /*  ЗАГРУЗКА THREE.JS                                                  */
 /* ------------------------------------------------------------------ */
