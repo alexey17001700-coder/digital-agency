@@ -125,7 +125,7 @@ function loadThree() {
         /* 2) ЗЕРКАЛА — только если локальный файл недоступен */
         for (const url of THREE_URLS) {
             try {
-                if (ok(await withTimeout(import(url), 8000))) return THREE;
+                if (ok(await withTimeout(import(url), 5000))) return THREE;
                 errs.push(url + ' → загрузился, но это не Three.js (нет WebGLRenderer)');
             } catch (e) {
                 const m = (e && e.message) ? e.message : String(e);
