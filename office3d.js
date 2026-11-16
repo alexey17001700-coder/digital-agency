@@ -1354,11 +1354,15 @@ const BREAK_SPOTS = [
 let toiletCount = 0;
 let toiletTimer = 60 + Math.random() * 60;
 
+let WALKERS = 0;   // сколько агентов сейчас идут — чтобы офис не «кишел»
+
 function agentBreak(a, dt) {
     if (a.state !== 'sit' || a.working) return;
     a.breakTimer -= dt;
     if (a.breakTimer > 0) return;
-    a.breakTimer = 25 + Math.random() * 20;
+    // одновременно гуляют максимум 2 агента, иначе офис выглядит хаотично
+    if (WALKERS >= 2) { a.breakTimer = 15 + Math.random() * 20; return; }
+    a.breakTimer = 110 + Math.random() * 130;
     const s = BREAK_SPOTS[(Math.random() * BREAK_SPOTS.length) | 0];
     goTo(a, routeOut(a.model.position.z, s.x, s.z), () => {
         a.state = 'idle';
