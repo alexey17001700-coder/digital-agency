@@ -245,22 +245,44 @@ function geos() {
         plane: new THREE.PlaneGeometry(1, 1),
         chairSeat: new THREE.BoxGeometry(0.95, 0.14, 0.9),
         chairBack: new THREE.BoxGeometry(0.95, 0.85, 0.14),
-        chairPole: new THREE.CylinderGeometry(0.09, 0.09, 0.55, 8),
+        chairPole: new THREE.CylinderGeometry(0.09, 0.09, 0.40, 8),
         chairFoot: new THREE.CylinderGeometry(0.42, 0.42, 0.07, 12),
-        // агент — человеческие пропорции (origin модели — на уровне бёдер)
-        aTorso: new THREE.CylinderGeometry(0.27, 0.19, 0.58, 10),  // плечи шире талии
-        aChest: new THREE.BoxGeometry(0.24, 0.16, 0.08),
-        aBelt: new THREE.CylinderGeometry(0.20, 0.20, 0.08, 12),
-        aNeck: new THREE.CylinderGeometry(0.075, 0.085, 0.13, 8),  // шея
-        aHead: new THREE.SphereGeometry(0.175, 12, 10),            // голова меньше в 1.5 раза
-        aVisor: new THREE.BoxGeometry(0.26, 0.08, 0.06),           // тёмные очки/визор
-        aAnt: new THREE.CylinderGeometry(0.012, 0.012, 0.18, 6),
-        aAntTip: new THREE.SphereGeometry(0.032, 8, 6),
-        aShoulder: new THREE.SphereGeometry(0.10, 8, 6),
-        aArm: new THREE.CapsuleGeometry(0.058, 0.40, 4, 8),        // тоньше и длиннее
-        aHand: new THREE.SphereGeometry(0.072, 8, 6),
-        aLeg: new THREE.CapsuleGeometry(0.078, 0.48, 4, 8),        // тоньше и длиннее
-        aFoot: new THREE.BoxGeometry(0.16, 0.09, 0.28)             // обувь
+        /* --- АГЕНТ: реалистичные пропорции (origin модели — на уровне бёдер).
+           Рост ~1,70 м, ноги 0,90 м (53% роста), голова 0,23 м (7,4 головы).
+           Торс — LatheGeometry по анатомическому профилю (бёдра → талия →
+           грудь → плечи → основание шеи), а не цилиндр. --- */
+        aTorso: new THREE.LatheGeometry([
+            new THREE.Vector2(0.148, 0.000),   // бёдра
+            new THREE.Vector2(0.170, 0.050),
+            new THREE.Vector2(0.164, 0.120),   // талия
+            new THREE.Vector2(0.178, 0.200),
+            new THREE.Vector2(0.202, 0.285),   // грудь
+            new THREE.Vector2(0.214, 0.360),
+            new THREE.Vector2(0.206, 0.425),   // плечи
+            new THREE.Vector2(0.140, 0.470),
+            new THREE.Vector2(0.088, 0.500)    // основание шеи
+        ], 12),
+        aChest: new THREE.BoxGeometry(0.15, 0.10, 0.05),
+        aBelt: new THREE.CylinderGeometry(0.172, 0.172, 0.055, 12),
+        aNeck: new THREE.CylinderGeometry(0.052, 0.062, 0.09, 8),
+        aHead: new THREE.SphereGeometry(0.115, 14, 12),
+        aHair: new THREE.SphereGeometry(0.118, 12, 10),
+        aEar: new THREE.SphereGeometry(0.028, 6, 5),
+        aNose: new THREE.ConeGeometry(0.020, 0.045, 6),
+        aEye: new THREE.SphereGeometry(0.014, 6, 5),
+        aBrow: new THREE.BoxGeometry(0.042, 0.011, 0.011),
+        aVisor: new THREE.BoxGeometry(0.20, 0.05, 0.05),
+        aAnt: new THREE.CylinderGeometry(0.008, 0.008, 0.13, 5),
+        aAntTip: new THREE.SphereGeometry(0.020, 6, 5),
+        aPad: new THREE.SphereGeometry(0.085, 8, 6),
+        aShoulder: new THREE.SphereGeometry(0.062, 8, 6),
+        aUpArm: new THREE.CapsuleGeometry(0.050, 0.190, 3, 8),
+        aForearm: new THREE.CapsuleGeometry(0.043, 0.200, 3, 8),
+        aHand: new THREE.SphereGeometry(0.052, 8, 6),
+        aThigh: new THREE.CapsuleGeometry(0.072, 0.276, 3, 8),
+        aShin: new THREE.CapsuleGeometry(0.056, 0.308, 3, 8),
+        aFoot: new THREE.BoxGeometry(0.105, 0.07, 0.235),
+        aToe: new THREE.BoxGeometry(0.098, 0.05, 0.085)
     };
     return GEO;
 }
