@@ -727,9 +727,9 @@ function buildDesks(scene, M, screenMats) {
         { geo: new THREE.BoxGeometry(1.1, 0.06, 0.36), mat: M.plastic, offs: [[0, 1.16, 0.35]] },
         { geo: new THREE.SphereGeometry(0.09, 10, 8), mat: M.plastic, offs: [[0.85, 1.18, 0.35]], scale: [1, 0.6, 1.4] },
         { geo: new THREE.CylinderGeometry(0.11, 0.09, 0.22, 10), mat: M.metal, offs: [[-1.3, 1.24, 0.3]] },
-        { geo: geos().chairSeat, mat: M.plastic, offs: [[0, 0.62, 1.35]] },
-        { geo: geos().chairBack, mat: M.plastic, offs: [[0, 1.05, 1.77]] },
-        { geo: geos().chairPole, mat: M.metal, offs: [[0, 0.32, 1.35]] },
+        { geo: geos().chairSeat, mat: M.plastic, offs: [[0, 0.46, 1.35]] },
+        { geo: geos().chairBack, mat: M.plastic, offs: [[0, 0.90, 1.77]] },
+        { geo: geos().chairPole, mat: M.metal, offs: [[0, 0.24, 1.35]] },
         { geo: geos().chairFoot, mat: M.metal, offs: [[0, 0.05, 1.35]] }
     ];
 
