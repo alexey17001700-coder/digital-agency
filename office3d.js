@@ -1332,9 +1332,40 @@ function applyCam(cam, st) {
     cam.lookAt(st.tx, st.ty, st.tz);
 }
 
+/* Пределы панорамирования — камера не улетает за пределы офиса */
+const CAM_PAN_LIMIT = { x: 26, z: 21 };
+
+/* RTS-управление (как в Diablo / мобильных стратегиях):
+   угол камеры ЖЁСТКО ЗАФИКСИРОВАН (yaw + pitch из CAM_HOME) — вращения нет.
+   Один палец — панорамирование по полу («схватывание карты»),
+   два пальца — зум, колесо — зум. */
 function bindControls(el, cam, st) {
     const pts = new Map();
     let pinch = 0;
+
+    /* Мировые оси по земле: r — «вправо по экрану», u — «вверх по экрану».
+       Считаются от текущего yaw, поэтому движение всегда естественное. */
+    function axes() {
+        const s = Math.sin(st.yaw), c = Math.cos(st.yaw);
+        return { rx: c, rz: -s, ux: -s, uz: -c };
+    }
+
+    /* Сколько мировых метров приходится на один пиксель экрана
+       (чтобы панорамирование было 1:1 с пальцем при любом зуме). */
+    function pxToWorld() {
+        const h = Math.max(el.clientHeight, 1);
+        return (2 * st.dist * Math.tan((cam.fov * Math.PI / 180) / 2)) / h;
+    }
+
+    /* Панорамирование: палец вправо → офис едет вправо (эффект схватывания),
+       то есть цель камеры смещается в противоположную сторону. */
+    function pan(dx, dy) {
+        const a = axes();
+        const k = pxToWorld();
+        st.tx = clamp(st.tx + (-dx * a.rx + dy * a.ux) * k, -CAM_PAN_LIMIT.x, CAM_PAN_LIMIT.x);
+        st.tz = clamp(st.tz + (-dx * a.rz + dy * a.uz) * k, -CAM_PAN_LIMIT.z, CAM_PAN_LIMIT.z);
+        applyCam(cam, st);
+    }
 
     const onDown = (e) => {
         el.setPointerCapture && el.setPointerCapture(e.pointerId);
@@ -1348,14 +1379,16 @@ function bindControls(el, cam, st) {
         p.x = e.clientX; p.y = e.clientY;
 
         if (pts.size >= 2) {
+            // ЩИПОК — только зум. Камера сама опускается/поднимается,
+            // т.к. смотрит на st.tx / st.tz.
             const d = pinchDist();
             if (pinch > 0 && d > 0) st.dist = clamp(st.dist * (pinch / d), 24, 130);
             pinch = d;
+            applyCam(cam, st);
         } else {
-            st.yaw -= dx * 0.006;
-            st.pitch = clamp(st.pitch + dy * 0.005, 0.2, 1.28);
+            // ОДИН ПАЛЕЦ — панорамирование по полу (yaw и pitch не меняются)
+            pan(dx, dy);
         }
-        applyCam(cam, st);
     };
     const onUp = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
     const onWheel = (e) => {
