@@ -1542,7 +1542,7 @@ function applyCam(cam, st) {
    два пальца — зум, колесо — зум. */
 function bindControls(el, cam, st) {
     const pts = new Map();
-    let pinch = 0;
+    let pinch0 = 0, pinchBase = 0;
 
     /* Мировые оси по земле: r — «вправо по экрану», u — «вверх по экрану».
        Считаются от текущего yaw, поэтому движение всегда естественное. */
