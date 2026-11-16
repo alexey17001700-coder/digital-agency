@@ -446,8 +446,8 @@ const BATH_DOOR = { x: 25.7, z: 6.2 };
 const BATH_IN = { x: 25.7, z: 3.4 };
 
 /* Стол Босса и точка доклада (ЭТАП 3) */
-const BOSS_DESK = { x: -8, z: 9.6 };
-const BOSS_SPOT = { x: -8, z: 6.6 };
+const BOSS_DESK = { x: -5.3, z: 7.0 };
+const BOSS_SPOT = { x: -5.3, z: 4.6 };
 const BOSS_AISLE_Z = 4.4;
 
 function roundRect(x, px, py, w, h, r) {
