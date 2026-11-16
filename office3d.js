@@ -1817,8 +1817,10 @@ function startScene(office) {
     };
 
     reset.onclick = () => {
-        Object.assign(st, CAM_HOME);
-        applyCam(cam, st);
+        // плавный возврат к исходному виду — сглаживание делает tick
+        st.distT = CAM_HOME.dist;
+        st.txT = CAM_HOME.tx;
+        st.tzT = CAM_HOME.tz;
     };
 
     const onResize = () => {
