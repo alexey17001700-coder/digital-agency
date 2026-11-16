@@ -67,17 +67,49 @@ async function probeLocal() {
    1) ES-модуль (export class WebGLRenderer ...) — обычный three.module.js
    2) UMD/глобальная сборка (three.min.js) — модуль ничего не экспортирует,
       но создаёт window.THREE. Такой файл тоже подхватываем. */
+/* Импорт модуля через Blob-URL. Обходит случай, когда сервер отдаёт файл
+   с неверным MIME-типом — тогда обычный import() падает, а Blob работает. */
+async function importViaBlob(url) {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const code = await r.text();
+    if (!code || code.length < 2000) throw new Error('файл пустой: ' + code.length + ' байт');
+    const u = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+    try { return await import(u); }
+    finally { setTimeout(() => { try { URL.revokeObjectURL(u); } catch (e) {} }, 8000); }
+}
+
 function loadThree() {
     if (THREE) return Promise.resolve(THREE);
     if (loadPromise) return loadPromise;
     loadPromise = (async () => {
         const errs = [];
+        const ok = (mod) => {
+            if (mod && mod.WebGLRenderer) { THREE = mod; return true; }
+            const g = (typeof window !== 'undefined') ? window.THREE : null;
+            if (g && g.WebGLRenderer) { THREE = g; return true; }
+            return false;
+        };
+
+        /* 1) ЛОКАЛЬНЫЙ ФАЙЛ — основной путь (мгновенно, работает офлайн).
+              Сначала обычный import(), затем через Blob (обход MIME-типа). */
+        try {
+            if (ok(await withTimeout(import('./three.module.js'), 8000))) return THREE;
+            errs.push('./three.module.js → загрузился, но нет WebGLRenderer');
+        } catch (e) {
+            errs.push('./three.module.js → ' + ((e && e.message) || e));
+        }
+        try {
+            if (ok(await withTimeout(importViaBlob('./three.module.js'), 8000))) return THREE;
+            errs.push('./three.module.js (blob) → загрузился, но нет WebGLRenderer');
+        } catch (e) {
+            errs.push('./three.module.js (blob) → ' + ((e && e.message) || e));
+        }
+
+        /* 2) ЗЕРКАЛА — только если локальный файл недоступен */
         for (const url of THREE_URLS) {
             try {
-                const mod = await withTimeout(import(url), 8000);
-                if (mod && mod.WebGLRenderer) { THREE = mod; return THREE; }
-                const g = (typeof window !== 'undefined') ? window.THREE : null;
-                if (g && g.WebGLRenderer) { THREE = g; return THREE; }
+                if (ok(await withTimeout(import(url), 8000))) return THREE;
                 errs.push(url + ' → загрузился, но это не Three.js (нет WebGLRenderer)');
             } catch (e) {
                 const m = (e && e.message) ? e.message : String(e);
@@ -85,6 +117,7 @@ function loadThree() {
                 console.warn('[office3d] Three.js не загрузился:', url, m);
             }
         }
+
         loadPromise = null; // разрешаем повторную попытку при следующем открытии
         const err = new Error('Three.js недоступен');
         err.details = errs;
