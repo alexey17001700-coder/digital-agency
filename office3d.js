@@ -1565,6 +1565,7 @@ function bindControls(el, cam, st) {
         const k = pxToWorld();
         st.tx = clamp(st.tx + (-dx * a.rx + dy * a.ux) * k, -CAM_PAN_LIMIT.x, CAM_PAN_LIMIT.x);
         st.tz = clamp(st.tz + (-dx * a.rz + dy * a.uz) * k, -CAM_PAN_LIMIT.z, CAM_PAN_LIMIT.z);
+        st.txT = st.tx; st.tzT = st.tz;
         applyCam(cam, st);
     }
 
