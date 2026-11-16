@@ -1187,8 +1187,8 @@ function buildAgents(scene, spots) {
             home, homeYaw: Math.PI,
             state: 'sit', working: false, highlight: false,
             path: null, pi: 0, onDone: null,
-            breakTimer: 12 + Math.random() * 25,
-            toiletTimer: 45 + Math.random() * 75,
+            breakTimer: 60 + Math.random() * 90,
+            toiletTimer: 120 + Math.random() * 150,
             taskTimer: 25 + Math.random() * 45,
             waitTimer: 0,
             phase: Math.random() * 6.283
