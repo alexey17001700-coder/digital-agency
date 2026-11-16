@@ -1114,7 +1114,7 @@ function buildAgents(scene, spots) {
             map: texBubble('…', '#00e5ff'), transparent: true, depthTest: false, depthWrite: false
         }));
         bubble.scale.set(3.5, 1.4, 1);
-        bubble.position.y = 2.85;
+        bubble.position.y = 2.05;
         bubble.renderOrder = 3;
         bubble.visible = false;
         bubble.userData.agentName = def.name;
