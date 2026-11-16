@@ -14,18 +14,17 @@
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v2.9 · build 21';
+const OFFICE3D_VERSION = 'v3.0 · build 22';
 
+/* Локальный файл пробуется ОТДЕЛЬНО (два способа), CDN — только как резерв. */
 const THREE_URLS = [
-    './three.module.js',
-      'https://rawcdn.githack.com/mrdoob/three.js/r160/build/three.module.js',
-      'https://cdn.statically.io/gh/mrdoob/three.js/r160/build/three.module.js',
-      'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+    'https://rawcdn.githack.com/mrdoob/three.js/r160/build/three.module.js',
+    'https://cdn.statically.io/gh/mrdoob/three.js/r160/build/three.module.js',
+    'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
     'https://unpkg.com/three@0.160.0/build/three.module.js',
     'https://fastly.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
     'https://esm.sh/three@0.160.0',
-    'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js',
-    'https://cdn.statically.io/gh/mrdoob/three.js/r160/build/three.module.js'
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js'
 ];
 
 let THREE = null;
