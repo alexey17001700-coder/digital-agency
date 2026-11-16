@@ -1761,15 +1761,13 @@ function showOffice() {
             try {
                 startScene(office);
             } catch (e) {
-                if (e && !e.__stage) e.__stage = 'startScene';
+                if (e && !e.__stage) e.__stage = 'сборка сцены (buildScene / startScene)';
                 throw e;
             }
         }).catch((err) => {
-            console.warn('[office3d] 3D-офис не запустился — фолбэк на 2D-офис', err);
-            isOpen = false;
-            office.innerHTML = '';
-            if (origToggle) origToggle();
-            showFail(err, (err && err.__stage) || 'запуск 3D');
+            // НИКАКОГО молчаливого фолбэка: показываем полноэкранную диагностику
+            console.warn('[office3d] 3D-офис не запустился', err);
+            showFail(err, (err && err.__stage) || 'загрузка Three.js');
         });
     }
 }
