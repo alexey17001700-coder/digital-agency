@@ -1509,7 +1509,7 @@ function startScene(office) {
 
     const hint = document.createElement('div');
     hint.className = 'o3d-hint';
-    hint.textContent = 'Тапни агента — карточка · Потяни — поворот · Щипок — зум';
+    hint.textContent = 'Тапни агента — карточка · Потяни — панорама · Щипок — зум';
     office.appendChild(hint);
     setTimeout(() => hint.classList.add('hide'), 6000);
 
