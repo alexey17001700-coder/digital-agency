@@ -521,56 +521,69 @@ function texBubble(text, color) {
     return new THREE.CanvasTexture(c);
 }
 
-/* Низкополигональная модель агента (~1.7 м). Геометрии — общие. */
+/* Низкополигональная модель агента — человеческие пропорции (рост ~1.75 м).
+   Плечи шире талии, есть шея, голова уменьшена, конечности длинные и тонкие.
+   Геометрии и часть материалов — ОБЩИЕ (не создаются на каждого агента).
+   Origin модели — на уровне бёдер (ноги уходят вниз до y ≈ −0.7). */
 function createAgentModel(color) {
     const G = geos();
+    const SH = sharedMats();
     const g = new THREE.Group();
 
     const accent = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45);
     const suit = new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.55 });
-    const suitDark = new THREE.MeshStandardMaterial({ color: 0x1b2028, metalness: 0.5, roughness: 0.6 });
     const glow = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.5, metalness: 0.2, roughness: 0.4 });
     const visorMat = new THREE.MeshStandardMaterial({ color: 0x0a1018, emissive: accent, emissiveIntensity: 0.45, metalness: 0.9, roughness: 0.15 });
 
+    // ТУЛОВИЩЕ — вытянутое, сужается к поясу
     const torso = new THREE.Mesh(G.aTorso, suit);
-    torso.position.y = 0.55; g.add(torso);
+    torso.position.y = 0.29; g.add(torso);
 
     const chest = new THREE.Mesh(G.aChest, glow);
-    chest.position.set(0, 0.62, 0.28); g.add(chest);
+    chest.position.set(0, 0.36, 0.20); g.add(chest);
 
-    const belt = new THREE.Mesh(G.aBelt, suitDark);
-    belt.position.y = 0.06; g.add(belt);
+    const belt = new THREE.Mesh(G.aBelt, SH.dark);
+    belt.position.y = 0.04; g.add(belt);
 
-    const head = new THREE.Mesh(G.aHead, suit);
-    head.position.y = 1.24; g.add(head);
+    // ШЕЯ — между головой и телом
+    const neck = new THREE.Mesh(G.aNeck, SH.skin);
+    neck.position.y = 0.645; g.add(neck);
+
+    // ГОЛОВА — телесного цвета, с тёмным визором (очки), не пустой шар
+    const head = new THREE.Mesh(G.aHead, SH.skin);
+    head.position.y = 0.885; g.add(head);
 
     const visor = new THREE.Mesh(G.aVisor, visorMat);
-    visor.position.set(0, 1.26, 0.22); g.add(visor);
+    visor.position.set(0, 0.90, 0.155); g.add(visor);
 
-    const ant = new THREE.Mesh(G.aAnt, suitDark);
-    ant.position.set(0.14, 1.52, 0); g.add(ant);
+    const ant = new THREE.Mesh(G.aAnt, SH.dark);
+    ant.position.set(0.11, 1.02, -0.02); g.add(ant);
     const antTip = new THREE.Mesh(G.aAntTip, glow);
-    antTip.position.set(0.14, 1.64, 0); g.add(antTip);
+    antTip.position.set(0.11, 1.12, -0.02); g.add(antTip);
 
+    // РУКИ — pivot в ПЛЕЧЕ, геометрия смещена вниз (вращение вокруг плеча)
     const mkArm = (side) => {
         const p = new THREE.Group();
-        p.position.set(side * 0.36, 0.92, 0);
+        p.position.set(side * 0.30, 0.50, 0);
+        const sh = new THREE.Mesh(G.aShoulder, suit);
+        p.add(sh);
         const a = new THREE.Mesh(G.aArm, suit);
-        a.position.y = -0.28; p.add(a);
-        const hand = new THREE.Mesh(G.aHand, suitDark);
-        hand.position.y = -0.55; p.add(hand);
+        a.position.y = -0.26; p.add(a);
+        const hand = new THREE.Mesh(G.aHand, SH.skin);   // кисти — телесные
+        hand.position.y = -0.53; p.add(hand);
         g.add(p);
         return p;
     };
     const armL = mkArm(-1), armR = mkArm(1);
 
+    // НОГИ — pivot в БЕДРЕ, геометрия смещена вниз (вращение вокруг бедра)
     const mkLeg = (side) => {
         const p = new THREE.Group();
-        p.position.set(side * 0.15, -0.04, 0);
+        p.position.set(side * 0.14, 0, 0);
         const l = new THREE.Mesh(G.aLeg, suit);
         l.position.y = -0.33; p.add(l);
-        const foot = new THREE.Mesh(G.aFoot, suitDark);
-        foot.position.set(0, -0.62, 0.06); p.add(foot);
+        const foot = new THREE.Mesh(G.aFoot, SH.shoe);   // обувь — тёмные кубы
+        foot.position.set(0, -0.66, 0.05); p.add(foot);
         g.add(p);
         return p;
     };
