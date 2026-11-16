@@ -1625,6 +1625,7 @@ function bindControls(el, cam, st) {
         el.removeEventListener('pointercancel', onUp);
         el.removeEventListener('pointerleave', onUp);
         el.removeEventListener('wheel', onWheel);
+        window.removeEventListener('keydown', onKey);
     };
 }
 
