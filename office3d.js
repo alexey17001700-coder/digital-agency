@@ -779,6 +779,24 @@ function buildBossDesk(scene, M, screenTex) {
     plate.position.set(0, 3.6, 0);
     g.add(plate);
 
+    // приподнятая площадка + золотое кольцо — стол Босса видно издалека
+    const pad = new THREE.Mesh(
+        new THREE.CylinderGeometry(3.0, 3.0, 0.12, 32),
+        new THREE.MeshStandardMaterial({ color: 0x2a3446, metalness: 0.6, roughness: 0.4 })
+    );
+    pad.position.y = 0.06;
+    g.add(pad);
+    const padRing = new THREE.Mesh(
+        new THREE.RingGeometry(2.86, 3.16, 40),
+        new THREE.MeshBasicMaterial({
+            color: 0xffd700, transparent: true, opacity: 0.5,
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+        })
+    );
+    padRing.rotation.x = -Math.PI / 2;
+    padRing.position.y = 0.13;
+    g.add(padRing);
+
     g.position.set(BOSS_DESK.x, 0, BOSS_DESK.z);
     scene.add(g);
 
