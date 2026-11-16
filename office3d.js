@@ -1960,7 +1960,7 @@ function startScene(office) {
         // ЭТАП 3: агенты ходят с докладом к Боссу
         bossTimer -= dt;
         if (bossTimer <= 0) {
-            bossTimer = 22 + Math.random() * 28;
+            bossTimer = 55 + Math.random() * 55;
             if (bossCount < 2) {
                 const freeB = [];
                 for (let i = 0; i < agents.length; i++) {
