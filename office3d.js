@@ -1654,6 +1654,11 @@ function injectStyles() {
         background:rgba(10,14,20,.8); border:1px solid rgba(0,229,255,.5); color:#00e5ff;
         border-radius:10px; padding:8px 12px; font:12px monospace; }
     .o3d-reset:active { background:rgba(0,229,255,.2); }
+    .o3d-zoom { position:absolute; right:12px; top:56px; z-index:6; display:flex; flex-direction:column; gap:8px; }
+    .o3d-zoom button { width:44px; height:44px; cursor:pointer; font:20px monospace; line-height:1;
+        background:rgba(10,14,20,.8); border:1px solid rgba(0,229,255,.5); color:#00e5ff;
+        border-radius:12px; -webkit-tap-highlight-color:transparent; }
+    .o3d-zoom button:active { background:rgba(0,229,255,.25); }
     .o3d-load { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
         font:14px monospace; color:#00e5ff; background:#070a10; z-index:4; }
     /* карточка агента должна быть поверх 3D-канваса */
