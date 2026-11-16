@@ -1730,6 +1730,16 @@ function startScene(office) {
     reset.textContent = '⟲ Сброс вида';
     office.appendChild(reset);
 
+    // КНОПКИ ЗУМА — для тех, кому неудобен щипок
+    const zoomBox = document.createElement('div');
+    zoomBox.className = 'o3d-zoom';
+    const zin = document.createElement('button'); zin.textContent = '＋';
+    const zout = document.createElement('button'); zout.textContent = '−';
+    zoomBox.appendChild(zin); zoomBox.appendChild(zout);
+    office.appendChild(zoomBox);
+    zin.onclick = () => zoomAt(renderer.domElement, cam, st, st.distT * 0.78);
+    zout.onclick = () => zoomAt(renderer.domElement, cam, st, st.distT * 1.28);
+
     const renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setSize(office.clientWidth, office.clientHeight);
