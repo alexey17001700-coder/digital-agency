@@ -1571,7 +1571,7 @@ function bindControls(el, cam, st) {
     const onDown = (e) => {
         el.setPointerCapture && el.setPointerCapture(e.pointerId);
         pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        if (pts.size === 2) pinch = pinchDist();
+        if (pts.size === 2) { pinch0 = pinchDist(); pinchBase = st.distT; }
     };
     const onMove = (e) => {
         const p = pts.get(e.pointerId);
