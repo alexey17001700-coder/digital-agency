@@ -55,6 +55,7 @@
                 showBootError('Не загрузилось ядро (chat.js/ui.js). Проверь связь и обнови страницу.');
             }
             if (failed.length) showBootError('Не загрузились файлы: ' + failed.join(', '));
+            if (!window.OFFICE3D_VERSION) showBootError('office3d.js не выполнился — 3D-офис недоступен, откроется 2D.');
         });
     </script>
 </head>
