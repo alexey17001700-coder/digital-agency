@@ -1670,6 +1670,25 @@ function injectStyles() {
 /* ------------------------------------------------------------------ */
 /*  ОТКРЫТИЕ / ЗАКРЫТИЕ                                                */
 /* ------------------------------------------------------------------ */
+/* Видимая диагностика: любая ошибка 3D-офиса показывается на экране,
+   а не молча ломает запуск. */
+function showFail(err, stage) {
+    const first = (err && err.details && err.details[0]) ? err.details[0] : ((err && err.message) || String(err) || '?');
+    const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 6).join('  ⟶  ') : '—';
+    const b = document.createElement('div');
+    b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:99999;' +
+        'background:#3a2a00;color:#ffd700;border:1px solid #ffd700;border-radius:8px;' +
+        'padding:10px 14px;font:11px monospace;max-width:92vw;text-align:left;line-height:1.5;' +
+        'word-break:break-word;';
+    b.innerHTML = '<b>⚠️ 3D-офис: сбой.</b><br>' +
+        'Этап: ' + esc(stage || 'неизвестно') + '<br>' +
+        'Причина: ' + esc(first) + '<br>' +
+        'Стек: ' + esc(stack) + '<br>' +
+        '<span style="opacity:.75">Показан 2D-офис. Пришли этот текст — починю точно.</span>';
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 30000);
+}
+
 function showOffice() {
     injectStyles();
     const chat = document.getElementById('chatContainer');
