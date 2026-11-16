@@ -1678,7 +1678,7 @@ function hideOffice() {
     toiletCount = 0;
     toiletTimer = 60 + Math.random() * 60;
     bossCount = 0;
-    bossTimer = 18 + Math.random() * 20;
+    bossTimer = 6 + Math.random() * 8;
     delete window.office3dSay;
     delete window.office3dTask;
     if (office) { office.innerHTML = ''; office.style.display = 'none'; }
