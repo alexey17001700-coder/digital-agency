@@ -1386,6 +1386,11 @@ function sendToToilet(a) {
 function agentTick(a, dt, t) {
     const rig = a.rig;
 
+    // учёт идущих агентов (ограничение одновременных прогулок)
+    const isWalk = (a.state === 'walk');
+    if (isWalk && !a._walk) { a._walk = true; WALKERS++; }
+    else if (!isWalk && a._walk) { a._walk = false; WALKERS = Math.max(0, WALKERS - 1); }
+
     if (a.state === 'walk' && a.path) {
         const to = a.path[a.pi];
         const dx = to.x - a.model.position.x;
