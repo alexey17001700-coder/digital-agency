@@ -553,66 +553,154 @@ function createAgentModel(color) {
     const SH = sharedMats();
     const g = new THREE.Group();
 
-    const accent = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45);
-    const suit = new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.55 });
+    const base = new THREE.Color(color);
+    const accent = base.clone().lerp(new THREE.Color(0xffffff), 0.45);
+    const suit = new THREE.MeshStandardMaterial({ color: base, metalness: 0.25, roughness: 0.62 });
+    const suitDark = new THREE.MeshStandardMaterial({ color: base.clone().multiplyScalar(0.5), metalness: 0.35, roughness: 0.6 });
     const glow = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.5, metalness: 0.2, roughness: 0.4 });
-    const visorMat = new THREE.MeshStandardMaterial({ color: 0x0a1018, emissive: accent, emissiveIntensity: 0.45, metalness: 0.9, roughness: 0.15 });
+    const visorMat = new THREE.MeshStandardMaterial({
+        color: 0x0b1119, emissive: accent, emissiveIntensity: 0.45,
+        metalness: 0.85, roughness: 0.12, transparent: true, opacity: 0.82
+    });
 
-    // ТУЛОВИЩЕ — вытянутое, сужается к поясу
-    const torso = new THREE.Mesh(G.aTorso, suit);
-    torso.position.y = 0.29; g.add(torso);
+    /* --- ТОРС (Group в бёдрах: наклон корпуса идёт от бёдер, а не от центра) --- */
+    const torso = new THREE.Group();
+    g.add(torso);
 
-    const chest = new THREE.Mesh(G.aChest, glow);
-    chest.position.set(0, 0.36, 0.20); g.add(chest);
+    const body = new THREE.Mesh(G.aTorso, suit);
+    body.scale.set(1, 1, 0.74);          // сечение овальное — как у человека
+    torso.add(body);
 
     const belt = new THREE.Mesh(G.aBelt, SH.dark);
-    belt.position.y = 0.04; g.add(belt);
+    belt.position.y = 0.045; belt.scale.set(1, 1, 0.78);
+    torso.add(belt);
 
-    // ШЕЯ — между головой и телом
+    const chest = new THREE.Mesh(G.aChest, glow);
+    chest.position.set(0, 0.32, 0.152);
+    torso.add(chest);
+
+    [-1, 1].forEach(s => {
+        const pad = new THREE.Mesh(G.aPad, suitDark);
+        pad.position.set(s * 0.205, 0.415, 0);
+        pad.scale.set(1, 0.7, 1);
+        torso.add(pad);
+    });
+
+    /* --- ШЕЯ + ГОЛОВА --- */
     const neck = new THREE.Mesh(G.aNeck, SH.skin);
-    neck.position.y = 0.645; g.add(neck);
+    neck.position.y = 0.535;
+    torso.add(neck);
 
-    // ГОЛОВА — телесного цвета, с тёмным визором (очки), не пустой шар
-    const head = new THREE.Mesh(G.aHead, SH.skin);
-    head.position.y = 0.885; g.add(head);
+    const head = new THREE.Group();
+    head.position.y = 0.655;
+    torso.add(head);
+
+    const skull = new THREE.Mesh(G.aHead, SH.skin);
+    skull.scale.set(0.94, 1.05, 1.0);
+    head.add(skull);
+
+    const hair = new THREE.Mesh(G.aHair, SH.hair);
+    hair.position.set(0, 0.020, -0.014);
+    hair.scale.set(0.98, 1.02, 1.02);
+    head.add(hair);
+
+    [-1, 1].forEach(s => {
+        const ear = new THREE.Mesh(G.aEar, SH.skin);
+        ear.position.set(s * 0.108, -0.004, -0.006);
+        ear.scale.set(0.55, 1, 0.85);
+        head.add(ear);
+
+        const eye = new THREE.Mesh(G.aEye, SH.dark);
+        eye.position.set(s * 0.042, 0.016, 0.098);
+        head.add(eye);
+
+        const brow = new THREE.Mesh(G.aBrow, SH.hair);
+        brow.position.set(s * 0.044, 0.048, 0.098);
+        brow.rotation.z = -s * 0.12;
+        head.add(brow);
+    });
+
+    const nose = new THREE.Mesh(G.aNose, SH.skin);
+    nose.position.set(0, -0.008, 0.104);
+    nose.rotation.x = Math.PI / 2;
+    head.add(nose);
 
     const visor = new THREE.Mesh(G.aVisor, visorMat);
-    visor.position.set(0, 0.90, 0.155); g.add(visor);
+    visor.position.set(0, 0.016, 0.094);
+    head.add(visor);
 
     const ant = new THREE.Mesh(G.aAnt, SH.dark);
-    ant.position.set(0.11, 1.02, -0.02); g.add(ant);
+    ant.position.set(0.072, 0.125, -0.02);
+    head.add(ant);
     const antTip = new THREE.Mesh(G.aAntTip, glow);
-    antTip.position.set(0.11, 1.12, -0.02); g.add(antTip);
+    antTip.position.set(0.072, 0.195, -0.02);
+    head.add(antTip);
 
-    // РУКИ — pivot в ПЛЕЧЕ, геометрия смещена вниз (вращение вокруг плеча)
+    /* --- РУКИ: плечо → локоть → кисть (два сегмента, как у человека) --- */
     const mkArm = (side) => {
-        const p = new THREE.Group();
-        p.position.set(side * 0.30, 0.50, 0);
-        const sh = new THREE.Mesh(G.aShoulder, suit);
-        p.add(sh);
-        const a = new THREE.Mesh(G.aArm, suit);
-        a.position.y = -0.26; p.add(a);
-        const hand = new THREE.Mesh(G.aHand, SH.skin);   // кисти — телесные
-        hand.position.y = -0.53; p.add(hand);
-        g.add(p);
-        return p;
+        const sh = new THREE.Group();
+        sh.position.set(side * 0.215, 0.415, 0);
+        torso.add(sh);
+
+        const cap = new THREE.Mesh(G.aShoulder, suit);
+        sh.add(cap);
+
+        const up = new THREE.Mesh(G.aUpArm, suit);
+        up.position.y = -0.145;
+        sh.add(up);
+
+        const el = new THREE.Group();
+        el.position.y = -0.29;
+        sh.add(el);
+
+        const fore = new THREE.Mesh(G.aForearm, suit);
+        fore.position.y = -0.143;
+        el.add(fore);
+
+        const hand = new THREE.Mesh(G.aHand, SH.skin);
+        hand.position.y = -0.286;
+        hand.scale.set(0.85, 1.15, 0.72);
+        el.add(hand);
+
+        return { sh, el };
     };
     const armL = mkArm(-1), armR = mkArm(1);
 
-    // НОГИ — pivot в БЕДРЕ, геометрия смещена вниз (вращение вокруг бедра)
+    /* --- НОГИ: бедро → колено → ступня (два сегмента) --- */
     const mkLeg = (side) => {
-        const p = new THREE.Group();
-        p.position.set(side * 0.14, 0, 0);
-        const l = new THREE.Mesh(G.aLeg, suit);
-        l.position.y = -0.33; p.add(l);
-        const foot = new THREE.Mesh(G.aFoot, SH.shoe);   // обувь — тёмные кубы
-        foot.position.set(0, -0.66, 0.05); p.add(foot);
-        g.add(p);
-        return p;
+        const hip = new THREE.Group();
+        hip.position.set(side * 0.105, 0, 0);
+        g.add(hip);
+
+        const thigh = new THREE.Mesh(G.aThigh, suit);
+        thigh.position.y = -0.210;
+        hip.add(thigh);
+
+        const kn = new THREE.Group();
+        kn.position.y = -0.420;
+        hip.add(kn);
+
+        const shin = new THREE.Mesh(G.aShin, suit);
+        shin.position.y = -0.210;
+        kn.add(shin);
+
+        const foot = new THREE.Mesh(G.aFoot, SH.shoe);
+        foot.position.set(0, -0.455, 0.040);
+        kn.add(foot);
+
+        const toe = new THREE.Mesh(G.aToe, SH.shoe);
+        toe.position.set(0, -0.465, 0.130);
+        kn.add(toe);
+
+        return { hip, kn };
     };
     const legL = mkLeg(-1), legR = mkLeg(1);
 
-    g.userData.rig = { torso, head, armL, armR, legL, legR, glow };
+    g.userData.rig = {
+        torso, head, glow,
+        armL: armL.sh, armR: armR.sh, elbowL: armL.el, elbowR: armR.el,
+        legL: legL.hip, legR: legR.hip, kneeL: legL.kn, kneeR: legR.kn
+    };
     return g;
 }
 
