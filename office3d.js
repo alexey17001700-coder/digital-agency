@@ -1899,6 +1899,20 @@ function startScene(office) {
             if (a) { ring.position.x = a.model.position.x; ring.position.z = a.model.position.z; }
         }
 
+        // ПЛАВНЫЙ ЗУМ И ПАНОРАМА: текущие значения тянутся к целевым
+        let camMoved = false;
+        if (Math.abs(st.dist - st.distT) > 0.02) { st.dist += (st.distT - st.dist) * Math.min(1, dt * 9); camMoved = true; }
+        if (Math.abs(st.tx - st.txT) > 0.01) { st.tx += (st.txT - st.tx) * Math.min(1, dt * 9); camMoved = true; }
+        if (Math.abs(st.tz - st.tzT) > 0.01) { st.tz += (st.tzT - st.tz) * Math.min(1, dt * 9); camMoved = true; }
+        if (camMoved) applyCam(cam, st);
+
+        // индикатор зума в HUD (перерисовываем только при изменении)
+        const zEl = document.getElementById('o3d-zoom');
+        if (zEl) {
+            const z = Math.round(st.dist);
+            if (zEl.__z !== z) { zEl.__z = z; zEl.textContent = '🔍 зум ' + z; }
+        }
+
         renderer.render(scene, cam);
     };
     tick();
