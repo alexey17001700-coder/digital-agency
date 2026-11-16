@@ -1580,12 +1580,13 @@ function bindControls(el, cam, st) {
         p.x = e.clientX; p.y = e.clientY;
 
         if (pts.size >= 2) {
-            // ЩИПОК — только зум. Камера сама опускается/поднимается,
-            // т.к. смотрит на st.tx / st.tz.
+            // ЩИПОК — зум «в точку» между пальцами. Камера сама опускается
+            // при приближении и поднимается при отдалении (смотрит на st.tx/tz).
             const d = pinchDist();
-            if (pinch > 0 && d > 0) st.dist = clamp(st.dist * (pinch / d), 24, 130);
-            pinch = d;
-            applyCam(cam, st);
+            if (pinch0 > 0 && d > 0) {
+                const mid = pinchMid();
+                zoomAt(el, cam, st, pinchBase * (pinch0 / d), mid.x, mid.y);
+            }
         } else {
             // ОДИН ПАЛЕЦ — панорамирование по полу (yaw и pitch не меняются)
             pan(dx, dy);
