@@ -2051,9 +2051,10 @@ function hideOffice() {
     GEO = null;
     SHARED_M = null;
     toiletCount = 0;
-    toiletTimer = 60 + Math.random() * 60;
+    toiletTimer = 150 + Math.random() * 150;
     bossCount = 0;
-    bossTimer = 6 + Math.random() * 8;
+    bossTimer = 12 + Math.random() * 10;
+    WALKERS = 0;
     delete window.office3dSay;
     delete window.office3dTask;
     if (office) { office.innerHTML = ''; office.style.display = 'none'; }
