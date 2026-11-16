@@ -1974,7 +1974,7 @@ function startScene(office) {
         // АГЕНТЫ: анимация + перемещение + потребности
         toiletTimer -= dt;
         if (toiletTimer <= 0) {
-            toiletTimer = 60 + Math.random() * 60;
+            toiletTimer = 150 + Math.random() * 150;
             if (toiletCount < 2) {
                 const free = [];
                 for (let i = 0; i < agents.length; i++) {
