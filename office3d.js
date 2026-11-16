@@ -1245,7 +1245,7 @@ function agentTick(a, dt, t) {
             rig.legR.rotation.x = -s * 0.55;
             rig.armL.rotation.x = -s * 0.45;
             rig.armR.rotation.x = s * 0.45;
-            a.model.position.y = 0.68 + Math.abs(s) * 0.05;
+            a.model.position.y = 0.71 + Math.abs(s) * 0.05;
             rig.torso.rotation.x = 0.06;
         }
     } else if (a.state === 'sit') {
