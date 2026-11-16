@@ -1104,7 +1104,7 @@ function buildAgents(scene, spots) {
             transparent: true, depthTest: false, depthWrite: false
         }));
         tag.scale.set(1.9, 0.48, 1);
-        tag.position.y = 2.0;
+        tag.position.y = 1.35;
         tag.renderOrder = 2;
         tag.userData.agentName = def.name;
         model.add(tag);
