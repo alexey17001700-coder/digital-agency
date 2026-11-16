@@ -1716,7 +1716,7 @@ function startScene(office) {
 
     const hud = document.createElement('div');
     hud.className = 'o3d-hud';
-    hud.innerHTML = '<div class="t">🏢 ОФИС · 3D РЕЖИМ</div><div class="v">' + OFFICE3D_VERSION + '</div><div class="v" id="o3d-selected"></div>';
+    hud.innerHTML = '<div class="t">🏢 ОФИС · 3D РЕЖИМ</div><div class="v">' + OFFICE3D_VERSION + '</div><div class="v" id="o3d-selected"></div><div class="v" id="o3d-zoom"></div>';
     office.appendChild(hud);
 
     const hint = document.createElement('div');
