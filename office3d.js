@@ -1014,7 +1014,7 @@ function buildAgents(scene, spots) {
             new THREE.BoxGeometry(0.34, 0.34, 0.34),
             new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.8, metalness: 0.3, roughness: 0.3 })
         );
-        taskCube.position.set(0, 1.0, 0.52);
+        taskCube.position.set(0, 0.74, 0.44);
         taskCube.visible = false;
         taskCube.userData.agentName = def.name;
         model.add(taskCube);
