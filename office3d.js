@@ -1616,6 +1616,7 @@ function bindControls(el, cam, st) {
     el.addEventListener('pointercancel', onUp);
     el.addEventListener('pointerleave', onUp);
     el.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('keydown', onKey);
 
     return () => {
         el.removeEventListener('pointerdown', onDown);
