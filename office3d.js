@@ -1691,27 +1691,12 @@ function showOffice() {
                 if (e && !e.__stage) e.__stage = 'startScene';
                 throw e;
             }
-        }).catch(async (err) => {
-            console.warn('[office3d] Three.js недоступен — фолбэк на 2D-офис', err);
+        }).catch((err) => {
+            console.warn('[office3d] 3D-офис не запустился — фолбэк на 2D-офис', err);
             isOpen = false;
             office.innerHTML = '';
             if (origToggle) origToggle();
-            const probe = await probeLocal();
-            const first = (err && err.details && err.details[0]) ? err.details[0] : ((err && err.message) || '?');
-            const b = document.createElement('div');
-            b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:99999;' +
-                'background:#3a2a00;color:#ffd700;border:1px solid #ffd700;border-radius:8px;' +
-                'padding:10px 14px;font:11px monospace;max-width:92vw;text-align:left;line-height:1.5;' +
-                'word-break:break-word;';
-            const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 5).join('  ⟶  ') : '—';
-            b.innerHTML = '<b>⚠️ 3D-офис: сбой.</b><br>' +
-                'Этап: ' + esc((err && err.__stage) || 'загрузка Three.js') + '<br>' +
-                'Причина: ' + esc(first) + '<br>' +
-                'Стек: ' + esc(stack) + '<br>' +
-                'Локальный файл: ' + esc(probe) + '<br>' +
-                '<span style="opacity:.75">Показан 2D-офис. Пришли этот текст — починю точно.</span>';
-            document.body.appendChild(b);
-            setTimeout(() => b.remove(), 25000);
+            showFail(err, (err && err.__stage) || 'запуск 3D');
         });
     }
 }
