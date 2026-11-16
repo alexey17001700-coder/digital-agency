@@ -75,6 +75,8 @@
                 try { await loadScript('office3d.js', false); } catch (e) { console.error(e); }
                 if (!window.OFFICE3D_VERSION) {
                     showBootError('office3d.js не загрузился — 3D-офис недоступен. Обнови страницу.');
+                } else if (window.__office3dBootError) {
+                    showBootError('office3d.js загрузился, но install() упал: ' + window.__office3dBootError);
                 } else {
                     console.log('office3d.js загружен со второй попытки');
                 }
