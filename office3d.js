@@ -1251,8 +1251,8 @@ function agentTick(a, dt, t) {
     } else if (a.state === 'sit') {
         poseSit(a);
         rig.torso.rotation.x = 0.12 + Math.sin(t * 2.2 + a.phase) * 0.03;
-        rig.armL.rotation.x = -0.95 + Math.sin(t * 7 + a.phase) * 0.10;
-        rig.armR.rotation.x = -0.95 + Math.sin(t * 7 + a.phase + 1.6) * 0.10;
+        rig.armL.rotation.x = -1.36 + Math.sin(t * 7 + a.phase) * 0.10;
+        rig.armR.rotation.x = -1.36 + Math.sin(t * 7 + a.phase + 1.6) * 0.10;
         rig.head.rotation.y = Math.sin(t * 0.7 + a.phase) * 0.25;
     } else if (a.state === 'hidden') {
         a.waitTimer -= dt;
