@@ -307,9 +307,9 @@ function sharedMats() {
 function buildChair(M) {
     const G = geos();
     const g = new THREE.Group();
-    const seat = new THREE.Mesh(G.chairSeat, M.plastic); seat.position.y = 0.62; g.add(seat);
-    const back = new THREE.Mesh(G.chairBack, M.plastic); back.position.set(0, 1.05, 0.42); g.add(back);
-    const pole = new THREE.Mesh(G.chairPole, M.metal); pole.position.y = 0.32; g.add(pole);
+    const seat = new THREE.Mesh(G.chairSeat, M.plastic); seat.position.y = 0.46; g.add(seat);
+    const back = new THREE.Mesh(G.chairBack, M.plastic); back.position.set(0, 0.90, 0.42); g.add(back);
+    const pole = new THREE.Mesh(G.chairPole, M.metal); pole.position.y = 0.24; g.add(pole);
     const foot = new THREE.Mesh(G.chairFoot, M.metal); foot.position.y = 0.05; g.add(foot);
     return g;
 }
