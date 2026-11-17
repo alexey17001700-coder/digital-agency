@@ -105,13 +105,6 @@ function setMode(mode) {
     saveAll();
 }
 
-function toggleAutoMode() {
-    isAutoMode = !isAutoMode;
-    const btn = document.getElementById('btnAuto');
-    if (isAutoMode) { btn.innerText = "⚡ Авто: ВКЛ"; btn.style.background = "#00ff00"; btn.style.color = "#000"; }
-    else { btn.innerText = "⚡ Авто: ВЫКЛ"; btn.style.background = "#333"; btn.style.color = "#aaa"; }
-}
-
 async function clearAllContent() {
     renderMessage("🧹 Очищаю контент...", 'director', 'Оркестратор');
     try {
