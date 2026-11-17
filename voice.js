@@ -1,4 +1,6 @@
-const TTS_PROXY = "https://functions.yandexcloud.net/d4etaf7qtg7n1r7j6eka";
+// Озвучка идёт на СВОЙ сервер (main.ts, маршрут /tts) → edge-tts.
+// Бесплатно, без ключей и регистрации, CORS отсутствует (тот же домен).
+const TTS_PROXY = "/tts";
 let isVoiceEnabled = localStorage.getItem('shtabVoiceEnabled') === 'true';
 let agentVoiceSettings = {};
 try { const sv = localStorage.getItem('shtabAgentVoice'); if (sv) agentVoiceSettings = JSON.parse(sv); } catch (e) {}
