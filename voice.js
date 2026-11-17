@@ -439,6 +439,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
 setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
+    if (window.speakPhoneVoice !== phoneSpeak) window.speakPhoneVoice = phoneSpeak;
     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
     positionVoiceBtn();
 }, 1500);
