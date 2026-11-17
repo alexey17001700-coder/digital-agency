@@ -112,10 +112,10 @@
 ### Вкладка 1: SHTAB (порт 8000)
 ```bash
 cd ~
-export ZVENO_API_KEY="[твой_ключ]"
+export ZVENO_API_KEY="[твой_ключ_звена]"
 export GITHUB_TOKEN="[твой_токен_github]"
-export REPO_OWNER="alexey17001700-coder"
-export REPO_NAME="digital-agency"
+export GITHUB_OWNER="alexey17001700-coder"
+export GITHUB_REPO="digital-agency"
 deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch main.ts
 ```
 
