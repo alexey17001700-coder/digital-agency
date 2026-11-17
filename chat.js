@@ -420,7 +420,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
         weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
-        addDeployButton(div, fullText);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
         if (onComplete) onComplete();
