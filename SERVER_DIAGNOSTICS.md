@@ -99,6 +99,63 @@
 
 ---
 
+## 2.1. АВАРИЙНОЕ ВОССТАНОВЛЕНИЕ (VIVO → TERMUX)
+
+> Пошаговый подъём сервера с нуля. Нужен после перезагрузки телефона —
+> **автозапуска нет, после ребута всё умирает.**
+
+### Шаг 0. Подготовка
+1. Открой Termux.
+2. Зайди в Ubuntu: `proot-distro login ubuntu`
+3. Открой 4 вкладки (свайп слева → NEW SESSION). Переименуй их для удобства.
+
+### Вкладка 1: SHTAB (порт 8000)
+```bash
+cd ~
+export ZVENO_API_KEY="[твой_ключ]"
+export GITHUB_TOKEN="[твой_токен_github]"
+export REPO_OWNER="alexey17001700-coder"
+export REPO_NAME="digital-agency"
+deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch main.ts
+```
+
+### Вкладка 2: CADDY (SSL / порт 8443)
+```bash
+cd ~
+./caddy-linux-arm64 run --config caddyfile
+```
+
+### Вкладка 3: SYNC (Курьер)
+```bash
+cd ~
+bash sync.sh
+```
+(Он зависнет и будет молчать. Это нормально — он следит за обновлениями.)
+
+### Вкладка 4: CHAT (порт 8001)
+```bash
+cd ~/nexus_ws
+export VAPID_PRIVATE="[твой_ключ]"
+export VAPID_SUBJECT="mailto:admin@example.com"
+export VAPID_PUBLIC="[твой_ключ]"
+deno run --allow-net --allow-env --allow-read --allow-run main.ts
+```
+
+⚠️ **Важно про переменные Штаба:** `GITHUB_TOKEN`, `REPO_OWNER`, `REPO_NAME` нужны
+для работы GitHub-инструментов Архитектора (чтение/запись файлов через `main.ts`).
+Без них Штаб отвечает **401** и Архитектор не видит содержимое репозиториев.
+Переменные читаются **только при старте** процесса — после правки env Штаб перезапустить.
+
+### Проверка после подъёма
+```bash
+curl -s  -o /dev/null -w "Shtab: %{http_code}\n" http://localhost:8000/
+curl -s  -o /dev/null -w "Chat:  %{http_code}\n" http://localhost:8001/
+curl -sk -o /dev/null -w "Caddy: %{http_code}\n" https://localhost:8443/
+```
+**Ожидаемые коды:** Штаб `405` (отвечает только на POST — норма), Чат `200`, Caddy `200`.
+
+---
+
 ## 3. ПРАВИЛА БЕЗОПАСНОСТИ (ЖЕЛЕЗНО)
 
 - ❌ **НИКОГДА** не удалять `/root/ssl` и файлы сертификатов
