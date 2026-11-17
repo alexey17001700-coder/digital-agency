@@ -33,10 +33,16 @@
 
 ### СЦЕНАРИЙ 1: Не работает Штаб (ошибка в main.ts)
 1. Босс → **1-я вкладка** (Deno) → `Ctrl+C`
-2. Запуск:
+2. Запуск (с озвучкой — так правильно):
    ```bash
-   deno run --allow-net --allow-env --allow-read --watch main.ts
+   bash start.sh
    ```
+   или вручную:
+   ```bash
+   deno run --allow-net --allow-env --allow-read --allow-run --allow-write --watch main.ts
+   ```
+   ⚠️ **Без `--allow-run` и `--allow-write` серверная озвучка (edge-tts) НЕ работает** —
+   падает с «Requires run access» и уходит в системный голос телефона.
 3. Если красная ошибка (`SyntaxError`, `Identifier has already been declared`):
    - Босс скидывает текст ошибки
    - Архитектор находит проблему **на GitHub** и правит через `replace_in_file`
