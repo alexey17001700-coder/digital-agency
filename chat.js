@@ -416,13 +416,6 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     let displayText = wcParsed.cleanText;
     
-    const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
-    const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
-
-    if (!userAskedForCode && displayText.includes('```')) {
-        displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
-    }
-
     if (displayText.includes('[FILE:') || displayText.includes('```')) {
         const { cleanText, dangerBadges } = processDangerTags(displayText);
         try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
