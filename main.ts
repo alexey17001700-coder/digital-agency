@@ -787,15 +787,36 @@ async function handleTTS(body: any) {
 
     const tmp = await Deno.makeTempFile({ suffix: ".mp3" });
     try {
-        const cmd = new Deno.Command("edge-tts", {
-            args: ["--voice", voice, "--rate", rate, "--text", text, "--write-media", tmp],
-            stdout: "null",
-            stderr: "piped",
-        });
-        const { code, stderr } = await cmd.output();
-        if (code !== 0) {
-            const err = new TextDecoder().decode(stderr).slice(0, 300);
-            return json({ success: false, error: `edge-tts: ${err}` }, 500);
+        // edge-tts может стоять по-разному: в PATH, в ~/.local/bin (pip --user/pipx)
+        // или как python-модуль. Перебираем варианты — озвучка не должна падать из-за PATH.
+        const args = ["--voice", voice, "--rate", rate, "--text", text, "--write-media", tmp];
+        const home = Deno.env.get("HOME") || "";
+        const variants: string[][] = [
+            ["edge-tts", ...args],
+            [`${home}/.local/bin/edge-tts`, ...args],
+            ["python3", "-m", "edge_tts", ...args],
+            ["python", "-m", "edge_tts", ...args],
+        ];
+        let code = 1;
+        let err = "";
+        let started = false;
+        for (const v of variants) {
+            try {
+                const cmd = new Deno.Command(v[0], { args: v.slice(1), stdout: "null", stderr: "piped" });
+                const out = await cmd.output();
+                code = out.code;
+                err = new TextDecoder().decode(out.stderr).slice(0, 300);
+                started = true;
+                if (code === 0) break;
+                // бинарник найден, но упал по другой причине (сеть/голос) — дальше не перебираем
+                if (!/not found|No such file|os error 2/i.test(err)) break;
+            } catch (e: any) {
+                err = String((e && e.message) || e);
+                continue;
+            }
+        }
+        if (!started || code !== 0) {
+            return json({ success: false, error: `edge-tts: ${err || "не найден"}` }, 500);
         }
         const data = await Deno.readFile(tmp);
         if (data.length < 200) return json({ success: false, error: "edge-tts вернул пустой файл" }, 500);
