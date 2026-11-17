@@ -104,6 +104,37 @@ const VOICE_PHRASE = 'Здравствуйте, Босс. Система гот�
 let voiceOverrides = {};
 try { const vo = localStorage.getItem('shtabVoiceOverrides'); if (vo) voiceOverrides = JSON.parse(vo); } catch (e) {}
 let vlabAudio = null;
+let ttsLastError = 'нет данных';
+
+async function vlabCheckServer() {
+    const out = document.getElementById('vlabDiag');
+    if (out) out.textContent = '⏳ Проверяю сервер…';
+    const t0 = Date.now();
+    try {
+        const res = await fetch(TTS_PROXY, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: 'Проверка связи', voice: 'alena', emotion: 'neutral' })
+        });
+        const ms = Date.now() - t0;
+        const raw = await res.text();
+        let info = 'HTTP ' + res.status + ' · ' + ms + ' мс';
+        try {
+            const d = JSON.parse(raw);
+            if (d.audio) info += ' · аудио ' + Math.round(d.audio.length * 0.75 / 1024) + ' КБ · РАБОТАЕТ ✅';
+            else info += ' · нет поля audio ❌ · ' + raw.slice(0, 200);
+        } catch (e) { info += ' · ответ не JSON ❌ · ' + raw.slice(0, 200); }
+        if (out) out.textContent = info;
+        ttsLastError = info;
+        return info;
+    } catch (e) {
+        const ms = Date.now() - t0;
+        const info = '❌ СЕТЬ / CORS · ' + ms + ' мс · ' + (e && e.message ? e.message : e);
+        if (out) out.textContent = info;
+        ttsLastError = info;
+        return info;
+    }
+}
 
 async function vlabPlay(voice, emotion, rowEl) {
     if (vlabAudio) { try { vlabAudio.pause(); } catch (e) {} vlabAudio = null; }
