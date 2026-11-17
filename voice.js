@@ -1,6 +1,30 @@
-// Озвучка идёт на СВОЙ сервер (main.ts, маршрут /tts) → edge-tts.
-// Бесплатно, без ключей и регистрации, CORS отсутствует (тот же домен).
-const TTS_PROXY = "/tts";
+// Озвучка идёт на СВОЙ сервер (main.ts) → edge-tts. Бесплатно, без ключей.
+// ВАЖНО: в Caddy корень домена уже проброшен на main.ts (там же ходит и чат),
+// а отдельный маршрут /tts не прописан — поэтому POST на /tts отдавал 405.
+// main.ts обрабатывает озвучку на ЛЮБОМ пути, значит корень домена работает.
+// Список адресов: пробуем по очереди, первый ответивший аудио — рабочий.
+const TTS_HOST = "https://shtab-boss.duckdns.org:8443";
+const TTS_ENDPOINTS = [TTS_HOST, TTS_HOST + "/tts", "/tts"];
+let TTS_PROXY = TTS_ENDPOINTS[0];
+
+// Отправка запроса на синтез: перебирает адреса, пока не получит аудио.
+async function ttsFetch(body) {
+    let lastErr = null;
+    for (let i = 0; i < TTS_ENDPOINTS.length; i++) {
+        const url = TTS_ENDPOINTS[i];
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body
+            });
+            const ct = res.headers.get('Content-Type') || '';
+            if (res.ok && ct.indexOf('audio') > -1) { TTS_PROXY = url; return res; }
+            lastErr = new Error('Сервер ' + res.status + (ct ? ' · ' + ct.split(';')[0] : ''));
+        } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('Сервер озвучки не ответил');
+}
 let isVoiceEnabled = localStorage.getItem('shtabVoiceEnabled') === 'true';
 let agentVoiceSettings = {};
 try { const sv = localStorage.getItem('shtabAgentVoice'); if (sv) agentVoiceSettings = JSON.parse(sv); } catch (e) {}
