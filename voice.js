@@ -275,7 +275,7 @@ function injectVoiceLab() {
             '.vlab-scroll{overflow-y:auto;padding:12px 16px 18px}' +
             '.vlab-diag{background:rgba(255,255,255,.04);border:1px solid rgba(201,162,39,.28);border-radius:14px;padding:11px 12px}' +
             '.vlab-diag-t{color:#B08D57;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:1.4px}' +
-            '.vlab-diag-v{color:#DCE6F2;font:500 11.5px/1.45 system-ui,sans-serif;margin:7px 0 9px;word-break:break-word}' +
+            '.vlab-diag-v{color:#DCE6F2;font:500 11.5px/1.45 system-ui,sans-serif;margin:7px 0 9px;word-break:break-word;white-space:pre-line}' +
             '.vlab-check{width:100%;height:38px;border-radius:11px;cursor:pointer;border:1px solid rgba(201,162,39,.5);' +
             'background:rgba(201,162,39,.12);color:#C9A227;font:700 11.5px system-ui,sans-serif;letter-spacing:1.2px}' +
             '.vlab-sec{color:#B08D57;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:1.6px;margin:14px 0 8px}' +
