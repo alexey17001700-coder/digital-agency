@@ -102,6 +102,17 @@ try { const vo = localStorage.getItem('shtabVoiceOverrides'); if (vo) voiceOverr
 let vlabAudio = null;
 let ttsLastError = 'нет данных';
 
+// Ключ Яндекс Облака (SpeechKit). Хранится ТОЛЬКО в браузере (localStorage),
+// в репозиторий не попадает и на сервер не пишется.
+let yandexKey = '';
+try { yandexKey = localStorage.getItem('shtabYandexKey') || ''; } catch (e) {}
+function saveYandexKey(k) { yandexKey = (k || '').trim(); try { localStorage.setItem('shtabYandexKey', yandexKey); } catch (e) {} }
+function ttsBody(text, voice, emotion) {
+    const b = { text: text, voice: voice, emotion: emotion };
+    if (yandexKey) b.key = yandexKey;
+    return JSON.stringify(b);
+}
+
 async function vlabCheckServer() {
     const out = document.getElementById('vlabDiag');
     if (out) out.textContent = '⏳ Проверяю сервер…';
