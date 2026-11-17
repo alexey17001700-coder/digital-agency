@@ -229,6 +229,20 @@ function openVoiceLab2() {
               '<button id="vlabCheck" class="vlab-check">ПРОВЕРИТЬ СЕРВЕР</button>' +
               '<button id="vlabOpen" class="vlab-check" style="margin-top:7px">ОТКРЫТЬ АДРЕС В БРАУЗЕРЕ</button>' +
             '</div>' +
+            '<div class="vlab-sec">ГОЛОС ТЕЛЕФОНА · БЕСПЛАТНО</div>' +
+            '<div class="vlab-diag">' +
+              '<div class="vlab-diag-t">СИСТЕМНЫЙ СИНТЕЗ ANDROID</div>' +
+              '<div class="vlab-tag" style="margin:7px 0 2px">Без сервера и интернета. Выбери голос и подстрой тон.</div>' +
+              '<select id="pvVoice" class="vlab-sel" style="width:100%;margin-top:9px"></select>' +
+              '<div class="pv-sl"><span>Скорость речи</span><b id="pvRateV">0.95</b></div>' +
+              '<input id="pvRate" class="pv-range" type="range" min="0.5" max="1.5" step="0.05">' +
+              '<div class="pv-sl"><span>Высота тона</span><b id="pvPitchV">0.90</b></div>' +
+              '<input id="pvPitch" class="pv-range" type="range" min="0.5" max="1.5" step="0.05">' +
+              '<div class="pv-sl"><span>Громкость</span><b id="pvVolV">1.00</b></div>' +
+              '<input id="pvVol" class="pv-range" type="range" min="0.2" max="1" step="0.05">' +
+              '<button id="pvPlay" class="vlab-check" style="margin-top:10px">▶ ПОСЛУШАТЬ ГОЛОС ТЕЛЕФОНА</button>' +
+              '<button id="pvReset" class="vlab-check" style="margin-top:7px">СБРОСИТЬ НАСТРОЙКИ</button>' +
+            '</div>' +
             '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА</div><div id="vlabVoices"></div>' +
             '<div class="vlab-sec">АГЕНТЫ ШТАБА</div><div id="vlabAgents"></div>' +
           '</div>' +
