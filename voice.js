@@ -189,6 +189,8 @@ function openVoiceLab() {
     document.body.appendChild(ov);
     ov.querySelector('.vlab-close').onclick = function () { ov.remove(); };
     ov.querySelector('#vlabCheck').onclick = vlabCheckServer;
+    const dg0 = ov.querySelector('#vlabDiag');
+    if (dg0 && ttsLastError !== 'нет данных') dg0.textContent = ttsLastError;
     ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
 
     const vbox = ov.querySelector('#vlabVoices');
