@@ -115,6 +115,10 @@ function emotionRate(emotion) {
 
 let voiceOverrides = {};
 try { const vo = localStorage.getItem('shtabVoiceOverrides'); if (vo) voiceOverrides = JSON.parse(vo); } catch (e) {}
+// Голос по умолчанию — выбирается в лаборатории. Применяется ко всем агентам,
+// которым не задан свой голос. Пусто = как в AGENT_VOICES.
+let defaultVoice = '';
+try { defaultVoice = localStorage.getItem('shtabDefaultVoice') || ''; } catch (e) {}
 let vlabAudio = null;
 let ttsLastError = 'нет данных';
 
