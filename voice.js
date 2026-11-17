@@ -94,7 +94,7 @@ const VOICE_PHRASE = 'Здравствуйте, Босс. Система гот�
 const VOICE_MAP = {
     alena: 'ru-RU-SvetlanaNeural', jane: 'ru-RU-SvetlanaNeural', julia: 'ru-RU-SvetlanaNeural',
     marina: 'ru-RU-SvetlanaNeural', omazh: 'ru-RU-SvetlanaNeural',
-    dasha: 'ru-RU-DariyaNeural', lera: 'ru-RU-DariyaNeural', masha: 'ru-RU-DariyaNeural',
+    dasha: 'ru-RU-SvetlanaNeural', lera: 'ru-RU-SvetlanaNeural', masha: 'ru-RU-SvetlanaNeural',
     filipp: 'ru-RU-DmitryNeural', ermil: 'ru-RU-DmitryNeural', zahar: 'ru-RU-DmitryNeural',
     alexander: 'ru-RU-DmitryNeural', kirill: 'ru-RU-DmitryNeural', anton: 'ru-RU-DmitryNeural',
     madirus: 'ru-RU-DmitryNeural'
