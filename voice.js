@@ -236,10 +236,12 @@ function openVoiceLab2() {
 }
 
 function injectVoiceLab() {
-    if (document.getElementById('vlabBtn')) return;
-    if (!document.getElementById('vlabCss')) {
+    const _oldBtn = document.getElementById('vlabBtn');
+    if (_oldBtn) _oldBtn.remove();
+    if (document.getElementById('vlabBtn2')) { window.openVoiceLab = openVoiceLab2; return; }
+    if (!document.getElementById('vlabCss2')) {
         const st = document.createElement('style');
-        st.id = 'vlabCss';
+        st.id = 'vlabCss2';
         st.textContent =
             '#vlabBtn{position:fixed;right:12px;bottom:96px;width:46px;height:46px;border-radius:50%;' +
             'background:linear-gradient(145deg,#C9A227,#8E6F14);color:#0B1522;font-size:20px;border:1px solid #E3C766;' +
