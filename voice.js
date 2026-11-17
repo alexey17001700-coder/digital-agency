@@ -50,10 +50,12 @@ async function speakText(text, agentName) {
     try {
         const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ttsBody(cleanText, v.voice, v.emotion) });
         if (!isVoiceEnabled) return;
-        if (!res.ok) throw new Error("Сервер");
-        const data = await res.json();
+        if (!res.ok) throw new Error("Сервер " + res.status);
+        const blob = await res.blob();
         if (!isVoiceEnabled) return;
-        if (data.audio) { currentAudio = new Audio("data:audio/mpeg;base64," + data.audio); await currentAudio.play(); } else throw new Error("Нет аудио");
+        if (blob.size < 200) throw new Error("Нет аудио");
+        currentAudio = new Audio(URL.createObjectURL(blob));
+        await currentAudio.play();
     } catch (e) {
         ttsLastError = 'озвучка: ' + (e && e.message ? e.message : e) + ' → голос телефона';
         if (!isVoiceEnabled) return;
