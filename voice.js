@@ -53,6 +53,7 @@ async function speakText(text, agentName) {
         if (!isVoiceEnabled) return;
         if (data.audio) { currentAudio = new Audio("data:audio/mpeg;base64," + data.audio); await currentAudio.play(); } else throw new Error("Нет аудио");
     } catch (e) {
+        ttsLastError = 'озвучка: ' + (e && e.message ? e.message : e) + ' → голос телефона';
         if (!isVoiceEnabled) return;
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(cleanText); utterance.lang = 'ru-RU';
