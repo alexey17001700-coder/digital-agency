@@ -149,6 +149,7 @@ async function vlabCheckServer() {
     }
 
     // 3) адрес, который можно открыть руками
+    lines.push('Ключ: ' + (yandexKey ? 'задан (' + yandexKey.length + ' симв.)' : 'не задан'));
     lines.push('Адрес: ' + TTS_PROXY);
 
     const info = lines.join('\n');
