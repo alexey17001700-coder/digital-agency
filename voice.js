@@ -146,13 +146,14 @@ async function vlabCheckServer() {
             body: ttsBody('Проверка связи', 'alena', 'neutral')
         });
         const ms = Date.now() - t0;
-        const raw = await res.text();
-        let info = 'HTTP ' + res.status + ' · ' + ms + ' мс';
-        try {
-            const d = JSON.parse(raw);
-            if (d.audio) info += ' · аудио ' + Math.round(d.audio.length * 0.75 / 1024) + ' КБ · РАБОТАЕТ ✅';
-            else info += ' · нет поля audio ❌ · ' + raw.slice(0, 200);
-        } catch (e) { info += ' · ответ не JSON ❌ · ' + raw.slice(0, 200); }
+        const ct = res.headers.get('Content-Type') || '';
+        const buf = await res.arrayBuffer();
+        let info = 'HTTP ' + res.status + ' · ' + ms + ' мс · ' + ct;
+        if (ct.indexOf('audio') > -1 && buf.byteLength > 200) {
+            info += ' · аудио ' + Math.round(buf.byteLength / 1024) + ' КБ · РАБОТАЕТ ✅';
+        } else {
+            info += ' · НЕ аудио ❌ · ' + new TextDecoder().decode(buf.slice(0, 220));
+        }
         lines.push('POST: ' + info);
     } catch (e) {
         lines.push('POST: ❌ ' + (e && e.message ? e.message : e));
