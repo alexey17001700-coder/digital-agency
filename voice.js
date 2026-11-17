@@ -261,8 +261,8 @@ function openVoiceLab2() {
     ov.innerHTML =
         '<div class="vlab-box">' +
           '<div class="vlab-head">' +
-            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ · v3</div>' +
-            '<div class="vlab-sub">Разделы сворачиваются. Платное — отдельно, бесплатное — отдельно.</div></div>' +
+            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ · v4</div>' +
+            '<div class="vlab-sub">Всё бесплатно. Разделы сворачиваются нажатием.</div></div>' +
             '<button class="vlab-close">✕</button>' +
           '</div>' +
           '<div class="vlab-scroll">' +
