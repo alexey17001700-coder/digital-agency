@@ -279,10 +279,21 @@ function injectVoiceLab() {
         document.head.appendChild(st);
     }
     const b = document.createElement('button');
-    b.id = 'vlabBtn';
-    b.title = 'Лаборатория голосов';
+    b.id = 'vlabBtn2';
+    b.title = 'Лаборатория голосов v2';
     b.textContent = '🎛';
-    b.onclick = openVoiceLab;
+    b.onclick = openVoiceLab2;
     document.body.appendChild(b);
+    window.openVoiceLab = openVoiceLab2;
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectVoiceLab); else injectVoiceLab();
+
+// ПЕРЕХВАТ: если другой скрипт переопределит openVoiceLab или удалит кнопку —
+// возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
+let _vlabTries = 0;
+const _vlabTimer = setInterval(function () {
+    _vlabTries++;
+    if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
+    if (!document.getElementById('vlabBtn2')) injectVoiceLab();
+    if (_vlabTries > 60) clearInterval(_vlabTimer);
+}, 1000);
