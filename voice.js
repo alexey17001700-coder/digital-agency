@@ -281,16 +281,12 @@ function openVoiceLab2() {
                 '<button id="pvReset" class="vlab-check" style="margin-top:7px">СБРОСИТЬ НАСТРОЙКИ</button>' +
               '</div>') +
 
-            acc('paid', '💰 ПЛАТНЫЕ · ЯНДЕКС SPEECHKIT', false,
+            acc('paid', '🆓 БЕСПЛАТНЫЕ · НЕЙРО-ГОЛОСА EDGE-TTS', true,
               '<div class="vlab-diag">' +
-                '<div class="vlab-diag-t">API-КЛЮЧ YANDEX SPEECHKIT</div>' +
-                '<div class="vlab-tag" style="margin:7px 0 2px">Оплата за 1000 символов. Ключ хранится только в этом браузере и в репозиторий не попадёт.</div>' +
-                '<input id="ykInput" class="vlab-sel" type="password" placeholder="AQVN..." style="width:100%;margin-top:9px">' +
-                '<div id="ykState" class="vlab-tag" style="margin-top:7px"></div>' +
-                '<button id="ykSave" class="vlab-check" style="margin-top:9px">СОХРАНИТЬ КЛЮЧ</button>' +
-                '<button id="ykClear" class="vlab-check" style="margin-top:7px">УДАЛИТЬ КЛЮЧ</button>' +
+                '<div class="vlab-diag-t">НЕЙРО-СИНТЕЗ MICROSOFT · БЕЗ КЛЮЧА</div>' +
+                '<div class="vlab-tag" style="margin:7px 0 2px">Бесплатно, без регистрации и ключей. Синтез идёт на нашем сервере (маршрут /tts). Нужен интернет.</div>' +
               '</div>' +
-              '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА · 15 ШТУК</div><div id="vlabVoices"></div>') +
+              '<div class="vlab-sec">ГОЛОСА · 3 ШТУКИ</div><div id="vlabVoices"></div>') +
 
             acc('agents', '🤖 АГЕНТЫ ШТАБА', false,
               '<div class="vlab-tag" style="margin-bottom:9px">Кому какой голос. Выбор сохраняется сразу.</div>' +
