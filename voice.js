@@ -59,8 +59,11 @@ async function speakText(text, agentName) {
         await currentAudio.play();
     } catch (e) {
         ttsLastError = 'озвучка: ' + (e && e.message ? e.message : e) + ' → голос телефона';
+        ttsToast(ttsLastError);
+        const _dg = document.getElementById('vlabDiag');
+        if (_dg) _dg.textContent = ttsLastError;
         if (!isVoiceEnabled) return;
-        speakPhoneVoice(cleanText, agentName);
+        phoneSpeak(cleanText, agentName);
     }
 }
 
