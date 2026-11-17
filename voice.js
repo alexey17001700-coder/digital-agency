@@ -243,9 +243,9 @@ function injectVoiceLab() {
         const st = document.createElement('style');
         st.id = 'vlabCss2';
         st.textContent =
-            '#vlabBtn2{position:fixed;right:12px;bottom:96px;width:46px;height:46px;border-radius:50%;' +
+            '#vlabBtn2{position:fixed;right:12px;bottom:150px;width:46px;height:46px;border-radius:50%;' +
             'background:linear-gradient(145deg,#C9A227,#8E6F14);color:#0B1522;font-size:20px;border:1px solid #E3C766;' +
-            'box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:9998;cursor:pointer}' +
+            'box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:99999;cursor:pointer}' +
             '#vlabBtn2:active{transform:scale(.94)}' +
             '#vlab2{position:fixed;inset:0;background:rgba(3,8,16,.78);backdrop-filter:blur(6px);z-index:9999;' +
             'display:flex;align-items:center;justify-content:center;padding:14px}' +
