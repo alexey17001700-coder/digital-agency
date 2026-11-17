@@ -259,7 +259,7 @@ function injectVoiceLab() {
         const st = document.createElement('style');
         st.id = 'vlabCss2';
         st.textContent =
-            '#vlabBtn2{position:fixed;right:12px;bottom:150px;width:46px;height:46px;border-radius:50%;' +
+            '#vlabBtn2{position:fixed;right:12px;bottom:12px;width:46px;height:46px;border-radius:50%;' +
             'background:linear-gradient(145deg,#C9A227,#8E6F14);color:#0B1522;font-size:20px;border:1px solid #E3C766;' +
             'box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:99999;cursor:pointer}' +
             '#vlabBtn2:active{transform:scale(.94)}' +
