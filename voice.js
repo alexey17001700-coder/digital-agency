@@ -268,7 +268,16 @@ function phoneSpeak(text, agentName) {
         window.speechSynthesis.speak(u);
     } catch (e) {}
 }
-window.speakPhoneVoice = phoneSpeak;
+// РОУТЕР ОЗВУЧКИ: кто бы ни позвал speakPhoneVoice (чат, ui.js, старый код) —
+// сначала идём на сервер (edge-tts), и только если он не ответил, звучит телефон.
+let _phoneBusy = false;
+function speakAny(text, agentName) {
+    if (!isVoiceEnabled) return;
+    if (_phoneBusy) { phoneSpeak(text, agentName); return; }
+    _phoneBusy = true;
+    Promise.resolve(speakText(text, agentName)).catch(function () {}).then(function () { _phoneBusy = false; });
+}
+window.speakPhoneVoice = speakAny;
 
 function openVoiceLab2() {
     const old = document.getElementById('vlab2');
@@ -587,7 +596,16 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
 setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
-    if (window.speakPhoneVoice !== phoneSpeak) window.speakPhoneVoice = phoneSpeak;
+    if (window.speakPhoneVoice !== phoneSpeak) // РОУТЕР ОЗВУЧКИ: кто бы ни позвал speakPhoneVoice (чат, ui.js, старый код) —
+// сначала идём на сервер (edge-tts), и только если он не ответил, звучит телефон.
+let _phoneBusy = false;
+function speakAny(text, agentName) {
+    if (!isVoiceEnabled) return;
+    if (_phoneBusy) { phoneSpeak(text, agentName); return; }
+    _phoneBusy = true;
+    Promise.resolve(speakText(text, agentName)).catch(function () {}).then(function () { _phoneBusy = false; });
+}
+window.speakPhoneVoice = speakAny;
     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
     positionVoiceBtn();
 }, 1500);
