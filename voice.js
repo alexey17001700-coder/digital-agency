@@ -300,8 +300,32 @@ function injectVoiceLab() {
     b.textContent = '🎛';
     b.onclick = openVoiceLab2;
     document.body.appendChild(b);
+    positionVoiceBtn();
     window.openVoiceLab = openVoiceLab2;
 }
+
+// Кнопка 🎛 «прилипает» прямо ПОД кнопкой отправки ➤.
+// Позиция считается от реального положения #sendBtn, поэтому кнопка
+// остаётся под ней и при повороте экрана, и при открытии панели агентов.
+function positionVoiceBtn() {
+    const b = document.getElementById('vlabBtn2');
+    if (!b) return;
+    const sb = document.getElementById('sendBtn');
+    if (sb) {
+        const r = sb.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+            b.style.left = Math.round(r.right - 46) + 'px';
+            b.style.top = Math.round(r.bottom + 6) + 'px';
+            return;
+        }
+    }
+    b.style.left = Math.round(window.innerWidth - 58) + 'px';
+    b.style.top = Math.round(window.innerHeight - 110) + 'px';
+}
+
+window.addEventListener('resize', positionVoiceBtn);
+window.addEventListener('orientationchange', function () { setTimeout(positionVoiceBtn, 250); });
+
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectVoiceLab); else injectVoiceLab();
 
 // ПЕРЕХВАТ: если другой скрипт переопределит openVoiceLab или удалит кнопку —
@@ -309,4 +333,5 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
+    positionVoiceBtn();
 }, 1500);
