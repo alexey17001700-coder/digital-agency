@@ -290,10 +290,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 
 // ПЕРЕХВАТ: если другой скрипт переопределит openVoiceLab или удалит кнопку —
 // возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
-let _vlabTries = 0;
-const _vlabTimer = setInterval(function () {
-    _vlabTries++;
+setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
-    if (_vlabTries > 60) clearInterval(_vlabTimer);
-}, 1000);
+}, 1500);
