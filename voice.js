@@ -79,25 +79,37 @@ if (SpeechRecognition) {
 function toggleVoiceInput() { if (!recognition) return alert('Нет поддержки микрофона'); if (isListening) recognition.stop(); else try { recognition.start(); } catch (e) {} }
 
 /* ================= ЛАБОРАТОРИЯ ГОЛОСОВ ================= */
+// НЕЙРО-ГОЛОСА EDGE-TTS (бесплатные, от Microsoft). Синтез на сервере, ключ не нужен.
 const YANDEX_VOICES = [
-    { id: 'alena',     name: 'Алёна',     tag: 'женский · тёплый' },
-    { id: 'filipp',    name: 'Филипп',    tag: 'мужской · ровный' },
-    { id: 'ermil',     name: 'Ермил',     tag: 'мужской · низкий' },
-    { id: 'jane',      name: 'Джейн',     tag: 'женский · мягкий' },
-    { id: 'omazh',     name: 'Омаж',      tag: 'женский · низкий' },
-    { id: 'zahar',     name: 'Захар',     tag: 'мужской · жёсткий' },
-    { id: 'dasha',     name: 'Даша',      tag: 'женский · живой' },
-    { id: 'julia',     name: 'Юлия',      tag: 'женский · спокойный' },
-    { id: 'lera',      name: 'Лера',      tag: 'женский · лёгкий' },
-    { id: 'masha',     name: 'Маша',      tag: 'женский · детский' },
-    { id: 'marina',    name: 'Марина',    tag: 'женский · деловой' },
-    { id: 'alexander', name: 'Александр', tag: 'мужской · строгий' },
-    { id: 'kirill',    name: 'Кирилл',    tag: 'мужской · молодой' },
-    { id: 'anton',     name: 'Антон',     tag: 'мужской · дружелюбный' },
-    { id: 'madirus',   name: 'Мадирус',   tag: 'мужской · глубокий' }
+    { id: 'ru-RU-DmitryNeural',  name: 'Дмитрий',  tag: 'мужской · деловой' },
+    { id: 'ru-RU-SvetlanaNeural', name: 'Светлана', tag: 'женский · мягкий' },
+    { id: 'ru-RU-DariyaNeural',  name: 'Дарья',    tag: 'женский · живой' }
 ];
 const VOICE_EMOTIONS = ['neutral', 'good', 'evil', 'strict', 'friendly', 'happy', 'sad', 'whisper'];
 const VOICE_PHRASE = 'Здравствуйте, Босс. Система готова к работе.';
+
+// Старые id из AGENT_VOICES (яндексовые) → нейро-голоса edge-tts
+const VOICE_MAP = {
+    alena: 'ru-RU-SvetlanaNeural', jane: 'ru-RU-SvetlanaNeural', julia: 'ru-RU-SvetlanaNeural',
+    marina: 'ru-RU-SvetlanaNeural', omazh: 'ru-RU-SvetlanaNeural',
+    dasha: 'ru-RU-DariyaNeural', lera: 'ru-RU-DariyaNeural', masha: 'ru-RU-DariyaNeural',
+    filipp: 'ru-RU-DmitryNeural', ermil: 'ru-RU-DmitryNeural', zahar: 'ru-RU-DmitryNeural',
+    alexander: 'ru-RU-DmitryNeural', kirill: 'ru-RU-DmitryNeural', anton: 'ru-RU-DmitryNeural',
+    madirus: 'ru-RU-DmitryNeural'
+};
+function edgeVoice(v) {
+    if (!v) return 'ru-RU-DmitryNeural';
+    if (String(v).indexOf('Neural') > -1) return v;
+    return VOICE_MAP[v] || 'ru-RU-DmitryNeural';
+}
+// Эмоции у edge-tts нет — передаём их через темп речи
+function emotionRate(emotion) {
+    if (emotion === 'evil' || emotion === 'strict') return '-8%';
+    if (emotion === 'happy' || emotion === 'good') return '+8%';
+    if (emotion === 'sad') return '-14%';
+    if (emotion === 'whisper') return '-20%';
+    return '+0%';
+}
 
 let voiceOverrides = {};
 try { const vo = localStorage.getItem('shtabVoiceOverrides'); if (vo) voiceOverrides = JSON.parse(vo); } catch (e) {}
