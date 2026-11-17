@@ -251,6 +251,11 @@ function injectVoiceLab() {
             '.vlab-close{background:transparent;border:1px solid rgba(201,162,39,.35);color:#C9A227;width:32px;height:32px;' +
             'border-radius:10px;font-size:14px;cursor:pointer;flex:0 0 auto}' +
             '.vlab-scroll{overflow-y:auto;padding:12px 16px 18px}' +
+            '.vlab-diag{background:rgba(255,255,255,.04);border:1px solid rgba(201,162,39,.28);border-radius:14px;padding:11px 12px}' +
+            '.vlab-diag-t{color:#B08D57;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:1.4px}' +
+            '.vlab-diag-v{color:#DCE6F2;font:500 11.5px/1.45 system-ui,sans-serif;margin:7px 0 9px;word-break:break-word}' +
+            '.vlab-check{width:100%;height:38px;border-radius:11px;cursor:pointer;border:1px solid rgba(201,162,39,.5);' +
+            'background:rgba(201,162,39,.12);color:#C9A227;font:700 11.5px system-ui,sans-serif;letter-spacing:1.2px}' +
             '.vlab-sec{color:#B08D57;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:1.6px;margin:14px 0 8px}' +
             '.vlab-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:14px;' +
             'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:7px;transition:.2s}' +
