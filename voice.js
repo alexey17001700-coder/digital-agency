@@ -423,6 +423,16 @@ function injectVoiceLab() {
             '.vlab-check{width:100%;height:38px;border-radius:11px;cursor:pointer;border:1px solid rgba(201,162,39,.5);' +
             'background:rgba(201,162,39,.12);color:#C9A227;font:700 11.5px system-ui,sans-serif;letter-spacing:1.2px}' +
             '.vlab-sec{color:#B08D57;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:1.6px;margin:14px 0 8px}' +
+            '.vlab-acc{border:1px solid rgba(201,162,39,.22);border-radius:14px;overflow:hidden;margin-bottom:9px;' +
+            'background:rgba(255,255,255,.02)}' +
+            '.vlab-acc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;' +
+            'cursor:pointer;background:rgba(201,162,39,.07);user-select:none}' +
+            '.vlab-acc-head:active{background:rgba(201,162,39,.14)}' +
+            '.vlab-acc-t{color:#C9A227;font:700 11.5px/1.2 system-ui,sans-serif;letter-spacing:1.3px}' +
+            '.vlab-acc-a{color:#C9A227;font-size:13px;transition:transform .25s;flex:0 0 auto}' +
+            '.vlab-acc.open .vlab-acc-a{transform:rotate(180deg)}' +
+            '.vlab-acc-body{display:none;padding:11px 12px 13px}' +
+            '.vlab-acc.open .vlab-acc-body{display:block}' +
             '.vlab-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:14px;' +
             'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:7px;transition:.2s}' +
             '.vlab-row.vlab-playing{border-color:rgba(201,162,39,.7);background:rgba(201,162,39,.10)}' +
