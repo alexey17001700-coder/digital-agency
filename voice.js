@@ -124,7 +124,7 @@ async function vlabCheckServer() {
         const res = await fetch(TTS_PROXY, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: 'Проверка связи', voice: 'alena', emotion: 'neutral' })
+            body: ttsBody('Проверка связи', 'alena', 'neutral')
         });
         const ms = Date.now() - t0;
         const raw = await res.text();
