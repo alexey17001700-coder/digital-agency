@@ -153,6 +153,9 @@ async function vlabPlay(voice, emotion, rowEl) {
         vlabAudio.onended = function () { if (rowEl) rowEl.classList.remove('vlab-playing'); };
         await vlabAudio.play();
     } catch (e) {
+        ttsLastError = 'прослушивание: ' + (e && e.message ? e.message : e) + ' → голос телефона';
+        const dg = document.getElementById('vlabDiag');
+        if (dg) dg.textContent = ttsLastError;
         if (rowEl) rowEl.classList.remove('vlab-playing');
         if ('speechSynthesis' in window) {
             const u = new SpeechSynthesisUtterance(VOICE_PHRASE); u.lang = 'ru-RU';
