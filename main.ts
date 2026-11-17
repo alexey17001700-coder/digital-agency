@@ -810,7 +810,17 @@ async function handleTTS(body: any) {
             headers: { ...corsHeaders, "Content-Type": "audio/mpeg", "X-TTS-Cache": "miss" }
         });
     } catch (e: any) {
-        return json({ success: false, error: `edge-tts не установлен: ${e.message}` }, 500);
+        // Разбираем причину, чтобы в «Лаборатории голосов» было видно, что чинить.
+        const m = String((e && e.message) || e || "");
+        let hint = "edge-tts не установлен";
+        if (m.includes("Requires run access") || m.includes("PermissionDenied")) {
+            hint = "нет прав: запусти Штаб с флагами --allow-run --allow-write (bash start.sh)";
+        } else if (m.includes("Requires write access")) {
+            hint = "нет прав на запись: добавь флаг --allow-write (bash start.sh)";
+        } else if (m.includes("NotFound") || m.includes("No such file") || m.includes("os error 2")) {
+            hint = "edge-tts не установлен (pip install edge-tts)";
+        }
+        return json({ success: false, error: `${hint}: ${m}` }, 500);
     } finally {
         try { await Deno.remove(tmp); } catch (_e) { /* ignore */ }
     }
