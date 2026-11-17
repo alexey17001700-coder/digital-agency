@@ -366,6 +366,30 @@ function openVoiceLab2() {
         fillPhoneVoices();
         phoneSpeak(VOICE_PHRASE);
     };
+
+    // ---- КЛЮЧ ЯНДЕКСА ----
+    const ykInput = ov.querySelector('#ykInput');
+    const ykState = ov.querySelector('#ykState');
+    function ykRender() {
+        if (!ykState) return;
+        if (yandexKey) {
+            ykState.textContent = '✅ ключ сохранён · ' + yandexKey.slice(0, 6) + '…' + yandexKey.slice(-4) + ' · ' + yandexKey.length + ' симв.';
+            if (ykInput) ykInput.value = yandexKey;
+        } else {
+            ykState.textContent = '⚠ ключ не задан — голоса Яндекса не работают';
+        }
+    }
+    ykRender();
+    ov.querySelector('#ykSave').onclick = function () {
+        saveYandexKey(ykInput.value);
+        ykRender();
+        vlabCheckServer();
+    };
+    ov.querySelector('#ykClear').onclick = function () {
+        saveYandexKey('');
+        if (ykInput) ykInput.value = '';
+        ykRender();
+    };
 }
 
 function injectVoiceLab() {
