@@ -187,26 +187,30 @@ async function vlabCheckServer() {
     if (out) out.textContent = '⏳ Проверяю сервер…';
     const lines = [];
 
-    // 1) обычный POST — точно так же, как в озвучке чата
-    const t0 = Date.now();
-    try {
-        const res = await fetch(TTS_PROXY, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: ttsBody('Проверка связи', 'alena', 'neutral')
-        });
-        const ms = Date.now() - t0;
-        const ct = res.headers.get('Content-Type') || '';
-        const buf = await res.arrayBuffer();
-        let info = 'HTTP ' + res.status + ' · ' + ms + ' мс · ' + ct;
-        if (ct.indexOf('audio') > -1 && buf.byteLength > 200) {
-            info += ' · аудио ' + Math.round(buf.byteLength / 1024) + ' КБ · РАБОТАЕТ ✅';
-        } else {
-            info += ' · НЕ аудио ❌ · ' + new TextDecoder().decode(buf.slice(0, 220));
+    // 1) POST на каждый адрес по очереди — ищем тот, что реально отдаёт аудио
+    for (let i = 0; i < TTS_ENDPOINTS.length; i++) {
+        const url = TTS_ENDPOINTS[i];
+        const t0 = Date.now();
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: ttsBody('Проверка связи', 'alena', 'neutral')
+            });
+            const ms = Date.now() - t0;
+            const ct = res.headers.get('Content-Type') || '';
+            const buf = await res.arrayBuffer();
+            let info = 'HTTP ' + res.status + ' · ' + ms + ' мс · ' + ct.split(';')[0];
+            if (ct.indexOf('audio') > -1 && buf.byteLength > 200) {
+                TTS_PROXY = url;
+                info += ' · аудио ' + Math.round(buf.byteLength / 1024) + ' КБ · РАБОТАЕТ ✅';
+            } else {
+                info += ' · НЕ аудио ❌ · ' + new TextDecoder().decode(buf.slice(0, 160));
+            }
+            lines.push(url + ' → ' + info);
+        } catch (e) {
+            lines.push(url + ' → ❌ ' + (e && e.message ? e.message : e));
         }
-        lines.push('POST: ' + info);
-    } catch (e) {
-        lines.push('POST: ❌ ' + (e && e.message ? e.message : e));
     }
 
     // 2) проверка доступности сервера — отвечает ли он вообще
