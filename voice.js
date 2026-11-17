@@ -225,7 +225,7 @@ async function vlabCheckServer() {
     // 3) движок и адрес
     lines.push('Движок: edge-tts · нейро-голоса Microsoft · бесплатно, без ключа');
     lines.push('Адрес: ' + TTS_PROXY);
-    lines.push('Если ответ «edge-tts не установлен» — на сервере: pip install edge-tts');
+    lines.push('Если ответ «edge-tts не установлен» — на сервере: pip install --break-system-packages edge-tts');
 
     const info = lines.join('\n');
     if (out) out.textContent = info;
