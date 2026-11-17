@@ -184,6 +184,7 @@ function openVoiceLab() {
         '</div>';
     document.body.appendChild(ov);
     ov.querySelector('.vlab-close').onclick = function () { ov.remove(); };
+    ov.querySelector('#vlabCheck').onclick = vlabCheckServer;
     ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
 
     const vbox = ov.querySelector('#vlabVoices');
