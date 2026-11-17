@@ -110,6 +110,9 @@ let ttsLastError = 'нет данных';
 async function vlabCheckServer() {
     const out = document.getElementById('vlabDiag');
     if (out) out.textContent = '⏳ Проверяю сервер…';
+    const lines = [];
+
+    // 1) обычный POST — точно так же, как в озвучке чата
     const t0 = Date.now();
     try {
         const res = await fetch(TTS_PROXY, {
@@ -125,16 +128,27 @@ async function vlabCheckServer() {
             if (d.audio) info += ' · аудио ' + Math.round(d.audio.length * 0.75 / 1024) + ' КБ · РАБОТАЕТ ✅';
             else info += ' · нет поля audio ❌ · ' + raw.slice(0, 200);
         } catch (e) { info += ' · ответ не JSON ❌ · ' + raw.slice(0, 200); }
-        if (out) out.textContent = info;
-        ttsLastError = info;
-        return info;
+        lines.push('POST: ' + info);
     } catch (e) {
-        const ms = Date.now() - t0;
-        const info = '❌ СЕТЬ / CORS · ' + ms + ' мс · ' + (e && e.message ? e.message : e);
-        if (out) out.textContent = info;
-        ttsLastError = info;
-        return info;
+        lines.push('POST: ❌ ' + (e && e.message ? e.message : e));
     }
+
+    // 2) проверка доступности сервера в обход CORS — отвечает ли он вообще
+    try {
+        const t1 = Date.now();
+        await fetch(TTS_PROXY, { method: 'GET', mode: 'no-cors', cache: 'no-store' });
+        lines.push('Доступность: сервер ОТВЕЧАЕТ ✅ (' + (Date.now() - t1) + ' мс) → дело в CORS-заголовках функции');
+    } catch (e) {
+        lines.push('Доступность: сервер НЕ отвечает ❌ → функция удалена, квота кончилась или домен заблокирован провайдером');
+    }
+
+    // 3) адрес, который можно открыть руками
+    lines.push('Адрес: ' + TTS_PROXY);
+
+    const info = lines.join('\n');
+    if (out) out.textContent = info;
+    ttsLastError = info;
+    return info;
 }
 
 async function vlabPlay(voice, emotion, rowEl) {
