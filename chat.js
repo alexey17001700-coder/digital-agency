@@ -339,6 +339,7 @@ function enhanceMediaInMessage(container) {
         else if (url.match(/\.(mp4|webm)$/i)) { const v = document.createElement('video'); v.controls = true; v.src = url; v.className = 'chat-media'; link.after(v); }
         else if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) { const i = document.createElement('img'); i.src = url; i.className = 'chat-media'; link.after(i); }
     });
+    enhanceCodeBlocks(container);
 }
 
 async function manualDeploy(file, code) {
