@@ -122,6 +122,26 @@ try { defaultVoice = localStorage.getItem('shtabDefaultVoice') || ''; } catch (e
 let vlabAudio = null;
 let ttsLastError = 'нет данных';
 
+// Видимый тост: если серверная озвучка не сработала — Босс сразу видит причину,
+// а не только слышит робота телефона.
+let _ttsToastEl = null;
+function ttsToast(msg) {
+    try {
+        if (!_ttsToastEl) {
+            _ttsToastEl = document.createElement('div');
+            _ttsToastEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:120px;' +
+                'max-width:88vw;padding:9px 13px;border-radius:12px;background:rgba(180,40,40,.92);' +
+                'color:#fff;font:600 11.5px/1.35 system-ui,sans-serif;z-index:100000;' +
+                'box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;text-align:center';
+            document.body.appendChild(_ttsToastEl);
+        }
+        _ttsToastEl.textContent = '🔇 ' + msg;
+        _ttsToastEl.style.display = 'block';
+        clearTimeout(_ttsToastEl._t);
+        _ttsToastEl._t = setTimeout(function () { _ttsToastEl.style.display = 'none'; }, 4500);
+    } catch (e) {}
+}
+
 // Ключ Яндекс Облака (SpeechKit). Хранится ТОЛЬКО в браузере (localStorage),
 // в репозиторий не попадает и на сервер не пишется.
 let yandexKey = '';
