@@ -40,6 +40,13 @@
             showBootError('3D-офис недоступен: office3d.js не выполнился. Обнови страницу.');
         };
 
+        // Кнопка «Голоса» в панели: если voice.js ещё не загрузился —
+        // не молчим, а честно сообщаем. Как только voice.js выполнится,
+        // он переопределит openVoiceLab на настоящую лабораторию.
+        window.openVoiceLab = function () {
+            showBootError('Модуль голосов ещё не загрузился. Обнови страницу.');
+        };
+
         function showBootError(msg) {
             const box = document.createElement('div');
             box.style.cssText = 'position:fixed;bottom:10px;left:10px;right:10px;z-index:99999;background:#440000;color:#ff8888;border:1px solid #ff0055;border-radius:8px;padding:10px;font:12px monospace;';
