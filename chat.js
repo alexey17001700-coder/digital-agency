@@ -398,7 +398,6 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     if (cleanText || dangerBadges) div.appendChild(contentDiv);
     wcParsed.cards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
-    addDeployButton(div, text);
     chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
