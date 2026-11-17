@@ -418,12 +418,14 @@ function openVoiceLab2() {
         }
     }
     ykRender();
-    ov.querySelector('#ykSave').onclick = function () {
-        saveYandexKey(ykInput.value);
+    const ykSaveBtn = ov.querySelector('#ykSave');
+    const ykClearBtn = ov.querySelector('#ykClear');
+    if (ykSaveBtn) ykSaveBtn.onclick = function () {
+        saveYandexKey(ykInput ? ykInput.value : '');
         ykRender();
         vlabCheckServer();
     };
-    ov.querySelector('#ykClear').onclick = function () {
+    if (ykClearBtn) ykClearBtn.onclick = function () {
         saveYandexKey('');
         if (ykInput) ykInput.value = '';
         ykRender();
