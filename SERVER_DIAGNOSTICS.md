@@ -43,6 +43,12 @@
    ```
    ⚠️ **Без `--allow-run` и `--allow-write` серверная озвучка (edge-tts) НЕ работает** —
    падает с «Requires run access» и уходит в системный голос телефона.
+   `start.sh` сам проверяет `edge-tts` и ставит его, если нет.
+   Вручную (Ubuntu 24+ / Debian 12+, Python 3.12+, PEP 668):
+   ```bash
+   pip install --break-system-packages edge-tts
+   ```
+   ❌ Просто `pip install edge-tts` НЕ пройдёт: «externally-managed-environment».
 3. Если красная ошибка (`SyntaxError`, `Identifier has already been declared`):
    - Босс скидывает текст ошибки
    - Архитектор находит проблему **на GitHub** и правит через `replace_in_file`
