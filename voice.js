@@ -73,9 +73,8 @@ async function speakText(text, agentName) {
     const v = _ov ? _ov : (defaultVoice ? { voice: defaultVoice, emotion: _base.emotion } : _base);
 
     try {
-        const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ttsBody(cleanText, v.voice, v.emotion) });
+        const res = await ttsFetch(ttsBody(cleanText, v.voice, v.emotion));
         if (!isVoiceEnabled) return;
-        if (!res.ok) throw new Error("Сервер " + res.status);
         const blob = await res.blob();
         if (!isVoiceEnabled) return;
         if (blob.size < 200) throw new Error("Нет аудио");
