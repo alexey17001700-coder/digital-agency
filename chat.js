@@ -277,6 +277,57 @@ function shareMessage(text) {
     else navigator.clipboard.writeText(text).then(() => alert("Скопировано!"));
 }
 
+/* --- КНОПКА «КОПИРОВАТЬ» НА БЛОКАХ КОДА --- */
+function _injectCodeCss() {
+    if (document.getElementById('codeCopyCss')) return;
+    const st = document.createElement('style'); st.id = 'codeCopyCss';
+    st.textContent = `
+    .code-wrap { position: relative; margin: 10px 0; }
+    .code-wrap pre { margin: 0 !important; padding-top: 36px !important; }
+    .code-copy-btn {
+        position: absolute; top: 6px; right: 6px; z-index: 5;
+        padding: 4px 10px; font-size: 11px; font-weight: 700;
+        font-family: inherit; letter-spacing: .3px;
+        background: rgba(0,229,255,.14); color: #00e5ff;
+        border: 1px solid rgba(0,229,255,.45); border-radius: 7px;
+        cursor: pointer; transition: .18s; backdrop-filter: blur(4px);
+    }
+    .code-copy-btn:hover { background: rgba(0,229,255,.28); }
+    .code-copy-btn:active { transform: scale(.95); }
+    .code-copy-btn.copied { background: rgba(76,175,80,.25); color: #7ee08a; border-color: rgba(76,175,80,.6); }
+    `;
+    document.head.appendChild(st);
+}
+function enhanceCodeBlocks(container) {
+    if (!container) return;
+    const pres = container.querySelectorAll('pre');
+    if (!pres.length) return;
+    _injectCodeCss();
+    pres.forEach(pre => {
+        if (pre.parentElement && pre.parentElement.classList.contains('code-wrap')) return;
+        const wrap = document.createElement('div'); wrap.className = 'code-wrap';
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'code-copy-btn'; btn.innerText = '📋 Копировать';
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const code = pre.innerText;
+            const ok = () => { btn.innerText = '✅ Скопировано'; btn.classList.add('copied'); setTimeout(() => { btn.innerText = '📋 Копировать'; btn.classList.remove('copied'); }, 1600); };
+            const fallback = () => {
+                const ta = document.createElement('textarea');
+                ta.value = code; ta.style.position = 'fixed'; ta.style.top = '-1000px';
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                try { document.execCommand('copy'); ok(); } catch (err) { btn.innerText = '❌ Не вышло'; }
+                document.body.removeChild(ta);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok).catch(fallback);
+            else fallback();
+        };
+        wrap.appendChild(btn);
+    });
+}
+
 function enhanceMediaInMessage(container) {
     container.querySelectorAll('a').forEach(link => {
         const url = link.href;
