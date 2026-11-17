@@ -833,13 +833,13 @@ async function handleTTS(body: any) {
     } catch (e: any) {
         // Разбираем причину, чтобы в «Лаборатории голосов» было видно, что чинить.
         const m = String((e && e.message) || e || "");
-        let hint = "edge-tts не установлен";
+        let hint = "edge-tts не установлен (bash start.sh поставит сам)";
         if (m.includes("Requires run access") || m.includes("PermissionDenied")) {
             hint = "нет прав: запусти Штаб с флагами --allow-run --allow-write (bash start.sh)";
         } else if (m.includes("Requires write access")) {
             hint = "нет прав на запись: добавь флаг --allow-write (bash start.sh)";
         } else if (m.includes("NotFound") || m.includes("No such file") || m.includes("os error 2")) {
-            hint = "edge-tts не установлен (pip install edge-tts)";
+            hint = "edge-tts не установлен (bash start.sh поставит сам, или pip install --break-system-packages edge-tts)";
         }
         return json({ success: false, error: `${hint}: ${m}` }, 500);
     } finally {
