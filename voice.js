@@ -164,11 +164,11 @@ async function vlabPlay(voice, emotion, rowEl) {
     }
 }
 
-function openVoiceLab() {
-    const old = document.getElementById('vlab');
+function openVoiceLab2() {
+    const old = document.getElementById('vlab2');
     if (old) { old.remove(); return; }
     const ov = document.createElement('div');
-    ov.id = 'vlab';
+    ov.id = 'vlab2';
     ov.innerHTML =
         '<div class="vlab-box">' +
           '<div class="vlab-head">' +
