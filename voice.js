@@ -195,6 +195,7 @@ function openVoiceLab2() {
               '<div class="vlab-diag-t">ДИАГНОСТИКА СЕРВЕРА ОЗВУЧКИ</div>' +
               '<div id="vlabDiag" class="vlab-diag-v">нажми «Проверить»</div>' +
               '<button id="vlabCheck" class="vlab-check">ПРОВЕРИТЬ СЕРВЕР</button>' +
+              '<button id="vlabOpen" class="vlab-check" style="margin-top:7px">ОТКРЫТЬ АДРЕС В БРАУЗЕРЕ</button>' +
             '</div>' +
             '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА</div><div id="vlabVoices"></div>' +
             '<div class="vlab-sec">АГЕНТЫ ШТАБА</div><div id="vlabAgents"></div>' +
