@@ -173,6 +173,43 @@ async function vlabPlay(voice, emotion, rowEl) {
     }
 }
 
+/* ================= ГОЛОС ТЕЛЕФОНА (бесплатный, системный) ================= */
+let phoneVoiceSettings = { voice: '', rate: 0.95, pitch: 0.90, volume: 1.0 };
+try { const pv = localStorage.getItem('shtabPhoneVoice'); if (pv) phoneVoiceSettings = Object.assign(phoneVoiceSettings, JSON.parse(pv)); } catch (e) {}
+function savePhoneVoice() { try { localStorage.setItem('shtabPhoneVoice', JSON.stringify(phoneVoiceSettings)); } catch (e) {} }
+
+function ruPhoneVoices() {
+    if (!('speechSynthesis' in window)) return [];
+    try {
+        return window.speechSynthesis.getVoices().filter(function (v) {
+            return (v.lang || '').toLowerCase().indexOf('ru') === 0;
+        });
+    } catch (e) { return []; }
+}
+
+// Своя реализация системного голоса — читает наши настройки (голос/скорость/тон).
+// Перебивает любую другую реализацию speakPhoneVoice, чтобы настройки работали.
+function phoneSpeak(text, agentName) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ru-RU';
+        u.rate = Number(phoneVoiceSettings.rate) || 0.95;
+        u.pitch = Number(phoneVoiceSettings.pitch) || 0.90;
+        u.volume = Number(phoneVoiceSettings.volume) || 1.0;
+        const vs = ruPhoneVoices();
+        let pick = null;
+        if (phoneVoiceSettings.voice) {
+            for (let i = 0; i < vs.length; i++) { if (vs[i].name === phoneVoiceSettings.voice) { pick = vs[i]; break; } }
+        }
+        if (!pick && vs.length) pick = vs[0];
+        if (pick) u.voice = pick;
+        window.speechSynthesis.speak(u);
+    } catch (e) {}
+}
+window.speakPhoneVoice = phoneSpeak;
+
 function openVoiceLab2() {
     const old = document.getElementById('vlab2');
     if (old) { old.remove(); return; }
