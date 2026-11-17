@@ -227,48 +227,70 @@ function openVoiceLab2() {
     if (old) { old.remove(); return; }
     const ov = document.createElement('div');
     ov.id = 'vlab2';
+    // Сворачиваемый раздел: заголовок + тело. open=true — развёрнут сразу.
+    function acc(id, title, open, body) {
+        return '<div class="vlab-acc' + (open ? ' open' : '') + '" id="acc_' + id + '">' +
+            '<div class="vlab-acc-head" data-acc="' + id + '">' +
+              '<div class="vlab-acc-t">' + title + '</div>' +
+              '<div class="vlab-acc-a">▾</div>' +
+            '</div>' +
+            '<div class="vlab-acc-body">' + body + '</div>' +
+          '</div>';
+    }
+
     ov.innerHTML =
         '<div class="vlab-box">' +
           '<div class="vlab-head">' +
-            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ · v2</div>' +
-            '<div class="vlab-sub">Нажми ▶ — услышишь голос. Выбери голос агенту — сохранится сразу.</div></div>' +
+            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ · v3</div>' +
+            '<div class="vlab-sub">Разделы сворачиваются. Платное — отдельно, бесплатное — отдельно.</div></div>' +
             '<button class="vlab-close">✕</button>' +
           '</div>' +
           '<div class="vlab-scroll">' +
-            '<div class="vlab-diag">' +
-              '<div class="vlab-diag-t">ДИАГНОСТИКА СЕРВЕРА ОЗВУЧКИ</div>' +
-              '<div id="vlabDiag" class="vlab-diag-v">нажми «Проверить»</div>' +
-              '<button id="vlabCheck" class="vlab-check">ПРОВЕРИТЬ СЕРВЕР</button>' +
-              '<button id="vlabOpen" class="vlab-check" style="margin-top:7px">ОТКРЫТЬ АДРЕС В БРАУЗЕРЕ</button>' +
-            '</div>' +
-            '<div class="vlab-sec">ГОЛОС ТЕЛЕФОНА · БЕСПЛАТНО</div>' +
-            '<div class="vlab-diag">' +
-              '<div class="vlab-diag-t">СИСТЕМНЫЙ СИНТЕЗ ANDROID</div>' +
-              '<div class="vlab-tag" style="margin:7px 0 2px">Без сервера и интернета. Выбери голос и подстрой тон.</div>' +
-              '<select id="pvVoice" class="vlab-sel" style="width:100%;margin-top:9px"></select>' +
-              '<div class="pv-sl"><span>Скорость речи</span><b id="pvRateV">0.95</b></div>' +
-              '<input id="pvRate" class="pv-range" type="range" min="0.5" max="1.5" step="0.05">' +
-              '<div class="pv-sl"><span>Высота тона</span><b id="pvPitchV">0.90</b></div>' +
-              '<input id="pvPitch" class="pv-range" type="range" min="0.5" max="1.5" step="0.05">' +
-              '<div class="pv-sl"><span>Громкость</span><b id="pvVolV">1.00</b></div>' +
-              '<input id="pvVol" class="pv-range" type="range" min="0.2" max="1" step="0.05">' +
-              '<button id="pvPlay" class="vlab-check" style="margin-top:10px">▶ ПОСЛУШАТЬ ГОЛОС ТЕЛЕФОНА</button>' +
-              '<button id="pvReset" class="vlab-check" style="margin-top:7px">СБРОСИТЬ НАСТРОЙКИ</button>' +
-            '</div>' +
-            '<div class="vlab-sec">КЛЮЧ ЯНДЕКСА · ДЛЯ ГОЛОСОВ</div>' +
-            '<div class="vlab-diag">' +
-              '<div class="vlab-diag-t">API-КЛЮЧ YANDEX SPEECHKIT</div>' +
-              '<div class="vlab-tag" style="margin:7px 0 2px">Вставь ключ — он сохранится только в этом браузере и в репозиторий не попадёт.</div>' +
-              '<input id="ykInput" class="vlab-sel" type="password" placeholder="AQVN..." style="width:100%;margin-top:9px">' +
-              '<div id="ykState" class="vlab-tag" style="margin-top:7px"></div>' +
-              '<button id="ykSave" class="vlab-check" style="margin-top:9px">СОХРАНИТЬ КЛЮЧ</button>' +
-              '<button id="ykClear" class="vlab-check" style="margin-top:7px">УДАЛИТЬ КЛЮЧ</button>' +
-            '</div>' +
-            '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА</div><div id="vlabVoices"></div>' +
-            '<div class="vlab-sec">АГЕНТЫ ШТАБА</div><div id="vlabAgents"></div>' +
+
+            acc('free', '🆓 БЕСПЛАТНЫЕ · ГОЛОС ТЕЛЕФОНА', true,
+              '<div class="vlab-diag">' +
+                '<div class="vlab-diag-t">СИСТЕМНЫЙ СИНТЕЗ ANDROID</div>' +
+                '<div class="vlab-tag" style="margin:7px 0 2px">Без сервера, интернета и оплаты. Выбери голос и подстрой тон.</div>' +
+                '<select id="pvVoice" class="vlab-sel" style="width:100%;margin-top:9px"></select>' +
+                '<div class="pv-sl"><span>Скорость речи</span><b id="pvRateV">0.95</b></div>' +
+                '<input id="pvRate" class="pv-range" type="range" min="0.5" max="1.5" step="0.05">' +
+                '<div class="pv-sl"><span>Высота тона</span><b id="pvPitchV">0.90</b></div>' +
+                '<input id="pvPitch" class="pv-range" type="range" min="0.5" max="1.5" step="0.05">' +
+                '<div class="pv-sl"><span>Громкость</span><b id="pvVolV">1.00</b></div>' +
+                '<input id="pvVol" class="pv-range" type="range" min="0.2" max="1" step="0.05">' +
+                '<button id="pvPlay" class="vlab-check" style="margin-top:10px">▶ ПОСЛУШАТЬ ГОЛОС ТЕЛЕФОНА</button>' +
+                '<button id="pvReset" class="vlab-check" style="margin-top:7px">СБРОСИТЬ НАСТРОЙКИ</button>' +
+              '</div>') +
+
+            acc('paid', '💰 ПЛАТНЫЕ · ЯНДЕКС SPEECHKIT', false,
+              '<div class="vlab-diag">' +
+                '<div class="vlab-diag-t">API-КЛЮЧ YANDEX SPEECHKIT</div>' +
+                '<div class="vlab-tag" style="margin:7px 0 2px">Оплата за 1000 символов. Ключ хранится только в этом браузере и в репозиторий не попадёт.</div>' +
+                '<input id="ykInput" class="vlab-sel" type="password" placeholder="AQVN..." style="width:100%;margin-top:9px">' +
+                '<div id="ykState" class="vlab-tag" style="margin-top:7px"></div>' +
+                '<button id="ykSave" class="vlab-check" style="margin-top:9px">СОХРАНИТЬ КЛЮЧ</button>' +
+                '<button id="ykClear" class="vlab-check" style="margin-top:7px">УДАЛИТЬ КЛЮЧ</button>' +
+              '</div>' +
+              '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА · 15 ШТУК</div><div id="vlabVoices"></div>') +
+
+            acc('agents', '🤖 АГЕНТЫ ШТАБА', false,
+              '<div class="vlab-tag" style="margin-bottom:9px">Кому какой голос. Выбор сохраняется сразу.</div>' +
+              '<div id="vlabAgents"></div>') +
+
+            acc('diag', '🔧 ДИАГНОСТИКА СЕРВЕРА ОЗВУЧКИ', false,
+              '<div class="vlab-diag">' +
+                '<div class="vlab-diag-t">СОСТОЯНИЕ СЕРВЕРА</div>' +
+                '<div id="vlabDiag" class="vlab-diag-v">нажми «Проверить»</div>' +
+                '<button id="vlabCheck" class="vlab-check">ПРОВЕРИТЬ СЕРВЕР</button>' +
+                '<button id="vlabOpen" class="vlab-check" style="margin-top:7px">ОТКРЫТЬ АДРЕС В БРАУЗЕРЕ</button>' +
+              '</div>') +
+
           '</div>' +
         '</div>';
     document.body.appendChild(ov);
+    ov.querySelectorAll('.vlab-acc-head').forEach(function (h) {
+        h.onclick = function () { h.parentElement.classList.toggle('open'); };
+    });
     ov.querySelector('.vlab-close').onclick = function () { ov.remove(); };
     ov.querySelector('#vlabCheck').onclick = vlabCheckServer;
     ov.querySelector('#vlabOpen').onclick = function () { window.open(TTS_PROXY, '_blank'); };
