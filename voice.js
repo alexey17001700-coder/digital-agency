@@ -46,7 +46,7 @@ async function speakText(text, agentName) {
     const v = _ov ? _ov : ((typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "alena", emotion: "neutral" });
 
     try {
-        const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: cleanText, voice: v.voice, emotion: v.emotion }) });
+        const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ttsBody(cleanText, v.voice, v.emotion) });
         if (!isVoiceEnabled) return;
         if (!res.ok) throw new Error("Сервер");
         const data = await res.json();
