@@ -566,6 +566,29 @@ function validSearchMatch(text) {
     return m;
 }
 
+/* --- ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ КОНТЕКСТА ---
+   У модели лимит 128k токенов. Длинный чат + фото легко переваливают его,
+   и приходит ошибка "maximum context length is 128000 tokens".
+   Режем историю: системный промпт всегда на месте, дальше — только
+   последние сообщения в пределах бюджета. */
+const MAX_HISTORY_CHARS = 60000;   // ~20k токенов текста: с запасом под ответ и инструменты
+const MAX_HISTORY_MSGS = 40;
+
+function trimHistory(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) return messages;
+    const systemMsg = (messages[0] && messages[0].role === 'system') ? messages[0] : null;
+    let rest = systemMsg ? messages.slice(1) : messages.slice();
+    if (rest.length > MAX_HISTORY_MSGS) rest = rest.slice(-MAX_HISTORY_MSGS);
+    let total = 0; const kept = [];
+    for (let i = rest.length - 1; i >= 0; i--) {
+        const m = rest[i];
+        const len = (typeof m.content === 'string') ? m.content.length : 0;
+        if (kept.length > 0 && total + len > MAX_HISTORY_CHARS) break;
+        total += len; kept.unshift(m);
+    }
+    return systemMsg ? [systemMsg, ...kept] : kept;
+}
+
 async function sendMessage(overrideText = null, isKick = false) {
     if (isGenerating && !isKick) { 
         if (currentAbortController) currentAbortController.abort(); 
