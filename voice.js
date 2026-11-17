@@ -173,6 +173,11 @@ function openVoiceLab() {
             '<button class="vlab-close">✕</button>' +
           '</div>' +
           '<div class="vlab-scroll">' +
+            '<div class="vlab-diag">' +
+              '<div class="vlab-diag-t">ДИАГНОСТИКА СЕРВЕРА ОЗВУЧКИ</div>' +
+              '<div id="vlabDiag" class="vlab-diag-v">нажми «Проверить»</div>' +
+              '<button id="vlabCheck" class="vlab-check">ПРОВЕРИТЬ СЕРВЕР</button>' +
+            '</div>' +
             '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА</div><div id="vlabVoices"></div>' +
             '<div class="vlab-sec">АГЕНТЫ ШТАБА</div><div id="vlabAgents"></div>' +
           '</div>' +
