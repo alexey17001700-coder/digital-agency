@@ -654,12 +654,13 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
                 if (isBossSecret) modelToUse = 'zveno';
 
-                let currentMessages = messagesToSend;
+                let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
                 let currentAttempt = 0;
 
                 while (currentAttempt < maxAttempts) {
                     currentAttempt++;
+                    currentMessages = trimHistory(currentMessages);
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 || currentChatImage, isBoss: localStorage.getItem('shtab_boss') === 'true' }),
