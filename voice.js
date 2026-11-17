@@ -85,8 +85,7 @@ function toggleVoiceInput() { if (!recognition) return alert('Нет подде�
 // НЕЙРО-ГОЛОСА EDGE-TTS (бесплатные, от Microsoft). Синтез на сервере, ключ не нужен.
 const YANDEX_VOICES = [
     { id: 'ru-RU-DmitryNeural',  name: 'Дмитрий',  tag: 'мужской · деловой' },
-    { id: 'ru-RU-SvetlanaNeural', name: 'Светлана', tag: 'женский · мягкий' },
-    { id: 'ru-RU-DariyaNeural',  name: 'Дарья',    tag: 'женский · живой' }
+    { id: 'ru-RU-SvetlanaNeural', name: 'Светлана', tag: 'женский · мягкий' }
 ];
 const VOICE_EMOTIONS = ['neutral', 'good', 'evil', 'strict', 'friendly', 'happy', 'sad', 'whisper'];
 const VOICE_PHRASE = 'Здравствуйте, Босс. Система готова к работе.';
