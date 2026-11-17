@@ -503,6 +503,11 @@ function injectVoiceLab() {
             '.vlab-row.vlab-playing{border-color:rgba(201,162,39,.7);background:rgba(201,162,39,.10)}' +
             '.vlab-play{width:38px;height:38px;border-radius:12px;flex:0 0 auto;cursor:pointer;' +
             'background:linear-gradient(145deg,#C9A227,#8E6F14);color:#0B1522;border:none;font-size:14px}' +
+            '.vlab-pick{flex:0 0 auto;height:34px;padding:0 11px;border-radius:10px;cursor:pointer;' +
+            'border:1px solid rgba(201,162,39,.5);background:rgba(201,162,39,.12);color:#C9A227;' +
+            'font:700 10.5px system-ui,sans-serif;letter-spacing:1px}' +
+            '.vlab-pick:active{transform:scale(.95)}' +
+            '.vlab-row.vlab-picked{border-color:rgba(201,162,39,.7);background:rgba(201,162,39,.10)}' +
             '.vlab-info{flex:1;min-width:0}' +
             '.vlab-name{color:#EAF1FA;font:600 13.5px/1.2 system-ui,sans-serif}' +
             '.vlab-tag{color:#7E93AC;font:400 11px/1.3 system-ui,sans-serif;margin-top:3px}' +
