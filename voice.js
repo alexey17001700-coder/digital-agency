@@ -172,7 +172,7 @@ function openVoiceLab2() {
     ov.innerHTML =
         '<div class="vlab-box">' +
           '<div class="vlab-head">' +
-            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ</div>' +
+            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ · v2</div>' +
             '<div class="vlab-sub">Нажми ▶ — услышишь голос. Выбери голос агенту — сохранится сразу.</div></div>' +
             '<button class="vlab-close">✕</button>' +
           '</div>' +
