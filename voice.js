@@ -295,6 +295,57 @@ function openVoiceLab2() {
         eSel.onchange = save;
         abox.appendChild(row);
     });
+
+    // ---- ГОЛОС ТЕЛЕФОНА: заполнение и настройки ----
+    const pvSel = ov.querySelector('#pvVoice');
+    const pvRate = ov.querySelector('#pvRate');
+    const pvPitch = ov.querySelector('#pvPitch');
+    const pvVol = ov.querySelector('#pvVol');
+    const pvRateV = ov.querySelector('#pvRateV');
+    const pvPitchV = ov.querySelector('#pvPitchV');
+    const pvVolV = ov.querySelector('#pvVolV');
+    pvRate.value = phoneVoiceSettings.rate;
+    pvPitch.value = phoneVoiceSettings.pitch;
+    pvVol.value = phoneVoiceSettings.volume;
+    pvRateV.textContent = Number(phoneVoiceSettings.rate).toFixed(2);
+    pvPitchV.textContent = Number(phoneVoiceSettings.pitch).toFixed(2);
+    pvVolV.textContent = Number(phoneVoiceSettings.volume).toFixed(2);
+
+    function fillPhoneVoices() {
+        const vs = ruPhoneVoices();
+        if (!vs.length) {
+            pvSel.innerHTML = '<option value="">русские голоса не найдены</option>';
+            return;
+        }
+        pvSel.innerHTML = vs.map(function (v) {
+            const sel = (v.name === phoneVoiceSettings.voice) ? ' selected' : '';
+            return '<option value="' + v.name + '"' + sel + '>' + v.name + ' · ' + v.lang + '</option>';
+        }).join('');
+        if (!phoneVoiceSettings.voice) {
+            phoneVoiceSettings.voice = vs[0].name;
+            savePhoneVoice();
+        }
+    }
+    fillPhoneVoices();
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = function () { fillPhoneVoices(); };
+        setTimeout(fillPhoneVoices, 600);
+    }
+
+    pvSel.onchange = function () { phoneVoiceSettings.voice = pvSel.value; savePhoneVoice(); phoneSpeak(VOICE_PHRASE); };
+    pvRate.oninput = function () { phoneVoiceSettings.rate = Number(pvRate.value); pvRateV.textContent = Number(pvRate.value).toFixed(2); savePhoneVoice(); };
+    pvPitch.oninput = function () { phoneVoiceSettings.pitch = Number(pvPitch.value); pvPitchV.textContent = Number(pvPitch.value).toFixed(2); savePhoneVoice(); };
+    pvVol.oninput = function () { phoneVoiceSettings.volume = Number(pvVol.value); pvVolV.textContent = Number(pvVol.value).toFixed(2); savePhoneVoice(); };
+    pvRate.onchange = pvPitch.onchange = pvVol.onchange = function () { phoneSpeak(VOICE_PHRASE); };
+    ov.querySelector('#pvPlay').onclick = function () { phoneSpeak(VOICE_PHRASE); };
+    ov.querySelector('#pvReset').onclick = function () {
+        phoneVoiceSettings = { voice: '', rate: 0.95, pitch: 0.90, volume: 1.0 };
+        savePhoneVoice();
+        pvRate.value = 0.95; pvPitch.value = 0.90; pvVol.value = 1.0;
+        pvRateV.textContent = '0.95'; pvPitchV.textContent = '0.90'; pvVolV.textContent = '1.00';
+        fillPhoneVoices();
+        phoneSpeak(VOICE_PHRASE);
+    };
 }
 
 function injectVoiceLab() {
