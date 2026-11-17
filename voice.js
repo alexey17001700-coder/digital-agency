@@ -159,18 +159,19 @@ async function vlabCheckServer() {
         lines.push('POST: ❌ ' + (e && e.message ? e.message : e));
     }
 
-    // 2) проверка доступности сервера в обход CORS — отвечает ли он вообще
+    // 2) проверка доступности сервера — отвечает ли он вообще
     try {
         const t1 = Date.now();
         await fetch(TTS_PROXY, { method: 'GET', mode: 'no-cors', cache: 'no-store' });
-        lines.push('Доступность: сервер ОТВЕЧАЕТ ✅ (' + (Date.now() - t1) + ' мс) → дело в CORS-заголовках функции');
+        lines.push('Доступность: сервер ОТВЕЧАЕТ ✅ (' + (Date.now() - t1) + ' мс)');
     } catch (e) {
-        lines.push('Доступность: сервер НЕ отвечает ❌ → функция удалена, квота кончилась или домен заблокирован провайдером');
+        lines.push('Доступность: сервер НЕ отвечает ❌ → Штаб не запущен или нет связи');
     }
 
-    // 3) адрес, который можно открыть руками
-    lines.push('Ключ: ' + (yandexKey ? 'задан (' + yandexKey.length + ' симв.)' : 'не задан'));
+    // 3) движок и адрес
+    lines.push('Движок: edge-tts · нейро-голоса Microsoft · бесплатно, без ключа');
     lines.push('Адрес: ' + TTS_PROXY);
+    lines.push('Если ответ «edge-tts не установлен» — на сервере: pip install edge-tts');
 
     const info = lines.join('\n');
     if (out) out.textContent = info;
