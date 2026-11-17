@@ -79,3 +79,160 @@ if (SpeechRecognition) {
     recognition.onend = function() { isListening = false; const b = document.getElementById('micBtn'); if (b) { b.style.background = '#333'; b.style.boxShadow = 'none'; } };
 }
 function toggleVoiceInput() { if (!recognition) return alert('Нет поддержки микрофона'); if (isListening) recognition.stop(); else try { recognition.start(); } catch (e) {} }
+
+/* ================= ЛАБОРАТОРИЯ ГОЛОСОВ ================= */
+const YANDEX_VOICES = [
+    { id: 'alena',     name: 'Алёна',     tag: 'женский · тёплый' },
+    { id: 'filipp',    name: 'Филипп',    tag: 'мужской · ровный' },
+    { id: 'ermil',     name: 'Ермил',     tag: 'мужской · низкий' },
+    { id: 'jane',      name: 'Джейн',     tag: 'женский · мягкий' },
+    { id: 'omazh',     name: 'Омаж',      tag: 'женский · низкий' },
+    { id: 'zahar',     name: 'Захар',     tag: 'мужской · жёсткий' },
+    { id: 'dasha',     name: 'Даша',      tag: 'женский · живой' },
+    { id: 'julia',     name: 'Юлия',      tag: 'женский · спокойный' },
+    { id: 'lera',      name: 'Лера',      tag: 'женский · лёгкий' },
+    { id: 'masha',     name: 'Маша',      tag: 'женский · детский' },
+    { id: 'marina',    name: 'Марина',    tag: 'женский · деловой' },
+    { id: 'alexander', name: 'Александр', tag: 'мужской · строгий' },
+    { id: 'kirill',    name: 'Кирилл',    tag: 'мужской · молодой' },
+    { id: 'anton',     name: 'Антон',     tag: 'мужской · дружелюбный' },
+    { id: 'madirus',   name: 'Мадирус',   tag: 'мужской · глубокий' }
+];
+const VOICE_EMOTIONS = ['neutral', 'good', 'evil', 'strict', 'friendly', 'happy', 'sad', 'whisper'];
+const VOICE_PHRASE = 'Здравствуйте, Босс. Система готова к работе.';
+
+let voiceOverrides = {};
+try { const vo = localStorage.getItem('shtabVoiceOverrides'); if (vo) voiceOverrides = JSON.parse(vo); } catch (e) {}
+let vlabAudio = null;
+
+async function vlabPlay(voice, emotion, rowEl) {
+    if (vlabAudio) { try { vlabAudio.pause(); } catch (e) {} vlabAudio = null; }
+    if (rowEl) rowEl.classList.add('vlab-playing');
+    try {
+        const res = await fetch(TTS_PROXY, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: VOICE_PHRASE, voice: voice, emotion: emotion })
+        });
+        if (!res.ok) throw new Error('Сервер ' + res.status);
+        const data = await res.json();
+        if (!data.audio) throw new Error('Нет аудио');
+        vlabAudio = new Audio('data:audio/mpeg;base64,' + data.audio);
+        vlabAudio.onended = function () { if (rowEl) rowEl.classList.remove('vlab-playing'); };
+        await vlabAudio.play();
+    } catch (e) {
+        if (rowEl) rowEl.classList.remove('vlab-playing');
+        if ('speechSynthesis' in window) {
+            const u = new SpeechSynthesisUtterance(VOICE_PHRASE); u.lang = 'ru-RU';
+            window.speechSynthesis.speak(u);
+        }
+    }
+}
+
+function openVoiceLab() {
+    const old = document.getElementById('vlab');
+    if (old) { old.remove(); return; }
+    const ov = document.createElement('div');
+    ov.id = 'vlab';
+    ov.innerHTML =
+        '<div class="vlab-box">' +
+          '<div class="vlab-head">' +
+            '<div><div class="vlab-title">ЛАБОРАТОРИЯ ГОЛОСОВ</div>' +
+            '<div class="vlab-sub">Нажми ▶ — услышишь голос. Выбери голос агенту — сохранится сразу.</div></div>' +
+            '<button class="vlab-close">✕</button>' +
+          '</div>' +
+          '<div class="vlab-scroll">' +
+            '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА</div><div id="vlabVoices"></div>' +
+            '<div class="vlab-sec">АГЕНТЫ ШТАБА</div><div id="vlabAgents"></div>' +
+          '</div>' +
+        '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('.vlab-close').onclick = function () { ov.remove(); };
+    ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+
+    const vbox = ov.querySelector('#vlabVoices');
+    YANDEX_VOICES.forEach(function (v) {
+        const row = document.createElement('div');
+        row.className = 'vlab-row';
+        row.innerHTML = '<button class="vlab-play">▶</button>' +
+            '<div class="vlab-info"><div class="vlab-name">' + v.name + '</div>' +
+            '<div class="vlab-tag">' + v.tag + ' · ' + v.id + '</div></div>';
+        row.querySelector('.vlab-play').onclick = function () { vlabPlay(v.id, 'neutral', row); };
+        vbox.appendChild(row);
+    });
+
+    const abox = ov.querySelector('#vlabAgents');
+    const names = (typeof AGENT_VOICES !== 'undefined') ? Object.keys(AGENT_VOICES) : [];
+    if (!names.length) abox.innerHTML = '<div class="vlab-tag">AGENT_VOICES не найден</div>';
+    names.forEach(function (name) {
+        const base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[name]) ? AGENT_VOICES[name] : { voice: 'alena', emotion: 'neutral' };
+        const cur = voiceOverrides[name] || base;
+        const row = document.createElement('div');
+        row.className = 'vlab-row';
+        const opts = YANDEX_VOICES.map(function (v) {
+            return '<option value="' + v.id + '"' + (v.id === cur.voice ? ' selected' : '') + '>' + v.name + '</option>';
+        }).join('');
+        const eopts = VOICE_EMOTIONS.map(function (e) {
+            return '<option value="' + e + '"' + (e === cur.emotion ? ' selected' : '') + '>' + e + '</option>';
+        }).join('');
+        row.innerHTML = '<button class="vlab-play">▶</button>' +
+            '<div class="vlab-info"><div class="vlab-name">' + name + '</div>' +
+            '<div class="vlab-ctl"><select class="vlab-sel vlab-v">' + opts + '</select>' +
+            '<select class="vlab-sel vlab-e">' + eopts + '</select></div></div>';
+        const vSel = row.querySelector('.vlab-v');
+        const eSel = row.querySelector('.vlab-e');
+        row.querySelector('.vlab-play').onclick = function () { vlabPlay(vSel.value, eSel.value, row); };
+        const save = function () {
+            voiceOverrides[name] = { voice: vSel.value, emotion: eSel.value };
+            localStorage.setItem('shtabVoiceOverrides', JSON.stringify(voiceOverrides));
+        };
+        vSel.onchange = function () { save(); vlabPlay(vSel.value, eSel.value, row); };
+        eSel.onchange = save;
+        abox.appendChild(row);
+    });
+}
+
+function injectVoiceLab() {
+    if (document.getElementById('vlabBtn')) return;
+    if (!document.getElementById('vlabCss')) {
+        const st = document.createElement('style');
+        st.id = 'vlabCss';
+        st.textContent =
+            '#vlabBtn{position:fixed;right:12px;bottom:96px;width:46px;height:46px;border-radius:50%;' +
+            'background:linear-gradient(145deg,#C9A227,#8E6F14);color:#0B1522;font-size:20px;border:1px solid #E3C766;' +
+            'box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:9998;cursor:pointer}' +
+            '#vlabBtn:active{transform:scale(.94)}' +
+            '#vlab{position:fixed;inset:0;background:rgba(3,8,16,.78);backdrop-filter:blur(6px);z-index:9999;' +
+            'display:flex;align-items:center;justify-content:center;padding:14px}' +
+            '.vlab-box{width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;' +
+            'background:linear-gradient(160deg,#0F1B2D,#0A1220);border:1px solid rgba(201,162,39,.45);border-radius:22px;' +
+            'box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}' +
+            '.vlab-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;' +
+            'border-bottom:1px solid rgba(201,162,39,.22)}' +
+            '.vlab-title{color:#C9A227;font:700 14px/1.2 system-ui,sans-serif;letter-spacing:1.6px}' +
+            '.vlab-sub{color:#7E93AC;font:400 11.5px/1.4 system-ui,sans-serif;margin-top:5px}' +
+            '.vlab-close{background:transparent;border:1px solid rgba(201,162,39,.35);color:#C9A227;width:32px;height:32px;' +
+            'border-radius:10px;font-size:14px;cursor:pointer;flex:0 0 auto}' +
+            '.vlab-scroll{overflow-y:auto;padding:12px 16px 18px}' +
+            '.vlab-sec{color:#B08D57;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:1.6px;margin:14px 0 8px}' +
+            '.vlab-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:14px;' +
+            'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:7px;transition:.2s}' +
+            '.vlab-row.vlab-playing{border-color:rgba(201,162,39,.7);background:rgba(201,162,39,.10)}' +
+            '.vlab-play{width:38px;height:38px;border-radius:12px;flex:0 0 auto;cursor:pointer;' +
+            'background:linear-gradient(145deg,#C9A227,#8E6F14);color:#0B1522;border:none;font-size:14px}' +
+            '.vlab-info{flex:1;min-width:0}' +
+            '.vlab-name{color:#EAF1FA;font:600 13.5px/1.2 system-ui,sans-serif}' +
+            '.vlab-tag{color:#7E93AC;font:400 11px/1.3 system-ui,sans-serif;margin-top:3px}' +
+            '.vlab-ctl{display:flex;gap:6px;margin-top:6px}' +
+            '.vlab-sel{flex:1;min-width:0;background:#0A1220;color:#DCE6F2;border:1px solid rgba(201,162,39,.35);' +
+            'border-radius:9px;padding:6px 8px;font:500 12px system-ui,sans-serif}';
+        document.head.appendChild(st);
+    }
+    const b = document.createElement('button');
+    b.id = 'vlabBtn';
+    b.title = 'Лаборатория голосов';
+    b.textContent = '🎛';
+    b.onclick = openVoiceLab;
+    document.body.appendChild(b);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectVoiceLab); else injectVoiceLab();
