@@ -187,9 +187,9 @@ async function vlabPlay(voice, emotion, rowEl) {
             body: ttsBody(VOICE_PHRASE, voice, emotion)
         });
         if (!res.ok) throw new Error('Сервер ' + res.status);
-        const data = await res.json();
-        if (!data.audio) throw new Error('Нет аудио');
-        vlabAudio = new Audio('data:audio/mpeg;base64,' + data.audio);
+        const blob = await res.blob();
+        if (blob.size < 200) throw new Error('Нет аудио');
+        vlabAudio = new Audio(URL.createObjectURL(blob));
         vlabAudio.onended = function () { if (rowEl) rowEl.classList.remove('vlab-playing'); };
         await vlabAudio.play();
     } catch (e) {
