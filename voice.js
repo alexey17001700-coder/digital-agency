@@ -164,7 +164,7 @@ async function vlabPlay(voice, emotion, rowEl) {
         const res = await fetch(TTS_PROXY, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: VOICE_PHRASE, voice: voice, emotion: emotion })
+            body: ttsBody(VOICE_PHRASE, voice, emotion)
         });
         if (!res.ok) throw new Error('Сервер ' + res.status);
         const data = await res.json();
