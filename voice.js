@@ -55,12 +55,7 @@ async function speakText(text, agentName) {
     } catch (e) {
         ttsLastError = 'озвучка: ' + (e && e.message ? e.message : e) + ' → голос телефона';
         if (!isVoiceEnabled) return;
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(cleanText); utterance.lang = 'ru-RU';
-            if (agentName === 'Хакер') { utterance.pitch = 0.5; utterance.rate = 0.9; }
-            else if (agentName === 'Охранник') { utterance.pitch = 0.8; utterance.rate = 1.0; }
-            window.speechSynthesis.speak(utterance);
-        }
+        speakPhoneVoice(cleanText, agentName);
     }
 }
 
