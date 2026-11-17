@@ -45,7 +45,8 @@ async function speakText(text, agentName) {
     if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
 
     const _ov = voiceOverrides[agentName];
-    const v = _ov ? _ov : ((typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "alena", emotion: "neutral" });
+    const _base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "alena", emotion: "neutral" };
+    const v = _ov ? _ov : (defaultVoice ? { voice: defaultVoice, emotion: _base.emotion } : _base);
 
     try {
         const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ttsBody(cleanText, v.voice, v.emotion) });
