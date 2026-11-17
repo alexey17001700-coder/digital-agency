@@ -765,11 +765,69 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
 }
 
 // =========================================
+// ОЗВУЧКА (EDGE-TTS, БЕСПЛАТНО)
+// =========================================
+const TTS_CACHE = new Map<string, Uint8Array>();
+const TTS_CACHE_MAX = 150;
+
+async function handleTTS(body: any) {
+    const text = String(body.text || "").trim().slice(0, 600);
+    if (!text) return json({ success: false, error: "Пустой текст" }, 400);
+
+    const voice = String(body.voice || "ru-RU-DmitryNeural").trim();
+    const rate = String(body.rate || "+0%").trim();
+    const key = `${voice}|${rate}|${text}`;
+
+    const cached = TTS_CACHE.get(key);
+    if (cached) {
+        return new Response(cached, {
+            headers: { ...corsHeaders, "Content-Type": "audio/mpeg", "X-TTS-Cache": "hit" }
+        });
+    }
+
+    const tmp = await Deno.makeTempFile({ suffix: ".mp3" });
+    try {
+        const cmd = new Deno.Command("edge-tts", {
+            args: ["--voice", voice, "--rate", rate, "--text", text, "--write-media", tmp],
+            stdout: "null",
+            stderr: "piped",
+        });
+        const { code, stderr } = await cmd.output();
+        if (code !== 0) {
+            const err = new TextDecoder().decode(stderr).slice(0, 300);
+            return json({ success: false, error: `edge-tts: ${err}` }, 500);
+        }
+        const data = await Deno.readFile(tmp);
+        if (data.length < 200) return json({ success: false, error: "edge-tts вернул пустой файл" }, 500);
+
+        if (TTS_CACHE.size >= TTS_CACHE_MAX) {
+            const first = TTS_CACHE.keys().next().value;
+            if (first !== undefined) TTS_CACHE.delete(first);
+        }
+        TTS_CACHE.set(key, data);
+
+        return new Response(data, {
+            headers: { ...corsHeaders, "Content-Type": "audio/mpeg", "X-TTS-Cache": "miss" }
+        });
+    } catch (e: any) {
+        return json({ success: false, error: `edge-tts не установлен: ${e.message}` }, 500);
+    } finally {
+        try { await Deno.remove(tmp); } catch (_e) { /* ignore */ }
+    }
+}
+
+// =========================================
 // СЕРВЕР (БЕЗ ДУБЛЕЙ WSROOMS)
 // =========================================
 Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
     if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
+
+    // ОЗВУЧКА — до проверки секрета (нужна и гостям, и Штабу)
+    try {
+        const peek = await request.clone().json();
+        if (peek && peek.tts) return await handleTTS(peek);
+    } catch (_e) { /* не JSON — идём дальше */ }
 
     if (!checkSecret(request)) {
         return json({ success: false, error: "Доступ запрещен: неверный секрет Штаба" }, 401);
