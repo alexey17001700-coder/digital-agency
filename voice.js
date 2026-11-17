@@ -233,12 +233,7 @@ async function vlabPlay(voice, emotion, rowEl) {
     if (vlabAudio) { try { vlabAudio.pause(); } catch (e) {} vlabAudio = null; }
     if (rowEl) rowEl.classList.add('vlab-playing');
     try {
-        const res = await fetch(TTS_PROXY, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: ttsBody(VOICE_PHRASE, voice, emotion)
-        });
-        if (!res.ok) throw new Error('Сервер ' + res.status);
+        const res = await ttsFetch(ttsBody(VOICE_PHRASE, voice, emotion));
         const blob = await res.blob();
         if (blob.size < 200) throw new Error('Нет аудио');
         vlabAudio = new Audio(URL.createObjectURL(blob));
