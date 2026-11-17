@@ -321,15 +321,34 @@ function openVoiceLab2() {
     ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
 
     const vbox = ov.querySelector('#vlabVoices');
-    YANDEX_VOICES.forEach(function (v) {
-        const row = document.createElement('div');
-        row.className = 'vlab-row';
-        row.innerHTML = '<button class="vlab-play">▶</button>' +
-            '<div class="vlab-info"><div class="vlab-name">' + v.name + '</div>' +
-            '<div class="vlab-tag">' + v.tag + ' · ' + v.id + '</div></div>';
-        row.querySelector('.vlab-play').onclick = function () { vlabPlay(v.id, 'neutral', row); };
-        vbox.appendChild(row);
-    });
+    function renderVoices() {
+        vbox.innerHTML = '';
+        YANDEX_VOICES.forEach(function (v) {
+            const on = (defaultVoice === v.id);
+            const row = document.createElement('div');
+            row.className = 'vlab-row' + (on ? ' vlab-picked' : '');
+            row.innerHTML = '<button class="vlab-play">▶</button>' +
+                '<div class="vlab-info"><div class="vlab-name">' + v.name + (on ? ' · ВЫБРАН' : '') + '</div>' +
+                '<div class="vlab-tag">' + v.tag + ' · ' + v.id + '</div></div>' +
+                '<button class="vlab-pick">' + (on ? '✓' : 'ВЫБРАТЬ') + '</button>';
+            row.querySelector('.vlab-play').onclick = function () { vlabPlay(v.id, 'neutral', row); };
+            row.querySelector('.vlab-pick').onclick = function () {
+                defaultVoice = on ? '' : v.id;
+                try { localStorage.setItem('shtabDefaultVoice', defaultVoice); } catch (e) {}
+                renderVoices();
+                if (defaultVoice) vlabPlay(v.id, 'neutral', null);
+            };
+            vbox.appendChild(row);
+        });
+        const hint = document.createElement('div');
+        hint.className = 'vlab-tag';
+        hint.style.margin = '8px 2px 0';
+        hint.textContent = defaultVoice
+            ? 'Выбран: ' + defaultVoice + ' — говорят все агенты, кроме тех, кому задан свой голос ниже.'
+            : 'Голос не выбран — агенты говорят своими голосами из AGENT_VOICES.';
+        vbox.appendChild(hint);
+    }
+    renderVoices();
 
     const abox = ov.querySelector('#vlabAgents');
     const names = (typeof AGENT_VOICES !== 'undefined') ? Object.keys(AGENT_VOICES) : [];
