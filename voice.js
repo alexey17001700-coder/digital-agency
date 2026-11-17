@@ -480,7 +480,7 @@ function injectVoiceLab() {
     }
     const b = document.createElement('button');
     b.id = 'vlabBtn2';
-    b.title = 'Лаборатория голосов v2';
+    b.title = 'Лаборатория голосов v3';
     b.textContent = '🎛';
     b.onclick = openVoiceLab2;
     document.body.appendChild(b);
