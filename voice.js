@@ -42,7 +42,8 @@ async function speakText(text, agentName) {
     if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
     if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
 
-    const v = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "alena", emotion: "neutral" };
+    const _ov = voiceOverrides[agentName];
+    const v = _ov ? _ov : ((typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "alena", emotion: "neutral" });
 
     try {
         const res = await fetch(TTS_PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: cleanText, voice: v.voice, emotion: v.emotion }) });
