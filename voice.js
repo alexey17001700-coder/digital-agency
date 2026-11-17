@@ -254,6 +254,15 @@ function openVoiceLab2() {
               '<button id="pvPlay" class="vlab-check" style="margin-top:10px">▶ ПОСЛУШАТЬ ГОЛОС ТЕЛЕФОНА</button>' +
               '<button id="pvReset" class="vlab-check" style="margin-top:7px">СБРОСИТЬ НАСТРОЙКИ</button>' +
             '</div>' +
+            '<div class="vlab-sec">КЛЮЧ ЯНДЕКСА · ДЛЯ ГОЛОСОВ</div>' +
+            '<div class="vlab-diag">' +
+              '<div class="vlab-diag-t">API-КЛЮЧ YANDEX SPEECHKIT</div>' +
+              '<div class="vlab-tag" style="margin:7px 0 2px">Вставь ключ — он сохранится только в этом браузере и в репозиторий не попадёт.</div>' +
+              '<input id="ykInput" class="vlab-sel" type="password" placeholder="AQVN..." style="width:100%;margin-top:9px">' +
+              '<div id="ykState" class="vlab-tag" style="margin-top:7px"></div>' +
+              '<button id="ykSave" class="vlab-check" style="margin-top:9px">СОХРАНИТЬ КЛЮЧ</button>' +
+              '<button id="ykClear" class="vlab-check" style="margin-top:7px">УДАЛИТЬ КЛЮЧ</button>' +
+            '</div>' +
             '<div class="vlab-sec">ГОЛОСА ЯНДЕКСА</div><div id="vlabVoices"></div>' +
             '<div class="vlab-sec">АГЕНТЫ ШТАБА</div><div id="vlabAgents"></div>' +
           '</div>' +
