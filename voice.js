@@ -324,7 +324,7 @@ function openVoiceLab2() {
                 '<div class="vlab-diag-t">НЕЙРО-СИНТЕЗ MICROSOFT · БЕЗ КЛЮЧА</div>' +
                 '<div class="vlab-tag" style="margin:7px 0 2px">Бесплатно, без регистрации и ключей. Синтез идёт на нашем сервере (маршрут /tts). Нужен интернет.</div>' +
               '</div>' +
-              '<div class="vlab-sec">ГОЛОСА · 3 ШТУКИ</div><div id="vlabVoices"></div>') +
+              '<div class="vlab-sec">ГОЛОСА · 2 ШТУКИ</div><div id="vlabVoices"></div>') +
 
             acc('agents', '🤖 АГЕНТЫ ШТАБА', false,
               '<div class="vlab-tag" style="margin-bottom:9px">Кому какой голос. Выбор сохраняется сразу.</div>' +
