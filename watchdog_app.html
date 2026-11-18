@@ -655,7 +655,7 @@ document.getElementById("cfgInt").addEventListener("change", function(){
 document.getElementById("cfgThr").addEventListener("change", function(){
   cfg.threshold = Math.max(1, Math.min(10, +this.value || 2)); this.value = cfg.threshold; saveCfg();
 });
-["cfgSnd|sound","cfgVib|vibro","cfgNtf|notify","cfgHour|hourly"].forEach(function(pair){
+["cfgSnd|sound","cfgVib|vibro","cfgNtf|notify","cfgHour|hourly","cfgWake|autowake"].forEach(function(pair){
   const parts = pair.split("|");
   const el = document.getElementById(parts[0]);
   el.addEventListener("change", function(){ cfg[parts[1]] = el.checked; saveCfg(); });
