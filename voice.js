@@ -173,12 +173,23 @@ function ttsToast(msg) {
 let yandexKey = '';
 try { yandexKey = localStorage.getItem('shtabYandexKey') || ''; } catch (e) {}
 function saveYandexKey(k) { yandexKey = (k || '').trim(); try { localStorage.setItem('shtabYandexKey', yandexKey); } catch (e) {} }
+// Настройки нейро-голосов (edge-tts): скорость, громкость, тон.
+// Работают на сервере — edge-tts принимает --rate / --volume / --pitch.
+let neuralVoiceSettings = { rate: 0, volume: 0, pitch: 0 };
+try { const nv = localStorage.getItem('shtabNeuralVoice'); if (nv) neuralVoiceSettings = Object.assign(neuralVoiceSettings, JSON.parse(nv)); } catch (e) {}
+function saveNeuralVoice() { try { localStorage.setItem('shtabNeuralVoice', JSON.stringify(neuralVoiceSettings)); } catch (e) {} }
+function sign(v, unit) { const n = Number(v) || 0; return (n > 0 ? '+' : '') + n + unit; }
+
 function ttsBody(text, voice, emotion) {
+    // Эмоция задаёт базовый темп, ползунок Босса сдвигает его поверх.
+    const r = (parseInt(emotionRate(emotion)) || 0) + (Number(neuralVoiceSettings.rate) || 0);
     return JSON.stringify({
         tts: true,
         text: text,
         voice: edgeVoice(voice),
-        rate: emotionRate(emotion)
+        rate: sign(r, '%'),
+        volume: sign(neuralVoiceSettings.volume, '%'),
+        pitch: sign(neuralVoiceSettings.pitch, 'Hz')
     });
 }
 
