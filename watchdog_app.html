@@ -213,7 +213,7 @@ const K_CFG = "wd_app_cfg", K_LOG = "wd_app_log", K_FEED = "wd_app_feed";
 
 let cfg = load(K_CFG, null) || {
   interval: 15, threshold: 2, sound: true, vibro: true, notify: true, hourly: true,
-  relay: DEFAULT_RELAY, running: false,
+  relay: DEFAULT_RELAY, running: false, autowake: true,
   targets: [
     { id:"shtab", name:"Штаб (этот телефон)", ico:"🏛", url:"self", on:true },
     { id:"vivo",  name:"Сервер Vivo",          ico:"🖥", url:"https://shtab-boss.duckdns.org:8443", on:true }
