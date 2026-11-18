@@ -397,6 +397,23 @@ async function relay(kind, text){
   } catch(e){ return false; }
 }
 
+/* ================= АВТО-ТРЕВОГА (БУДИТ АРХИТЕКТОРА) ================= */
+let waking = false;
+async function autoWake(kind, text){
+  if (!cfg.autowake) return;
+  if (waking) return;
+  waking = true;
+  addFeed("boss", "🤖 СТОРОЖ | " + hhmmss(now()) + "\n" + text);
+  try {
+    const answer = await askArchitect("[СИСТЕМНАЯ ТРЕВОГА СТОРОЖА — это пишет скрипт, не Босс]\n" + text + "\n\nРазбери: что случилось и что делать. Коротко, по делу.");
+    addFeed("arch", "🏛 АРХИТЕКТОР\n" + answer);
+    addLog("сторож", "wake", kind + ": " + text.slice(0, 90));
+  } catch(e){
+    addFeed("err", watchLine("не смог разбудить Архитектора: " + (e.message || "нет связи")));
+  }
+  waking = false;
+}
+
 /* ================= ЦИКЛ ================= */
 async function tick(){
   for (const t of cfg.targets){
