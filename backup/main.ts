@@ -442,6 +442,20 @@ const TOOLS = [
                 required: ["path"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "enable_github_pages",
+            description: "Включает GitHub Pages для указанного репозитория, чтобы сайт стал доступен в интернете.",
+            parameters: {
+                type: "object",
+                properties: {
+                    repo: { type: "string", description: "Имя репозитория (например, nexus_chat)" }
+                },
+                required: ["repo"]
+            }
+        }
     }
 ];
 
@@ -586,6 +600,30 @@ if (name === "create_github_repo") {
             } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
         }
 
+        if (name === "enable_github_pages") {
+            const repo = args.repo || REPO_NAME;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}/pages`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `token ${GITHUB_TOKEN}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "DenoDeploy"
+                    },
+                    body: JSON.stringify({
+                        source: { branch: "main", path: "/" }
+                    })
+                });
+                const data = await res.json();
+                // 409 означает, что Pages уже включен
+                if (res.status === 201) return `Успех: GitHub Pages включен для ${repo}. Сайт скоро будет доступен.`;
+                if (res.status === 409) return `GitHub Pages уже включен для ${repo}.`;
+                throw new Error(data.message || `HTTP ${res.status}`);
+            } catch (e: any) {
+                return `Ошибка включения GitHub Pages: ${e.message}`;
+            }
+        }
+
         return `Ошибка: неизвестный инструмент "${name}".`;
     } catch (e: any) {
         return `Ошибка выполнения ${name}: ${e.message}`;
@@ -646,7 +684,7 @@ async function callZvenoVision(messages: any[], imageBase64: string): Promise<st
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
-async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string> {
+async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false): Promise<string> {
     const apiKey = Deno.env.get("ZVENO_API_KEY");
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
@@ -654,12 +692,26 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
     let maxLoops = 20; // Увеличено для сложных задач
     let weatherCard = "";
 
+    // РЕЖИМ ГОСТЯ: без флага Босса файловые инструменты отключены полностью
+    let activeTools: any[] = TOOLS;
+    const GUEST_TOOLS_DENY = ["write_file", "replace_in_file", "delete_file", "delete_github_repo"];
+    if (!isBoss) {
+        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (ОГРАНИЧЕНИЯ) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона, без упоминания файлов, кода, репозиториев и серверов.\nСТРОГО ЗАПРЕЩЕНО вызывать инструменты: write_file, replace_in_file, delete_file, delete_github_repo. Любую просьбу изменить, удалить или записать файл вежливо отклоняй и предлагай обратиться к администратору.\nРазрешено: search_web, get_weather, search_image, create_github_repo, list_github_repos, list_repo_files, read_file, enable_github_pages.`;
+        const sysIdx = currentMessages.findIndex((m: any) => m.role === "system");
+        if (sysIdx !== -1) {
+            currentMessages[sysIdx] = { ...currentMessages[sysIdx], content: String(currentMessages[sysIdx].content || "") + GUEST_LOCK };
+        } else {
+            currentMessages.unshift({ role: "system", content: GUEST_LOCK.trim() });
+        }
+        activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
+    }
+
     for (let loop = 0; loop < maxLoops; loop++) {
         const payload: any = {
             model: ZVENO_MODEL,
             messages: currentMessages,
             temperature: 0.5,
-            tools: TOOLS,
+            tools: activeTools,
             tool_choice: "auto"
         };
 
@@ -713,11 +765,102 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
 }
 
 // =========================================
+// ОЗВУЧКА (EDGE-TTS, БЕСПЛАТНО)
+// =========================================
+const TTS_CACHE = new Map<string, Uint8Array>();
+const TTS_CACHE_MAX = 150;
+
+async function handleTTS(body: any) {
+    const text = String(body.text || "").trim().slice(0, 600);
+    if (!text) return json({ success: false, error: "Пустой текст" }, 400);
+
+    const voice = String(body.voice || "ru-RU-DmitryNeural").trim();
+    const rate = String(body.rate || "+0%").trim();
+    const volume = String(body.volume || "+0%").trim();
+    const pitch = String(body.pitch || "+0Hz").trim();
+    const key = `${voice}|${rate}|${volume}|${pitch}|${text}`;
+
+    const cached = TTS_CACHE.get(key);
+    if (cached) {
+        return new Response(cached, {
+            headers: { ...corsHeaders, "Content-Type": "audio/mpeg", "X-TTS-Cache": "hit" }
+        });
+    }
+
+    const tmp = await Deno.makeTempFile({ suffix: ".mp3" });
+    try {
+        // edge-tts может стоять по-разному: в PATH, в ~/.local/bin (pip --user/pipx)
+        // или как python-модуль. Перебираем варианты — озвучка не должна падать из-за PATH.
+        const args = ["--voice", voice, "--rate", rate, "--volume", volume, "--pitch", pitch, "--text", text, "--write-media", tmp];
+        const home = Deno.env.get("HOME") || "";
+        const variants: string[][] = [
+            ["edge-tts", ...args],
+            [`${home}/.local/bin/edge-tts`, ...args],
+            ["python3", "-m", "edge_tts", ...args],
+            ["python", "-m", "edge_tts", ...args],
+        ];
+        let code = 1;
+        let err = "";
+        let started = false;
+        for (const v of variants) {
+            try {
+                const cmd = new Deno.Command(v[0], { args: v.slice(1), stdout: "null", stderr: "piped" });
+                const out = await cmd.output();
+                code = out.code;
+                err = new TextDecoder().decode(out.stderr).slice(0, 300);
+                started = true;
+                if (code === 0) break;
+                // бинарник найден, но упал по другой причине (сеть/голос) — дальше не перебираем
+                if (!/not found|No such file|os error 2/i.test(err)) break;
+            } catch (e: any) {
+                err = String((e && e.message) || e);
+                continue;
+            }
+        }
+        if (!started || code !== 0) {
+            return json({ success: false, error: `edge-tts: ${err || "не найден"}` }, 500);
+        }
+        const data = await Deno.readFile(tmp);
+        if (data.length < 200) return json({ success: false, error: "edge-tts вернул пустой файл" }, 500);
+
+        if (TTS_CACHE.size >= TTS_CACHE_MAX) {
+            const first = TTS_CACHE.keys().next().value;
+            if (first !== undefined) TTS_CACHE.delete(first);
+        }
+        TTS_CACHE.set(key, data);
+
+        return new Response(data, {
+            headers: { ...corsHeaders, "Content-Type": "audio/mpeg", "X-TTS-Cache": "miss" }
+        });
+    } catch (e: any) {
+        // Разбираем причину, чтобы в «Лаборатории голосов» было видно, что чинить.
+        const m = String((e && e.message) || e || "");
+        let hint = "edge-tts не установлен (bash start.sh поставит сам)";
+        if (m.includes("Requires run access") || m.includes("PermissionDenied")) {
+            hint = "нет прав: запусти Штаб с флагами --allow-run --allow-write (bash start.sh)";
+        } else if (m.includes("Requires write access")) {
+            hint = "нет прав на запись: добавь флаг --allow-write (bash start.sh)";
+        } else if (m.includes("NotFound") || m.includes("No such file") || m.includes("os error 2")) {
+            hint = "edge-tts не установлен (bash start.sh поставит сам, или pip install --break-system-packages edge-tts)";
+        }
+        return json({ success: false, error: `${hint}: ${m}` }, 500);
+    } finally {
+        try { await Deno.remove(tmp); } catch (_e) { /* ignore */ }
+    }
+}
+
+// =========================================
 // СЕРВЕР (БЕЗ ДУБЛЕЙ WSROOMS)
 // =========================================
 Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
     if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
+
+    // ОЗВУЧКА — до проверки секрета (нужна и гостям, и Штабу)
+    try {
+        const peek = await request.clone().json();
+        if (peek && peek.tts) return await handleTTS(peek);
+    } catch (_e) { /* не JSON — идём дальше */ }
 
     if (!checkSecret(request)) {
         return json({ success: false, error: "Доступ запрещен: неверный секрет Штаба" }, 401);
@@ -783,7 +926,7 @@ Deno.serve(async (request) => {
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image);
             } else {
-                aiText = await callZvenoAI(body.messages, userKeys);
+                aiText = await callZvenoAI(body.messages, userKeys, body.isBoss === true);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });

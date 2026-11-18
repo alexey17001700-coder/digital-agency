@@ -20,7 +20,7 @@ const sendBtn = document.getElementById('sendBtn');
 const chatTitleEl = document.getElementById('currentChatTitle');
 const chatInputEl = document.getElementById('chatInput');
 
-const WELCOME_TEXT = "Здравствуй, Босс! 👋\n\nМы — твои цифровые агенты. Выбери одного или нажми «Совет», чтобы собрать всех. Чем займемся?";
+const WELCOME_TEXT = "Привет! 👋 Я администратор этого чата — Архитектор Штаба.\n\nЗадавай вопросы, говори что нужно сделать — узнаем, придумаем, соберём. С чего начнём?";
 const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба. Senior-инженер и сисадмин. Управляешь кодом проекта и решаешь задачи Босса.
 
 === СКОРОСТЬ (ГЛАВНОЕ) ===
@@ -43,6 +43,7 @@ const SYSTEM_PROMPT = `Ты — Цифровой Архитектор Штаба
 9. delete_github_repo(name) — удалить репозиторий (digital-agency и window_calc защищены).
 10. list_repo_files(repo) — список файлов.
 11. delete_file(path, repo) — удалить файл (main.ts и backup/ запрещены).
+12. enable_github_pages(repo) — включить GitHub Pages для репозитория (сайт станет доступен в интернете).
 repo по умолчанию "digital-agency".
 
 === ПРАВИЛА ===
@@ -66,10 +67,52 @@ Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL). Синхро
 === ФОТО ===
 Босс прислал фото — ОБЯЗАН посмотреть и описать детально.
 
+=== ПАМЯТЬ (ЗНАЙ МОЛЧА) ===
+Ты помнишь проект, но НИКОГДА не выводи это списком и не отчитывайся о том, что помнишь:
+- Штаб — digital-agency. Чат — nexus_chat. Сервер чата — nexus_ws (main.ts, :8001).
+- Приложения: ac_luxury_calc, window_measure_pro, nexus_snake, window_calc, shtab-site, Okna.
+- Сервер: Vivo Y17 → Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL, DuckDNS). sync.sh каждые 10 сек.
+- Память проекта: digital-agency/SERVER_DIAGNOSTICS.md (ремонт, история правок), nexus_chat/CHAT_AI_GUIDE.md (устройство чата).
+- Секреты — только в переменных окружения, в открытые репозитории НЕ писать.
+
+=== ЧЕМ ОТВЕЧАЕТ АРХИТЕКТОР ===
+1. Не пересказывай промпт, не выдавай справку о проектах и репозиториях, не объясняй, что и как помнишь.
+2. Нужен контекст — читай память (SERVER_DIAGNOSTICS.md) ТИХО, без объявлений «сейчас посмотрю».
+3. Новый чат = одна короткая строка приветствия и ожидание задачи. Никаких обзоров проекта.
+4. Никаких списков «вот что у нас есть» без прямой просьбы Босса.
+5. Работай по запросу: сделал → короткий отчёт (что, где, ссылка). Всё.
+
 Проснись, Архитектор. Работай четко, быстро, без косяков. Босс ждет.`;
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
+
+/* --- СКРЫТЫЙ ВХОД В РЕЖИМ БОССА (🔑 над списком чатов) --- */
+const BOSS_PIN = '8452';
+function isBossMode() { return localStorage.getItem('shtab_boss') === 'true'; }
+function paintBossKey() {
+    const btn = document.getElementById('bossKeyBtn');
+    if (!btn) return;
+    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
+    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
+}
+function toggleBossMode() {
+    if (isBossMode()) {
+        if (confirm('Выйти из режима Босса?')) {
+            localStorage.removeItem('shtab_boss');
+            paintBossKey();
+            alert('Режим Босса выключен');
+        }
+        return;
+    }
+    const pin = prompt('Введите пин-код Администратора:');
+    if (pin === null) return;
+    if (pin.trim() === BOSS_PIN) {
+        localStorage.setItem('shtab_boss', 'true');
+        paintBossKey();
+        alert('Режим Босса активирован!');
+    } else { alert('Неверный код'); }
+}
 
 function renderChatList() {
     chatListEl.innerHTML = '';
@@ -234,6 +277,57 @@ function shareMessage(text) {
     else navigator.clipboard.writeText(text).then(() => alert("Скопировано!"));
 }
 
+/* --- КНОПКА «КОПИРОВАТЬ» НА БЛОКАХ КОДА --- */
+function _injectCodeCss() {
+    if (document.getElementById('codeCopyCss')) return;
+    const st = document.createElement('style'); st.id = 'codeCopyCss';
+    st.textContent = `
+    .code-wrap { position: relative; margin: 10px 0; }
+    .code-wrap pre { margin: 0 !important; padding-top: 36px !important; }
+    .code-copy-btn {
+        position: absolute; top: 6px; right: 6px; z-index: 5;
+        padding: 4px 10px; font-size: 11px; font-weight: 700;
+        font-family: inherit; letter-spacing: .3px;
+        background: rgba(0,229,255,.14); color: #00e5ff;
+        border: 1px solid rgba(0,229,255,.45); border-radius: 7px;
+        cursor: pointer; transition: .18s; backdrop-filter: blur(4px);
+    }
+    .code-copy-btn:hover { background: rgba(0,229,255,.28); }
+    .code-copy-btn:active { transform: scale(.95); }
+    .code-copy-btn.copied { background: rgba(76,175,80,.25); color: #7ee08a; border-color: rgba(76,175,80,.6); }
+    `;
+    document.head.appendChild(st);
+}
+function enhanceCodeBlocks(container) {
+    if (!container) return;
+    const pres = container.querySelectorAll('pre');
+    if (!pres.length) return;
+    _injectCodeCss();
+    pres.forEach(pre => {
+        if (pre.parentElement && pre.parentElement.classList.contains('code-wrap')) return;
+        const wrap = document.createElement('div'); wrap.className = 'code-wrap';
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'code-copy-btn'; btn.innerText = '📋 Копировать';
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const code = pre.innerText;
+            const ok = () => { btn.innerText = '✅ Скопировано'; btn.classList.add('copied'); setTimeout(() => { btn.innerText = '📋 Копировать'; btn.classList.remove('copied'); }, 1600); };
+            const fallback = () => {
+                const ta = document.createElement('textarea');
+                ta.value = code; ta.style.position = 'fixed'; ta.style.top = '-1000px';
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                try { document.execCommand('copy'); ok(); } catch (err) { btn.innerText = '❌ Не вышло'; }
+                document.body.removeChild(ta);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok).catch(fallback);
+            else fallback();
+        };
+        wrap.appendChild(btn);
+    });
+}
+
 function enhanceMediaInMessage(container) {
     container.querySelectorAll('a').forEach(link => {
         const url = link.href;
@@ -245,6 +339,7 @@ function enhanceMediaInMessage(container) {
         else if (url.match(/\.(mp4|webm)$/i)) { const v = document.createElement('video'); v.controls = true; v.src = url; v.className = 'chat-media'; link.after(v); }
         else if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) { const i = document.createElement('img'); i.src = url; i.className = 'chat-media'; link.after(i); }
     });
+    enhanceCodeBlocks(container);
 }
 
 async function manualDeploy(file, code) {
@@ -303,7 +398,6 @@ function renderMessage(text, sender, agentName = 'Оркестратор') {
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
     if (cleanText || dangerBadges) div.appendChild(contentDiv);
     wcParsed.cards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
-    addDeployButton(div, text);
     chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
@@ -321,19 +415,11 @@ function typeMessage(fullText, sender, agentName, onComplete) {
 
     let displayText = wcParsed.cleanText;
     
-    const lastUserMsg = allChats[currentChatId]?.messages.filter(m => m.role === 'user').pop()?.content || "";
-    const userAskedForCode = /покажи|дай|выведи|скинь|исходник/i.test(lastUserMsg);
-
-    if (!userAskedForCode && displayText.includes('```')) {
-        displayText = displayText.replace(/```[\s\S]*?```/g, '\n\n*(Код файла обновлен на сервере)*\n\n');
-    }
-
     if (displayText.includes('[FILE:') || displayText.includes('```')) {
         const { cleanText, dangerBadges } = processDangerTags(displayText);
         try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
         weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
-        addDeployButton(div, fullText);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director') speakText(cleanText, agentName);
         if (onComplete) onComplete();
@@ -480,6 +566,29 @@ function validSearchMatch(text) {
     return m;
 }
 
+/* --- ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ КОНТЕКСТА ---
+   У модели лимит 128k токенов. Длинный чат + фото легко переваливают его,
+   и приходит ошибка "maximum context length is 128000 tokens".
+   Режем историю: системный промпт всегда на месте, дальше — только
+   последние сообщения в пределах бюджета. */
+const MAX_HISTORY_CHARS = 60000;   // ~20k токенов текста: с запасом под ответ и инструменты
+const MAX_HISTORY_MSGS = 40;
+
+function trimHistory(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) return messages;
+    const systemMsg = (messages[0] && messages[0].role === 'system') ? messages[0] : null;
+    let rest = systemMsg ? messages.slice(1) : messages.slice();
+    if (rest.length > MAX_HISTORY_MSGS) rest = rest.slice(-MAX_HISTORY_MSGS);
+    let total = 0; const kept = [];
+    for (let i = rest.length - 1; i >= 0; i--) {
+        const m = rest[i];
+        const len = (typeof m.content === 'string') ? m.content.length : 0;
+        if (kept.length > 0 && total + len > MAX_HISTORY_CHARS) break;
+        total += len; kept.unshift(m);
+    }
+    return systemMsg ? [systemMsg, ...kept] : kept;
+}
+
 async function sendMessage(overrideText = null, isKick = false) {
     if (isGenerating && !isKick) { 
         if (currentAbortController) currentAbortController.abort(); 
@@ -545,15 +654,16 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
                 if (isBossSecret) modelToUse = 'zveno';
 
-                let currentMessages = messagesToSend;
+                let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
                 let currentAttempt = 0;
 
                 while (currentAttempt < maxAttempts) {
                     currentAttempt++;
+                    currentMessages = trimHistory(currentMessages);
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 || currentChatImage }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64, isBoss: localStorage.getItem('shtab_boss') === 'true' }),
                         signal: currentAbortController.signal
                     });
                     
@@ -692,6 +802,7 @@ function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
+    if (typeof paintBossKey === 'function') paintBossKey();
     
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {

@@ -33,10 +33,22 @@
 
 ### СЦЕНАРИЙ 1: Не работает Штаб (ошибка в main.ts)
 1. Босс → **1-я вкладка** (Deno) → `Ctrl+C`
-2. Запуск:
+2. Запуск (с озвучкой — так правильно):
    ```bash
-   deno run --allow-net --allow-env --allow-read --watch main.ts
+   bash start.sh
    ```
+   или вручную:
+   ```bash
+   deno run --allow-net --allow-env --allow-read --allow-run --allow-write --watch main.ts
+   ```
+   ⚠️ **Без `--allow-run` и `--allow-write` серверная озвучка (edge-tts) НЕ работает** —
+   падает с «Requires run access» и уходит в системный голос телефона.
+   `start.sh` сам проверяет `edge-tts` и ставит его, если нет.
+   Вручную (Ubuntu 24+ / Debian 12+, Python 3.12+, PEP 668):
+   ```bash
+   pip install --break-system-packages edge-tts
+   ```
+   ❌ Просто `pip install edge-tts` НЕ пройдёт: «externally-managed-environment».
 3. Если красная ошибка (`SyntaxError`, `Identifier has already been declared`):
    - Босс скидывает текст ошибки
    - Архитектор находит проблему **на GitHub** и правит через `replace_in_file`
@@ -84,6 +96,82 @@
    ```bash
    cd ~/digital-agency && git reset --hard HEAD && git clean -fd
    ```
+
+---
+
+## 2.1. АВАРИЙНОЕ ВОССТАНОВЛЕНИЕ (VIVO → TERMUX)
+
+> Пошаговый подъём сервера с нуля. Нужен после перезагрузки телефона —
+> **автозапуска нет, после ребута всё умирает.**
+
+### Шаг 0. Подготовка
+1. Открой Termux.
+2. Зайди в Ubuntu: `proot-distro login ubuntu`
+3. Открой 4 вкладки (свайп слева → NEW SESSION). Переименуй их для удобства.
+
+### Вкладка 1: SHTAB (порт 8000)
+```bash
+cd ~
+export ZVENO_API_KEY="[ключ]"
+export GITHUB_TOKEN="[токен]"
+export GITHUB_OWNER="alexey17001700-coder"
+export GITHUB_REPO="digital-agency"
+deno run --allow-net --allow-env --allow-read --allow-write --allow-run main.ts
+```
+
+### Вкладка 2: CADDY (SSL / порт 8443)
+```bash
+cd ~
+# Если файла caddy-linux-arm64 нет — скачать:
+curl -L -o caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x caddy-linux-arm64
+./caddy-linux-arm64 run --config Caddyfile
+```
+⚠️ **Caddy может исчезнуть при сбое** — если бинарника нет, скачать командой выше.
+
+### Вкладка 3: SYNC (Курьер)
+```bash
+cd ~
+bash sync.sh
+```
+(Он зависнет и будет молчать. Это нормально — он следит за обновлениями.)
+
+### Вкладка 4: CHAT (порт 8001)
+```bash
+cd ~/nexus_ws
+export VAPID_PRIVATE="[ключ]"
+export VAPID_SUBJECT="mailto:admin@example.com"
+export VAPID_PUBLIC="[ключ]"
+deno run --allow-net --allow-env --allow-read --allow-run main.ts
+```
+
+⚠️ **Важно про переменные Штаба:** `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO` нужны
+для работы GitHub-инструментов Архитектора (чтение/запись файлов через `main.ts`).
+Без них Штаб отвечает **401** и Архитектор не видит содержимое репозиториев.
+❗ **Точные имена — `GITHUB_OWNER` и `GITHUB_REPO`.** Имена `REPO_OWNER` / `REPO_NAME`
+сервер НЕ читает — с ними доступ к файлам не появится (список репозиториев работает,
+а чтение/запись падает с 401/Not Found). Это был реальный двухдневный затык.
+Переменные читаются **только при старте** процесса — после правки env Штаб перезапустить.
+
+### Проверка после подъёма
+```bash
+curl -s  -o /dev/null -w "Shtab: %{http_code}\n" http://localhost:8000/
+curl -s  -o /dev/null -w "Chat:  %{http_code}\n" http://localhost:8001/
+curl -sk -o /dev/null -w "Caddy: %{http_code}\n" https://localhost:8443/
+```
+**Ожидаемые коды:** Штаб `405` (отвечает только на POST — норма), Чат `200`, Caddy `200`.
+
+### ⚡ Быстрый подъём одной командой
+Если не хочется руками открывать 4 вкладки — запустить скрипт вручную одной командой:
+```bash
+bash /root/start_all.sh
+```
+Скрипт поднимает всё разом (Штаб, Чат, Caddy, sync.sh) через `setsid nohup` —
+процессы живут отдельно от вкладки, `Ctrl+C`/`exit` их не роняют.
+Логи: `/root/shtab.log`, `/root/chat.log`, `/root/caddy.log`, `/root/sync.log`.
+
+⚠️ **Важно:** `start_all.sh` не подставляет секреты — `ZVENO_API_KEY`, `GITHUB_TOKEN`,
+`VAPID_*` должны быть заданы в окружении **до** запуска (или прописаны внутри скрипта
+на сервере, но НЕ в репозитории).
 
 ---
 
@@ -187,6 +275,12 @@
 |---|---|
 | `ws_server.ts` лежал в Штабе — нарушение архитектуры | ⚠️ Удалён из `digital-agency`, вынесен в отдельный репозиторий `nexus_ws` |
 | Красный крестик (сертификат) | Починено Боссом вручную (перевыпуск сертификата) |
+| **«Ошибка AI: maximum context length is 128000 tokens»** | ⚠️ В `chat.js` в модель уходила ВСЯ история чата без ограничения. **Решение:** `trimHistory()` — системный промпт всегда, дальше последние сообщения в пределах 60k символов (≈20k токенов), максимум 40 сообщений. Применяется и перед повторами в цикле (поиск/чтение файла/погода) |
+| **ИИ отвечает одно и то же на все вопросы** | ⚠️ В `chat.js` в запрос уходило `image: attachedImageBase64 \|\| currentChatImage`. Фото из чата лежит в `localStorage` (`shtabChatImage_<id>`) и приклеивалось к КАЖДОМУ запросу → сервер (`main.ts`) уводил всё в `callZvenoVision` (gpt-4o-mini + промпт «опиши, что на фото»), и модель на любой вопрос описывала одно и то же фото. **Решение:** фото уходит только когда Босс прикрепил его в этом сообщении (`image: attachedImageBase64`) |
+| **Озвучка: `POST /tts` → 405 Not Allowed (HTML от Caddy)** | ⚠️ В `Caddyfile` на main.ts (порт 8000) проброшен **только корень домена** (`/`) — именно туда ходит чат (`PROXY` в `chat.js`). Отдельного маршрута `/tts` нет, поэтому POST на `/tts` попадал в `file_server` → **405**. А `main.ts` обрабатывает озвучку на **любом** пути (`peek.tts` проверяется в начале `Deno.serve`). **Решение (без правки Caddy):** в `voice.js` озвучка идёт на **корень домена** `https://shtab-boss.duckdns.org:8443`, плюс запасные адреса `/tts` — функция `ttsFetch()` перебирает их и запоминает рабочий |
+| **Озвучка молчит / говорит роботом телефона** | ⚠️ Штаб запускался командой **без `--allow-run` и `--allow-write`**. `main.ts` → `handleTTS` использует `Deno.Command("edge-tts")` и `Deno.makeTempFile` — без этих прав Deno бросает `PermissionDenied`, озвучка падает в `phoneSpeak`. **Решение:** создан `start.sh` (запуск с нужными флагами) + в `handleTTS` добавлен разбор причины ошибки (права / не установлен edge-tts) — теперь в «Лаборатории голосов» видно точную причину |
+| **`pip install edge-tts` → `externally-managed-environment`** | ⚠️ Ubuntu 24+/Debian 12+ (Python 3.12+) по PEP 668 блокируют pip в системный Python. **Решение:** `pip install --break-system-packages edge-tts` (или `pipx install edge-tts`). `start.sh` теперь ставит сам: пробует pipx → pip3 --user → pip3, добавляет `~/.local/bin` в PATH |
+| **edge-tts есть, но озвучка молчит (PATH)** | ⚠️ `Deno.Command("edge-tts")` не находил бинарник, если он в `~/.local/bin` (pip --user/pipx) — Deno-процесс не видел этот путь. **Решение:** `handleTTS` перебирает 4 варианта: `edge-tts` → `~/.local/bin/edge-tts` → `python3 -m edge_tts` → `python -m edge_tts` |
 
 **🔑 ГЛАВНЫЙ УРОК:** Штаб и Чат — **полностью раздельные** репозитории. Сервер чата живёт только в `nexus_ws`.
 
@@ -241,6 +335,12 @@
 
 ---
 
-*Последнее обновление: чат — исправлен двойной `JSON.parse` истории (v16) и добавлен индикатор «кто в сети» (v17). Баги 1 и 2 закрыты.*
+*Последнее обновление: раздел «2.1. АВАРИЙНОЕ ВОССТАНОВЛЕНИЕ (VIVO → TERMUX)» полностью переписан по актуальной версии. Добавлено: Caddy может исчезнуть при сбое — команда переустановки `caddy-linux-arm64` (curl + chmod). Имена env Штаба — `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`.*
+
+*Ранее: в раздел 2.1 добавлен быстрый подъём одной командой — `bash /root/start_all.sh` (поднимает Штаб, Чат, Caddy и sync.sh разом; секреты задать в окружении до запуска).*
+
+*Ранее: раздел 2.1 приведён к рабочей версии — пошаговый подъём сервера с нуля, проверка после подъёма, правильные имена env Штаба: `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO` (не `REPO_OWNER`/`REPO_NAME` — с ними 401).*
+
+*Ранее: чат — исправлен двойной `JSON.parse` истории (v16) и добавлен индикатор «кто в сети» (v17). Баги 1 и 2 закрыты.*
 
 *Ранее: алгоритм диагностики сервера на Vivo, журнал работы, история исправлений, правило о секретах, раздел «Инструкции для ИИ» и список открытых багов чата.*

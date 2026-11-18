@@ -14,10 +14,14 @@
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
 
         // Загрузка одного скрипта с честной очисткой таймера.
-        function loadScript(src) {
+        function loadScript(src, isModule) {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = `${src}?v=${timestamp}`;
+                // Обычный (classic) скрипт: office3d.js использует только
+                // динамический import(), которому type="module" не нужен.
+                // Classic-скрипт грузится надёжнее — без ограничений модулей.
+                if (isModule) script.type = 'module';
                 const timer = setTimeout(() => {
                     reject(new Error('Таймаут загрузки: ' + src));
                 }, 15000);
@@ -27,6 +31,22 @@
             });
         }
 
+        // Кнопка «Офис»: сначала 3D, и только если 3D-модуль реально не поднялся —
+        // 2D-фолбэк. Раньше при сбое office3d.js кнопка МОЛЧА открывала 2D-офис,
+        // и было непонятно, что 3D не загрузился.
+        window.openOffice = function () {
+            if (typeof window.openOffice3D === 'function') { window.openOffice3D(); return; }
+            if (typeof window.toggleOffice === 'function') { window.toggleOffice(); return; }
+            showBootError('3D-офис недоступен: office3d.js не выполнился. Обнови страницу.');
+        };
+
+        // Кнопка «Голоса» в панели: если voice.js ещё не загрузился —
+        // не молчим, а честно сообщаем. Как только voice.js выполнится,
+        // он переопределит openVoiceLab на настоящую лабораторию.
+        window.openVoiceLab = function () {
+            showBootError('Модуль голосов ещё не загрузился. Обнови страницу.');
+        };
+
         function showBootError(msg) {
             const box = document.createElement('div');
             box.style.cssText = 'position:fixed;bottom:10px;left:10px;right:10px;z-index:99999;background:#440000;color:#ff8888;border:1px solid #ff0055;border-radius:8px;padding:10px;font:12px monospace;';
@@ -35,12 +55,12 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'office.js', 'ui.js'];
+            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'office.js', 'office3d.js', 'ui.js'];
             const failed = [];
 
             // Грузим параллельно: один упавший файл не тормозит и не ломает остальные.
             await Promise.all(scripts.map(src =>
-                loadScript(src).catch(e => {
+                loadScript(src, false).catch(e => {
                     failed.push(src);
                     console.error('Ошибка загрузки скрипта', src, e);
                 })
@@ -53,6 +73,21 @@
                 showBootError('Не загрузилось ядро (chat.js/ui.js). Проверь связь и обнови страницу.');
             }
             if (failed.length) showBootError('Не загрузились файлы: ' + failed.join(', '));
+
+            // СТРАХОВКА: если 3D-модуль не выполнился — пробуем загрузить его ещё раз,
+            // и только потом сообщаем о проблеме (без этого кнопка «Офис» молча
+            // открывала старый 2D-офис и было непонятно, что случилось).
+            if (!window.OFFICE3D_VERSION) {
+                console.warn('office3d.js не выполнился — повторная загрузка');
+                try { await loadScript('office3d.js', false); } catch (e) { console.error(e); }
+                if (!window.OFFICE3D_VERSION) {
+                    showBootError('office3d.js не загрузился — 3D-офис недоступен. Обнови страницу.');
+                } else if (window.__office3dBootError) {
+                    showBootError('office3d.js загрузился, но install() упал: ' + window.__office3dBootError);
+                } else {
+                    console.log('office3d.js загружен со второй попытки');
+                }
+            }
         });
     </script>
 </head>
@@ -133,8 +168,12 @@
                 <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
             </div>
         </div>
+        <div class="boss-key-row">
+            <span class="boss-key" id="bossKeyBtn" onclick="toggleBossMode()" title="Служебный вход">🔑</span>
+        </div>
         <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
         <div class="chat-list" id="chatList"></div>
+        <button onclick="openRecoveryGuide()" title="Пошаговая инструкция по восстановлению сервера" style="margin: 10px; padding: 12px; background: #10202c; color: #00e5ff; border: 1px solid #00e5ff; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; flex-shrink: 0;">🚑 Восстановление сервера</button>
     </div>
 
     <div class="main-content">
@@ -165,16 +204,16 @@
             <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
             <button class="mode-btn" id="btnCouncil" onclick="toggleCouncil()">👥 Совет</button>
             <button class="mode-btn" id="btnVoiceToggle" onclick="toggleVoice()">🗣️ Озвучка: ВЫКЛ</button>
+            <button class="mode-btn" id="btnVoiceLab" onclick="openVoiceLab()">🎛 Голоса</button>
             <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
-            <button class="mode-btn" id="btnAuto" onclick="toggleAutoMode()">⚡ Авто: ВЫКЛ</button>
-            <button class="mode-btn" id="btnOffice" onclick="toggleOffice()">🏢 Офис</button>
+            <button class="mode-btn" id="btnOffice" onclick="openOffice()">🏢 Офис</button>
             <button class="mode-btn" id="btnAIModel" onclick="toggleAIModel()">🧠 ИИ: Yandex</button>
             <button class="mode-btn" onclick="openApiSettings()">🔑 API Ключи</button>
             <button class="mode-btn" onclick="refreshShtab()">🔄 Обновить штаб</button>
         </div>
 
         <div class="chat-container" id="chatContainer"></div>
-        <div id="office-container" style="display: none; width: 100%; height: 100%; position: relative;"></div>
+        <div id="office-container" style="display: none; width: 100%; height: 100%; flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;"></div>
 
         <div class="input-area">
             <textarea id="chatInput" placeholder="Написать задачу..." rows="1"></textarea>
@@ -191,5 +230,142 @@
             <div class="agents-grid" id="agents-grid"></div>
         </div>
     </div>
+
+    <!-- Модалка: пошаговое восстановление сервера -->
+    <div class="modal-overlay" id="recoveryModal" onclick="if(event.target===this) this.classList.remove('active')">
+        <div class="modal-content" style="max-width: 92%; max-height: 85vh; overflow-y: auto; border-color: #00e5ff;">
+            <div class="modal-header">
+                <h2 style="color: #00e5ff;">🚑 Восстановление сервера</h2>
+                <button class="modal-close" onclick="document.getElementById('recoveryModal').classList.remove('active')">✖</button>
+            </div>
+            <div class="modal-body" id="recoveryBody"></div>
+        </div>
+    </div>
+
+    <script>
+    // Пошаговая инструкция по аварийному восстановлению (VIVO -> Termux).
+    // Источник: SERVER_DIAGNOSTICS.md, раздел 2.1.
+    const RECOVERY_STEPS = [
+        {
+            title: 'Шаг 0. Подготовка',
+            note: 'Открой Termux, зайди в Ubuntu и создай 4 вкладки (свайп слева → NEW SESSION). Переименуй их долгим нажатием на название.',
+            cmds: ['proot-distro login ubuntu']
+        },
+        {
+            title: 'Вкладка 1: ШТАБ (порт 8000)',
+            note: 'Имена переменных именно GITHUB_OWNER и GITHUB_REPO. С REPO_OWNER / REPO_NAME сервер не увидит файлы (401).',
+            cmds: [
+                'cd ~',
+                'export ZVENO_API_KEY="[ключ]"',
+                'export GITHUB_TOKEN="[токен]"',
+                'export GITHUB_OWNER="alexey17001700-coder"',
+                'export GITHUB_REPO="digital-agency"',
+                'deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch main.ts'
+            ]
+        },
+        {
+            title: 'Вкладка 2: CADDY (SSL / порт 8443)',
+            note: '⚠️ Caddy может исчезнуть при сбое. Если файла caddy-linux-arm64 нет — сначала скачай его (первая команда), потом запускай.',
+            cmds: [
+                'cd ~',
+                '# если бинарника нет — скачать заново:',
+                'curl -L -o caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x caddy-linux-arm64',
+                './caddy-linux-arm64 run --config Caddyfile'
+            ]
+        },
+        {
+            title: 'Вкладка 3: SYNC (Курьер)',
+            note: 'Зависнет и будет молчать — это нормально, он следит за обновлениями.',
+            cmds: ['cd ~', 'bash sync.sh']
+        },
+        {
+            title: 'Вкладка 4: ЧАТ (порт 8001)',
+            note: '',
+            cmds: [
+                'cd ~/nexus_ws',
+                'export VAPID_PRIVATE="[ключ]"',
+                'export VAPID_SUBJECT="mailto:admin@example.com"',
+                'export VAPID_PUBLIC="[ключ]"',
+                'deno run --allow-net --allow-env --allow-read --allow-run main.ts'
+            ]
+        },
+        {
+            title: 'Проверка после подъёма',
+            note: 'Ожидаемые коды: Штаб 405 (отвечает только на POST — это норма), Чат 200, Caddy 200.',
+            cmds: [
+                'curl -s  -o /dev/null -w "Shtab: %{http_code}\\n" http://localhost:8000/',
+                'curl -s  -o /dev/null -w "Chat:  %{http_code}\\n" http://localhost:8001/',
+                'curl -sk -o /dev/null -w "Caddy: %{http_code}\\n" https://localhost:8443/'
+            ]
+        },
+        {
+            title: '⚡ Быстрый подъём одной командой',
+            note: 'Если не хочется открывать 4 вкладки — поднять всё разом. Секреты (ZVENO_API_KEY, GITHUB_TOKEN, VAPID_*) задать в окружении ДО запуска. Логи: /root/shtab.log, /root/chat.log, /root/caddy.log, /root/sync.log.',
+            cmds: ['bash /root/start_all.sh']
+        }
+    ];
+
+    function openRecoveryGuide() {
+        const body = document.getElementById('recoveryBody');
+        if (!body) return;
+        if (!body.dataset.built) {
+            RECOVERY_STEPS.forEach(step => {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'margin-bottom:16px; background:#121212; border:1px solid #333; border-radius:10px; padding:12px;';
+
+                const h = document.createElement('div');
+                h.textContent = step.title;
+                h.style.cssText = 'color:#00e5ff; font-weight:bold; font-size:14px; margin-bottom:6px;';
+                wrap.appendChild(h);
+
+                if (step.note) {
+                    const n = document.createElement('div');
+                    n.textContent = step.note;
+                    n.style.cssText = 'color:#aaa; font-size:12px; margin-bottom:8px; line-height:1.4;';
+                    wrap.appendChild(n);
+                }
+
+                const code = document.createElement('pre');
+                code.textContent = step.cmds.join('\n');
+                code.style.cssText = 'background:#000; color:#00ff88; border:1px solid #222; border-radius:8px; padding:10px; font:12px monospace; white-space:pre-wrap; word-break:break-all; margin:0 0 8px 0;';
+                wrap.appendChild(code);
+
+                const btn = document.createElement('button');
+                btn.textContent = '📋 Копировать';
+                btn.style.cssText = 'background:#00e5ff; color:#000; border:none; border-radius:6px; padding:6px 12px; font-weight:bold; font-size:12px; cursor:pointer;';
+                btn.onclick = () => copyRecovery(step.cmds.join('\n'), btn);
+                wrap.appendChild(btn);
+
+                body.appendChild(wrap);
+            });
+            body.dataset.built = '1';
+        }
+        document.getElementById('recoveryModal').classList.add('active');
+    }
+
+    function copyRecovery(text, btn) {
+        const done = () => {
+            const old = btn.textContent;
+            btn.textContent = '✅ Скопировано';
+            setTimeout(() => { btn.textContent = old; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopyRecovery(text, done));
+        } else {
+            fallbackCopyRecovery(text, done);
+        }
+    }
+
+    function fallbackCopyRecovery(text, done) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed; top:0; left:0; opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (e) { alert('Не удалось скопировать — выдели текст вручную.'); }
+        document.body.removeChild(ta);
+    }
+    </script>
 </body>
 </html>
