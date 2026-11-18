@@ -791,7 +791,7 @@ async function handleTTS(body: any) {
     try {
         // edge-tts может стоять по-разному: в PATH, в ~/.local/bin (pip --user/pipx)
         // или как python-модуль. Перебираем варианты — озвучка не должна падать из-за PATH.
-        const args = ["--voice", voice, "--rate", rate, "--text", text, "--write-media", tmp];
+        const args = ["--voice", voice, "--rate", rate, "--volume", volume, "--pitch", pitch, "--text", text, "--write-media", tmp];
         const home = Deno.env.get("HOME") || "";
         const variants: string[][] = [
             ["edge-tts", ...args],
