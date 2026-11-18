@@ -776,7 +776,9 @@ async function handleTTS(body: any) {
 
     const voice = String(body.voice || "ru-RU-DmitryNeural").trim();
     const rate = String(body.rate || "+0%").trim();
-    const key = `${voice}|${rate}|${text}`;
+    const volume = String(body.volume || "+0%").trim();
+    const pitch = String(body.pitch || "+0Hz").trim();
+    const key = `${voice}|${rate}|${volume}|${pitch}|${text}`;
 
     const cached = TTS_CACHE.get(key);
     if (cached) {
