@@ -292,6 +292,11 @@
                 'curl -s  -o /dev/null -w "Chat:  %{http_code}\\n" http://localhost:8001/',
                 'curl -sk -o /dev/null -w "Caddy: %{http_code}\\n" https://localhost:8443/'
             ]
+        },
+        {
+            title: '⚡ Быстрый подъём одной командой',
+            note: 'Если не хочется открывать 4 вкладки — поднять всё разом. Секреты (ZVENO_API_KEY, GITHUB_TOKEN, VAPID_*) задать в окружении ДО запуска. Логи: /root/shtab.log, /root/chat.log, /root/caddy.log, /root/sync.log.',
+            cmds: ['bash /root/start_all.sh']
         }
     ];
 
