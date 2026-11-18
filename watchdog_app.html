@@ -585,7 +585,7 @@ async function askArchitect(text){
         signal: ctrl.signal,
         body: JSON.stringify({
           messages: [
-            { role: "system", content: "Ты — Цифровой Архитектор Штаба. Отвечай коротко и по делу. Это аварийный чат-сторож: тревоги помечены '🤖 СТОРОЖ'. Если видишь тревогу — разбери её и скажи, что делать." },
+            { role: "system", content: ARCH_PROMPT },
             { role: "user", content: text }
           ],
           temperature: 0.6
