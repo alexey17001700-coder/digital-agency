@@ -112,18 +112,21 @@
 ### Вкладка 1: SHTAB (порт 8000)
 ```bash
 cd ~
-export ZVENO_API_KEY="[твой_ключ_звена]"
-export GITHUB_TOKEN="[твой_токен_github]"
+export ZVENO_API_KEY="[ключ]"
+export GITHUB_TOKEN="[токен]"
 export GITHUB_OWNER="alexey17001700-coder"
 export GITHUB_REPO="digital-agency"
-deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch main.ts
+deno run --allow-net --allow-env --allow-read --allow-write --allow-run main.ts
 ```
 
 ### Вкладка 2: CADDY (SSL / порт 8443)
 ```bash
 cd ~
-./caddy-linux-arm64 run --config caddyfile
+# Если файла caddy-linux-arm64 нет — скачать:
+curl -L -o caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x caddy-linux-arm64
+./caddy-linux-arm64 run --config Caddyfile
 ```
+⚠️ **Caddy может исчезнуть при сбое** — если бинарника нет, скачать командой выше.
 
 ### Вкладка 3: SYNC (Курьер)
 ```bash
@@ -135,9 +138,9 @@ bash sync.sh
 ### Вкладка 4: CHAT (порт 8001)
 ```bash
 cd ~/nexus_ws
-export VAPID_PRIVATE="[твой_ключ]"
+export VAPID_PRIVATE="[ключ]"
 export VAPID_SUBJECT="mailto:admin@example.com"
-export VAPID_PUBLIC="[твой_ключ]"
+export VAPID_PUBLIC="[ключ]"
 deno run --allow-net --allow-env --allow-read --allow-run main.ts
 ```
 
