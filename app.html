@@ -265,8 +265,13 @@
         },
         {
             title: 'Вкладка 2: CADDY (SSL / порт 8443)',
-            note: '',
-            cmds: ['cd ~', './caddy-linux-arm64 run --config caddyfile']
+            note: '⚠️ Caddy может исчезнуть при сбое. Если файла caddy-linux-arm64 нет — сначала скачай его (первая команда), потом запускай.',
+            cmds: [
+                'cd ~',
+                '# если бинарника нет — скачать заново:',
+                'curl -L -o caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x caddy-linux-arm64',
+                './caddy-linux-arm64 run --config Caddyfile'
+            ]
         },
         {
             title: 'Вкладка 3: SYNC (Курьер)',
