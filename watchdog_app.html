@@ -448,6 +448,7 @@ async function tick(){
         beep(); vibro([300,120,300,120,600]);
         notify("⚠️ " + t.name + " НЕ ОТВЕЧАЕТ", r.err || "Сервер не отвечает");
         relay("DOWN", t.name + " не отвечает: " + (r.err || "нет ответа"));
+        autoWake("DOWN", t.name + " (" + t.url + ") — НЕ ОТВЕЧАЕТ, " + fails + " попыток. Ошибка: " + (r.err || "нет ответа"));
       }
     }
   }
