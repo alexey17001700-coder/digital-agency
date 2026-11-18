@@ -529,6 +529,7 @@ function renderFeed(){
   feed.slice(-120).forEach(function(m){
     const d = document.createElement("div");
     if (m.kind === "boss") d.className = "msg m-boss";
+    else if (m.kind === "wake") d.className = "msg m-wake";
     else if (m.kind === "arch") d.className = "msg m-arch";
     else if (m.kind === "err") d.className = "msg m-watch err";
     else if (m.kind === "ok") d.className = "msg m-watch ok";
