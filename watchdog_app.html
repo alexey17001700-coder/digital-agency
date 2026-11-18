@@ -430,6 +430,7 @@ async function tick(){
         addFeed("ok", txt); addLog(t.name, "up", "простой " + dur);
         chime(); notify("✅ " + t.name + " поднялся", "Простой: " + dur);
         relay("UP", t.name + " поднялся, простой " + dur);
+        autoWake("UP", t.name + " — ПОДНЯЛСЯ. Простой: " + dur + ". Проверь, всё ли в порядке.");
       }
     } else {
       const fails = (prev.fails || 0) + 1;
