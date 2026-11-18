@@ -425,6 +425,33 @@ function openVoiceLab2() {
     }
     renderVoices();
 
+    // ---- НЕЙРО-ГОЛОСА: скорость / громкость / тон (edge-tts на сервере) ----
+    const nvRate = ov.querySelector('#nvRate');
+    const nvVol = ov.querySelector('#nvVol');
+    const nvPitch = ov.querySelector('#nvPitch');
+    const nvRateV = ov.querySelector('#nvRateV');
+    const nvVolV = ov.querySelector('#nvVolV');
+    const nvPitchV = ov.querySelector('#nvPitchV');
+    function nvRender() {
+        nvRate.value = neuralVoiceSettings.rate;
+        nvVol.value = neuralVoiceSettings.volume;
+        nvPitch.value = neuralVoiceSettings.pitch;
+        nvRateV.textContent = sign(neuralVoiceSettings.rate, '%');
+        nvVolV.textContent = sign(neuralVoiceSettings.volume, '%');
+        nvPitchV.textContent = sign(neuralVoiceSettings.pitch, 'Hz');
+    }
+    nvRender();
+    function nvTest() { vlabPlay(defaultVoice || 'ru-RU-DmitryNeural', 'neutral', null); }
+    nvRate.oninput = function () { neuralVoiceSettings.rate = Number(nvRate.value); nvRender(); saveNeuralVoice(); };
+    nvVol.oninput = function () { neuralVoiceSettings.volume = Number(nvVol.value); nvRender(); saveNeuralVoice(); };
+    nvPitch.oninput = function () { neuralVoiceSettings.pitch = Number(nvPitch.value); nvRender(); saveNeuralVoice(); };
+    nvRate.onchange = nvVol.onchange = nvPitch.onchange = nvTest;
+    ov.querySelector('#nvPlay').onclick = nvTest;
+    ov.querySelector('#nvReset').onclick = function () {
+        neuralVoiceSettings = { rate: 0, volume: 0, pitch: 0 };
+        saveNeuralVoice(); nvRender(); nvTest();
+    };
+
     const abox = ov.querySelector('#vlabAgents');
     const names = (typeof AGENT_VOICES !== 'undefined') ? Object.keys(AGENT_VOICES) : [];
     if (!names.length) abox.innerHTML = '<div class="vlab-tag">AGENT_VOICES не найден</div>';
