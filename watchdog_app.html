@@ -219,6 +219,7 @@ let cfg = load(K_CFG, null) || {
     { id:"vivo",  name:"Сервер Vivo",          ico:"🖥", url:"https://shtab-boss.duckdns.org:8443", on:true }
   ]
 };
+if (cfg.autowake === undefined) cfg.autowake = true;
 let log = load(K_LOG, []);
 let feed = load(K_FEED, []);
 let state = {};   // id -> {status, fails, lastOk, downSince, ms, err}
