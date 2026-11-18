@@ -357,7 +357,18 @@ function openVoiceLab2() {
                 '<div class="vlab-diag-t">НЕЙРО-СИНТЕЗ MICROSOFT · БЕЗ КЛЮЧА</div>' +
                 '<div class="vlab-tag" style="margin:7px 0 2px">Бесплатно, без регистрации и ключей. Синтез идёт на нашем сервере (маршрут /tts). Нужен интернет.</div>' +
               '</div>' +
-              '<div class="vlab-sec">ГОЛОСА · 2 ШТУКИ</div><div id="vlabVoices"></div>') +
+              '<div class="vlab-sec">ГОЛОСА · 2 ШТУКИ</div><div id="vlabVoices"></div>' +
+              '<div class="vlab-sec">НАСТРОЙКА ГОЛОСА</div>' +
+              '<div class="vlab-diag">' +
+                '<div class="pv-sl"><span>Скорость речи</span><b id="nvRateV">+0%</b></div>' +
+                '<input id="nvRate" class="pv-range" type="range" min="-50" max="50" step="5">' +
+                '<div class="pv-sl"><span>Громкость</span><b id="nvVolV">+0%</b></div>' +
+                '<input id="nvVol" class="pv-range" type="range" min="-50" max="50" step="5">' +
+                '<div class="pv-sl"><span>Высота тона</span><b id="nvPitchV">+0Hz</b></div>' +
+                '<input id="nvPitch" class="pv-range" type="range" min="-50" max="50" step="5">' +
+                '<button id="nvPlay" class="vlab-check" style="margin-top:10px">▶ ПОСЛУШАТЬ НЕЙРО-ГОЛОС</button>' +
+                '<button id="nvReset" class="vlab-check" style="margin-top:7px">СБРОСИТЬ НАСТРОЙКИ</button>' +
+              '</div>') +
 
             acc('agents', '🤖 АГЕНТЫ ШТАБА', false,
               '<div class="vlab-tag" style="margin-bottom:9px">Кому какой голос. Выбор сохраняется сразу.</div>' +
