@@ -433,8 +433,25 @@
         async function check() {
             const build = await fetchBuild();
             if (!build) return;
-            if (currentBuild === null) { currentBuild = build; return; }
-            if (build !== currentBuild) markUpdate(build);
+            window.SHTAB_BUILD = build;
+
+            if (currentBuild === null) {
+                currentBuild = build;
+                // Страховка: если на этом телефоне уже была ДРУГАЯ версия —
+                // мигаем сразу, даже когда страницу только что открыли и
+                // проверка не успела заметить смену build.
+                let seen = null;
+                try { seen = localStorage.getItem(SEEN_KEY); } catch (e) {}
+                if (seen && seen !== build) markUpdate(build);
+                try { localStorage.setItem(SEEN_KEY, build); } catch (e) {}
+                return;
+            }
+
+            if (build !== currentBuild) {
+                currentBuild = build;
+                try { localStorage.setItem(SEEN_KEY, build); } catch (e) {}
+                markUpdate(build);
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
