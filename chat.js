@@ -375,6 +375,9 @@ async function manualDeploy(file, code) {
 
 function addDeployButton(container, text) {
     if (isAutoMode) return;
+    // Кнопка «Внедрить в файл» — инструмент Босса: она пишет в файлы Штаба.
+    // Гостю она не нужна и только пугала отказом замка.
+    if (!isBossMode()) return;
     let targetFile = "";
     
     const fileMatch = text.match(/\[FILE:\s*([^\]]+)\]/);
