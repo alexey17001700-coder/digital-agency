@@ -698,19 +698,9 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     let maxLoops = 20; // Увеличено для сложных задач
     let weatherCard = "";
 
-    // РЕЖИМ ГОСТЯ: без флага Босса файловые инструменты отключены полностью
-    let activeTools: any[] = TOOLS;
-    const GUEST_TOOLS_DENY = ["write_file", "replace_in_file", "delete_file", "delete_github_repo"];
-    if (!isBoss) {
-        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (ОГРАНИЧЕНИЯ) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона, без упоминания файлов, кода, репозиториев и серверов.\nСТРОГО ЗАПРЕЩЕНО вызывать инструменты: write_file, replace_in_file, delete_file, delete_github_repo. Любую просьбу изменить, удалить или записать файл вежливо отклоняй и предлагай обратиться к администратору.\nРазрешено: search_web, get_weather, search_image, create_github_repo, list_github_repos, list_repo_files, read_file, enable_github_pages.`;
-        const sysIdx = currentMessages.findIndex((m: any) => m.role === "system");
-        if (sysIdx !== -1) {
-            currentMessages[sysIdx] = { ...currentMessages[sysIdx], content: String(currentMessages[sysIdx].content || "") + GUEST_LOCK };
-        } else {
-            currentMessages.unshift({ role: "system", content: GUEST_LOCK.trim() });
-        }
-        activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
-    }
+    // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
+    // никаких паролей и ограничений. Флаг isBoss оставлен для совместимости.
+    const activeTools: any[] = TOOLS;
 
     for (let loop = 0; loop < maxLoops; loop++) {
         const payload: any = {
