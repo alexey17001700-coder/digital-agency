@@ -347,7 +347,7 @@ async function manualDeploy(file, code) {
         try {
             const res = await fetch(PROXY, {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ updateFile: true, path: file, content: code, message: `Auto-update: ${file}`, isBoss: localStorage.getItem('shtab_boss') === 'true' })
+                body: JSON.stringify({ updateFile: true, path: file, content: code, isBoss: localStorage.getItem('shtab_boss') === 'true', message: `Auto-update: ${file}`, isBoss: localStorage.getItem('shtab_boss') === 'true' })
             });
             const data = await res.json();
             if (data.success) renderMessage(`✅ **Файл ${file} успешно обновлен!**`, 'director', 'DevOps');
