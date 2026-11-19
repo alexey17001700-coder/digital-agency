@@ -76,25 +76,17 @@ function json(data: unknown, status = 200) {
 // =========================================
 // ЗАЩИТА ПУТЕЙ
 // =========================================
-function isWriteAllowed(path: unknown, isProtected: boolean = false): boolean {
-    if (typeof path !== "string") return false;
+function cleanPath(path: unknown): string | null {
+    if (typeof path !== "string") return null;
     const clean = path.trim().replace(/^\/+/, "");
-    if (!clean || clean.includes("..")) return false;
-
-    const lower = clean.toLowerCase();
-    if (isProtected) {
-        // В Штабе запрещаем только backup (main.ts теперь разрешен)
-        if (lower.startsWith("backup")) return false;
-    }
-    return WRITE_ALLOWED_EXT.some((ext) => lower.endsWith(ext));
+    if (!clean || clean.includes("..")) return null;
+    return clean;
 }
 
-function isReadAllowed(path: unknown): boolean {
-    if (typeof path !== "string") return false;
-    const clean = path.trim().replace(/^\/+/, "");
-    if (!clean || clean.includes("..")) return false;
-    if (clean.toLowerCase().startsWith("backup")) return false;
-    return true;
+// Единственный запрет: папка backup (эталон Штаба).
+function isBackupPath(path: unknown): boolean {
+    const clean = cleanPath(path);
+    return clean !== null && clean.toLowerCase().startsWith("backup");
 }
 
 async function gitAPI(path: string, method = "GET", bodyData: any = null, repoName: string = REPO_NAME) {
