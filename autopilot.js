@@ -44,7 +44,8 @@
     const ATTR_KICK = 'apKick';
     const ATTR_TOOMANY = 'apTooMany';
     let lastChatId = null;      // какой чат открыт сейчас
-    let lastMsgCount = -1;      // сколько сообщений было в прошлый тик
+    let lastHead = null;        // «отпечаток» первого сообщения чата
+    let switchCooldown = 0;     // тики «остывания» после смены/перерисовки чата
     let lastKickAt = 0;         // когда последний раз отправляли «разбей на задачи»
 
     let timer = null;
