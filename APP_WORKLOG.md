@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 45 — ЭТАП 1 чистки (остатки ключей/гостя/замка): в main.ts убраны вызовы удалённых isReadAllowed/isWriteAllowed, переменная isProtected, параметр userKeys у callZvenoAI, фраза «папка не найдена или закрыта для записи»; защита папки backup переведена на isBackupPath/cleanPath; ветка для записи/удаления/Pages берётся у репозитория (getDefaultBranch) вместо вшитой main; комментарий «ключ Администратора введён» убран. Проверено: BOSS_KEY, SHATAB_SECRET, verifyKey, isBoss, guest_workspace, PROMPT_GUEST — в main.ts отсутствуют.. Файлы: main.ts
+
 - build 45 — ЭТАП 1 чистки: сняты остатки замка в main.ts. Убран белый список расширений (WRITE_ALLOWED_EXT, WRITE_DENY_NAMES, isWriteAllowed) — запись больше не блокируется по расширению. isReadAllowed заменён на cleanPath/isBackupPath (единственный запрет — папка backup). Ветка для записи/удаления/Pages берётся у репозитория (getDefaultBranch) вместо вшитой main — фикс ошибки 422. Убран текст «папка не найдена или закрыта для записи» — теперь настоящая ошибка GitHub. Убраны isProtected и неиспользуемый userKeys.. Файлы: main.ts, version.json
 
 - build 44 — Чистка остатков ключей/гостя: убраны SHATAB_SECRET, checkSecret, X-Shtab-Token, verifyKey, isBoss, замок репозиториев (OLD_REPOS/isOldRepo/isRepoLocked/REPO_LOCK_TEXT), кнопка 🔑 и функции bossToken/isBossMode/paintBossKey/toggleBossMode, мёртвый локальный ИИ-фолбэк, CSS .boss-key. Удалены TASKS_KEYS.md и TASKS_GUEST_REMOVAL.md. Файлы: main.ts, chat.js, app.html, style.css, local_ai.js, PROMPT_BOSS.md, version.json
