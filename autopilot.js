@@ -22,28 +22,21 @@
     const RE_PLAIN = /\[\[\s*NEXT\s*\]\]/i;
 
     // --- ПИНОК: ловим системное «Слишком много шагов. Задача прервана.» ---
-    const LS_KICK = 'shtabAutopilotKickCount';   // {id чата: сколько уже отработано}
-    const RE_TOOMANY = /Слишком\s+много\s+шагов/gi;
+    // ВАЖНО: помечаем КАЖДОЕ сообщение, а не считаем «сколько раз в чате».
+    // Раньше счётчик шёл по всему контейнеру, и при переключении чата
+    // (loadChat перерисовывает историю) счётчик прыгал 0 → N. Автопилот решал,
+    // что Босс написал «Пинок», и САМ отправлял «разбей на задачи по шагам».
+    const RE_TOOMANY = /Слишком\s+много\s+шагов/i;
     const KICK_TEXT = 'разбей на задачи по шагам';
 
     // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — это тоже команда «разбей на задачи» ---
-    const LS_KICK2 = 'shtabAutopilotKick2Count';
-    const RE_KICK_WORD = /пинок/gi;
+    const RE_KICK_WORD = /пинок/i;
 
-    /* Счётчики храним ПО КАЖДОМУ ЧАТУ.
-       Раньше счётчик был один на весь Штаб: при переключении чатов он сравнивался
-       с содержимым ДРУГОГО чата — «Пинок» из старого чата срабатывал заново,
-       и в новый чат прилетало «разбей на задачи по шагам» без команды Босса. */
-    function chatKey() {
-        try { return localStorage.getItem('shtabCurrentChatId') || 'default'; } catch (e) { return 'default'; }
-    }
-    function loadCounts(lsKey) {
-        try { const v = JSON.parse(localStorage.getItem(lsKey) || '{}'); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; } catch (e) { return {}; }
-    }
-    function saveCount(lsKey, chatId, n) {
-        const m = loadCounts(lsKey); m[chatId] = n;
-        try { localStorage.setItem(lsKey, JSON.stringify(m)); } catch (e) {}
-    }
+    // Метки «уже видел» ставим прямо на сообщения (data-атрибуты).
+    const ATTR_KICK = 'apKick';
+    const ATTR_TOOMANY = 'apTooMany';
+    let lastChatId = null;      // какой чат открыт сейчас
+    let lastMsgCount = -1;      // сколько сообщений было в прошлый тик
 
     let timer = null;
     let busy = false;      // уже отправляем — второй раз не дёргаем
@@ -109,27 +102,74 @@
         return null;
     }
 
-    // Считаем, сколько раз в чате прозвучало «Слишком много шагов»
-    // (счётчик, а не хеш — одинаковые сообщения тоже ловятся)
-    function countTooMany() {
+    /* --- «УЖЕ ВИДЕЛ» ВМЕСТО СЧЁТЧИКОВ ---
+       Переключение чата перерисовывает историю: сообщения появляются заново.
+       Раньше автопилот считал их новыми и сам отправлял «разбей на задачи по шагам»
+       (Босс видел это как «мне приплывает сообщение, хотя я его не писал»).
+       Теперь каждое сообщение помечается data-атрибутом, а при старте и при
+       переключении чата вся история помечается «виденной» БЕЗ отправки. */
+
+    // Помечаем всё, что уже есть в чате, как «виденное» — молча.
+    function primeSeen() {
         const box = document.getElementById('chatContainer');
-        if (!box) return 0;
-        const t = box.innerText || '';
-        const m = t.match(RE_TOOMANY);
-        return m ? m.length : 0;
+        if (!box) return;
+        box.querySelectorAll('.chat-msg.msg-boss').forEach(function (el) {
+            if (RE_KICK_WORD.test(el.innerText || '')) el.dataset[ATTR_KICK] = '1';
+        });
+        box.querySelectorAll('.chat-msg.msg-director').forEach(function (el) {
+            const txt = el.innerText || '';
+            const html = el.innerHTML || '';
+            if (RE_TOOMANY.test(txt)) el.dataset[ATTR_TOOMANY] = '1';
+            // Метку «дальше» из истории тоже считаем отработанной — иначе при
+            // переключении чата автопилот отправит «дальше» в чужой чат.
+            if (RE_ZW.test(txt) || RE_COMMENT.test(html) || RE_PLAIN.test(txt)) {
+                const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
+                markDone(hash(clean.slice(-400)));
+            }
+        });
     }
 
-    // Считаем «Пинок» ТОЛЬКО в сообщениях Босса: свои ответы не считаем,
-    // иначе Архитектор зациклит сам себя.
-    function countBossKick() {
+    // Новое сообщение Босса со словом «Пинок» (ещё не помеченное).
+    function findNewKick() {
         const box = document.getElementById('chatContainer');
-        if (!box) return 0;
-        let n = 0;
-        box.querySelectorAll('.chat-msg.msg-boss').forEach(function (el) {
-            const m = (el.innerText || '').match(RE_KICK_WORD);
-            if (m) n += m.length;
-        });
-        return n;
+        if (!box) return null;
+        const msgs = box.querySelectorAll('.chat-msg.msg-boss');
+        for (let i = 0; i < msgs.length; i++) {
+            const el = msgs[i];
+            if (el.dataset[ATTR_KICK]) continue;
+            if (RE_KICK_WORD.test(el.innerText || '')) return el;
+            el.dataset[ATTR_KICK] = '1';   // без «пинка» — больше не проверяем
+        }
+        return null;
+    }
+
+    // Новое системное «Слишком много шагов» (ещё не помеченное).
+    function findNewTooMany() {
+        const box = document.getElementById('chatContainer');
+        if (!box) return null;
+        const msgs = box.querySelectorAll('.chat-msg.msg-director');
+        for (let i = 0; i < msgs.length; i++) {
+            const el = msgs[i];
+            if (el.dataset[ATTR_TOOMANY]) continue;
+            if (RE_TOOMANY.test(el.innerText || '')) return el;
+            el.dataset[ATTR_TOOMANY] = '1';
+        }
+        return null;
+    }
+
+    // Переключили чат или чат очистили — история принимается как «виденная».
+    function checkChatSwitch() {
+        const box = document.getElementById('chatContainer');
+        if (!box) return false;
+        const id = (typeof currentChatId !== 'undefined') ? currentChatId : null;
+        const count = box.querySelectorAll('.chat-msg').length;
+        if (id !== lastChatId || count < lastMsgCount) {
+            lastChatId = id; lastMsgCount = count;
+            primeSeen();
+            return true;
+        }
+        lastMsgCount = count;
+        return false;
     }
 
     function sendText(text) {
@@ -144,16 +184,15 @@
     function tick() {
         if (!isOn() || busy) return;
 
-        const cid = chatKey();
+        // 0) СМЕНИЛИ ЧАТ — история это не команда, просто помечаем её.
+        if (checkChatSwitch()) { waiting = 0; return; }
 
         // 1) ПИНОК — задача развалилась на «слишком много шагов»
-        const n = countTooMany();
-        let handled = loadCounts(LS_KICK)[cid] || 0;
-        if (n < handled) { saveCount(LS_KICK, cid, n); handled = n; }  // чат почистили
-        if (n > handled) {
+        const tooManyEl = findNewTooMany();
+        if (tooManyEl) {
             if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
             busy = true; waiting = 0;
-            saveCount(LS_KICK, cid, n);
+            tooManyEl.dataset[ATTR_TOOMANY] = '1';
             log('Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
@@ -161,13 +200,11 @@
         }
 
         // 1б) ПИНОК СЛОВОМ — Босс написал «Пинок»
-        const k = countBossKick();
-        let kHandled = loadCounts(LS_KICK2)[cid] || 0;
-        if (k < kHandled) { saveCount(LS_KICK2, cid, k); kHandled = k; }
-        if (k > kHandled) {
+        const kickEl = findNewKick();
+        if (kickEl) {
             if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
             busy = true; waiting = 0;
-            saveCount(LS_KICK2, cid, k);
+            kickEl.dataset[ATTR_KICK] = '1';
             log('Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
@@ -199,6 +236,10 @@
         const b = document.getElementById('autopilotBtn');
         if (b) b.onclick = toggle;
         if (timer) clearInterval(timer);
+        // Стартовая история чата — не команда: помечаем молча.
+        primeSeen();
+        lastMsgCount = (document.getElementById('chatContainer') || { querySelectorAll: function () { return []; } }).querySelectorAll('.chat-msg').length;
+        lastChatId = (typeof currentChatId !== 'undefined') ? currentChatId : null;
         timer = setInterval(tick, POLL_MS);
         log('Автопилот на связи. Слежу за чатом (без GitHub).');
     }
