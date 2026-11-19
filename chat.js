@@ -727,7 +727,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     }
                 }
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
-            clearTimeout(timeoutId);
+            clearTimeout(autoKickTimer);
 
         if (success) {
             playSound('receive'); 
