@@ -42,7 +42,17 @@
     let busy = false;      // уже отправляем — второй раз не дёргаем
     let waiting = 0;       // сколько циклов ждём, пока Архитектор договорит
 
-    function isOn() { return localStorage.getItem(LS_ON) !== 'off'; }
+    // ПО УМОЛЧАНИЮ ВЫКЛЮЧЕН. Раньше было «включён, пока не выключишь» —
+    // из-за этого автопилот сам слал «разбей на задачи по шагам» и зацикливался.
+    function isOn() { return localStorage.getItem(LS_ON) === 'on'; }
+
+    // Одноразовая глушилка: после починки зацикливания принудительно ВЫКЛ.
+    const LS_VER = 'shtabAutopilotVer';
+    const AP_VER = '34';
+    if (localStorage.getItem(LS_VER) !== AP_VER) {
+        localStorage.setItem(LS_ON, 'off');
+        localStorage.setItem(LS_VER, AP_VER);
+    }
 
     function setBtn() {
         const b = document.getElementById('autopilotBtn');
