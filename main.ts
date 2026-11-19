@@ -60,66 +60,6 @@ function isRepoLocked(repo: unknown, isBoss: boolean): boolean {
     if (isBoss) return false;
     return isOldRepo(repo);
 }
-// Последний репозиторий, созданный ГОСТЕМ. Если гость не указал repo в вызове,
-// работаем в нём, а не в Штабе — иначе правка уходила в digital-agency и падала под замком.
-let LAST_GUEST_REPO = "";
-// Память о репозитории гостя переживает перезапуск сервера: пишем на диск.
-// Раньше переменная жила только в памяти — после рестарта (Deno --watch) гость
-// терял свой репозиторий, правка уходила в Штаб и падала под замком.
-const GUEST_STATE_FILE = ".guest_repo.json";
-async function saveGuestRepo(name: string) {
-    LAST_GUEST_REPO = name;
-    try { await Deno.writeTextFile(GUEST_STATE_FILE, JSON.stringify({ repo: name, at: Date.now() })); } catch (_e) {}
-}
-// Ищем рабочий репозиторий гостя: память → файл.
-// ВАЖНО: раньше третьим шагом брался «самый свежий нестарый репозиторий» —
-// это дыра: гость мог попасть в НОВЫЙ репозиторий Босса. Убрано.
-// Нет своей папки — создаём её (ensureGuestRepo), а не ищем чужую.
-async function findGuestRepo(): Promise<string> {
-    if (LAST_GUEST_REPO) return LAST_GUEST_REPO;
-    try {
-        const j = JSON.parse(await Deno.readTextFile(GUEST_STATE_FILE));
-        if (j && j.repo && !isOldRepo(j.repo)) { LAST_GUEST_REPO = String(j.repo); return LAST_GUEST_REPO; }
-    } catch (_e) {}
-    return "";
-}
-
-// Существует ли репозиторий на GitHub (не 404).
-async function repoExists(name: string): Promise<boolean> {
-    if (!name) return false;
-    try {
-        const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${name}`, {
-            headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" },
-            signal: AbortSignal.timeout(15000)
-        });
-        return res.ok;
-    } catch (_e) { return false; }
-}
-
-// Создаём репозиторий. 422 = уже существует — это тоже успех.
-async function createRepo(name: string, description = "Рабочая папка гостя Штаба"): Promise<boolean> {
-    try {
-        const res = await fetch("https://api.github.com/user/repos", {
-            method: "POST",
-            headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" },
-            body: JSON.stringify({ name, description, private: false, auto_init: true })
-        });
-        return res.ok || res.status === 422;
-    } catch (_e) { return false; }
-}
-
-// РАБОЧАЯ ПАПКА ГОСТЯ — ГАРАНТИРОВАННО СУЩЕСТВУЕТ.
-// Своей папки нет или она пропала — создаём guest_workspace и пишем туда.
-// Благодаря этому запись гостя не может провалиться из-за «не той» папки,
-// а модель не получает отказа, из которого делает вывод «прав нет».
-const GUEST_DEFAULT_REPO = "guest_workspace";
-async function ensureGuestRepo(): Promise<string> {
-    const own = await findGuestRepo();
-    if (own && !isOldRepo(own) && await repoExists(own)) return own;
-    await createRepo(GUEST_DEFAULT_REPO);
-    await saveGuestRepo(GUEST_DEFAULT_REPO);
-    return GUEST_DEFAULT_REPO;
-}
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
