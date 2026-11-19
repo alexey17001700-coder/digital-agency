@@ -89,22 +89,17 @@ function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
 
 /* --- СКРЫТЫЙ ВХОД (🔑 над списком чатов) ---
-   Одна кнопка — два ключа:
-   • КЛЮЧ АДМИНИСТРАТОРА (BOSS_PIN) — полный доступ ко всему;
-   • ГОСТЕВОЙ КЛЮЧ (GUEST_PIN) — режим гостя: создаёт свои репозитории и пишет
-     в них, старые проекты только читает. Гостевой ключ открывает доступ к ИИ
-     сервера (у него есть ключ ZVENO и все инструменты).
-   Без ключа вовсе — локальный ИИ без инструментов, писать он не умеет. */
+   Один ключ — КЛЮЧ АДМИНИСТРАТОРА (BOSS_PIN): полный доступ ко всему.
+   Гостевой режим удалён (build 41): он держался на флаге в браузере,
+   прав гостю всё равно не хватало, а дыр в защите добавлял.
+   Без ключа — локальный ИИ без инструментов, писать он не умеет. */
 const BOSS_PIN = '8452';
-const GUEST_PIN = '1234';
 function isBossMode() { return localStorage.getItem('shtab_boss') === 'true'; }
-function isGuestMode() { return localStorage.getItem('shtab_guest') === 'true'; }
 function paintBossKey() {
     const btn = document.getElementById('bossKeyBtn');
     if (!btn) return;
-    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.classList.remove('guest-on'); btn.title = 'Режим Босса: ВКЛ'; }
-    else if (isGuestMode()) { btn.innerText = '👤'; btn.classList.remove('boss-on'); btn.classList.add('guest-on'); btn.title = 'Режим гостя: ВКЛ'; }
-    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.classList.remove('guest-on'); btn.title = 'Служебный вход'; }
+    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
+    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
 }
 function toggleBossMode() {
     if (isBossMode()) {
@@ -115,27 +110,13 @@ function toggleBossMode() {
         }
         return;
     }
-    if (isGuestMode()) {
-        if (confirm('Выйти из режима гостя?')) {
-            localStorage.removeItem('shtab_guest');
-            paintBossKey();
-            alert('Режим гостя выключен');
-        }
-        return;
-    }
-    const pin = prompt('Введите ключ доступа:\n• ключ Администратора — полный доступ\n• гостевой ключ — создавать свои приложения');
+    const pin = prompt('Введите ключ Администратора:');
     if (pin === null) return;
-    const p = pin.trim();
-    if (p === BOSS_PIN) {
+    if (pin.trim() === BOSS_PIN) {
         localStorage.setItem('shtab_boss', 'true');
         localStorage.removeItem('shtab_guest');
         paintBossKey();
         alert('Режим Босса активирован!');
-    } else if (p === GUEST_PIN) {
-        localStorage.setItem('shtab_guest', 'true');
-        localStorage.removeItem('shtab_boss');
-        paintBossKey();
-        alert('Гостевой ключ принят! Можно создавать приложения.');
     } else { alert('Неверный ключ'); }
 }
 
