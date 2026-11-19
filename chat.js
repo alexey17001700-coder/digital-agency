@@ -611,7 +611,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     /* 300 секунд — предел ожидания. По истечении не обрываем молча, а пинаем:
        autoKick() снимает зависший запрос и сам отправляет приказ разбить на задачи. */
-    currentAbortController = new AbortController(); const timeoutId = setTimeout(autoKick, 300000); clearTimeout(watchdogTimer);
+    currentAbortController = new AbortController(); clearTimeout(autoKickTimer); autoKickTimer = setTimeout(autoKick, 300000); clearTimeout(watchdogTimer);
 
     try {
         let success = false; let aiText = ""; let lastError = "";
