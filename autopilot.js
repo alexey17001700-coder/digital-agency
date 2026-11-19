@@ -143,6 +143,20 @@
             return;
         }
 
+        // 1б) ПИНОК СЛОВОМ — Босс написал «Пинок»
+        const k = countBossKick();
+        let kHandled = parseInt(localStorage.getItem(LS_KICK2) || '0', 10);
+        if (k < kHandled) { localStorage.setItem(LS_KICK2, String(k)); kHandled = k; }
+        if (k > kHandled) {
+            if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
+            busy = true; waiting = 0;
+            localStorage.setItem(LS_KICK2, String(k));
+            log('Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
+            sendText(KICK_TEXT);
+            setTimeout(function () { busy = false; }, 4000);
+            return;
+        }
+
         // 2) МЕТКА — обычный шаг
         const sig = findSignal();
         if (!sig) { waiting = 0; return; }
