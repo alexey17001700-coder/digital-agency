@@ -325,7 +325,7 @@ async function manualDeploy(file, code) {
         try {
             const res = await fetch(PROXY, {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ updateFile: true, path: file, content: code, bossToken: bossToken(), message: `Auto-update: ${file}` })
+                body: JSON.stringify({ updateFile: true, path: file, content: code, message: `Auto-update: ${file}` })
             });
             const data = await res.json();
             if (data.success) renderMessage(`✅ **Файл ${file} успешно обновлен!**`, 'director', 'DevOps');
