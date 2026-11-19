@@ -817,6 +817,14 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
     }
 
+    // 📒 Память проделанной работы — правило для всех режимов
+    const worklogIdx = currentMessages.findIndex((m: any) => m.role === "system");
+    if (worklogIdx !== -1) {
+        currentMessages[worklogIdx] = { ...currentMessages[worklogIdx], content: String(currentMessages[worklogIdx].content || "") + WORKLOG_RULE };
+    } else {
+        currentMessages.unshift({ role: "system", content: WORKLOG_RULE.trim() });
+    }
+
     for (let loop = 0; loop < maxLoops; loop++) {
         const payload: any = {
             model: ZVENO_MODEL,
