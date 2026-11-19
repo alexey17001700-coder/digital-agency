@@ -665,8 +665,6 @@ if (name === "create_github_repo") {
         }
 
         if (name === "delete_github_repo") {
-            // Проверка в САМОМ исполнении, а не только в списке инструментов.
-            if (!isBoss) return "Ошибка: удаление репозиториев доступно только с ключом Администратора.";
             const repo = String(args.name).trim();
             // ЖЕЛЕЗНАЯ ЗАЩИТА: Штаб и Калькулятор удалять нельзя
             if (repo === REPO_NAME || repo === "window_calc") {
