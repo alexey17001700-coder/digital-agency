@@ -1162,11 +1162,8 @@ Deno.serve(async (request) => {
             // запрос уходил в Штаб и падал под замком («менять digital-agency запрещено»).
             // Теперь молча переводим запись в репозиторий гостя.
             if (body.isBoss !== true && isRepoLocked(targetRepo, false)) {
-                const ownRepo = await findGuestRepo();
-                if (!ownRepo || isOldRepo(ownRepo)) {
-                    return json({ success: false, error: "Сначала создай свой репозиторий (create_github_repo) — в него и будем писать." }, 403);
-                }
-                targetRepo = ownRepo;
+                // Рабочая папка гостя создаётся сама — отказа «сначала создай репозиторий» больше нет.
+                targetRepo = await ensureGuestRepo();
                 isProtected = targetRepo === REPO_NAME;
             }
             if (isRepoLocked(targetRepo, body.isBoss === true)) return json({ success: false, error: REPO_LOCK_TEXT }, 403);
