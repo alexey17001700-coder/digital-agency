@@ -478,11 +478,18 @@ const TOOLS = [
 // =========================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
 // =========================================
-async function executeTool(name: string, args: any): Promise<string> {
+async function executeTool(name: string, args: any, isBoss: boolean = false): Promise<string> {
     try {
         // Определяем репозиторий (любой, который укажет ИИ)
         const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
         const isProtected = targetRepo === REPO_NAME;
+
+        // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
+        // Новый репозиторий гость создаёт сам и работает внутри него свободно.
+        if (!isBoss && isOldRepo(targetRepo) &&
+            ["write_file", "replace_in_file", "delete_file"].includes(name)) {
+            return `Ошибка: без ключа Администратора менять старый проект "${targetRepo}" запрещено. Разрешено только чтение. Гость может создать свой репозиторий через create_github_repo и менять файлы в нём.`;
+        }
 
         if (name === "read_file") {
             if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
