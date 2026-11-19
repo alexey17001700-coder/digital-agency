@@ -553,7 +553,7 @@ async function executeTool(name: string, args: any): Promise<string> {
             return `Успех: файл "${args.path}" записан в ${targetRepo}.`;
         }
       if (name === "replace_in_file") {
-    if (isProtected && args.path.startsWith("backup/")) {
+    if (isBackupPath(args.path)) {
         return "Ошибка: запись в папку backup запрещена.";
     }
     const oldCode = await getFileContent(args.path, targetRepo);
