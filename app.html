@@ -466,12 +466,36 @@
         // Администратора». Свежий кадр сверяет метку сборки оболочки с version.json
         // и, если оболочка старая (или метки нет вовсе), жёстко перезагружает её
         // в обход кэша. Один раз — флаг в sessionStorage, петли нет.
-        const SHELL_BUILD = 56;
+        const SHELL_BUILD = 57;
         (function () {
             const KEY = 'shtabShellHealBuild';
+            const SHELL_URL = 'https://raw.githubusercontent.com/alexey17001700-coder/digital-agency/main/index.html';
             if (window.parent === window) return; // кадр открыт отдельно — оболочки нет
             function parentBuild() {
                 try { return Number(window.parent.SHTAB_SHELL_BUILD) || 0; } catch (e) { return 0; }
+            }
+            // ЖЁСТКОЕ ЛЕЧЕНИЕ ОБОЛОЧКИ.
+            // sync.sh обновляет на телефоне только main.ts, а index.html лежит на диске
+            // старый — поэтому обычная перезагрузка снова отдаёт старую оболочку, и
+            // кнопка «Откатить Штаб» опять отвечает «Бэкап и откат доступны только с
+            // ключом Администратора». Здесь свежий index.html качается прямо с GitHub
+            // и переписывает родительский документ целиком.
+            async function overwriteShell(build) {
+                try {
+                    const r = await fetch(SHELL_URL + '?t=' + Date.now(), { cache: 'no-store' });
+                    if (!r.ok) return false;
+                    const html = await r.text();
+                    // Пишем только проверенную свежую оболочку — иначе не трогаем.
+                    if (!html || html.length < 2000) return false;
+                    if (!html.includes('isBoss: true')) return false;
+                    if (!html.includes('SHTAB_SHELL_BUILD = ' + build)) return false;
+                    const p = window.parent;
+                    p.document.open();
+                    p.document.write(html);
+                    p.document.close();
+                    console.log('Штаб: оболочка перезаписана из GitHub, build =', build);
+                    return true;
+                } catch (e) { return false; }
             }
             async function healShell() {
                 let build = 0;
@@ -483,8 +507,13 @@
                 if (parentBuild() === build) { try { sessionStorage.removeItem(KEY); } catch (e) {} return; }
                 let already = null;
                 try { already = sessionStorage.getItem(KEY); } catch (e) { return; }
-                if (already === String(build)) return; // уже лечили — не зацикливаемся
                 try { sessionStorage.setItem(KEY, String(build)); } catch (e) {}
+
+                // Перезагрузка уже пробовалась в прошлый раз, а оболочка всё та же —
+                // значит файл на диске старый. Переписываем его из GitHub.
+                if (already === String(build)) { await overwriteShell(build); return; }
+
+                // Первая попытка: обычная перезагрузка в обход кэша.
                 try {
                     if ('caches' in window) caches.keys().then(ns => ns.forEach(n => caches.delete(n)));
                     const p = window.parent;
