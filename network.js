@@ -88,6 +88,20 @@ async function runConnectionTest() {
     }
     const aiEl = document.getElementById('t-ai-model');
     if (aiEl) aiEl.innerText = "yandexgpt";
+
+    const buildEl = document.getElementById('t-shtab-build');
+    if (buildEl) {
+        buildEl.innerText = "Проверка...";
+        try {
+            const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+            const j = await r.json();
+            buildEl.innerText = 'build ' + (j.build || '?');
+            buildEl.style.color = '#00e5ff';
+        } catch (e) {
+            buildEl.innerText = 'не читается';
+            buildEl.style.color = '#ff0000';
+        }
+    }
                     }
 
 // --- ПОГОДА (Open-Meteo, без ключей) ---
