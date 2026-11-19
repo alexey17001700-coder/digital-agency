@@ -8,6 +8,31 @@ const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 // =========================================
+// 🔑 КЛЮЧ АДМИНИСТРАТОРА — ТОЛЬКО НА СЕРВЕРЕ
+// Ключ больше НЕ лежит в chat.js (его читал любой гость через исходник страницы).
+// Клиент присылает ключ один раз на ручку verifyKey, сервер сверяет его
+// с переменной окружения BOSS_KEY и отдаёт токен сессии.
+// Дальше режим Босса определяется ТОЛЬКО по токену — подделать флаг в браузере нельзя.
+// =========================================
+const BOSS_KEY = Deno.env.get("BOSS_KEY") || "";
+let BOSS_TOKEN_CACHE = "";
+async function bossToken(): Promise<string> {
+    if (BOSS_TOKEN_CACHE) return BOSS_TOKEN_CACHE;
+    if (!BOSS_KEY) return "";
+    const data = new TextEncoder().encode("shtab-boss:" + BOSS_KEY);
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    BOSS_TOKEN_CACHE = Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    return BOSS_TOKEN_CACHE;
+}
+async function isBossToken(token: unknown): Promise<boolean> {
+    const t = String(token || "").trim();
+    if (!t) return false;
+    const real = await bossToken();
+    if (!real) return false;
+    return t === real;
+}
+
+// =========================================
 // 🔒 ЗАМОК СТАРЫХ РЕПОЗИТОРИЕВ
 // Без ключа администратора (режим Босса) старые репозитории закрыты на запись:
 // ни менять файлы, ни удалять. Читать можно. Новые репозитории (которых нет
