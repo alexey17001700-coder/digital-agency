@@ -786,6 +786,11 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
     } finally {
         isGenerating = false; clearInterval(timerInterval); 
+        // СТРАХОВКА: гасим «Думает» у активного агента (в т.ч. при остановке и обрыве).
+        // Раньше класс 'working' от отметки «занят» путался с фоновой задачей,
+        // и статус Оркестратора оставался «Думает» навсегда.
+        const _activeCard = document.getElementById('agent-' + activeAgent);
+        if (_activeCard && !_activeCard.classList.contains('task-running') && typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'free');
         attachedImageBase64 = null;
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
