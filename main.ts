@@ -30,12 +30,18 @@ const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удале
 // Всё, что перечислено ниже, гость не меняет никогда — только читает.
 // =========================================
 const OLD_REPOS = [
-    "digital-agency", "nexus_chat", "nexus_ws", "ac_luxury_calc",
-    "window_measure_pro", "nexus_snake", "window_calc", "shtab-site", "okna"
+    "digital-agency", "nexus_chat", "nexus_ws", "nexus_snake", "ac_luxury_calc",
+    "window_measure_pro", "window_calc", "shtab-site", "okna", "nexus_space",
+    "racing_game", "shtab_watchdog", "test_access_repo_xyz"
 ];
 function isOldRepo(repo: unknown): boolean {
     const r = String(repo || "").trim().toLowerCase();
     return OLD_REPOS.includes(r);
+}
+// Замок: старый репозиторий закрыт на запись, пока не введён ключ Администратора.
+function isRepoLocked(repo: unknown, isBoss: boolean): boolean {
+    if (isBoss) return false;
+    return isOldRepo(repo);
 }
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
