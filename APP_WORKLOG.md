@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 51 — Фикс «Откатить Штаб просит GitHub-токен»: из index.html убран запрос токена (prompt + localStorage shtabGhToken) и прямые вызовы GitHub API (ghToken/ghAPI/ghBackup) — бэкап/откат снова идут через сервер (shtabBackup → PROXY, isBackup/isRollback). В main.ts в ветке бэкапа/отката токен берётся ТОЛЬКО из Deno.env.get("GITHUB_TOKEN"), при отсутствии — ошибка «Токен GitHub не задан на сервере». build 50 → 51. Файлы: index.html, main.ts, version.json
+
 - build 50 — Бэкап и откат Штаба переведены с сервера Vivo на прямые запросы к GitHub API из браузера (ghAPI/ghBackup, токен в localStorage). Запрос на сервер (isBackup/isRollback) убран — серверный замок «только с ключом администратора» больше не мешает. Файлы: index.html, version.json
 
 - 49 — Найдена причина «Бекап и откат доступны только с ключем администратора»: сервер на Vivo (старый main.ts) требует флаг isBoss в запросах бэкапа/отката. В triggerBackup и triggerRollback добавлен isBoss:true в тело запроса. build 48 → 49. Файлы: index.html, version.json
