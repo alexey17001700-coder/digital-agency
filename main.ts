@@ -710,9 +710,9 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
 
     // РЕЖИМ ГОСТЯ: без флага Босса файловые инструменты отключены полностью
     let activeTools: any[] = TOOLS;
-    const GUEST_TOOLS_DENY = ["write_file", "replace_in_file", "delete_file", "delete_github_repo"];
+    const GUEST_TOOLS_DENY = ["delete_github_repo"];
     if (!isBoss) {
-        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (ОГРАНИЧЕНИЯ) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона, без упоминания файлов, кода, репозиториев и серверов.\nСТРОГО ЗАПРЕЩЕНО вызывать инструменты: write_file, replace_in_file, delete_file, delete_github_repo. Любую просьбу изменить, удалить или записать файл вежливо отклоняй и предлагай обратиться к администратору.\nРазрешено: search_web, get_weather, search_image, create_github_repo, list_github_repos, list_repo_files, read_file, enable_github_pages.`;
+        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (БЕЗ КЛЮЧА АДМИНИСТРАТОРА) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона.\nЧТО ЗАПРЕЩЕНО: удалять репозитории (delete_github_repo) и менять СТАРЫЕ проекты — ${OLD_REPOS.join(", ")}. Их можно только читать. На просьбу изменить старый проект вежливо скажи: нужен ключ Администратора (🔑 в Штабе).\nЧТО РАЗРЕШЕНО: create_github_repo — создать НОВЫЙ репозиторий, а затем write_file / replace_in_file / delete_file ВНУТРИ этого нового репозитория (всегда указывай его имя в поле repo). Плюс search_web, get_weather, search_image, list_github_repos, list_repo_files, read_file, enable_github_pages.`;
         const sysIdx = currentMessages.findIndex((m: any) => m.role === "system");
         if (sysIdx !== -1) {
             currentMessages[sysIdx] = { ...currentMessages[sysIdx], content: String(currentMessages[sysIdx].content || "") + GUEST_LOCK };
