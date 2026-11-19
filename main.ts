@@ -122,18 +122,27 @@ function b64EncodeUnicode(str: string): string {
     return btoa(binStr);
 }
 
+// Ветку берём у самого репозитория (default_branch), а не вшиваем "main":
+// у новых репозиториев ветка может называться иначе — запись падала с 422.
+async function getDefaultBranch(repoName: string): Promise<string> {
+    try {
+        const info = await gitAPI("", "GET", null, repoName);
+        if (info && info.default_branch) return info.default_branch;
+    } catch (_e) { /* ниже — запасной вариант */ }
+    return "main";
+}
+
 async function updateFileInRepo(path: string, content: string, repoName: string = REPO_NAME) {
-    const existing = await gitAPI(`contents/${path}`, "GET", null, repoName);
+    const branch = await getDefaultBranch(repoName);
+    const existing = await gitAPI(`contents/${path}?ref=${branch}`, "GET", null, repoName);
     const payload: any = {
         message: `Auto-update: ${path}`,
         content: b64EncodeUnicode(content),
-        branch: "main",
+        branch,
     };
     if (existing && existing.sha) payload.sha = existing.sha;
     const res = await gitAPI(`contents/${path}`, "PUT", payload, repoName);
-    // Понятный текст вместо «GitHub не вернул commit»: модель читала эту фразу
-    // как отказ в правах и отвечала «я не могу писать код».
-    if (!res || !res.commit) throw new Error(`папка "${repoName}" не найдена или закрыта для записи`);
+    if (!res || !res.commit) throw new Error(`GitHub не принял запись в "${repoName}/${path}" (ветка ${branch})`);
     return true;
 }
 
