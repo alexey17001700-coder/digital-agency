@@ -876,26 +876,13 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             currentMessages.push(msg);
             for (const tc of msg.tool_calls) {
                 const fnName = tc.function.name;
-                const fnArgs = JSON.parse(tc.function.arguments || "{}");
-                // ГОСТЬ: write_file / replace_in_file / delete_file без поля repo уходили в Штаб
-                // и падали под замком («старый репозиторий только с ключом»). Модель читала это
-                // как «у меня только чтение» и отказывалась работать. Подставляем репозиторий
-                // гостя ДО вызова инструмента — правка всегда попадает в его папку.
-                if (!isBoss && ["write_file", "replace_in_file", "delete_file"].includes(fnName)) {
-                    const asked = String(fnArgs?.repo || "").trim();
-                    // Рабочая папка гостя гарантированно существует: нет — создадим.
-                    const own = await ensureGuestRepo();
-                    // Гость пишет ТОЛЬКО в свою папку. Раньше проверялось лишь «пусто или старый»,
-                    // а опечатка в имени (например «redmi MD» с пробелом или несуществующее имя)
-                    // проходила дальше → GitHub отдавал 404 → модель делала вывод «писать не могу».
-                    // Теперь проверяем, что папка реально есть, иначе молча переводим в свою.
-                    if (!asked || isOldRepo(asked) || !(await repoExists(asked))) {
-                        fnArgs.repo = own;
-                    }
-                }
-                if (!isBoss && ["read_file", "list_repo_files"].includes(fnName)) {
-                    const askedRead = String(fnArgs?.repo || "").trim();
-                    if (!askedRead) fnArgs.repo = await ensureGuestRepo();
+                let fnArgs: any = {};
+                try { fnArgs = JSON.parse(tc.function.arguments || "{}"); }
+                catch (_e) {
+                    // Битый tool-call раньше ронял ВЕСЬ запрос (500). Теперь отдаём модели
+                    // понятную ошибку — она повторит вызов.
+                    currentMessages.push({ role: "tool", tool_call_id: tc.id, content: "Ошибка: аргументы вызова повреждены (некорректный JSON). Повтори вызов с корректными аргументами." });
+                    continue;
                 }
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
                 const result = await executeTool(fnName, fnArgs, isBoss);
