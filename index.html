@@ -86,6 +86,36 @@
     </div>
     <script>
         const PROXY = "https://shtab-boss.duckdns.org:8443";
+
+        // === СТОРОЖ ОБОЛОЧКИ (index.html) ===
+        // app.html грузится с ?v=<timestamp> и обновляется сам, а САМА оболочка — нет.
+        // Из-за этого старая закэшированная оболочка залипала на телефоне навсегда:
+        // кнопка «Откатить Штаб» из старой версии снова просила GitHub-токен, хотя
+        // в коде это давно убрано. Теперь оболочка сверяет свой build с version.json
+        // и, если на сервере новее, жёстко перезагружается в обход кэша (один раз — без петли).
+        (function () {
+            const SHELL_BUILD = 52;
+            const GUARD_KEY = 'shtabShellReloadBuild';
+            async function checkShellBuild() {
+                try {
+                    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+                    if (!r.ok) return;
+                    const j = await r.json();
+                    const serverBuild = parseInt(j.build, 10);
+                    if (!serverBuild || serverBuild === SHELL_BUILD) {
+                        try { sessionStorage.removeItem(GUARD_KEY); } catch (e) {}
+                        return;
+                    }
+                    let already = null;
+                    try { already = sessionStorage.getItem(GUARD_KEY); } catch (e) {}
+                    if (already === String(serverBuild)) return; // уже пробовали — не зацикливаемся
+                    try { sessionStorage.setItem(GUARD_KEY, String(serverBuild)); } catch (e) {}
+                    location.replace(location.pathname + '?v=' + Date.now());
+                } catch (e) { /* нет version.json — молча живём дальше */ }
+            }
+            checkShellBuild();
+        })();
+
         const fabMenu = document.getElementById('fab-menu');
         const fabOverlay = document.getElementById('fab-overlay');
         const appFrame = document.getElementById('app-frame');
