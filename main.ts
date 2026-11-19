@@ -767,9 +767,13 @@ if (name === "create_github_repo") {
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || `Ошибка создания репозитория`);
-        if (!isBoss) await saveGuestRepo(String(args.name).trim());
-        return `Успех: репозиторий "${args.name}" создан! Ссылка: ${data.html_url}. Теперь пиши файлы с repo="${args.name}" — это твой рабочий репозиторий.`;
+        // 422 = репозиторий с таким именем уже есть. Это НЕ ошибка: папка готова,
+        // работаем в ней. Раньше гость получал отказ и решал, что писать не может.
+        if (!res.ok && res.status !== 422) throw new Error(data.message || `Ошибка создания репозитория`);
+        const newRepoName = String(args.name).trim();
+        if (!isBoss) await saveGuestRepo(newRepoName);
+        const repoUrl = data.html_url || `https://github.com/${REPO_OWNER}/${newRepoName}`;
+        return `Успех: репозиторий "${newRepoName}" готов. Ссылка: ${repoUrl}. Теперь пиши файлы с repo="${newRepoName}" — это твой рабочий репозиторий.`;
     } catch (e: any) { return `Ошибка создания репозитория: ${e.message}`; }
 }
               if (name === "list_github_repos") {
