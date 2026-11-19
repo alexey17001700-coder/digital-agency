@@ -1089,9 +1089,13 @@ Deno.serve(async (request) => {
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
 
-        if (body.scanRepo) return await scanRepoFiles();
+        if (body.scanRepo) {
+            if (!isBoss) return json({ success: false, error: "🔒 Скан кода доступен только с ключом Администратора." }, 403);
+            return await scanRepoFiles();
+        }
 
         if (body.checkStatus) {
+            if (!isBoss) return json({ success: false, error: "🔒 Статус файлов доступен только с ключом Администратора." }, 403);
             try {
                 const rootFiles = await gitAPI("contents/");
                 const backupFiles = await gitAPI("contents/backup");
