@@ -760,7 +760,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
                 const fnName = tc.function.name;
                 const fnArgs = JSON.parse(tc.function.arguments || "{}");
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
-                const result = await executeTool(fnName, fnArgs);
+                const result = await executeTool(fnName, fnArgs, isBoss);
 
                 let toolResult = result;
                 if (fnName === "get_weather") {
