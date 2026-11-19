@@ -12,6 +12,14 @@
    ПИНОК: «Слишком много шагов» или слово «Пинок» → автопилот сам
    отправляет «разбей на задачи по шагам».
 
+   ПИНОК ПО ТАЙМЕРУ (300 сек):
+   Пока Архитектор отвечает, на кнопке отправки идут секунды, а сам
+   запрос обрывается на 300-й секунде. Если ответа так и не пришло —
+   задача умирает на полуслове. Теперь на исходе таймера автопилот
+   обрывает зависший запрос и сам отправляет Боссу задание:
+   «Разбей на задачи и делай по одной задаче, отчитывайся после каждой».
+   Работает даже при выключенном автопилоте.
+
    ГЛАВНОЕ ПРАВИЛО ЭТОГО ФАЙЛА:
    «уже видел» хранится в localStorage ПО ХЕШУ текста, а НЕ в
    data-атрибутах и НЕ в счётчиках — перерисовка чата их убивает.
@@ -55,6 +63,14 @@
     // снова может закончиться «Слишком много шагов». Без паузы — петля.
     const KICK_COOLDOWN_MS = 45000;
 
+    // --- ПИНОК ПО ТАЙМЕРУ (300 сек) ---
+    // В чате идёт счётчик секунд, запрос обрывается сам на 300-й секунде.
+    // Если ответа нет — на исходе таймера обрываем запрос и шлём задание.
+    const TIMEOUT_KICK_TEXT = 'Разбей на задачи и делай по одной задаче, отчитывайся после каждой';
+    const TIMEOUT_LIMIT_S = 298;             // порог: таймаут запроса в чате — 300 сек
+    const TIMEOUT_KICK_COOLDOWN_MS = 120000; // не чаще одного пинка в 2 минуты
+    const TIMEOUT_KICK_MAX = 3;              // не больше 3 пинков подряд без ответа
+
     let timer = null;
     let busy = false;       // уже отправляем — второй раз не дёргаем
     let waiting = 0;        // сколько циклов ждём, пока Архитектор договорит
@@ -62,6 +78,9 @@
     let lastChatId = null;  // какой чат открыт сейчас
     let lastHead = null;    // «отпечаток» первого сообщения чата
     let switchCooldown = 0; // тики «остывания» после смены/перерисовки чата
+    let genStartMsgs = -1;  // сколько ответов Архитектора было на старте запроса
+    let timeoutKickAt = 0;  // когда последний раз пинали по таймеру
+    let timeoutKickRun = 0; // сколько пинков подряд без ответа
 
     function isOn() { return localStorage.getItem(LS_ON) !== 'off'; }
 
@@ -184,6 +203,7 @@
         const head = chatHead();
         if (id !== lastChatId || head !== lastHead) {
             lastChatId = id; lastHead = head;
+            genStartMsgs = -1;    // счёт ответов для пинка по таймеру — заново
             primeSeen();
             switchCooldown = 3;   // даём DOM дорисоваться — команды не слушаем
             return true;
@@ -234,8 +254,79 @@
         setTimeout(function () { busy = false; }, 4000);
     }
 
+    /* ============================================================
+       ПИНОК ПО ТАЙМЕРУ (300 СЕК)
+       Пока идёт ответ, на кнопке отправки тикают секунды, а запрос
+       обрывается сам на 300-й секунде. Если ответа не пришло — задача
+       умирает на полуслове. На исходе таймера обрываем зависший запрос
+       и сами отправляем Боссу задание: разбить работу на задачи и
+       делать по одной, отчитываясь после каждой.
+       ============================================================ */
+
+    // Сколько ответов Архитектора сейчас в чате.
+    function directorCount() {
+        const b = box();
+        return b ? b.querySelectorAll('.chat-msg.msg-director').length : 0;
+    }
+
+    // Секунды с кнопки отправки («123.4s»). -1 — запрос не идёт.
+    function sendBtnElapsed() {
+        const btn = document.getElementById('sendBtn');
+        if (!btn) return -1;
+        const m = String(btn.innerText || '').match(/^\s*([\d.]+)s\s*$/);
+        return m ? parseFloat(m[1]) : -1;
+    }
+
+    // Обрываем зависший запрос и отправляем пинок от имени Босса.
+    function fireTimeoutKick() {
+        busy = true;
+        try {
+            if (typeof isGenerating !== 'undefined' && isGenerating) {
+                if (typeof currentAbortController !== 'undefined' && currentAbortController) currentAbortController.abort();
+                if (typeof typingTimer !== 'undefined') clearTimeout(typingTimer);
+                isGenerating = false;
+            }
+        } catch (e) {}
+        const input = document.getElementById('chatInput');
+        if (!input) { busy = false; return; }
+        if (input.value && input.value.trim()) { log('В поле ввода есть текст Босса — пинок не отправляю'); busy = false; return; }
+        // Даём старому запросу «догаснуть» (его finally гасит статусы), потом шлём пинок.
+        setTimeout(function () {
+            input.value = TIMEOUT_KICK_TEXT;
+            try {
+                if (typeof sendMessage === 'function') sendMessage();
+                else log('Ошибка: чат не готов');
+            } catch (e) { log('Сбой пинка: ' + e.message); }
+            setTimeout(function () { busy = false; }, 4000);
+        }, 500);
+    }
+
+    // Следим за таймером: 300 сек без ответа — пинок.
+    function checkTimeoutKick() {
+        const gen = (typeof isGenerating !== 'undefined') && isGenerating;
+        const sec = sendBtnElapsed();
+        if (!gen || sec < 0) { genStartMsgs = -1; return; }        // запрос не идёт — счёт сброшен
+        if (genStartMsgs < 0) { genStartMsgs = directorCount(); return; }
+        if (directorCount() > genStartMsgs) {                       // ответ пришёл — всё хорошо
+            genStartMsgs = -1; timeoutKickRun = 0; return;
+        }
+        if (sec < TIMEOUT_LIMIT_S) return;
+        if ((Date.now() - timeoutKickAt) < TIMEOUT_KICK_COOLDOWN_MS) return;
+        if (timeoutKickRun >= TIMEOUT_KICK_MAX) { genStartMsgs = -1; return; }
+        timeoutKickAt = Date.now(); timeoutKickRun++; genStartMsgs = -1;
+        log('Таймер ' + Math.round(sec) + 'с — ответа нет → пинок: «' + TIMEOUT_KICK_TEXT + '»');
+        fireTimeoutKick();
+    }
+
     function tick() {
-        if (!isOn() || busy) return;
+        if (busy) return;
+
+        // ПИНОК ПО ТАЙМЕРУ работает всегда — даже если автопилот выключен:
+        // иначе ответ обрывается на 300-й секунде и задача умирает молча.
+        checkTimeoutKick();
+        if (busy) return;
+
+        if (!isOn()) return;
 
         // 0) СМЕНИЛИ ЧАТ / ЧАТ ПЕРЕРИСОВАЛСЯ — история это не команда.
         //    Остываем несколько тиков: DOM может дорисоваться не сразу.
