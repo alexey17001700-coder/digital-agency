@@ -467,7 +467,7 @@ function parseAgentReplies(text) {
 async function playAgentReplies(replies) {
     for (let reply of replies) {
         focusAgentCard(reply.agent);
-        const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('working');
+        const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('task-running');
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'typing'); updateAgentStatus(reply.agent, 'busy'); }
         await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'idle'); updateAgentStatus(reply.agent, 'free'); }
