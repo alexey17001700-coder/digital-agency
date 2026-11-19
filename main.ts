@@ -63,6 +63,35 @@ function isRepoLocked(repo: unknown, isBoss: boolean): boolean {
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
+// =========================================
+// 📜 ПРАВИЛА РЕЖИМОВ — ВЫНЕСЕНЫ В ДВА ФАЙЛА
+// PROMPT_BOSS.md  — правила Босса (ключ Администратора введён)
+// PROMPT_GUEST.md — правила гостя (без ключа)
+// Правятся прямо на GitHub, пересборка не нужна. Ниже — аварийный текст,
+// если файл не найден или пуст.
+// =========================================
+const PROMPT_BOSS_FILE = "PROMPT_BOSS.md";
+const PROMPT_GUEST_FILE = "PROMPT_GUEST.md";
+
+const GUEST_RULE = `\n\n=== РЕЖИМ ГОСТЯ (БЕЗ КЛЮЧА АДМИНИСТРАТОРА) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона.\nЧТО ЗАПРЕЩЕНО: удалять репозитории (delete_github_repo) и менять СТАРЫЕ проекты — ${OLD_REPOS.join(", ")}. Их можно только читать. На просьбу изменить старый проект вежливо скажи: нужен ключ Администратора (🔑 в Штабе).\nЧТО РАЗРЕШЕНО: create_github_repo — создать НОВЫЙ репозиторий, а затем write_file / replace_in_file / delete_file ВНУТРИ этого нового репозитория (всегда указывай его имя в поле repo). Плюс search_web, get_weather, search_image, list_github_repos, list_repo_files, read_file, enable_github_pages.\nЧТО МОЖНО ЧИТАТЬ ВСЕГДА: журнал проделанной работы — read_worklog (файл APP_WORKLOG.md). Там вся история шагов по каждому приложению. Если спрашивают «что уже сделано» — читай журнал.`;
+
+// Кэш правил на 60 секунд: файлы читаются с GitHub, но не на каждый запрос.
+const PROMPT_CACHE = new Map<string, { text: string, at: number }>();
+const PROMPT_CACHE_TTL = 60000;
+async function loadPromptFile(path: string, fallback: string): Promise<string> {
+    const now = Date.now();
+    const hit = PROMPT_CACHE.get(path);
+    if (hit && now - hit.at < PROMPT_CACHE_TTL) return hit.text;
+    try {
+        const content = await getFileContent(path, REPO_NAME);
+        if (content && content.trim().length > 20) {
+            PROMPT_CACHE.set(path, { text: content.trim(), at: now });
+            return content.trim();
+        }
+    } catch (_e) { /* файла нет — берём аварийный текст */ }
+    return fallback;
+}
+
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
