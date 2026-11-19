@@ -24,6 +24,7 @@
 
 ## digital-agency
 
+- build 23 — Фикс «Оркестратор вечно думает»: класс 'working' от отметки «занят» принимался за фоновую задачу, из-за чего статус не гасился. Введён отдельный класс task-running, добавлена страховка в finally. Файлы: chat.js, version.json
 - build 22 — Правила режимов вынесены в два файла: PROMPT_BOSS.md (Босс) и PROMPT_GUEST.md (гость). main.ts читает их с кэшем 60 сек, при отсутствии файла берёт вшитый текст. Файлы: PROMPT_BOSS.md, PROMPT_GUEST.md, main.ts, version.json. (Штаб)
 
 - build 19 — журнал проделанной работы: файл APP_WORKLOG.md + инструменты remember_step / read_worklog, правило в промпте, чтение без ключа. Файлы: main.ts, APP_WORKLOG.md
