@@ -102,12 +102,6 @@ function isReadAllowed(path: unknown): boolean {
     return true;
 }
 
-function checkSecret(request: Request): boolean {
-    if (!SHATAB_SECRET) return true;
-    const given = request.headers.get("X-Shtab-Token") || "";
-    return given === SHATAB_SECRET;
-}
-
 async function gitAPI(path: string, method = "GET", bodyData: any = null, repoName: string = REPO_NAME) {
     const url = `https://api.github.com/repos/${REPO_OWNER}/${repoName}/${path}`;
     const options: any = {
