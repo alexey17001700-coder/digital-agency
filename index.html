@@ -148,6 +148,18 @@
         function paintSafe() { const d = document.getElementById('safe-display'); if (d) d.innerText = safePin.replace(/./g, '•'); }
         function pressSafeKey(k) { if (safePin.length >= 8) return; safePin += k; paintSafe(); if (safePin.length === CORRECT_PIN.length) checkSafePin(); }
         function clearSafePin() { safePin = ''; paintSafe(); }
+        /* Клавиатуру слушаем делегированием на документе (фаза перехвата).
+           Так цифры доходят всегда — даже если inline-onclick в браузере
+           телефона не срабатывает. Ключ берём из data-k. */
+        document.addEventListener('click', function (ev) {
+            const t = ev.target;
+            const b = (t && t.closest) ? t.closest('.safe-key') : null;
+            if (!b) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            const k = b.getAttribute('data-k');
+            if (k === 'C') clearSafePin(); else if (k) pressSafeKey(k);
+        }, true);
         function checkSafePin() {
             const d = document.getElementById('safe-display');
             if (safePin === CORRECT_PIN) {
