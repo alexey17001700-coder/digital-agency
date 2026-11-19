@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 45 — ЭТАП 1 чистки: сняты остатки замка в main.ts. Убран белый список расширений (WRITE_ALLOWED_EXT, WRITE_DENY_NAMES, isWriteAllowed) — запись больше не блокируется по расширению. isReadAllowed заменён на cleanPath/isBackupPath (единственный запрет — папка backup). Ветка для записи/удаления/Pages берётся у репозитория (getDefaultBranch) вместо вшитой main — фикс ошибки 422. Убран текст «папка не найдена или закрыта для записи» — теперь настоящая ошибка GitHub. Убраны isProtected и неиспользуемый userKeys.. Файлы: main.ts, version.json
+
 - build 44 — Чистка остатков ключей/гостя: убраны SHATAB_SECRET, checkSecret, X-Shtab-Token, verifyKey, isBoss, замок репозиториев (OLD_REPOS/isOldRepo/isRepoLocked/REPO_LOCK_TEXT), кнопка 🔑 и функции bossToken/isBossMode/paintBossKey/toggleBossMode, мёртвый локальный ИИ-фолбэк, CSS .boss-key. Удалены TASKS_KEYS.md и TASKS_GUEST_REMOVAL.md. Файлы: main.ts, chat.js, app.html, style.css, local_ai.js, PROMPT_BOSS.md, version.json
 
 - build 44 — ЭТАП 1: ключ снят — Штаб открыт. main.ts: BOSS_KEY/isBossToken убраны, isBoss=true всегда, verifyKey отдаёт пустой токен. chat.js: isBossMode()=true, кнопка 🔑 скрыта, toggleBossMode — только сообщение. Правка уже была в репозитории (build 43), проверил и подтвердил.. Файлы: main.ts, chat.js
