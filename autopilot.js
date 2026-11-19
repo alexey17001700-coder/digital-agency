@@ -146,10 +146,13 @@
     // Все системные «Слишком много шагов».
     function scanTooMany() { return scan('.chat-msg.msg-director', RE_TOOMANY, MAX_TOOMANY_LEN, 'many'); }
 
-    // Первое сообщение из списка, чей хеш ещё не отработан.
-    function firstNew(list) {
-        for (let i = 0; i < list.length; i++) if (!isDone(list[i].hash)) return list[i];
-        return null;
+    // Кандидат на команду — только ПОСЛЕДНЕЕ сообщение своего типа, и только
+    // если оно ещё не отработано. Команда «из середины» истории (после
+    // перерисовки чата) не срабатывает — вторая линия защиты к хешу.
+    function tailCandidate(list) {
+        if (!list.length) return null;
+        const last = list[list.length - 1];
+        return isDone(last.hash) ? null : last;
     }
 
     // Помечаем всё, что уже есть в чате, как «виденное» — молча.
