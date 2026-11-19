@@ -490,7 +490,7 @@ function autoKick(){
     if (!isGenerating) return;   // ответ уже пришёл или Босс остановил вручную — пинок не нужен
     try { currentAbortController.abort(); } catch(e){}
     isGenerating = false; clearTimeout(typingTimer);
-    renderMessage('⏰ *[Система: 300 секунд истекли — ответа нет. Пинок: разбиваю на задачи.]*', 'director', 'Оркестратор');
+    renderMessage(`⏰ *[Система: ${KICK_AFTER_MS/1000} секунд без ответа. Пинок ${kickCount}/${MAX_KICKS}: разбиваю на задачи.]*`, 'director', 'Оркестратор');
     renderMessage(AUTO_KICK_TEXT, 'boss');
     addMessageToHistory(AUTO_KICK_TEXT, 'boss');
     setTimeout(() => sendMessage(AUTO_KICK_TEXT, true), 600);
