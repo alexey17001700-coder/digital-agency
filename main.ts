@@ -771,7 +771,7 @@ if (name === "create_github_repo") {
         }
 
         if (name === "delete_file") {
-            const repo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
+            const repo = targetRepo;
             // ЖЕЛЕЗНАЯ ЗАЩИТА: main.ts и backup удалять нельзя
             if (repo === REPO_NAME && (args.path === "main.ts" || args.path.startsWith("backup/"))) {
                 return "Ошибка: удаление этого файла запрещено.";
