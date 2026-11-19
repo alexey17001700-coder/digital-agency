@@ -8,10 +8,23 @@
      1) невидимые символы (основная) — Босс их не видит вообще;
      2) <!--NEXT--> — HTML-комментарий, в чате не отображается;
      3) [[NEXT]] — обычный текст (аварийный вариант).
+
+   ПИНОК: «Слишком много шагов» или слово «Пинок» → автопилот сам
+   отправляет «разбей на задачи по шагам».
+
+   ГЛАВНОЕ ПРАВИЛО ЭТОГО ФАЙЛА:
+   «уже видел» хранится в localStorage ПО ХЕШУ текста, а НЕ в
+   data-атрибутах и НЕ в счётчиках. Атрибуты живут на элементе, а
+   чат при перерисовке (loadChat, отправка, смена чата) создаёт
+   элементы заново — метки пропадали, и автопилот повторно
+   срабатывал на СТАРЫХ сообщениях. Босс видел это как «мне
+   приплывает сообщение, хотя я его не писал».
+   Хеш = чат + текст + номер такого же сообщения по счёту.
+   Перерисовка и переключение чатов хеш не меняют → повтора нет.
    ============================================================ */
 (function () {
     const LS_ON = 'shtabAutopilotOn';
-    const LS_DONE = 'shtabAutopilotDone';   // хеши уже отработанных меток
+    const LS_DONE = 'shtabAutopilotDone';   // хеши уже отработанных сообщений
     const POLL_MS = 1200;                   // как часто смотрим чат
     const MAX_DONE = 60;
 
@@ -21,30 +34,30 @@
     const RE_COMMENT = /<!--\s*NEXT\s*-->/i;
     const RE_PLAIN = /\[\[\s*NEXT\s*\]\]/i;
 
-    // --- ПИНОК: ловим системное «Слишком много шагов. Задача прервана.» ---
-    const RE_TOOMANY = /Слишком\s+много\s+шагов/i;
-    // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — команда «разбей на задачи» ---
-    const RE_KICK_WORD = /пинок/i;
+    // --- ПИНОК: системное «Слишком много шагов. Задача прервана.» ---
+    // Якорь ^ и ограничение длины: иначе мой же отчёт, где встречаются слова
+    // «Слишком много шагов», принимался за системное сообщение и вызывал
+    // ложную отправку.
+    const RE_TOOMANY = /^\s*Слишком\s+много\s+шагов/i;
+    const MAX_TOOMANY_LEN = 120;
     const KICK_TEXT = 'разбей на задачи по шагам';
 
-    /* --- НАДЁЖНАЯ ЗАЩИТА ОТ ПЕРЕРИСОВКИ ЧАТА ---
-       Держим ссылку на последний ОБРАБОТАННЫЙ узел сообщения (lastMsgEl).
+    // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — это тоже команда «разбей на задачи» ---
+    const RE_KICK_WORD = /пинок/i;
+    const MAX_KICK_LEN = 60;
 
-       • Новое сообщение ДОБАВЛЯЕТСЯ в конец — старый узел остаётся в DOM.
-         Значит новое = всё, что появилось ПОСЛЕ lastMsgEl.
-       • Смена чата / loadChat ПЕРЕРИСОВЫВАЕТ историю (chatContainer.innerHTML='').
-         Старый узел выпадает из DOM → это перерисовка, НИЧЕГО не отправляем.
-
-       Раньше считали «сколько раз встречается слово» и сверяли currentChatId.
-       При переключении чатов счётчик прыгал 0 → N, и автопилот САМ отправлял
-       «разбей на задачи по шагам» (Босс видел это как «мне приплывает сообщение,
-       хотя я его не писал»). Теперь опираемся только на идентичность DOM-узлов —
-       это не зависит ни от счётчиков, ни от currentChatId. */
-    let lastMsgEl = null;
+    // --- ЗАЩИТА ОТ ПЕТЛИ ---
+    // Отправка «разбей на задачи» сама вызывает ответ Архитектора, который
+    // снова может закончиться «Слишком много шагов». Без паузы получалась
+    // бесконечная петля: Босс видел 5 одинаковых сообщений подряд.
+    const KICK_COOLDOWN_MS = 45000;
 
     let timer = null;
-    let busy = false;      // уже отправляем — второй раз не дёргаем
-    let waiting = 0;       // сколько циклов ждём, пока Архитектор договорит
+    let busy = false;       // уже отправляем — второй раз не дёргаем
+    let waiting = 0;        // сколько циклов ждём, пока Архитектор договорит
+    let lastKickAt = 0;     // когда последний раз отправляли «разбей на задачи»
+    let lastChatId = null;  // какой чат открыт сейчас
+    let lastMsgCount = -1;  // сколько сообщений было в прошлый тик
 
     function isOn() { return localStorage.getItem(LS_ON) !== 'off'; }
 
@@ -88,12 +101,83 @@
         while (list.length > MAX_DONE) list.shift();
         localStorage.setItem(LS_DONE, JSON.stringify(list));
     }
+    function isDone(h) { return doneList().indexOf(h) !== -1; }
+
+    function box() { return document.getElementById('chatContainer'); }
+
+    // Какой чат открыт сейчас. Если переменной нет — общий ключ '_'.
+    function chatKey() {
+        return (typeof currentChatId !== 'undefined' && currentChatId) ? String(currentChatId) : '_';
+    }
+
+    /* Устойчивый хеш: чат + текст + номер такого же сообщения по счёту.
+       При перерисовке чата порядок сообщений не меняется → хеш тот же →
+       повторной отправки нет. Два одинаковых сообщения Босса при этом
+       остаются разными (n = 1 и 2). */
+    function scan(sel, re, maxLen, tag) {
+        const b = box();
+        if (!b) return [];
+        const out = [];
+        const seen = {};
+        b.querySelectorAll(sel).forEach(function (el) {
+            const txt = (el.innerText || '').replace(/\s+/g, ' ').trim();
+            if (!re.test(txt) || txt.length > maxLen) return;
+            seen[txt] = (seen[txt] || 0) + 1;
+            out.push({ el: el, hash: hash(tag + '|' + chatKey() + '|' + txt + '|' + seen[txt]) });
+        });
+        return out;
+    }
+
+    // Все сообщения Босса со словом «Пинок».
+    function scanBossKicks() { return scan('.chat-msg.msg-boss', RE_KICK_WORD, MAX_KICK_LEN, 'kick'); }
+
+    // Все системные «Слишком много шагов».
+    function scanTooMany() { return scan('.chat-msg.msg-director', RE_TOOMANY, MAX_TOOMANY_LEN, 'many'); }
+
+    // Первое сообщение из списка, чей хеш ещё не отработан.
+    function firstNew(list) {
+        for (let i = 0; i < list.length; i++) if (!isDone(list[i].hash)) return list[i];
+        return null;
+    }
+
+    // Помечаем всё, что уже есть в чате, как «виденное» — молча.
+    function primeSeen() {
+        scanBossKicks().forEach(function (m) { markDone(m.hash); });
+        scanTooMany().forEach(function (m) { markDone(m.hash); });
+        const b = box();
+        if (!b) return;
+        // Метку «дальше» из истории тоже считаем отработанной — иначе при
+        // переключении чата автопилот отправит «дальше» в чужой чат.
+        b.querySelectorAll('.chat-msg.msg-director').forEach(function (el) {
+            const txt = el.innerText || '';
+            const html = el.innerHTML || '';
+            if (RE_ZW.test(txt) || RE_COMMENT.test(html) || RE_PLAIN.test(txt)) {
+                const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
+                markDone(hash(clean.slice(-400)));
+            }
+        });
+    }
+
+    // Переключили чат или чат очистили — история принимается как «виденная».
+    function checkChatSwitch() {
+        const b = box();
+        if (!b) return false;
+        const id = chatKey();
+        const count = b.querySelectorAll('.chat-msg').length;
+        if (id !== lastChatId || count < lastMsgCount) {
+            lastChatId = id; lastMsgCount = count;
+            primeSeen();
+            return true;
+        }
+        lastMsgCount = count;
+        return false;
+    }
 
     // Ищем метку только в ответах Архитектора (msg-director), не в своих сообщениях
     function findSignal() {
-        const box = document.getElementById('chatContainer');
-        if (!box) return null;
-        const msgs = box.querySelectorAll('.chat-msg.msg-director');
+        const b = box();
+        if (!b) return null;
+        const msgs = b.querySelectorAll('.chat-msg.msg-director');
         for (let i = msgs.length - 1; i >= 0; i--) {
             const el = msgs[i];
             const html = el.innerHTML || '';
@@ -101,54 +185,10 @@
             if (!RE_ZW.test(txt) && !RE_COMMENT.test(html) && !RE_PLAIN.test(txt)) continue;
             const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
             const h = hash(clean.slice(-400));
-            if (doneList().indexOf(h) !== -1) return null;   // уже отработано
+            if (isDone(h)) return null;   // уже отработано
             return { el: el, hash: h, text: clean };
         }
         return null;
-    }
-
-    /* Возвращает только НОВЫЕ сообщения (появившиеся после lastMsgEl).
-       При перерисовке истории возвращает { rerender: true } и ничего не отдаёт. */
-    function scanMessages() {
-        const box = document.getElementById('chatContainer');
-        if (!box) return { fresh: [], rerender: false };
-        const msgs = Array.prototype.slice.call(box.querySelectorAll('.chat-msg'));
-        if (msgs.length === 0) return { fresh: [], rerender: false };
-
-        // Перерисовка: последний обработанный узел больше не в контейнере.
-        if (lastMsgEl && !box.contains(lastMsgEl)) {
-            lastMsgEl = msgs[msgs.length - 1];
-            return { fresh: [], rerender: true };
-        }
-
-        // Новые сообщения — только те, что идут после lastMsgEl.
-        let fresh = [];
-        if (lastMsgEl) {
-            const idx = msgs.indexOf(lastMsgEl);
-            if (idx !== -1) fresh = msgs.slice(idx + 1);
-        }
-        lastMsgEl = msgs[msgs.length - 1];
-        return { fresh: fresh, rerender: false };
-    }
-
-    // Помечаем всю текущую историю как «виденную» — молча, без отправки.
-    // Метки «дальше» из истории тоже считаем отработанными, иначе при смене
-    // чата автопилот отправит «дальше» в чужой чат.
-    function primeAll() {
-        const box = document.getElementById('chatContainer');
-        if (!box) return;
-        const dirs = box.querySelectorAll('.chat-msg.msg-director');
-        for (let i = 0; i < dirs.length; i++) {
-            const el = dirs[i];
-            const txt = el.innerText || '';
-            const html = el.innerHTML || '';
-            if (RE_ZW.test(txt) || RE_COMMENT.test(html) || RE_PLAIN.test(txt)) {
-                const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
-                markDone(hash(clean.slice(-400)));
-            }
-        }
-        const all = box.querySelectorAll('.chat-msg');
-        lastMsgEl = all.length ? all[all.length - 1] : null;
     }
 
     function sendText(text) {
@@ -160,38 +200,49 @@
         } catch (e) { log('Сбой отправки: ' + e.message); }
     }
 
+    // Прошло ли достаточно времени с последнего пинка.
+    function kickReady() { return (Date.now() - lastKickAt) > KICK_COOLDOWN_MS; }
+
+    function fire(reason) {
+        busy = true; waiting = 0; lastKickAt = Date.now();
+        log(reason + ' → отправляю «' + KICK_TEXT + '»');
+        sendText(KICK_TEXT);
+        setTimeout(function () { busy = false; }, 4000);
+    }
+
     function tick() {
         if (!isOn() || busy) return;
 
-        const scan = scanMessages();
+        // 0) СМЕНИЛИ ЧАТ — история это не команда, просто помечаем её.
+        if (checkChatSwitch()) { waiting = 0; return; }
 
-        // 0) ПЕРЕРИСОВКА (смена чата / loadChat) — история это НЕ команда.
-        if (scan.rerender) { waiting = 0; return; }
+        const tooMany = firstNew(scanTooMany());
+        const kick = firstNew(scanBossKicks());
 
-        // Нет новых сообщений — делать нечего.
-        if (scan.fresh.length === 0) { waiting = 0; return; }
-
-        // 1) Ищем команду ТОЛЬКО среди новых сообщений:
-        //    «Пинок» словом (от Босса) или «Слишком много шагов» (система).
-        let kickEl = null, tooManyEl = null;
-        for (let i = 0; i < scan.fresh.length; i++) {
-            const el = scan.fresh[i];
-            const txt = el.innerText || '';
-            if (el.classList.contains('msg-boss') && RE_KICK_WORD.test(txt)) { kickEl = el; break; }
-            if (el.classList.contains('msg-director') && RE_TOOMANY.test(txt)) { tooManyEl = el; break; }
-        }
-
-        if (tooManyEl || kickEl) {
-            if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
-            busy = true; waiting = 0;
-            log(tooManyEl ? 'Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»'
-                          : 'Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
-            sendText(KICK_TEXT);
-            setTimeout(function () { busy = false; }, 4000);
+        // Команда есть, но Архитектор ещё печатает — ждём, хеш не помечаем.
+        if ((tooMany || kick) && typeof isGenerating !== 'undefined' && isGenerating) {
+            waiting++;
+            if (waiting === 1) log('Команда найдена, жду окончания ответа...');
             return;
         }
 
-        // 2) МЕТКА — обычный шаг (повтор отсекает doneList).
+        // 1) ПИНОК — задача развалилась на «слишком много шагов»
+        if (tooMany) {
+            markDone(tooMany.hash);          // гасим сразу, иначе петля
+            if (!kickReady()) { log('Пинок уже отправлялся — пауза, второй раз не шлю'); return; }
+            fire('Поймал «слишком много шагов»');
+            return;
+        }
+
+        // 1б) ПИНОК СЛОВОМ — Босс написал «Пинок»
+        if (kick) {
+            markDone(kick.hash);
+            if (!kickReady()) { log('Пинок уже отправлялся — пауза, второй раз не шлю'); return; }
+            fire('Босс сказал «Пинок»');
+            return;
+        }
+
+        // 2) МЕТКА — обычный шаг
         const sig = findSignal();
         if (!sig) { waiting = 0; return; }
 
@@ -217,7 +268,10 @@
         if (b) b.onclick = toggle;
         if (timer) clearInterval(timer);
         // Стартовая история чата — не команда: помечаем молча.
-        primeAll();
+        primeSeen();
+        const bb = box();
+        lastMsgCount = bb ? bb.querySelectorAll('.chat-msg').length : 0;
+        lastChatId = chatKey();
         timer = setInterval(tick, POLL_MS);
         log('Автопилот на связи. Слежу за чатом (без GitHub).');
     }
