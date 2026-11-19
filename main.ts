@@ -1017,7 +1017,6 @@ Deno.serve(async (request) => {
         }
 
         if (body.scanRepo) {
-            if (!isBoss) return json({ success: false, error: "🔒 Скан кода доступен только с ключом Администратора." }, 403);
             return await scanRepoFiles();
         }
 
