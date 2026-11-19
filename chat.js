@@ -87,32 +87,9 @@ Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL). Синхро
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
 
-/* --- СКРЫТЫЙ ВХОД В РЕЖИМ БОССА (🔑 над списком чатов) --- */
-const BOSS_PIN = '8452';
-function isBossMode() { return localStorage.getItem('shtab_boss') === 'true'; }
-function paintBossKey() {
-    const btn = document.getElementById('bossKeyBtn');
-    if (!btn) return;
-    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
-    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
-}
-function toggleBossMode() {
-    if (isBossMode()) {
-        if (confirm('Выйти из режима Босса?')) {
-            localStorage.removeItem('shtab_boss');
-            paintBossKey();
-            alert('Режим Босса выключен');
-        }
-        return;
-    }
-    const pin = prompt('Введите пин-код Администратора:');
-    if (pin === null) return;
-    if (pin.trim() === BOSS_PIN) {
-        localStorage.setItem('shtab_boss', 'true');
-        paintBossKey();
-        alert('Режим Босса активирован!');
-    } else { alert('Неверный код'); }
-}
+/* --- РЕЖИМ БОССА: ВКЛЮЧЁН ВСЕГДА ---
+   Скрытый вход 🔑 с пин-кодом убран. Штаб всегда работает в режиме Босса,
+   без пароля и без переключений. */
 
 function renderChatList() {
     chatListEl.innerHTML = '';
