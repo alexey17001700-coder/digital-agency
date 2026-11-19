@@ -764,8 +764,7 @@ if (name === "create_github_repo") {
 
         if (name === "list_repo_files") {
             try {
-                const targetRepoList = args.repo || REPO_NAME;
-                const res = await gitAPI("contents/", "GET", null, targetRepoList);
+                const res = await gitAPI("contents/", "GET", null, targetRepo);
                 if (!Array.isArray(res)) return "Не удалось получить список файлов.";
                 return res.filter((f: any) => f.type === "file").map((f: any) => `- ${f.name}`).join("\n");
             } catch (e: any) { return `Ошибка: ${e.message}`; }
