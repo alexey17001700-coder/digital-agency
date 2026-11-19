@@ -998,8 +998,8 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
                 if (!isBoss && ["write_file", "replace_in_file", "delete_file"].includes(fnName)) {
                     const asked = String(fnArgs?.repo || "").trim();
                     if (!asked || isOldRepo(asked)) {
-                        const own = await findGuestRepo();
-                        if (own) fnArgs.repo = own;
+                        // Рабочая папка гостя гарантированно существует: нет — создадим.
+                        fnArgs.repo = await ensureGuestRepo();
                     }
                 }
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
