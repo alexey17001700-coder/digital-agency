@@ -104,6 +104,19 @@
         return m ? m.length : 0;
     }
 
+    // Считаем «Пинок» ТОЛЬКО в сообщениях Босса: свои ответы не считаем,
+    // иначе Архитектор зациклит сам себя.
+    function countBossKick() {
+        const box = document.getElementById('chatContainer');
+        if (!box) return 0;
+        let n = 0;
+        box.querySelectorAll('.chat-msg.msg-boss').forEach(function (el) {
+            const m = (el.innerText || '').match(RE_KICK_WORD);
+            if (m) n += m.length;
+        });
+        return n;
+    }
+
     function sendText(text) {
         const input = document.getElementById('chatInput');
         if (input) { input.value = text; input.style.height = 'auto'; }
