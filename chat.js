@@ -93,8 +93,12 @@ function toggleSidebar() { document.getElementById('sidebar').classList.toggle('
    Гостевой режим удалён (build 41): он держался на флаге в браузере,
    прав гостю всё равно не хватало, а дыр в защите добавлял.
    Без ключа — локальный ИИ без инструментов, писать он не умеет. */
-const BOSS_PIN = '8452';
-function isBossMode() { return localStorage.getItem('shtab_boss') === 'true'; }
+/* Ключ Администратора живёт ТОЛЬКО на сервере (переменная окружения BOSS_KEY).
+   В этом файле его больше нет — исходник страницы читает любой желающий.
+   Клиент отправляет ключ один раз на ручку verifyKey и получает токен сессии.
+   Режим Босса определяется наличием токена, а не флагом в браузере. */
+function bossToken() { return localStorage.getItem('shtab_boss_token') || ''; }
+function isBossMode() { return !!bossToken(); }
 function paintBossKey() {
     const btn = document.getElementById('bossKeyBtn');
     if (!btn) return;
