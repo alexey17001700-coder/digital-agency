@@ -790,7 +790,7 @@ if (name === "create_github_repo") {
         }
 
         if (name === "enable_github_pages") {
-            const repo = args.repo || REPO_NAME;
+            const repo = targetRepo;
             try {
                 const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}/pages`, {
                     method: "POST",
