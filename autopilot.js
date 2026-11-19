@@ -11,9 +11,9 @@
    ============================================================ */
 (function () {
     const LS_ON = 'shtabAutopilotOn';
-    const LS_DONE = 'shtabAutopilotDone';   // хеши уже отработанных сообщений
+    const LS_DONE = 'shtabAutopilotDone';   // хеши уже отработанных меток
     const POLL_MS = 1200;                   // как часто смотрим чат
-    const MAX_DONE = 30;
+    const MAX_DONE = 60;
 
     // Невидимая метка: word-joiner + zero-width space (в тексте не видно)
     const ZW = '\u2060\u200B\u2060\u200B\u2060';
@@ -22,18 +22,25 @@
     const RE_PLAIN = /\[\[\s*NEXT\s*\]\]/i;
 
     // --- ПИНОК: ловим системное «Слишком много шагов. Задача прервана.» ---
-    // ВАЖНО: реагируем только на НОВЫЕ сообщения (см. счётчики ниже), а не
-    // на всё, что есть в чате. Раньше счёт шёл по всему контейнеру, и при
-    // перерисовке чата автопилот считал старые сообщения новыми и САМ
-    // отправлял «разбей на задачи по шагам».
     const RE_TOOMANY = /Слишком\s+много\s+шагов/i;
+    // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — команда «разбей на задачи» ---
+    const RE_KICK_WORD = /пинок/i;
     const KICK_TEXT = 'разбей на задачи по шагам';
 
-    // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — это тоже команда «разбей на задачи» ---
-    const RE_KICK_WORD = /пинок/i;
+    /* --- НАДЁЖНАЯ ЗАЩИТА ОТ ПЕРЕРИСОВКИ ЧАТА ---
+       Держим ссылку на последний ОБРАБОТАННЫЙ узел сообщения (lastMsgEl).
 
-    // «Уже обработано» считаем по счётчикам на каждый чат (см. ниже) —
-    // data-атрибуты больше не нужны, они терялись при перерисовке чата.
+       • Новое сообщение ДОБАВЛЯЕТСЯ в конец — старый узел остаётся в DOM.
+         Значит новое = всё, что появилось ПОСЛЕ lastMsgEl.
+       • Смена чата / loadChat ПЕРЕРИСОВЫВАЕТ историю (chatContainer.innerHTML='').
+         Старый узел выпадает из DOM → это перерисовка, НИЧЕГО не отправляем.
+
+       Раньше считали «сколько раз встречается слово» и сверяли currentChatId.
+       При переключении чатов счётчик прыгал 0 → N, и автопилот САМ отправлял
+       «разбей на задачи по шагам» (Босс видел это как «мне приплывает сообщение,
+       хотя я его не писал»). Теперь опираемся только на идентичность DOM-узлов —
+       это не зависит ни от счётчиков, ни от currentChatId. */
+    let lastMsgEl = null;
 
     let timer = null;
     let busy = false;      // уже отправляем — второй раз не дёргаем
@@ -76,6 +83,7 @@
     }
     function markDone(h) {
         const list = doneList();
+        if (list.indexOf(h) !== -1) return;
         list.push(h);
         while (list.length > MAX_DONE) list.shift();
         localStorage.setItem(LS_DONE, JSON.stringify(list));
@@ -99,38 +107,48 @@
         return null;
     }
 
-    /* --- «УЖЕ ОБРАБОТАНО» ПО СЧЁТЧИКАМ НА КАЖДЫЙ ЧАТ ---
-       Раньше «виденное» помечалось data-атрибутами на самих сообщениях.
-       Но loadChat() перерисовывает чат: элементы создаются заново, метки
-       терялись. checkChatSwitch этого не замечал (id и число сообщений те же),
-       и автопилот СНОВА находил старое «Слишком много шагов» / «Пинок» —
-       и сам отправлял «разбей на задачи по шагам». Босс видел это как
-       «сообщение приплывает, хотя я его не писал».
-       Теперь считаем, сколько сообщений Босса и Архитектора уже обработано
-       в КАЖДОМ чате, и храним это в localStorage. Перерисовка счётчики не
-       меняет — повторной реакции нет. Новое сообщение счётчик увеличивает —
-       реакция ровно одна. */
-    const LS_PROC = 'shtabAutopilotProc';
-    function loadProc() { try { return JSON.parse(localStorage.getItem(LS_PROC) || '{}'); } catch (e) { return {}; } }
-    function saveProc(o) { try { localStorage.setItem(LS_PROC, JSON.stringify(o)); } catch (e) {} }
-
-    function chatCounts() {
+    /* Возвращает только НОВЫЕ сообщения (появившиеся после lastMsgEl).
+       При перерисовке истории возвращает { rerender: true } и ничего не отдаёт. */
+    function scanMessages() {
         const box = document.getElementById('chatContainer');
-        if (!box) return { boss: 0, director: 0 };
-        return {
-            boss: box.querySelectorAll('.chat-msg.msg-boss').length,
-            director: box.querySelectorAll('.chat-msg.msg-director').length
-        };
+        if (!box) return { fresh: [], rerender: false };
+        const msgs = Array.prototype.slice.call(box.querySelectorAll('.chat-msg'));
+        if (msgs.length === 0) return { fresh: [], rerender: false };
+
+        // Перерисовка: последний обработанный узел больше не в контейнере.
+        if (lastMsgEl && !box.contains(lastMsgEl)) {
+            lastMsgEl = msgs[msgs.length - 1];
+            return { fresh: [], rerender: true };
+        }
+
+        // Новые сообщения — только те, что идут после lastMsgEl.
+        let fresh = [];
+        if (lastMsgEl) {
+            const idx = msgs.indexOf(lastMsgEl);
+            if (idx !== -1) fresh = msgs.slice(idx + 1);
+        }
+        lastMsgEl = msgs[msgs.length - 1];
+        return { fresh: fresh, rerender: false };
     }
 
-    // Последние n элементов по селектору (новые сообщения всегда в конце).
-    function lastN(sel, n) {
+    // Помечаем всю текущую историю как «виденную» — молча, без отправки.
+    // Метки «дальше» из истории тоже считаем отработанными, иначе при смене
+    // чата автопилот отправит «дальше» в чужой чат.
+    function primeAll() {
         const box = document.getElementById('chatContainer');
-        if (!box || n <= 0) return [];
-        const all = box.querySelectorAll(sel);
-        const out = [];
-        for (let i = Math.max(0, all.length - n); i < all.length; i++) out.push(all[i]);
-        return out;
+        if (!box) return;
+        const dirs = box.querySelectorAll('.chat-msg.msg-director');
+        for (let i = 0; i < dirs.length; i++) {
+            const el = dirs[i];
+            const txt = el.innerText || '';
+            const html = el.innerHTML || '';
+            if (RE_ZW.test(txt) || RE_COMMENT.test(html) || RE_PLAIN.test(txt)) {
+                const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
+                markDone(hash(clean.slice(-400)));
+            }
+        }
+        const all = box.querySelectorAll('.chat-msg');
+        lastMsgEl = all.length ? all[all.length - 1] : null;
     }
 
     function sendText(text) {
@@ -145,65 +163,37 @@
     function tick() {
         if (!isOn() || busy) return;
 
-        const id = (typeof currentChatId !== 'undefined' && currentChatId) ? currentChatId : '_';
-        const c = chatCounts();
+        const scan = scanMessages();
 
-        // Чат ещё не отрисован (пустой контейнер) — не трогаем.
-        if (c.boss === 0 && c.director === 0) { waiting = 0; return; }
+        // 0) ПЕРЕРИСОВКА (смена чата / loadChat) — история это НЕ команда.
+        if (scan.rerender) { waiting = 0; return; }
 
-        const proc = loadProc();
-        const prev = proc[id];
+        // Нет новых сообщений — делать нечего.
+        if (scan.fresh.length === 0) { waiting = 0; return; }
 
-        // Первый раз видим этот чат — просто запоминаем, без реакции.
-        if (!prev) { proc[id] = c; saveProc(proc); waiting = 0; return; }
-
-        // Перерисовка/удаление сообщений — счётчики уменьшились. Перезапоминаем.
-        if (c.boss < prev.boss || c.director < prev.director) { proc[id] = c; saveProc(proc); waiting = 0; return; }
-
-        const newBoss = c.boss - prev.boss;
-        const newDir = c.director - prev.director;
-
-        // Новые сообщения (всегда в конце списка) — ищем среди них команды.
+        // 1) Ищем команду ТОЛЬКО среди новых сообщений:
+        //    «Пинок» словом (от Босса) или «Слишком много шагов» (система).
         let kickEl = null, tooManyEl = null;
-        if (newBoss > 0) lastN('.chat-msg.msg-boss', newBoss).forEach(function (el) {
-            if (!kickEl && RE_KICK_WORD.test(el.innerText || '')) kickEl = el;
-        });
-        if (newDir > 0) lastN('.chat-msg.msg-director', newDir).forEach(function (el) {
-            if (!tooManyEl && RE_TOOMANY.test(el.innerText || '')) tooManyEl = el;
-        });
-
-        // Есть команда, но Архитектор ещё печатает — ждём, счётчики не двигаем.
-        if ((kickEl || tooManyEl) && typeof isGenerating !== 'undefined' && isGenerating) {
-            waiting++;
-            if (waiting === 1) log('Команда найдена, жду окончания ответа...');
-            return;
+        for (let i = 0; i < scan.fresh.length; i++) {
+            const el = scan.fresh[i];
+            const txt = el.innerText || '';
+            if (el.classList.contains('msg-boss') && RE_KICK_WORD.test(txt)) { kickEl = el; break; }
+            if (el.classList.contains('msg-director') && RE_TOOMANY.test(txt)) { tooManyEl = el; break; }
         }
 
-        // Фиксируем состояние: новых команд больше не будет.
-        proc[id] = c; saveProc(proc);
-        waiting = 0;
-
-        // 1) ПИНОК — задача развалилась на «слишком много шагов»
-        if (tooManyEl) {
-            busy = true;
-            log('Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»');
+        if (tooManyEl || kickEl) {
+            if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
+            busy = true; waiting = 0;
+            log(tooManyEl ? 'Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»'
+                          : 'Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
             return;
         }
 
-        // 1б) ПИНОК СЛОВОМ — Босс написал «Пинок»
-        if (kickEl) {
-            busy = true;
-            log('Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
-            sendText(KICK_TEXT);
-            setTimeout(function () { busy = false; }, 4000);
-            return;
-        }
-
-        // 2) МЕТКА — обычный шаг
+        // 2) МЕТКА — обычный шаг (повтор отсекает doneList).
         const sig = findSignal();
-        if (!sig) return;
+        if (!sig) { waiting = 0; return; }
 
         // Архитектор ещё печатает или думает — ждём, метка никуда не денется
         if (typeof isGenerating !== 'undefined' && isGenerating) {
@@ -213,6 +203,7 @@
         }
 
         busy = true;
+        waiting = 0;
         markDone(sig.hash);
         const step = (sig.text.match(/ШАГ\s*(\d+)/i) || [])[1];
         log('Метка поймана' + (step ? ' (шаг ' + step + ')' : '') + ' → отправляю «дальше»');
@@ -225,8 +216,8 @@
         const b = document.getElementById('autopilotBtn');
         if (b) b.onclick = toggle;
         if (timer) clearInterval(timer);
-        // Стартовое состояние чата — не команда: первый тик просто запомнит
-        // счётчики (см. tick), без отправки.
+        // Стартовая история чата — не команда: помечаем молча.
+        primeAll();
         timer = setInterval(tick, POLL_MS);
         log('Автопилот на связи. Слежу за чатом (без GitHub).');
     }
