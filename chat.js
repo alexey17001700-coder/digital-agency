@@ -677,7 +677,11 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
         }
-                if (hasAnyKeys) {
+                // ГОСТЕВОЙ КЛЮЧ: раньше без своих API-ключей гость уходил в локальный ИИ
+                // (без инструментов) и отвечал «я не могу писать код». Теперь при введённом
+                // ключе Администратора ИЛИ гостевом ключе запрос идёт на сервер — у него
+                // есть ключ ZVENO и все инструменты. Права сервер выдаёт по isBoss.
+                if (hasAnyKeys || localStorage.getItem('shtab_boss') === 'true' || localStorage.getItem('shtab_guest') === 'true') {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
