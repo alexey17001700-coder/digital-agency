@@ -383,9 +383,10 @@
     // начинает мигать, в шапке появляется бейдж «⬆ ОБНОВЛЕНИЕ», телефон вибрирует.
     // Фолбэк: если version.json нет — следим за ETag app.html.
     (function () {
-        const CHECK_MS = 30000;
+        const CHECK_MS = 15000;
         let currentBuild = null;
         let notified = false;
+        const SEEN_KEY = 'shtabSeenBuild';
 
         async function fetchBuild() {
             try {
