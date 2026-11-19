@@ -617,6 +617,11 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
             return `Ошибка: без ключа Администратора менять старый проект "${targetRepo}" запрещено — только чтение. Ты УМЕЕШЬ писать код: вызови create_github_repo (создай НОВЫЙ репозиторий), а затем write_file / replace_in_file с полем repo = имя ЭТОГО нового репозитория. Не отвечай «я не могу писать код» — это неверно.`;
         }
 
+        // Журнал проделанной работы заполняет только Архитектор с ключом. Читать — можно всем.
+        if (!isBoss && name === "remember_step") {
+            return "Ошибка: журнал проделанной работы заполняет только Архитектор с ключом Администратора. Читать журнал можно всегда — read_worklog.";
+        }
+
         if (name === "read_file") {
             if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
             const content = await getFileContent(args.path, targetRepo);
