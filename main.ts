@@ -871,7 +871,9 @@ Deno.serve(async (request) => {
     try {
         // СТАРЫЕ РУЧКИ (БЭКАПЫ)
         if (body.isBackup || body.isRollback) {
-            if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
+            // Токен берётся ТОЛЬКО из переменной окружения сервера. У пользователя не спрашиваем.
+            if (!GITHUB_TOKEN) return json({ success: false, error: "Токен GitHub не задан на сервере" }, 500);
+            if (!REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
             return await handleBackup(body);
         }
 
