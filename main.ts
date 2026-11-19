@@ -983,14 +983,8 @@ Deno.serve(async (request) => {
     try { body = await request.json(); } catch { return json({ success: false, error: "Некорректный JSON" }, 400); }
 
     try {
-        // 🔓 Пароли убраны — ключ не проверяется, доступ открыт.
-        if (body.verifyKey) return json({ success: true, token: "" });
-
-        const isBoss = true;
-
-        // СТАРЫЕ РУЧКИ (БЭКАПЫ) — только с ключом Администратора
+        // РУЧКИ БЭКАПА И ОТКАТА
         if (body.isBackup || body.isRollback) {
-            if (!isBoss) return json({ success: false, error: "🔒 Бэкап и откат доступны только с ключом Администратора." }, 403);
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
             return await handleBackup(body);
         }
