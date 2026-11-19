@@ -5,7 +5,6 @@ const REPO_NAME = Deno.env.get("GITHUB_REPO") || "digital-agency";
 
 const ZVENO_URL = "https://api.zveno.ai/v1/chat/completions";
 const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
-const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 // =========================================
 // 🔓 ДОСТУП ОТКРЫТ (по приказу Босса)
