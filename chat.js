@@ -740,6 +740,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             // Таймер пинка НЕ снимаем: если ответа так и нет — autoKick сработает сам.
 
         if (success) {
+            gotAnswer = true; clearTimeout(autoKickTimer); autoKickTimer = null;
             playSound('receive'); 
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
