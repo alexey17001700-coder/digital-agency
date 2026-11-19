@@ -466,7 +466,7 @@
         // Администратора». Свежий кадр сверяет метку сборки оболочки с version.json
         // и, если оболочка старая (или метки нет вовсе), жёстко перезагружает её
         // в обход кэша. Один раз — флаг в sessionStorage, петли нет.
-        const SHELL_BUILD = 55;
+        const SHELL_BUILD = 56;
         (function () {
             const KEY = 'shtabShellHealBuild';
             if (window.parent === window) return; // кадр открыт отдельно — оболочки нет
