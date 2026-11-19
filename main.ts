@@ -459,7 +459,7 @@ const TOOLS = [
         type: "function",
         function: {
             name: "create_github_repo",
-            description: "Создает новый репозиторий на GitHub — твою рабочую папку для приложения. Доступно ВСЕМ, в том числе гостю без ключа Администратора. Создал — пиши в него файлы через write_file с полем repo = имя этого репозитория.",
+            description: "Создает новый репозиторий на GitHub — рабочую папку для приложения. Создал — пиши в него файлы через write_file с полем repo = имя этого репозитория.",
             parameters: {
                 type: "object",
                 properties: {
