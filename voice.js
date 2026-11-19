@@ -564,6 +564,9 @@ function openVoiceLab2() {
 function injectVoiceLab() {
     const _oldBtn = document.getElementById('vlabBtn');
     if (_oldBtn) _oldBtn.remove();
+    // Плавающая кнопка 🎛 под кнопкой отправки убрана по приказу Босса.
+    const _oldBtn2 = document.getElementById('vlabBtn2');
+    if (_oldBtn2) _oldBtn2.remove();
     if (document.getElementById('vlabBtn2')) { window.openVoiceLab = openVoiceLab2; return; }
     if (!document.getElementById('vlabCss2')) {
         const st = document.createElement('style');
