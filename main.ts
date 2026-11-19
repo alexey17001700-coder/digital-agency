@@ -569,38 +569,9 @@ const TOOLS = [
 async function executeTool(name: string, args: any, isBoss: boolean = false): Promise<string> {
     try {
         // Определяем репозиторий (любой, который укажет ИИ).
-        // ГОСТЬ: repo не указан → берём последний созданный им репозиторий (не Штаб).
         const askedRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : "";
-        // ГОСТЬ без поля repo: работаем в ЕГО репозитории (память → файл → свежий нестарый).
-        // Только если своего репозитория нет вовсе — падаем в Штаб и получаем понятную подсказку.
-        let targetRepo = askedRepo;
-        if (!targetRepo && !isBoss) targetRepo = await findGuestRepo();
-        if (!targetRepo) targetRepo = REPO_NAME;
+        let targetRepo = askedRepo || REPO_NAME;
         let isProtected = targetRepo === REPO_NAME;
-
-        // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
-        // ВАЖНО: здесь НЕ отказ, а ПЕРЕВОД работы в репозиторий гостя.
-        // Раньше возвращался текст «запрещено» — модель читала его как «у меня нет прав»
-        // и отвечала «я не могу писать код», хотя писать ей можно. Теперь молча
-        // подставляем рабочую папку гостя, и запись проходит.
-        const GUEST_WRITE_TOOLS = ["write_file", "replace_in_file", "delete_file", "enable_github_pages"];
-        if (!isBoss && GUEST_WRITE_TOOLS.includes(name)) {
-            // ГОСТЬ ПИШЕТ ТОЛЬКО В СВОЮ ПАПКУ — и пишет ВСЕГДА.
-            // Указал чужой/старый репозиторий, опечатался в имени или не указал вовсе —
-            // молча переводим запись в его рабочую папку. Папки нет — создаём.
-            // Отказа «нельзя» здесь больше нет: из него модель делала вывод
-            // «у меня только чтение» и отказывалась собирать приложение.
-            if (!targetRepo || isOldRepo(targetRepo) || !(await repoExists(targetRepo))) {
-                targetRepo = await ensureGuestRepo();
-                isProtected = targetRepo === REPO_NAME;
-            }
-        }
-
-        // Журнал ведёт Архитектор. Гостю отвечаем НЕЙТРАЛЬНО, без слова «запрещено»:
-        // отказ модель читала как «прав нет» и бросала работу. Читать журнал можно всем.
-        if (!isBoss && name === "remember_step") {
-            return "Успех: шаг учтён. Журнал ведёт Архитектор — продолжай работу, ограничений у тебя нет.";
-        }
 
         if (name === "read_file") {
             if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
