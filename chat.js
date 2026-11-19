@@ -776,7 +776,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (success) {
             playSound('receive'); 
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
-            if (fileMatch && isAutoMode) {
+            if (fileMatch && isAutoMode && isBossMode()) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
