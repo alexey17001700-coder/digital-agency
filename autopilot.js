@@ -26,6 +26,10 @@
     const RE_TOOMANY = /Слишком\s+много\s+шагов/gi;
     const KICK_TEXT = 'разбей на задачи по шагам';
 
+    // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — это тоже команда «разбей на задачи» ---
+    const LS_KICK2 = 'shtabAutopilotKick2Count';
+    const RE_KICK_WORD = /пинок/gi;
+
     let timer = null;
     let busy = false;      // уже отправляем — второй раз не дёргаем
     let waiting = 0;       // сколько циклов ждём, пока Архитектор договорит
