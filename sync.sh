@@ -21,6 +21,11 @@ REPO="alexey17001700-coder/digital-agency"
 BASE="https://raw.githubusercontent.com/${REPO}/main"
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# Если скрипт запущен из копии в другом месте (например ~/sync.sh),
+# всё равно работаем с настоящей папкой Штаба.
+if [ ! -f "$DIR/main.ts" ] && [ -f "$HOME/digital-agency/main.ts" ]; then
+  DIR="$HOME/digital-agency"
+fi
 LOCK="$DIR/sync.lock"
 
 # Весь фронтенд Штаба + сервер. Порядок не важен.
