@@ -182,7 +182,7 @@
         }
         function safeUnlocked() { const act = document.getElementById('safe-actions'); return !!act && act.classList.contains('unlocked'); }
         async function triggerBackup() { if (!safeUnlocked()) { alert("🔒 Сейф закрыт. Введи код Босса."); return; } if (!confirm("💾 Сохранить эталон?")) return; toggleMenu(); try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true, isBoss: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
-        async function triggerRollback() { if (!safeUnlocked()) { alert("🔒 Сейф закрыт. Введи код Босса."); return; } if (!confirm("⚠️ Откатить Штаб?")) return; toggleMenu(); try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerRollback() { if (!safeUnlocked()) { alert("🔒 Сейф закрыт. Введи код Босса."); return; } if (!confirm("⚠️ Откатить Штаб?")) return; toggleMenu(); try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true, isBoss: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
     </script>
 </body>
 </html>
