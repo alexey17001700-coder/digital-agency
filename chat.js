@@ -653,10 +653,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
-        let isBossSecret = false;
-        if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
-            hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
-        }
                 // Ключ Администратора ИЛИ свои API-ключи — запрос идёт на сервер
                 // (у него есть ключ ZVENO и все инструменты).
                 if (hasAnyKeys || localStorage.getItem('shtab_boss') === 'true') {
