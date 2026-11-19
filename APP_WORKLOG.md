@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 50 — Бэкап и откат Штаба переведены с сервера Vivo на прямые запросы к GitHub API из браузера (ghAPI/ghBackup, токен в localStorage). Запрос на сервер (isBackup/isRollback) убран — серверный замок «только с ключом администратора» больше не мешает. Файлы: index.html, version.json
+
 - 49 — Найдена причина «Бекап и откат доступны только с ключем администратора»: сервер на Vivo (старый main.ts) требует флаг isBoss в запросах бэкапа/отката. В triggerBackup и triggerRollback добавлен isBoss:true в тело запроса. build 48 → 49. Файлы: index.html, version.json
 
 - 48 — Починен сейф Штаба: клавиатура переведена на делегирование кликов (data-k + type=button, перехват на document) — цифры теперь вводятся всегда; в triggerBackup/triggerRollback проверка safeUnlocked() перенесена ДО toggleMenu() (раньше закрытие меню сбрасывало сейф и кнопки отвечали «Сейф закрыт»). Файлы: index.html, version.json
