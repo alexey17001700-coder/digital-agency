@@ -1116,7 +1116,7 @@ Deno.serve(async (request) => {
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image);
             } else {
-                aiText = await callZvenoAI(body.messages, userKeys, body.isBoss === true);
+                aiText = await callZvenoAI(body.messages, userKeys, isBoss);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });
