@@ -794,7 +794,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
         } else {
-            renderMessage('⚙️ *[Система: API-ключи не найдены...]*', 'director', 'Оркестратор');
+            renderMessage('🔑 *[Система: нет ключа доступа. Нажми 🔑 в меню ☰ и введи гостевой ключ — тогда я смогу создавать приложения и писать код.]*', 'director', 'Оркестратор');
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             if (typeof generateLocalResponse === 'function') {
                 try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
