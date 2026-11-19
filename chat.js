@@ -775,7 +775,6 @@ function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
-    if (typeof paintBossKey === 'function') paintBossKey();
     
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {
