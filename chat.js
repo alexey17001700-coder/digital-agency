@@ -494,7 +494,7 @@ function handleSendClick() {
         if (currentAbortController) currentAbortController.abort(); 
         isGenerating = false; 
         clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
-        clearTimeout(autoKickTimer); // Босс остановил сам — пинок не нужен
+        clearTimeout(autoKickTimer); autoKickTimer = null; // Босс остановил сам — пинок не нужен
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
     }
