@@ -647,9 +647,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
-                const isBossNow = localStorage.getItem('shtab_boss') === 'true';
-                let finalPrompt = isBossNow ? SYSTEM_PROMPT : GUEST_SYSTEM_PROMPT;
-                if (isBossNow && bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+                let finalPrompt = SYSTEM_PROMPT;
+                if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
                 if (selectedAgents.length > 0) {
                     let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
