@@ -564,9 +564,6 @@ function openVoiceLab2() {
 function injectVoiceLab() {
     const _oldBtn = document.getElementById('vlabBtn');
     if (_oldBtn) _oldBtn.remove();
-    // Плавающая кнопка 🎛 под кнопкой отправки убрана по приказу Босса.
-    const _oldBtn2 = document.getElementById('vlabBtn2');
-    if (_oldBtn2) _oldBtn2.remove();
     if (document.getElementById('vlabBtn2')) { window.openVoiceLab = openVoiceLab2; return; }
     if (!document.getElementById('vlabCss2')) {
         const st = document.createElement('style');
@@ -632,8 +629,13 @@ function injectVoiceLab() {
             'background:linear-gradient(145deg,#E3C766,#8E6F14)}';
         document.head.appendChild(st);
     }
-    // Плавающая кнопка 🎛 под кнопкой отправки УБРАНА.
-    // Лаборатория голосов открывается кнопкой «🎛 Голоса» в панели режимов.
+    const b = document.createElement('button');
+    b.id = 'vlabBtn2';
+    b.title = 'Лаборатория голосов v4';
+    b.textContent = '🎛';
+    b.onclick = openVoiceLab2;
+    document.body.appendChild(b);
+    positionVoiceBtn();
     window.openVoiceLab = openVoiceLab2;
 }
 
@@ -665,8 +667,6 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
 setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
-    if (window.speakPhoneVoice !== speakAny) window.speakPhoneVoice = speakAny;
-    // Кнопку 🎛 больше не возвращаем — она убрана насовсем.
-    const _stray = document.getElementById('vlabBtn2');
-    if (_stray) _stray.remove();
+    if (window.speakPhoneVoice !== speakAny) window.speakPhoneVoice = speakAny;     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
+    positionVoiceBtn();
 }, 1500);

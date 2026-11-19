@@ -1,6 +1,6 @@
 const PROXY = "https://shtab-boss.duckdns.org:8443";
 let currentMode = 'normal'; let isAutoMode = false;
-let isGenerating = false; let currentAbortController = null; let watchdogTimer = null; let autoKickTimer = null;
+let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
 let attachedImageBase64 = null; let currentChatImage = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
@@ -53,7 +53,6 @@ repo по умолчанию "digital-agency".
 4. Не уверен в наличии файла — сначала list_repo_files().
 5. Секреты (пароли, ключи, токены) в открытые репозитории НЕ писать.
 6. Новое приложение: создай репозиторий → залей index.html → дай Боссу ссылку на тест.
-7. РЕПОЗИТОРИИ: доступ ко всем репозиториям открыт — читай и меняй свободно.
 
 === ПРОЕКТЫ ===
 - digital-agency — Штаб (app.html, style.css, chat.js, ui.js, network.js, voice.js, agents.js, main.ts).
@@ -88,9 +87,32 @@ Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL). Синхро
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
 
-/* 🔓 ПАРОЛЕЙ НЕТ (по приказу Босса).
-   Гостевой режим и ключ Администратора удалены полностью.
-   Доступ открыт всем: инструменты, запись файлов, создание приложений. */
+/* --- СКРЫТЫЙ ВХОД В РЕЖИМ БОССА (🔑 над списком чатов) --- */
+const BOSS_PIN = '8452';
+function isBossMode() { return localStorage.getItem('shtab_boss') === 'true'; }
+function paintBossKey() {
+    const btn = document.getElementById('bossKeyBtn');
+    if (!btn) return;
+    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
+    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
+}
+function toggleBossMode() {
+    if (isBossMode()) {
+        if (confirm('Выйти из режима Босса?')) {
+            localStorage.removeItem('shtab_boss');
+            paintBossKey();
+            alert('Режим Босса выключен');
+        }
+        return;
+    }
+    const pin = prompt('Введите пин-код Администратора:');
+    if (pin === null) return;
+    if (pin.trim() === BOSS_PIN) {
+        localStorage.setItem('shtab_boss', 'true');
+        paintBossKey();
+        alert('Режим Босса активирован!');
+    } else { alert('Неверный код'); }
+}
 
 function renderChatList() {
     chatListEl.innerHTML = '';
@@ -444,7 +466,7 @@ function parseAgentReplies(text) {
 async function playAgentReplies(replies) {
     for (let reply of replies) {
         focusAgentCard(reply.agent);
-        const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('task-running');
+        const isTaskAgent = document.getElementById('agent-' + reply.agent)?.classList.contains('working');
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'typing'); updateAgentStatus(reply.agent, 'busy'); }
         await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'idle'); updateAgentStatus(reply.agent, 'free'); }
@@ -453,8 +475,6 @@ async function playAgentReplies(replies) {
 }
 
 async function runBackgroundTask(agentName, taskDescription) {
-    const _taskCard = document.getElementById('agent-' + agentName);
-    if (_taskCard) _taskCard.classList.add('task-running');
     updateAgentStatus(agentName, 'working');
     setTimeout(async () => {
         try {
@@ -463,7 +483,6 @@ async function runBackgroundTask(agentName, taskDescription) {
             if (data.choices && data.choices.length > 0) { const r = data.choices[0].message.content; typeMessage(r, 'director', agentName); addMessageToHistory(r, 'director', agentName); }
         } catch(e) { console.error(e); }
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
-        if (_taskCard) _taskCard.classList.remove('task-running');
     }, 15000);
 }
 
@@ -473,34 +492,11 @@ function kickAI(agentName) {
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
 }
 
-/* --- ПИНОК ПО ТАЙМАУТУ (300 сек) ---
-   Раньше по истечении 300 секунд запрос просто обрывался (abort) — и работа
-   умирала молча. Теперь чат сам «пинает» Архитектора: отправляет сообщение
-   Босса с приказом разбить работу на задачи и делать их по одной с отчётом. */
-const AUTO_KICK_TEXT = "Разбей на задачи и делай по одной задаче, отчитывайся после каждой.";
-const KICK_AFTER_MS = 300000;  // 300 секунд без ответа = пинок
-const MAX_KICKS = 3;           // максимум 3 пинка подряд по одному вопросу
-let kickCount = 0;             // сколько пинков уже ушло
-let gotAnswer = false;         // пришёл ли ответ на текущий вопрос
-function autoKick(){
-    if (gotAnswer) return;                    // ответ уже пришёл — пинать нечего
-    if (kickCount >= MAX_KICKS) return;       // защита от бесконечной петли
-    kickCount++;
-    autoKickTimer = null;
-    if (isGenerating){ try { currentAbortController.abort(); } catch(e){} isGenerating = false; clearTimeout(typingTimer); }
-    /* запрос снят выше — пинаем дальше */
-    renderMessage(`⏰ *[Система: ${KICK_AFTER_MS/1000} секунд без ответа. Пинок ${kickCount}/${MAX_KICKS}: разбиваю на задачи.]*`, 'director', 'Оркестратор');
-    renderMessage(AUTO_KICK_TEXT, 'boss');
-    addMessageToHistory(AUTO_KICK_TEXT, 'boss');
-    setTimeout(() => sendMessage(AUTO_KICK_TEXT, true), 600);
-}
-
 function handleSendClick() {
     if (isGenerating) { 
         if (currentAbortController) currentAbortController.abort(); 
         isGenerating = false; 
         clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
-        clearTimeout(autoKickTimer); autoKickTimer = null; // Босс остановил сам — пинок не нужен
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
     }
@@ -600,7 +596,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearTimeout(typingTimer); 
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text) return;
-    if (!overrideText) { resetSearchGuard(); kickCount = 0; gotAnswer = false; } // новый вопрос Босса = чистый лист
+    if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
 
     if (!overrideText && !isKick) {
         chatInputEl.value = ''; chatInputEl.style.height = 'auto'; playSound('send'); 
@@ -619,17 +615,21 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
-    /* 300 секунд — предел ожидания. По истечении не обрываем молча, а пинаем:
-       autoKick() снимает зависший запрос и сам отправляет приказ разбить на задачи. */
-    currentAbortController = new AbortController(); clearTimeout(autoKickTimer); autoKickTimer = setTimeout(autoKick, 300000); clearTimeout(watchdogTimer);
+    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 300000); clearTimeout(watchdogTimer);
 
     try {
         let success = false; let aiText = ""; let lastError = "";
         
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
-        // Запрос идёт на сервер (у него есть ключ ZVENO и все инструменты).
-        try {
+        let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
+
+        let isBossSecret = false;
+        if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
+            hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
+        }
+                if (hasAnyKeys) {
+            try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
@@ -652,6 +652,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
+                if (isBossSecret) modelToUse = 'zveno';
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
@@ -662,7 +663,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentMessages = trimHistory(currentMessages);
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64, isBoss: localStorage.getItem('shtab_boss') === 'true' }),
                         signal: currentAbortController.signal
                     });
                     
@@ -736,11 +737,19 @@ async function sendMessage(overrideText = null, isKick = false) {
                         success = true; break; 
                     }
                 }
-            } catch (e) { if (e.name === 'AbortError') { if (!isGenerating) { clearTimeout(autoKickTimer); autoKickTimer = null; } return; } lastError = `Сбой сети: ${e.message}`; }
-            // Таймер пинка НЕ снимаем: если ответа так и нет — autoKick сработает сам.
-
+            } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
+            clearTimeout(timeoutId);
+        } else {
+            renderMessage('⚙️ *[Система: API-ключи не найдены...]*', 'director', 'Оркестратор');
+            await new Promise(resolve => setTimeout(resolve, 1000)); 
+            if (typeof generateLocalResponse === 'function') {
+                try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
+                catch (e) { if (e.name === 'AbortError') return; lastError = `Ошибка локального ИИ: ${e.message}`; }
+            } else { lastError = "Локальный ИИ не загружен."; }
+            clearTimeout(timeoutId);
+        }
+        
         if (success) {
-            gotAnswer = true; clearTimeout(autoKickTimer); autoKickTimer = null;
             playSound('receive'); 
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
@@ -772,12 +781,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
     } finally {
-        isGenerating = false; clearInterval(timerInterval); clearTimeout(autoKickTimer); // ответ пришёл — пинок по таймауту снимаем
-        // СТРАХОВКА: гасим «Думает» у активного агента (в т.ч. при остановке и обрыве).
-        // Раньше класс 'working' от отметки «занят» путался с фоновой задачей,
-        // и статус Оркестратора оставался «Думает» навсегда.
-        const _activeCard = document.getElementById('agent-' + activeAgent);
-        if (_activeCard && !_activeCard.classList.contains('task-running') && typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'free');
+        isGenerating = false; clearInterval(timerInterval); 
         attachedImageBase64 = null;
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
@@ -798,6 +802,7 @@ function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
+    if (typeof paintBossKey === 'function') paintBossKey();
     
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {

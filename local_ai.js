@@ -1,4 +1,4 @@
-const BRAIN_VERSION = "82.0_OPEN_ACCESS";
+const BRAIN_VERSION = "81.0_STRICT_NO_KEYS";
 
 window.__bootComplete = false;
 
@@ -11,6 +11,11 @@ window.bootAllBrains = async function() {
     if (window.parent && typeof window.parent.aiLoadingComplete === 'function') {
         window.parent.aiLoadingComplete();
     }
+};
+
+// Эта функция вызывается из chat.js, ТОЛЬКО если у пользователя нет ключей
+window.generateLocalResponse = async function(agentName, userMessage) {
+    return `⚠️ **API ключи не найдены!**\n\nШтаб работает только на твоих личных ключах. Нажми на иконку ключа 🔑 вверху и введи ключ DeepSeek или Yandex, чтобы я начал думать.`;
 };
 
 // Автозапуск

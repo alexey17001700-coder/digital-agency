@@ -55,7 +55,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'office.js', 'office3d.js', 'ui.js', 'autopilot.js'];
+            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'office.js', 'office3d.js', 'ui.js'];
             const failed = [];
 
             // Грузим параллельно: один упавший файл не тормозит и не ломает остальные.
@@ -90,24 +90,6 @@
             }
         });
     </script>
-
-    <style>
-        /* Мигание кнопки «Обновить штаб», когда вышла новая версия */
-        @keyframes shtabUpdateFlash {
-            0%, 100% { background: #333; color: #aaa; box-shadow: 0 0 0 rgba(0, 229, 255, 0); }
-            50%      { background: #00e5ff; color: #000; box-shadow: 0 0 14px rgba(0, 229, 255, 0.9); }
-        }
-        @keyframes shtabUpdateBlink {
-            0%, 100% { opacity: 1; }
-            50%      { opacity: 0.3; }
-        }
-        #btnRefreshShtab.update-flash {
-            animation: shtabUpdateFlash 1s ease-in-out infinite;
-            border-color: #00e5ff;
-            font-weight: bold;
-        }
-        #status-update { animation: shtabUpdateBlink 1s ease-in-out infinite; }
-    </style>
 </head>
 <body>
     <!-- Модалка Агента -->
@@ -129,6 +111,20 @@
                 </div>
                 <button onclick="unselectAgentFromModal()" style="width: 100%; padding: 10px; margin-top: 15px; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🔴 Убрать из диалога</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Модалка Контента -->
+    <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
+        <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
+            <div class="modal-header">
+                <h2 style="color: #ffd700;">📁 Контент</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button onclick="clearContentFromButton()" style="background: #662222; color: #ff8888; border: 1px solid #ff8888; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">🗑️ Очистить</button>
+                    <button class="modal-close" style="color: #ff0055; font-size: 24px; border: none; background: none; cursor: pointer; padding: 0;" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
+                </div>
+            </div>
+            <div class="modal-body" id="widgets-container"></div>
         </div>
     </div>
 
@@ -172,8 +168,12 @@
                 <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
             </div>
         </div>
+        <div class="boss-key-row">
+            <span class="boss-key" id="bossKeyBtn" onclick="toggleBossMode()" title="Служебный вход">🔑</span>
+        </div>
         <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
         <div class="chat-list" id="chatList"></div>
+        <button onclick="openRecoveryGuide()" title="Пошаговая инструкция по восстановлению сервера" style="margin: 10px; padding: 12px; background: #10202c; color: #00e5ff; border: 1px solid #00e5ff; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; flex-shrink: 0;">🚑 Восстановление сервера</button>
     </div>
 
     <div class="main-content">
@@ -196,7 +196,6 @@
             <div class="tester-item"><span>⚡ Пинг:</span> <span id="t-ping">--</span></div>
             <div class="tester-item"><span>🐙 GitHub:</span> <span id="t-github">--</span></div>
             <div class="tester-item"><span>🤖 ИИ Модель:</span> <span id="t-ai-model">--</span></div>
-            <div class="tester-item"><span>🏷️ Версия Штаба:</span> <span id="t-shtab-build">--</span></div>
             <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
         </div>
 
@@ -206,16 +205,11 @@
             <button class="mode-btn" id="btnCouncil" onclick="toggleCouncil()">👥 Совет</button>
             <button class="mode-btn" id="btnVoiceToggle" onclick="toggleVoice()">🗣️ Озвучка: ВЫКЛ</button>
             <button class="mode-btn" id="btnVoiceLab" onclick="openVoiceLab()">🎛 Голоса</button>
+            <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
             <button class="mode-btn" id="btnOffice" onclick="openOffice()">🏢 Офис</button>
-            <button class="mode-btn" id="btnRecovery" title="Пошаговая инструкция по восстановлению сервера" onclick="openRecoveryGuide()">🚑 Сервер</button>
             <button class="mode-btn" id="btnAIModel" onclick="toggleAIModel()">🧠 ИИ: Yandex</button>
             <button class="mode-btn" onclick="openApiSettings()">🔑 API Ключи</button>
-            <button class="mode-btn" id="btnRefreshShtab" onclick="refreshShtab()">🔄 Обновить штаб</button>
-            <button class="mode-btn" id="autopilotBtn" title="Ловит скрытую метку прямо в чате и сам отправляет «дальше». Работает без интернета и без GitHub.">🤖 Автопилот: ВКЛ</button>
-        </div>
-
-        <div id="autopilotPanel" style="display:none; margin:6px 10px 0; padding:6px 10px; background:#0d0d0d; border:1px solid #222; border-radius:8px; font:11px monospace; color:#7ee08a; max-height:64px; overflow-y:auto;">
-            <div id="autopilotLog"></div>
+            <button class="mode-btn" onclick="refreshShtab()">🔄 Обновить штаб</button>
         </div>
 
         <div class="chat-container" id="chatContainer"></div>
@@ -372,157 +366,6 @@
         catch (e) { alert('Не удалось скопировать — выдели текст вручную.'); }
         document.body.removeChild(ta);
     }
-    </script>
-
-    <script>
-    // === ПРОВЕРКА ОБНОВЛЕНИЙ ШТАБА ===
-    // Раз в 30 сек Штаб спрашивает version.json (в обход кэша) и сравнивает build
-    // с тем, что был при загрузке. Если build изменился — кнопка «Обновить штаб»
-    // начинает мигать, в шапке появляется бейдж «⬆ ОБНОВЛЕНИЕ», телефон вибрирует.
-    // Фолбэк: если version.json нет — следим за ETag app.html.
-    (function () {
-        const CHECK_MS = 15000;
-        let currentBuild = null;
-        let notified = false;
-        const SEEN_KEY = 'shtabSeenBuild';
-
-        async function fetchBuild() {
-            try {
-                const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
-                if (r.ok) {
-                    const j = await r.json();
-                    const v = String(j.build || j.version || '');
-                    if (v) return v;
-                }
-            } catch (e) { /* нет version.json — идём в фолбэк */ }
-            try {
-                const h = await fetch('app.html?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
-                return h.headers.get('etag') || h.headers.get('last-modified') || null;
-            } catch (e) { return null; }
-        }
-
-        function markUpdate(build) {
-            if (notified) return;
-            notified = true;
-
-            const btn = document.getElementById('btnRefreshShtab');
-            if (btn) {
-                btn.classList.add('update-flash');
-                btn.textContent = '🔄 НОВАЯ ВЕРСИЯ';
-                btn.title = 'Доступна новая версия Штаба (build ' + build + ')';
-            }
-
-            const bar = document.querySelector('.status-bar');
-            if (bar && !document.getElementById('status-update')) {
-                const b = document.createElement('div');
-                b.id = 'status-update';
-                b.className = 'status-item';
-                b.style.cssText = 'cursor:pointer; border-color:#00e5ff; color:#00e5ff;';
-                b.textContent = '⬆ ОБНОВЛЕНИЕ';
-                b.title = 'Нажми, чтобы обновить Штаб';
-                b.onclick = () => refreshShtab();
-                bar.appendChild(b);
-            }
-
-            if (navigator.vibrate) { try { navigator.vibrate([80, 60, 80]); } catch (e) {} }
-            console.log('Штаб: доступна новая версия, build =', build);
-        }
-
-        async function check() {
-            const build = await fetchBuild();
-            if (!build) return;
-            window.SHTAB_BUILD = build;
-
-            if (currentBuild === null) {
-                currentBuild = build;
-                // Страховка: если на этом телефоне уже была ДРУГАЯ версия —
-                // мигаем сразу, даже когда страницу только что открыли и
-                // проверка не успела заметить смену build.
-                let seen = null;
-                try { seen = localStorage.getItem(SEEN_KEY); } catch (e) {}
-                if (seen && seen !== build) markUpdate(build);
-                try { localStorage.setItem(SEEN_KEY, build); } catch (e) {}
-                return;
-            }
-
-            if (build !== currentBuild) {
-                currentBuild = build;
-                try { localStorage.setItem(SEEN_KEY, build); } catch (e) {}
-                markUpdate(build);
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            check();
-            setInterval(check, CHECK_MS);
-            // Вернулся к телефону из другого приложения — проверяем сразу.
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
-        });
-
-        // === СТОРОЖ ОБОЛОЧКИ (лечим залипшую оболочку ИЗ КАДРА) ===
-        // app.html грузится с ?v=<timestamp>, поэтому он ВСЕГДА свежий. А оболочка
-        // (index.html) может залипнуть в кэше телефона/PWA и слать старые запросы
-        // бэкапа/отката — сервер отвечает «Бэкап и откат доступны только с ключом
-        // Администратора». Свежий кадр сверяет метку сборки оболочки с version.json
-        // и, если оболочка старая (или метки нет вовсе), жёстко перезагружает её
-        // в обход кэша. Один раз — флаг в sessionStorage, петли нет.
-        const SHELL_BUILD = 57;
-        (function () {
-            const KEY = 'shtabShellHealBuild';
-            const SHELL_URL = 'https://raw.githubusercontent.com/alexey17001700-coder/digital-agency/main/index.html';
-            if (window.parent === window) return; // кадр открыт отдельно — оболочки нет
-            function parentBuild() {
-                try { return Number(window.parent.SHTAB_SHELL_BUILD) || 0; } catch (e) { return 0; }
-            }
-            // ЖЁСТКОЕ ЛЕЧЕНИЕ ОБОЛОЧКИ.
-            // sync.sh обновляет на телефоне только main.ts, а index.html лежит на диске
-            // старый — поэтому обычная перезагрузка снова отдаёт старую оболочку, и
-            // кнопка «Откатить Штаб» опять отвечает «Бэкап и откат доступны только с
-            // ключом Администратора». Здесь свежий index.html качается прямо с GitHub
-            // и переписывает родительский документ целиком.
-            async function overwriteShell(build) {
-                try {
-                    const r = await fetch(SHELL_URL + '?t=' + Date.now(), { cache: 'no-store' });
-                    if (!r.ok) return false;
-                    const html = await r.text();
-                    // Пишем только проверенную свежую оболочку — иначе не трогаем.
-                    if (!html || html.length < 2000) return false;
-                    if (!html.includes('isBoss: true')) return false;
-                    if (!html.includes('SHTAB_SHELL_BUILD = ' + build)) return false;
-                    const p = window.parent;
-                    p.document.open();
-                    p.document.write(html);
-                    p.document.close();
-                    console.log('Штаб: оболочка перезаписана из GitHub, build =', build);
-                    return true;
-                } catch (e) { return false; }
-            }
-            async function healShell() {
-                let build = 0;
-                try {
-                    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
-                    if (r.ok) build = Number((await r.json()).build) || 0;
-                } catch (e) { return; }
-                if (!build) return;
-                if (parentBuild() === build) { try { sessionStorage.removeItem(KEY); } catch (e) {} return; }
-                let already = null;
-                try { already = sessionStorage.getItem(KEY); } catch (e) { return; }
-                try { sessionStorage.setItem(KEY, String(build)); } catch (e) {}
-
-                // Перезагрузка уже пробовалась в прошлый раз, а оболочка всё та же —
-                // значит файл на диске старый. Переписываем его из GitHub.
-                if (already === String(build)) { await overwriteShell(build); return; }
-
-                // Первая попытка: обычная перезагрузка в обход кэша.
-                try {
-                    if ('caches' in window) caches.keys().then(ns => ns.forEach(n => caches.delete(n)));
-                    const p = window.parent;
-                    p.location.replace(p.location.pathname + '?v=' + Date.now());
-                } catch (e) {}
-            }
-            setTimeout(healShell, 1500);
-        })();
-    })();
     </script>
 </body>
 </html>
