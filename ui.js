@@ -97,8 +97,10 @@ function closeModal(e) { if (e && e.target !== e.currentTarget) return; document
 function setMode(mode) {
     currentMode = mode;
     document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
+    document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
     if (allChats[currentChatId] && allChats[currentChatId].messages[0]) {
-        allChats[currentChatId].messages[0].content = SYSTEM_PROMPT;
+        if (mode === 'hacker') { allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер."; }
+        else { allChats[currentChatId].messages[0].content = SYSTEM_PROMPT; }
     }
     saveAll();
 }

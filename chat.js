@@ -87,6 +87,33 @@ Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL). Синхро
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
 
+/* --- СКРЫТЫЙ ВХОД В РЕЖИМ БОССА (🔑 над списком чатов) --- */
+const BOSS_PIN = '8452';
+function isBossMode() { return localStorage.getItem('shtab_boss') === 'true'; }
+function paintBossKey() {
+    const btn = document.getElementById('bossKeyBtn');
+    if (!btn) return;
+    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
+    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
+}
+function toggleBossMode() {
+    if (isBossMode()) {
+        if (confirm('Выйти из режима Босса?')) {
+            localStorage.removeItem('shtab_boss');
+            paintBossKey();
+            alert('Режим Босса выключен');
+        }
+        return;
+    }
+    const pin = prompt('Введите пин-код Администратора:');
+    if (pin === null) return;
+    if (pin.trim() === BOSS_PIN) {
+        localStorage.setItem('shtab_boss', 'true');
+        paintBossKey();
+        alert('Режим Босса активирован!');
+    } else { alert('Неверный код'); }
+}
+
 function renderChatList() {
     chatListEl.innerHTML = '';
     const sortedIds = Object.keys(allChats).sort((a, b) => (allChats[a].pinned && !allChats[b].pinned) ? -1 : (!allChats[a].pinned && allChats[b].pinned) ? 1 : b.localeCompare(a));
@@ -597,7 +624,11 @@ async function sendMessage(overrideText = null, isKick = false) {
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
-        if (hasAnyKeys) {
+        let isBossSecret = false;
+        if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
+            hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
+        }
+                if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
@@ -621,6 +652,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
+                if (isBossSecret) modelToUse = 'zveno';
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
@@ -631,7 +663,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentMessages = trimHistory(currentMessages);
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64 }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64, isBoss: localStorage.getItem('shtab_boss') === 'true' }),
                         signal: currentAbortController.signal
                     });
                     
@@ -770,6 +802,7 @@ function init() {
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
+    if (typeof paintBossKey === 'function') paintBossKey();
     
     const chatIds = Object.keys(allChats);
     if (!currentChatId || !allChats[currentChatId]) {
