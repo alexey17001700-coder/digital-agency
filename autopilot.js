@@ -159,19 +159,37 @@
         });
     }
 
-    // Переключили чат или чат очистили — история принимается как «виденная».
-    function checkChatSwitch() {
+    /* ПОЧЕМУ ПОСЛЕ ПЕРЕЗАГРУЗКИ АВТОПИЛОТ СНОВА ПИСАЛ «РАЗБЕЙ НА ЗАДАЧИ»:
+       при F5 история чата доезжает с сервера ПОЗЖЕ старта автопилота.
+       В момент старта контейнер пуст — primeSeen() не находил ни одного
+       сообщения. Дальше история доезжала, счётчик рос 0 → N, а рост сообщений
+       считался НЕ сменой чата → вся старая история проходила как «новая».
+       Старое «Слишком много шагов» из прошлого диалога = пинок.
+       Теперь база берётся по факту: как только в чате появились сообщения,
+       вся история помечается «виденной» молча — один раз на чат. */
+    function syncChat() {
         const b = box();
-        if (!b) return false;
+        if (!b) return true;
         const id = chatKey();
         const count = b.querySelectorAll('.chat-msg').length;
-        if (id !== lastChatId || count < lastMsgCount) {
-            lastChatId = id; lastMsgCount = count;
-            primeSeen();
-            return true;
-        }
+        const switched = (id !== lastChatId) || (count < lastMsgCount);
+        lastChatId = id;
         lastMsgCount = count;
-        return false;
+        if (switched) primed = false;
+
+        if (count === 0) return true;                              // история ещё не пришла
+        if (!primed) { primeSeen(); primed = true; return true; }   // первый заход в чат
+        return switched;
+    }
+
+    // Реагируем только на САМОЕ ПОСЛЕДНЕЕ сообщение чата. Всё, что выше —
+    // прошлое, оно не может быть новой командой. Это вторая линия защиты
+    // от «сам присылает разбей на задачи» после перезагрузки и смены чата.
+    function isLastMsg(el) {
+        const b = box();
+        if (!b) return false;
+        const all = b.querySelectorAll('.chat-msg');
+        return all.length > 0 && all[all.length - 1] === el;
     }
 
     // Ищем метку только в ответах Архитектора (msg-director), не в своих сообщениях
