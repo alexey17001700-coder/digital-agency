@@ -973,15 +973,11 @@ Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
     if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
 
-    // ОЗВУЧКА — до проверки секрета (нужна и гостям, и Штабу)
+    // ОЗВУЧКА
     try {
         const peek = await request.clone().json();
         if (peek && peek.tts) return await handleTTS(peek);
     } catch (_e) { /* не JSON — идём дальше */ }
-
-    if (!checkSecret(request)) {
-        return json({ success: false, error: "Доступ запрещен: неверный секрет Штаба" }, 401);
-    }
 
     let body: any;
     try { body = await request.json(); } catch { return json({ success: false, error: "Некорректный JSON" }, 400); }
