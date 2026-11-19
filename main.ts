@@ -495,6 +495,36 @@ const TOOLS = [
                 required: ["repo"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "remember_step",
+            description: "Записывает выполненный шаг в журнал проделанной работы (digital-agency/APP_WORKLOG.md). Вызывай после КАЖДОГО завершённого шага.",
+            parameters: {
+                type: "object",
+                properties: {
+                    app: { type: "string", description: "Приложение — имя репозитория (например window_calc)" },
+                    version: { type: "string", description: "Версия или билд (например 3.4.25+88)" },
+                    step: { type: "string", description: "Что сделано, коротко" },
+                    files: { type: "string", description: "Затронутые файлы через запятую" }
+                },
+                required: ["app", "step"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "read_worklog",
+            description: "Читает журнал проделанной работы (APP_WORKLOG.md). Доступен без ключа Администратора. Без app — весь журнал, с app — только раздел этого приложения.",
+            parameters: {
+                type: "object",
+                properties: {
+                    app: { type: "string", description: "Имя репозитория (необязательно)" }
+                }
+            }
+        }
     }
 ];
 
