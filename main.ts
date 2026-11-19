@@ -14,7 +14,8 @@ const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 // с переменной окружения BOSS_KEY и отдаёт токен сессии.
 // Дальше режим Босса определяется ТОЛЬКО по токену — подделать флаг в браузере нельзя.
 // =========================================
-const BOSS_KEY = Deno.env.get("BOSS_KEY") || "";
+const BOSS_KEY = Deno.env.get("BOSS_KEY") || "8452";
+
 let BOSS_TOKEN_CACHE = "";
 async function bossToken(): Promise<string> {
     if (BOSS_TOKEN_CACHE) return BOSS_TOKEN_CACHE;
