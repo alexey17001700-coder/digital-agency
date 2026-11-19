@@ -13,6 +13,22 @@ const WRITE_ALLOWED_EXT = [
     ".ts", ".py", ".dart", ".sh", ".svg", ".png", ".jpg", ".jpeg", ".ico"
 ];
 const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удаления (проверяется в delete_file)
+
+// =========================================
+// СТАРЫЕ ПРОЕКТЫ — ТОЛЬКО ЧТЕНИЕ
+// Без ключа Администратора (режим гостя) можно:
+//   1) создать НОВЫЙ репозиторий (create_github_repo);
+//   2) читать и менять файлы внутри ЭТОГО нового репозитория.
+// Всё, что перечислено ниже, гость не меняет никогда — только читает.
+// =========================================
+const OLD_REPOS = [
+    "digital-agency", "nexus_chat", "nexus_ws", "ac_luxury_calc",
+    "window_measure_pro", "nexus_snake", "window_calc", "shtab-site", "okna"
+];
+function isOldRepo(repo: unknown): boolean {
+    const r = String(repo || "").trim().toLowerCase();
+    return OLD_REPOS.includes(r);
+}
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
