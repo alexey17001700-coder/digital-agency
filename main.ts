@@ -896,7 +896,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     const modeRules = isBoss
         ? await loadPromptFile(PROMPT_BOSS_FILE, BOSS_RULE)
         : await loadPromptFile(PROMPT_GUEST_FILE, GUEST_RULE);
-    const rulesBlock = "\n\n" + modeRules + WORKLOG_RULE;
+    const rulesBlock = "\n\n" + modeRules + (isBoss ? WORKLOG_RULE : WORKLOG_RULE_GUEST);
     const rulesIdx = currentMessages.findIndex((m: any) => m.role === "system");
     if (rulesIdx !== -1) {
         currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
