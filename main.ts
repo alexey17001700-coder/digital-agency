@@ -835,31 +835,16 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     let maxLoops = 20; // Увеличено для сложных задач
     let weatherCard = "";
 
-    // РЕЖИМ ГОСТЯ: без флага Босса удаление репозиториев отключено
-    let activeTools: any[] = TOOLS;
-    const GUEST_TOOLS_DENY = ["delete_github_repo"];
-    if (!isBoss) activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
+    const activeTools: any[] = TOOLS;
 
-    // 📜 Правила режима — из файла: Босс → PROMPT_BOSS.md, гость → PROMPT_GUEST.md.
-    // Плюс память проделанной работы — для всех режимов.
-    const modeRules = isBoss
-        ? await loadPromptFile(PROMPT_BOSS_FILE, BOSS_RULE)
-        : await loadPromptFile(PROMPT_GUEST_FILE, GUEST_RULE);
-    const rulesBlock = "\n\n" + modeRules + (isBoss ? WORKLOG_RULE : WORKLOG_RULE_GUEST);
+    // 📜 Правила режима — из файла PROMPT_BOSS.md + память проделанной работы.
+    const modeRules = await loadPromptFile(PROMPT_BOSS_FILE, BOSS_RULE);
+    const rulesBlock = "\n\n" + modeRules + WORKLOG_RULE;
     const rulesIdx = currentMessages.findIndex((m: any) => m.role === "system");
-    if (isBoss) {
-        if (rulesIdx !== -1) {
-            currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
-        } else {
-            currentMessages.unshift({ role: "system", content: rulesBlock.trim() });
-        }
+    if (rulesIdx !== -1) {
+        currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
     } else {
-        // ГОСТЬ: системный промпт Босса («старые репозитории — ТОЛЬКО ЧТЕНИЕ») до модели
-        // доходить не должен. Она читала это как «писать нельзя вообще» и отказывалась
-        // собирать приложение. Гостю системный промпт ПОЛНОСТЬЮ заменяется правилами гостя.
-        const guestContent = rulesBlock.trim();
-        if (rulesIdx !== -1) currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: guestContent };
-        else currentMessages.unshift({ role: "system", content: guestContent });
+        currentMessages.unshift({ role: "system", content: rulesBlock.trim() });
     }
 
     for (let loop = 0; loop < maxLoops; loop++) {
