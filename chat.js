@@ -476,6 +476,8 @@ async function playAgentReplies(replies) {
 }
 
 async function runBackgroundTask(agentName, taskDescription) {
+    const _taskCard = document.getElementById('agent-' + agentName);
+    if (_taskCard) _taskCard.classList.add('task-running');
     updateAgentStatus(agentName, 'working');
     setTimeout(async () => {
         try {
