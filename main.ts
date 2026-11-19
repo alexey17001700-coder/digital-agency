@@ -7,6 +7,24 @@ const ZVENO_URL = "https://api.zveno.ai/v1/chat/completions";
 const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
+// =========================================
+// 🔒 ЗАМОК СТАРЫХ РЕПОЗИТОРИЕВ
+// Без ключа администратора (режим Босса) старые репозитории закрыты:
+// ни читать, ни писать, ни удалять. Новые репозитории (которых нет в списке
+// ниже) замком НЕ закрываются — их можно создавать и вести свободно.
+// =========================================
+const FROZEN_REPOS = [
+    "digital-agency", "nexus_chat", "nexus_ws", "nexus_snake", "ac_luxury_calc",
+    "window_measure_pro", "window_calc", "shtab-site", "Okna", "nexus_space",
+    "racing_game", "shtab_watchdog", "test_access_repo_xyz"
+];
+const REPO_LOCK_TEXT = "🔒 Замок администратора: старый репозиторий открыт только с ключом. Создавать новые репозитории и работать в них можно всегда.";
+
+function isRepoLocked(repoName: string, isBoss: boolean): boolean {
+    if (isBoss) return false;                // ключ введён — замок снят со всех
+    return FROZEN_REPOS.includes(repoName);  // новый репозиторий в списке отсутствует — он открыт
+}
+
 // БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
 const WRITE_ALLOWED_EXT = [
     ".js", ".css", ".html", ".json", ".md", ".txt", ".xml", ".yaml", ".yml",
