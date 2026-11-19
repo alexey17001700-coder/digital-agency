@@ -535,7 +535,7 @@ const TOOLS = [
             description: "Возвращает список файлов в корне репозитория.",
             parameters: {
                 type: "object",
-                properties: { repo: { type: "string", description: "Имя репозитория (по умолчанию digital-agency)" } }
+                properties: { repo: { type: "string", description: "Имя репозитория. Гость указывает имя СВОЕГО репозитория; если не указать — сервер подставит его сам" } }
             }
         }
     },
