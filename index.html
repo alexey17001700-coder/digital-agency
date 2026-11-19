@@ -119,12 +119,7 @@
             if ('caches' in window) { caches.keys().then((names) => { for (let name of names) caches.delete(name); }); }
             window.location.href = window.location.pathname + '?v=' + Date.now();
         }
-        let safePin = "", CORRECT_PIN = "8452"; 
-        function toggleMenu() { fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); if (fabMenu.classList.contains('open')) resetSafe(); }
-        function resetSafe() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; document.getElementById('safe-lock-container').style.display = 'flex'; document.getElementById('save-action-container').style.display = 'none'; }
-        function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
-        function clearSafePin() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; }
-        function checkSafePin() { if (safePin === CORRECT_PIN) { document.getElementById('safe-display').innerText = "OK"; document.getElementById('safe-display').style.color = "#00ff00"; setTimeout(() => { document.getElementById('safe-lock-container').style.display = 'none'; document.getElementById('save-action-container').style.display = 'block'; }, 300); } else { document.getElementById('safe-display').innerText = "ERR"; document.getElementById('safe-display').style.color = "#ff0000"; setTimeout(clearSafePin, 1000); } }
+        function toggleMenu() { fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); }
         async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
         async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
     </script>
