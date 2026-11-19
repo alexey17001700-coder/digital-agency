@@ -144,14 +144,16 @@
     function tick() {
         if (!isOn() || busy) return;
 
+        const cid = chatKey();
+
         // 1) ПИНОК — задача развалилась на «слишком много шагов»
         const n = countTooMany();
-        let handled = parseInt(localStorage.getItem(LS_KICK) || '0', 10);
-        if (n < handled) { localStorage.setItem(LS_KICK, String(n)); handled = n; }  // чат почистили
+        let handled = loadCounts(LS_KICK)[cid] || 0;
+        if (n < handled) { saveCount(LS_KICK, cid, n); handled = n; }  // чат почистили
         if (n > handled) {
             if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
             busy = true; waiting = 0;
-            localStorage.setItem(LS_KICK, String(n));
+            saveCount(LS_KICK, cid, n);
             log('Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
@@ -160,12 +162,12 @@
 
         // 1б) ПИНОК СЛОВОМ — Босс написал «Пинок»
         const k = countBossKick();
-        let kHandled = parseInt(localStorage.getItem(LS_KICK2) || '0', 10);
-        if (k < kHandled) { localStorage.setItem(LS_KICK2, String(k)); kHandled = k; }
+        let kHandled = loadCounts(LS_KICK2)[cid] || 0;
+        if (k < kHandled) { saveCount(LS_KICK2, cid, k); kHandled = k; }
         if (k > kHandled) {
             if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
             busy = true; waiting = 0;
-            localStorage.setItem(LS_KICK2, String(k));
+            saveCount(LS_KICK2, cid, k);
             log('Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
