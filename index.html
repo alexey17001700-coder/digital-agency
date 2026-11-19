@@ -60,26 +60,7 @@
     <div id="fab-overlay" onclick="toggleMenu()"></div>
     <div id="control-panel">
         <div id="fab-menu">
-            <div id="safe-lock-container">
-                <div id="safe-display">____</div>
-                <div class="safe-keypad">
-                    <button class="safe-key" onclick="pressSafeKey('1')">1</button>
-                    <button class="safe-key" onclick="pressSafeKey('2')">2</button>
-                    <button class="safe-key" onclick="pressSafeKey('3')">3</button>
-                    <button class="safe-key" onclick="pressSafeKey('4')">4</button>
-                    <button class="safe-key" onclick="pressSafeKey('5')">5</button>
-                    <button class="safe-key" onclick="pressSafeKey('6')">6</button>
-                    <button class="safe-key" onclick="pressSafeKey('7')">7</button>
-                    <button class="safe-key" onclick="pressSafeKey('8')">8</button>
-                    <button class="safe-key" onclick="pressSafeKey('9')">9</button>
-                    <button class="safe-key clear" onclick="clearSafePin()">C</button>
-                    <button class="safe-key" onclick="pressSafeKey('0')">0</button>
-                    <button class="safe-key ok" onclick="checkSafePin()">OK</button>
-                </div>
-            </div>
-            <div id="save-action-container" style="display:none;">
-                <button class="fab-btn btn-backup" onclick="triggerBackup()" style="width:100%;"><span class="title">💾 Сохранить эталон</span></button>
-            </div>
+            <button class="fab-btn btn-backup" onclick="triggerBackup()" style="width:100%;"><span class="title">💾 Сохранить эталон</span></button>
             <button class="fab-btn btn-rollback" onclick="triggerRollback()"><span class="title">⏪ Откатить Штаб</span></button>
         </div>
         <button id="fab-trigger" onclick="toggleMenu()">🛠️</button>
