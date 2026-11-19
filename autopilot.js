@@ -243,8 +243,8 @@
         if (switchCooldown > 0) { switchCooldown--; waiting = 0; return; }
         if (switched) { waiting = 0; return; }
 
-        const tooMany = firstNew(scanTooMany());
-        const kick = firstNew(scanBossKicks());
+        const tooMany = tailCandidate(scanTooMany());
+        const kick = tailCandidate(scanBossKicks());
 
         // Команда есть, но Архитектор ещё печатает — ждём, хеш не помечаем.
         if ((tooMany || kick) && typeof isGenerating !== 'undefined' && isGenerating) {
