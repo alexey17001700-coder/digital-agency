@@ -603,7 +603,11 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
         // Определяем репозиторий (любой, который укажет ИИ).
         // ГОСТЬ: repo не указан → берём последний созданный им репозиторий (не Штаб).
         const askedRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : "";
-        const targetRepo = askedRepo || (!isBoss && LAST_GUEST_REPO ? LAST_GUEST_REPO : REPO_NAME);
+        // ГОСТЬ без поля repo: работаем в ЕГО репозитории (память → файл → свежий нестарый).
+        // Только если своего репозитория нет вовсе — падаем в Штаб и получаем понятную подсказку.
+        let targetRepo = askedRepo;
+        if (!targetRepo && !isBoss) targetRepo = await findGuestRepo();
+        if (!targetRepo) targetRepo = REPO_NAME;
         const isProtected = targetRepo === REPO_NAME;
 
         // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
