@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 44 — Чистка остатков ключей/гостя: убраны SHATAB_SECRET, checkSecret, X-Shtab-Token, verifyKey, isBoss, замок репозиториев (OLD_REPOS/isOldRepo/isRepoLocked/REPO_LOCK_TEXT), кнопка 🔑 и функции bossToken/isBossMode/paintBossKey/toggleBossMode, мёртвый локальный ИИ-фолбэк, CSS .boss-key. Удалены TASKS_KEYS.md и TASKS_GUEST_REMOVAL.md. Файлы: main.ts, chat.js, app.html, style.css, local_ai.js, PROMPT_BOSS.md, version.json
+
 - build 44 — ЭТАП 1: ключ снят — Штаб открыт. main.ts: BOSS_KEY/isBossToken убраны, isBoss=true всегда, verifyKey отдаёт пустой токен. chat.js: isBossMode()=true, кнопка 🔑 скрыта, toggleBossMode — только сообщение. Правка уже была в репозитории (build 43), проверил и подтвердил.. Файлы: main.ts, chat.js
 
 - build 43 — Пароли убраны полностью: ключ Босса и гостевой удалены. Сервер считает любой запрос запросом Босса (isBoss = true), ручка verifyKey больше не проверяет ключ. В браузере isBossMode() всегда true, кнопка 🔑 скрыта, ввод ключа убран.. Файлы: main.ts, chat.js
