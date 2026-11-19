@@ -1044,8 +1044,19 @@ Deno.serve(async (request) => {
     try { body = await request.json(); } catch { return json({ success: false, error: "Некорректный JSON" }, 400); }
 
     try {
-        // СТАРЫЕ РУЧКИ (БЭКАПЫ)
+        // 🔑 ПРОВЕРКА КЛЮЧА АДМИНИСТРАТОРА
+        if (body.verifyKey) {
+            if (!BOSS_KEY) return json({ success: false, error: "BOSS_KEY не задан на сервере. Задай переменную окружения BOSS_KEY и перезапусти Штаб." }, 500);
+            const given = String(body.verifyKey).trim();
+            if (given !== BOSS_KEY) return json({ success: false, error: "Неверный ключ" }, 403);
+            return json({ success: true, token: await bossToken() });
+        }
+
+        const isBoss = await isBossToken(body.bossToken);
+
+        // СТАРЫЕ РУЧКИ (БЭКАПЫ) — только с ключом Администратора
         if (body.isBackup || body.isRollback) {
+            if (!isBoss) return json({ success: false, error: "🔒 Бэкап и откат доступны только с ключом Администратора." }, 403);
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
             return await handleBackup(body);
         }
