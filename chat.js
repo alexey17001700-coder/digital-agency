@@ -478,7 +478,7 @@ function kickAI(agentName) {
    умирала молча. Теперь чат сам «пинает» Архитектора: отправляет сообщение
    Босса с приказом разбить работу на задачи и делать их по одной с отчётом. */
 const AUTO_KICK_TEXT = "Разбей на задачи и делай по одной задаче, отчитывайся после каждой.";
-function autoKick(){ /* KICK v2 */
+function autoKick(){
     autoKickTimer = null;
     if (!isGenerating) return;   // ответ уже пришёл или Босс остановил вручную — пинок не нужен
     try { currentAbortController.abort(); } catch(e){}
