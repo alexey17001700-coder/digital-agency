@@ -551,7 +551,7 @@ const TOOLS = [
         type: "function",
         function: {
             name: "read_worklog",
-            description: "Читает журнал проделанной работы (APP_WORKLOG.md). Доступен без ключа Администратора. Без app — весь журнал, с app — только раздел этого приложения.",
+            description: "Читает журнал проделанной работы (APP_WORKLOG.md). Без app — весь журнал, с app — только раздел этого приложения.",
             parameters: {
                 type: "object",
                 properties: {
