@@ -840,26 +840,22 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     let maxLoops = 20; // Увеличено для сложных задач
     let weatherCard = "";
 
-    // РЕЖИМ ГОСТЯ: без флага Босса файловые инструменты отключены полностью
+    // РЕЖИМ ГОСТЯ: без флага Босса удаление репозиториев отключено
     let activeTools: any[] = TOOLS;
     const GUEST_TOOLS_DENY = ["delete_github_repo"];
-    if (!isBoss) {
-        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (БЕЗ КЛЮЧА АДМИНИСТРАТОРА) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона.\nЧТО ЗАПРЕЩЕНО: удалять репозитории (delete_github_repo) и менять СТАРЫЕ проекты — ${OLD_REPOS.join(", ")}. Их можно только читать. На просьбу изменить старый проект вежливо скажи: нужен ключ Администратора (🔑 в Штабе).\nЧТО РАЗРЕШЕНО: create_github_repo — создать НОВЫЙ репозиторий, а затем write_file / replace_in_file / delete_file ВНУТРИ этого нового репозитория (всегда указывай его имя в поле repo). Плюс search_web, get_weather, search_image, list_github_repos, list_repo_files, read_file, enable_github_pages.\nЧТО МОЖНО ЧИТАТЬ ВСЕГДА: журнал проделанной работы — read_worklog (файл APP_WORKLOG.md). Там вся история шагов по каждому приложению. Если спрашивают «что уже сделано» — читай журнал.`;
-        const sysIdx = currentMessages.findIndex((m: any) => m.role === "system");
-        if (sysIdx !== -1) {
-            currentMessages[sysIdx] = { ...currentMessages[sysIdx], content: String(currentMessages[sysIdx].content || "") + GUEST_LOCK };
-        } else {
-            currentMessages.unshift({ role: "system", content: GUEST_LOCK.trim() });
-        }
-        activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
-    }
+    if (!isBoss) activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
 
-    // 📒 Память проделанной работы — правило для всех режимов
-    const worklogIdx = currentMessages.findIndex((m: any) => m.role === "system");
-    if (worklogIdx !== -1) {
-        currentMessages[worklogIdx] = { ...currentMessages[worklogIdx], content: String(currentMessages[worklogIdx].content || "") + WORKLOG_RULE + BOSS_RULE };
+    // 📜 Правила режима — из файла: Босс → PROMPT_BOSS.md, гость → PROMPT_GUEST.md.
+    // Плюс память проделанной работы — для всех режимов.
+    const modeRules = isBoss
+        ? await loadPromptFile(PROMPT_BOSS_FILE, BOSS_RULE)
+        : await loadPromptFile(PROMPT_GUEST_FILE, GUEST_RULE);
+    const rulesBlock = "\n\n" + modeRules + WORKLOG_RULE;
+    const rulesIdx = currentMessages.findIndex((m: any) => m.role === "system");
+    if (rulesIdx !== -1) {
+        currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
     } else {
-        currentMessages.unshift({ role: "system", content: (WORKLOG_RULE + BOSS_RULE).trim() });
+        currentMessages.unshift({ role: "system", content: rulesBlock.trim() });
     }
 
     for (let loop = 0; loop < maxLoops; loop++) {
