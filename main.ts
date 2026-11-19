@@ -999,7 +999,7 @@ Deno.serve(async (request) => {
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
               if (body.readFile) {
-            if (!isReadAllowed(body.path)) return json({ success: false, error: "Чтение этого пути запрещено" }, 403);
+            if (!cleanPath(body.path)) return json({ success: false, error: "Некорректный путь" }, 403);
             try {
                 const content = await getFileContent(body.path, targetRepo);
                 if (content === null) throw new Error("Файл не найден");
