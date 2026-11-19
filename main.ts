@@ -788,7 +788,7 @@ async function callZvenoVision(messages: any[], imageBase64: string): Promise<st
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
-async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string> {
+async function callZvenoAI(messages: any[]): Promise<string> {
     const apiKey = Deno.env.get("ZVENO_API_KEY");
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
