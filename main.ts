@@ -1091,7 +1091,17 @@ Deno.serve(async (request) => {
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
-            if (isRepoLocked(targetRepo, body.isBoss === true)) return json({ success: false, error: `🔒 Без ключа Администратора менять "${targetRepo}" запрещено. Разрешено создать новый репозиторий и работать в нём.` }, 403);
+            // ГОСТЬ: кнопка «🛠️ Внедрить в файл» и авто-внедрение не передают repo —
+            // запрос уходил в Штаб и падал под замком («менять digital-agency запрещено»).
+            // Теперь молча переводим запись в репозиторий гостя.
+            if (body.isBoss !== true && isRepoLocked(targetRepo, false)) {
+                const ownRepo = await findGuestRepo();
+                if (!ownRepo || isOldRepo(ownRepo)) {
+                    return json({ success: false, error: "Сначала создай свой репозиторий (create_github_repo) — в него и будем писать." }, 403);
+                }
+                targetRepo = ownRepo;
+                isProtected = targetRepo === REPO_NAME;
+            }
             if (isRepoLocked(targetRepo, body.isBoss === true)) return json({ success: false, error: REPO_LOCK_TEXT }, 403);
             if (isProtected && !isWriteAllowed(body.path, true)) return json({ success: false, error: `Запись в "${body.path}" запрещена.` }, 403);
             if (!isWriteAllowed(body.path, false)) return json({ success: false, error: `Расширение "${body.path}" не разрешено.` }, 403);
