@@ -105,9 +105,10 @@ function paintBossKey() {
     if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
     else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
 }
-function toggleBossMode() {
+async function toggleBossMode() {
     if (isBossMode()) {
         if (confirm('Выйти из режима Босса?')) {
+            localStorage.removeItem('shtab_boss_token');
             localStorage.removeItem('shtab_boss');
             paintBossKey();
             alert('Режим Босса выключен');
@@ -116,12 +117,25 @@ function toggleBossMode() {
     }
     const pin = prompt('Введите ключ Администратора:');
     if (pin === null) return;
-    if (pin.trim() === BOSS_PIN) {
-        localStorage.setItem('shtab_boss', 'true');
-        localStorage.removeItem('shtab_guest');
-        paintBossKey();
-        alert('Режим Босса активирован!');
-    } else { alert('Неверный ключ'); }
+    const key = pin.trim();
+    if (!key) return;
+    try {
+        const res = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verifyKey: key })
+        });
+        const data = await res.json();
+        if (data && data.success && data.token) {
+            localStorage.setItem('shtab_boss_token', data.token);
+            localStorage.removeItem('shtab_boss');
+            paintBossKey();
+            alert('Режим Босса активирован!');
+        } else {
+            alert('Неверный ключ' + (data && data.error ? '\n' + data.error : ''));
+        }
+    } catch (e) {
+        alert('Сервер недоступен: ' + e.message);
+    }
 }
 
 function renderChatList() {
