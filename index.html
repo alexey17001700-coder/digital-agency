@@ -189,6 +189,30 @@
         }
         async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { alert("✅ " + await shtabBackup(true)); } catch (e) { alert("❌ " + e.message); } }
         async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { alert("✅ " + await shtabBackup(false)); appFrame.src = "app.html?v=" + Date.now(); } catch (e) { alert("❌ " + e.message); } }
+        // === СТОРОЖ ОБОЛОЧКИ ===
+        // Оболочка (index.html) грузится БЕЗ ?v=, поэтому браузер/PWA может держать
+        // старую закэшированную версию — и тогда кнопки бэкапа/отката работают по
+        // старому коду (замок «только с ключом Администратора»). Сверяем свою сборку
+        // с version.json и один раз жёстко перезагружаем оболочку в обход кэша.
+        // Флаг в sessionStorage — чтобы перезагрузка не превратилась в петлю.
+        const SHELL_BUILD = 53;
+        (function () {
+            const KEY = 'shtabShellBuild';
+            let store = null;
+            try { sessionStorage.setItem(KEY + '_t', '1'); sessionStorage.removeItem(KEY + '_t'); store = sessionStorage; } catch (e) { store = null; }
+            if (!store) return; // нет sessionStorage — не рискуем петлёй
+            fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+                .then(r => r.ok ? r.json() : null)
+                .then(j => {
+                    const build = j && Number(j.build || 0);
+                    if (!build || build === SHELL_BUILD) return;
+                    if (Number(store.getItem(KEY) || 0) === build) return; // уже перезагружались под эту сборку
+                    store.setItem(KEY, String(build));
+                    if ('caches' in window) { caches.keys().then(ns => ns.forEach(n => caches.delete(n))); }
+                    location.replace(location.pathname + '?v=' + Date.now());
+                })
+                .catch(() => {});
+        })();
     </script>
 </body>
 </html>
