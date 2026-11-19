@@ -26,11 +26,15 @@
     // Раньше счётчик шёл по всему контейнеру, и при переключении чата
     // (loadChat перерисовывает историю) счётчик прыгал 0 → N. Автопилот решал,
     // что Босс написал «Пинок», и САМ отправлял «разбей на задачи по шагам».
-    const RE_TOOMANY = /Слишком\s+много\s+шагов/i;
+    // Требуем КОРОТКОЕ системное сообщение: иначе мой же отчёт со словами
+    // «Слишком много шагов» принимался за системное и вызывал ложную отправку.
+    const RE_TOOMANY = /^\s*Слишком\s+много\s+шагов/i;
+    const MAX_TOOMANY_LEN = 120;
     const KICK_TEXT = 'разбей на задачи по шагам';
 
     // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — это тоже команда «разбей на задачи» ---
     const RE_KICK_WORD = /пинок/i;
+    const MAX_KICK_LEN = 60;
 
     // --- ЗАЩИТА ОТ ПЕТЛИ ---
     // Отправка «разбей на задачи» сама вызывает ответ Архитектора, который
@@ -187,19 +191,13 @@
         const box = document.getElementById('chatContainer');
         if (!box) return false;
         const id = (typeof currentChatId !== 'undefined') ? currentChatId : null;
-        // Смотрим на «отпечаток» первого сообщения, а НЕ на количество.
-        // При асинхронной перерисовке счётчик успевал вырасти, проверка
-        // «count < lastMsgCount» молчала, и старый «Пинок» из истории снова
-        // запускал авто-отправку «разбей на задачи по шагам».
-        const first = box.querySelector('.chat-msg');
-        const head = first ? hash((first.innerText || '').slice(0, 200)) : '(пусто)';
-        if (id !== lastChatId || head !== lastHead) {
-            lastChatId = id;
-            lastHead = head;
+        const count = box.querySelectorAll('.chat-msg').length;
+        if (id !== lastChatId || count < lastMsgCount) {
+            lastChatId = id; lastMsgCount = count;
             primeSeen();
-            switchCooldown = 3;   // даём DOM дорисоваться — команды не слушаем
             return true;
         }
+        lastMsgCount = count;
         return false;
     }
 
