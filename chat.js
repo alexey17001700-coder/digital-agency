@@ -736,8 +736,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                         success = true; break; 
                     }
                 }
-            } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
-            clearTimeout(autoKickTimer);
+            } catch (e) { if (e.name === 'AbortError') { if (!isGenerating) { clearTimeout(autoKickTimer); autoKickTimer = null; } return; } lastError = `Сбой сети: ${e.message}`; }
+            // Таймер пинка НЕ снимаем: если ответа так и нет — autoKick сработает сам.
 
         if (success) {
             playSound('receive'); 
