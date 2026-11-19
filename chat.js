@@ -782,7 +782,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 const targetFile = fileMatch[1].trim();
                 const codeMatch = /```(?:html|css|javascript|js)?\n([\s\S]*?)```/.exec(aiText);
                 if (codeMatch) {
-                    fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ updateFile: true, path: targetFile, content: codeMatch[1], isBoss: localStorage.getItem('shtab_boss') === 'true', message: `Auto-update: ${targetFile}`, isBoss: localStorage.getItem('shtab_boss') === 'true' }), signal: currentAbortController.signal })
+                    fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ updateFile: true, path: targetFile, content: codeMatch[1], bossToken: bossToken(), message: `Auto-update: ${targetFile}` }), signal: currentAbortController.signal })
                     .then(res => res.json()).then(data => {
                         if (data.success) renderMessage(`✅ **Файл ${targetFile} обновлен автоматически!**`, 'director', 'DevOps');
                         else renderMessage(`❌ **Ошибка авто-внедрения:** ${data.error}`, 'director', 'DevOps');
