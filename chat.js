@@ -764,7 +764,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
     } finally {
-        isGenerating = false; clearInterval(timerInterval); 
+        isGenerating = false; clearInterval(timerInterval); clearTimeout(autoKickTimer); // ответ пришёл — пинок по таймауту снимаем
         // СТРАХОВКА: гасим «Думает» у активного агента (в т.ч. при остановке и обрыве).
         // Раньше класс 'working' от отметки «занят» путался с фоновой задачей,
         // и статус Оркестратора оставался «Думает» навсегда.
