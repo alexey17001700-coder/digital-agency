@@ -90,8 +90,43 @@
         return null;
     }
 
+    // Считаем, сколько раз в чате прозвучало «Слишком много шагов»
+    // (счётчик, а не хеш — одинаковые сообщения тоже ловятся)
+    function countTooMany() {
+        const box = document.getElementById('chatContainer');
+        if (!box) return 0;
+        const t = box.innerText || '';
+        const m = t.match(RE_TOOMANY);
+        return m ? m.length : 0;
+    }
+
+    function sendText(text) {
+        const input = document.getElementById('chatInput');
+        if (input) { input.value = text; input.style.height = 'auto'; }
+        try {
+            if (typeof sendMessage === 'function') sendMessage();
+            else log('Ошибка: чат не готов');
+        } catch (e) { log('Сбой отправки: ' + e.message); }
+    }
+
     function tick() {
         if (!isOn() || busy) return;
+
+        // 1) ПИНОК — задача развалилась на «слишком много шагов»
+        const n = countTooMany();
+        let handled = parseInt(localStorage.getItem(LS_KICK) || '0', 10);
+        if (n < handled) { localStorage.setItem(LS_KICK, String(n)); handled = n; }  // чат почистили
+        if (n > handled) {
+            if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
+            busy = true; waiting = 0;
+            localStorage.setItem(LS_KICK, String(n));
+            log('Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»');
+            sendText(KICK_TEXT);
+            setTimeout(function () { busy = false; }, 4000);
+            return;
+        }
+
+        // 2) МЕТКА — обычный шаг
         const sig = findSignal();
         if (!sig) { waiting = 0; return; }
 
@@ -107,13 +142,7 @@
         markDone(sig.hash);
         const step = (sig.text.match(/ШАГ\s*(\d+)/i) || [])[1];
         log('Метка поймана' + (step ? ' (шаг ' + step + ')' : '') + ' → отправляю «дальше»');
-
-        const input = document.getElementById('chatInput');
-        if (input) { input.value = 'дальше'; input.style.height = 'auto'; }
-        try {
-            if (typeof sendMessage === 'function') sendMessage();
-            else log('Ошибка: чат не готов');
-        } catch (e) { log('Сбой отправки: ' + e.message); }
+        sendText('дальше');
         setTimeout(function () { busy = false; }, 4000);
     }
 
