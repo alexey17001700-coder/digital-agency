@@ -501,7 +501,7 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
         // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
         // Новый репозиторий гость создаёт сам и работает внутри него свободно.
         if (!isBoss && isOldRepo(targetRepo) &&
-            ["write_file", "replace_in_file", "delete_file"].includes(name)) {
+            ["write_file", "replace_in_file", "delete_file", "enable_github_pages"].includes(name)) {
             return `Ошибка: без ключа Администратора менять старый проект "${targetRepo}" запрещено. Разрешено только чтение. Гость может создать свой репозиторий через create_github_repo и менять файлы в нём.`;
         }
 
