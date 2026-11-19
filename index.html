@@ -140,9 +140,37 @@
             if ('caches' in window) { caches.keys().then((names) => { for (let name of names) caches.delete(name); }); }
             window.location.href = window.location.pathname + '?v=' + Date.now();
         }
-        function toggleMenu() { fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); }
-        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
-        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        function toggleMenu() { const open = fabMenu.classList.toggle('open'); fabOverlay.classList.toggle('open'); if (!open) resetSafe(); }
+        // --- СЕЙФ: доступ к «Сохранить эталон» / «Откатить Штаб» только после кода Босса ---
+        const SAFE_CODES = [56, 52, 53, 50];
+        const CORRECT_PIN = SAFE_CODES.map((c) => String.fromCharCode(c)).join('');
+        let safePin = '';
+        function paintSafe() { const d = document.getElementById('safe-display'); if (d) d.innerText = safePin.replace(/./g, '•'); }
+        function pressSafeKey(k) { if (safePin.length >= 8) return; safePin += k; paintSafe(); if (safePin.length === CORRECT_PIN.length) checkSafePin(); }
+        function clearSafePin() { safePin = ''; paintSafe(); }
+        function checkSafePin() {
+            const d = document.getElementById('safe-display');
+            if (safePin === CORRECT_PIN) {
+                document.getElementById('safe-lock-container').classList.add('unlocked');
+                document.getElementById('safe-actions').classList.add('unlocked');
+                safePin = ''; paintSafe();
+            } else {
+                if (d) { d.style.color = '#ff3333'; d.innerText = '✖'; }
+                setTimeout(() => { safePin = ''; if (d) { d.style.color = '#ffd700'; paintSafe(); } }, 600);
+            }
+        }
+        function resetSafe() {
+            safePin = '';
+            const d = document.getElementById('safe-display');
+            if (d) { d.style.color = '#ffd700'; paintSafe(); }
+            const lock = document.getElementById('safe-lock-container');
+            const act = document.getElementById('safe-actions');
+            if (lock) lock.classList.remove('unlocked');
+            if (act) act.classList.remove('unlocked');
+        }
+        function safeUnlocked() { const act = document.getElementById('safe-actions'); return !!act && act.classList.contains('unlocked'); }
+        async function triggerBackup() { toggleMenu(); if (!safeUnlocked()) { alert("🔒 Сейф закрыт. Введи код Босса."); return; } if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerRollback() { toggleMenu(); if (!safeUnlocked()) { alert("🔒 Сейф закрыт. Введи код Босса."); return; } if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
     </script>
 </body>
 </html>
