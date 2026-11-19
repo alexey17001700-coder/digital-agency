@@ -291,11 +291,12 @@
         const b = document.getElementById('autopilotBtn');
         if (b) b.onclick = toggle;
         if (timer) clearInterval(timer);
-        // Стартовая история чата — не команда: помечаем молча.
-        primeSeen();
-        const bb = box();
-        lastMsgCount = bb ? bb.querySelectorAll('.chat-msg').length : 0;
-        lastChatId = chatKey();
+        // Стартовая история чата — не команда. Базу берём в syncChat() по факту
+        // появления сообщений: при F5 история доезжает позже старта.
+        lastMsgCount = 0;
+        lastChatId = null;
+        primed = false;
+        syncChat();
         timer = setInterval(tick, POLL_MS);
         log('Автопилот на связи. Слежу за чатом (без GitHub).');
     }
