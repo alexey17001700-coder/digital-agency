@@ -364,8 +364,7 @@ async function manualDeploy(file, code) {
 
 function addDeployButton(container, text) {
     if (isAutoMode) return;
-    // Кнопка «Внедрить в файл» — инструмент Босса: она пишет в файлы Штаба.
-    // Гостю она не нужна и только пугала отказом замка.
+    // Кнопка «Внедрить в файл» — только с ключом Администратора: она пишет в файлы Штаба.
     if (!isBossMode()) return;
     let targetFile = "";
     
