@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 52 — Фикс «Откатить Штаб снова просит GitHub-токен». Код build 51 был чист (prompt/ghToken/ghAPI/ghBackup в index.html убраны, main.ts берёт токен только из Deno.env.get("GITHUB_TOKEN")). Причина повторного появления — залипание оболочки: app.html грузится с ?v=<timestamp> и обновляется, а сам index.html — без версии, поэтому браузер/PWA держал старую закэшированную оболочку (build 50). Добавлен «сторож оболочки» в index.html: сверяет SHELL_BUILD с version.json и при расхождении жёстко перезагружает оболочку в обход кэша (один раз, без петли). build 51 → 52.. Файлы: index.html, version.json, SERVER_DIAGNOSTICS.md
+
 - build 51 — Фикс «Откатить Штаб просит GitHub-токен»: из index.html убран запрос токена (prompt + localStorage shtabGhToken) и прямые вызовы GitHub API (ghToken/ghAPI/ghBackup) — бэкап/откат снова идут через сервер (shtabBackup → PROXY, isBackup/isRollback). В main.ts в ветке бэкапа/отката токен берётся ТОЛЬКО из Deno.env.get("GITHUB_TOKEN"), при отсутствии — ошибка «Токен GitHub не задан на сервере». build 50 → 51. Файлы: index.html, main.ts, version.json
 
 - build 50 — Бэкап и откат Штаба переведены с сервера Vivo на прямые запросы к GitHub API из браузера (ghAPI/ghBackup, токен в localStorage). Запрос на сервер (isBackup/isRollback) убран — серверный замок «только с ключом администратора» больше не мешает. Файлы: index.html, version.json
