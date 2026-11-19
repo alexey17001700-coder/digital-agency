@@ -1026,13 +1026,12 @@ Deno.serve(async (request) => {
 
         // ГЛАВНАЯ РУЧКА: ИИ
         if (body.messages) {
-            const userKeys = body.userKeys || {};
             let aiText = "";
 
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image);
             } else {
-                aiText = await callZvenoAI(body.messages, userKeys);
+                aiText = await callZvenoAI(body.messages);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });
