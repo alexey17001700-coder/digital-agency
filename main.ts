@@ -362,7 +362,7 @@ const TOOLS = [
         type: "function",
         function: {
             name: "write_file",
-            description: "Записывает новый код в файл на GitHub. Создает файл, если его нет.",
+            description: "Записывает новый код в файл на GitHub. Создает файл, если его нет. Без ключа Администратора старые проекты менять нельзя — только новый репозиторий.",
             parameters: {
                 type: "object",
                 properties: {
