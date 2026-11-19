@@ -671,7 +671,7 @@ if (name === "create_github_repo") {
         });
         const data = await res.json();
         // 422 = репозиторий с таким именем уже есть. Это НЕ ошибка: папка готова,
-        // работаем в ней. Раньше гость получал отказ и решал, что писать не может.
+        // работаем в ней.
         if (!res.ok && res.status !== 422) throw new Error(data.message || `Ошибка создания репозитория`);
         const newRepoName = String(args.name).trim();
         const repoUrl = data.html_url || `https://github.com/${REPO_OWNER}/${newRepoName}`;
