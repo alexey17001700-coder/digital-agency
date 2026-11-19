@@ -613,7 +613,7 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
         let targetRepo = askedRepo;
         if (!targetRepo && !isBoss) targetRepo = await findGuestRepo();
         if (!targetRepo) targetRepo = REPO_NAME;
-        const isProtected = targetRepo === REPO_NAME;
+        let isProtected = targetRepo === REPO_NAME;
 
         // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
         // Новый репозиторий гость создаёт сам и работает внутри него свободно.
