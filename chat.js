@@ -603,12 +603,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
-        let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
-
-                // Ключ Администратора ИЛИ свои API-ключи — запрос идёт на сервер
-                // (у него есть ключ ZVENO и все инструменты).
-                if (hasAnyKeys || isBossMode()) {
-            try {
+        // Запрос идёт на сервер (у него есть ключ ZVENO и все инструменты).
+        try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
 
