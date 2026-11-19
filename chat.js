@@ -486,6 +486,7 @@ async function runBackgroundTask(agentName, taskDescription) {
             if (data.choices && data.choices.length > 0) { const r = data.choices[0].message.content; typeMessage(r, 'director', agentName); addMessageToHistory(r, 'director', agentName); }
         } catch(e) { console.error(e); }
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
+        if (_taskCard) _taskCard.classList.remove('task-running');
     }, 15000);
 }
 
