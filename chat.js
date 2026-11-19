@@ -336,8 +336,6 @@ async function manualDeploy(file, code) {
 
 function addDeployButton(container, text) {
     if (isAutoMode) return;
-    // Кнопка «Внедрить в файл» — только с ключом Администратора: она пишет в файлы Штаба.
-    if (!isBossMode()) return;
     let targetFile = "";
     
     const fileMatch = text.match(/\[FILE:\s*([^\]]+)\]/);
