@@ -609,7 +609,9 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
-    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 300000); clearTimeout(watchdogTimer);
+    /* 300 секунд — предел ожидания. По истечении не обрываем молча, а пинаем:
+       autoKick() снимает зависший запрос и сам отправляет приказ разбить на задачи. */
+    currentAbortController = new AbortController(); const timeoutId = setTimeout(autoKick, 300000); clearTimeout(watchdogTimer);
 
     try {
         let success = false; let aiText = ""; let lastError = "";
