@@ -1032,15 +1032,10 @@ Deno.serve(async (request) => {
     try { body = await request.json(); } catch { return json({ success: false, error: "Некорректный JSON" }, 400); }
 
     try {
-        // 🔑 ПРОВЕРКА КЛЮЧА АДМИНИСТРАТОРА
-        if (body.verifyKey) {
-            if (!BOSS_KEY) return json({ success: false, error: "BOSS_KEY не задан на сервере. Задай переменную окружения BOSS_KEY и перезапусти Штаб." }, 500);
-            const given = String(body.verifyKey).trim();
-            if (given !== BOSS_KEY) return json({ success: false, error: "Неверный ключ" }, 403);
-            return json({ success: true, token: await bossToken() });
-        }
+        // 🔓 Пароли убраны — ключ не проверяется, доступ открыт.
+        if (body.verifyKey) return json({ success: true, token: "" });
 
-        const isBoss = await isBossToken(body.bossToken);
+        const isBoss = true;
 
         // СТАРЫЕ РУЧКИ (БЭКАПЫ) — только с ключом Администратора
         if (body.isBackup || body.isRollback) {
