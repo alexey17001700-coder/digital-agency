@@ -536,22 +536,17 @@ async function executeTool(name: string, args: any): Promise<string> {
         // Определяем репозиторий (любой, который укажет ИИ).
         const askedRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : "";
         let targetRepo = askedRepo || REPO_NAME;
-        let isProtected = targetRepo === REPO_NAME;
 
         if (name === "read_file") {
-            if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
+            if (!cleanPath(args.path)) return `Ошибка: некорректный путь "${args.path}".`;
             const content = await getFileContent(args.path, targetRepo);
             if (content === null) return `Ошибка: файл "${args.path}" не найден в ${targetRepo}.`;
             return content;
         }
 
         if (name === "write_file") {
-            if (isProtected && !isWriteAllowed(args.path, true)) {
-                return `Ошибка: запись в "${args.path}" в Штабе запрещена (backup).`;
-            }
-            if (!isWriteAllowed(args.path, false)) {
-                return `Ошибка: расширение файла "${args.path}" не разрешено.`;
-            }
+            if (isBackupPath(args.path)) return `Ошибка: запись в папку backup запрещена.`;
+            if (!cleanPath(args.path)) return `Ошибка: некорректный путь "${args.path}".`;
             if (!args.content || args.content.length < 10) return "Ошибка: пустой контент.";
             if (args.content.length > MAX_WRITE_SIZE) return `Ошибка: файл слишком большой (${args.content.length} > ${MAX_WRITE_SIZE}).`;
             await updateFileInRepo(args.path, args.content, targetRepo);
