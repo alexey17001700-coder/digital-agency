@@ -689,7 +689,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentMessages = trimHistory(currentMessages);
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64, isBoss: localStorage.getItem('shtab_boss') === 'true' }),
+                        body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, image: attachedImageBase64, bossToken: bossToken() }),
                         signal: currentAbortController.signal
                     });
                     
