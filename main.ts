@@ -14,24 +14,11 @@ const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 // с переменной окружения BOSS_KEY и отдаёт токен сессии.
 // Дальше режим Босса определяется ТОЛЬКО по токену — подделать флаг в браузере нельзя.
 // =========================================
-const BOSS_KEY = Deno.env.get("BOSS_KEY") || "8452";
-
-let BOSS_TOKEN_CACHE = "";
-async function bossToken(): Promise<string> {
-    if (BOSS_TOKEN_CACHE) return BOSS_TOKEN_CACHE;
-    if (!BOSS_KEY) return "";
-    const data = new TextEncoder().encode("shtab-boss:" + BOSS_KEY);
-    const hash = await crypto.subtle.digest("SHA-256", data);
-    BOSS_TOKEN_CACHE = Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-    return BOSS_TOKEN_CACHE;
-}
-async function isBossToken(token: unknown): Promise<boolean> {
-    const t = String(token || "").trim();
-    if (!t) return false;
-    const real = await bossToken();
-    if (!real) return false;
-    return t === real;
-}
+// =========================================
+// 🔓 ДОСТУП ОТКРЫТ (по приказу Босса)
+// Пароли убраны полностью: ни в коде, ни в переменных окружения.
+// Любой запрос считается запросом Босса — полный доступ.
+// =========================================
 
 // =========================================
 // 🔒 ЗАМОК СТАРЫХ РЕПОЗИТОРИЕВ
