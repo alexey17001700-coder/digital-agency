@@ -63,6 +63,33 @@ function isRepoLocked(repo: unknown, isBoss: boolean): boolean {
 // Последний репозиторий, созданный ГОСТЕМ. Если гость не указал repo в вызове,
 // работаем в нём, а не в Штабе — иначе правка уходила в digital-agency и падала под замком.
 let LAST_GUEST_REPO = "";
+// Память о репозитории гостя переживает перезапуск сервера: пишем на диск.
+// Раньше переменная жила только в памяти — после рестарта (Deno --watch) гость
+// терял свой репозиторий, правка уходила в Штаб и падала под замком.
+const GUEST_STATE_FILE = ".guest_repo.json";
+async function saveGuestRepo(name: string) {
+    LAST_GUEST_REPO = name;
+    try { await Deno.writeTextFile(GUEST_STATE_FILE, JSON.stringify({ repo: name, at: Date.now() })); } catch (_e) {}
+}
+// Ищем рабочий репозиторий гостя: память → файл → самый свежий НЕстарый репозиторий.
+async function findGuestRepo(): Promise<string> {
+    if (LAST_GUEST_REPO) return LAST_GUEST_REPO;
+    try {
+        const j = JSON.parse(await Deno.readTextFile(GUEST_STATE_FILE));
+        if (j && j.repo && !isOldRepo(j.repo)) { LAST_GUEST_REPO = String(j.repo); return LAST_GUEST_REPO; }
+    } catch (_e) {}
+    try {
+        const res = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", {
+            headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json", "User-Agent": "DenoDeploy" }
+        });
+        const repos = await res.json();
+        if (Array.isArray(repos)) {
+            const cand = repos.find((r: any) => r && r.name && !isOldRepo(r.name));
+            if (cand) { await saveGuestRepo(String(cand.name)); return LAST_GUEST_REPO; }
+        }
+    } catch (_e) {}
+    return "";
+}
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
