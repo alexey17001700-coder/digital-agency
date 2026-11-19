@@ -655,7 +655,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 // Ключ Администратора ИЛИ свои API-ключи — запрос идёт на сервер
                 // (у него есть ключ ZVENO и все инструменты).
-                if (hasAnyKeys || localStorage.getItem('shtab_boss') === 'true') {
+                if (hasAnyKeys || isBossMode()) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
