@@ -983,13 +983,12 @@ Deno.serve(async (request) => {
 
         // Определяем, с каким репозиторием работаем
         let targetRepo = (body.repo && typeof body.repo === "string" && body.repo.trim()) ? body.repo.trim() : REPO_NAME;
-        let isProtected = targetRepo === REPO_NAME;
 
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
-            if (isProtected && !isWriteAllowed(body.path, true)) return json({ success: false, error: `Запись в "${body.path}" запрещена.` }, 403);
-            if (!isWriteAllowed(body.path, false)) return json({ success: false, error: `Расширение "${body.path}" не разрешено.` }, 403);
+            if (isBackupPath(body.path)) return json({ success: false, error: `Запись в папку backup запрещена.` }, 403);
+            if (!cleanPath(body.path)) return json({ success: false, error: `Некорректный путь "${body.path}".` }, 403);
             
             if (typeof body.content !== "string" || body.content.length < 10) return json({ success: false, error: "Пустой контент" }, 400);
             if (body.content.length > MAX_WRITE_SIZE) return json({ success: false, error: "Файл слишком большой" }, 413);
