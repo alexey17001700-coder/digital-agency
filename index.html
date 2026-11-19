@@ -179,7 +179,7 @@
             const res = await fetch(PROXY, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(isBackup ? { isBackup: true } : { isRollback: true })
+                body: JSON.stringify(isBackup ? { isBackup: true, isBoss: true } : { isRollback: true, isBoss: true })
             });
             let data = null;
             try { data = await res.json(); } catch (_e) { data = null; }
