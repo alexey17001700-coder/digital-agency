@@ -88,19 +88,9 @@ Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL). Синхро
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
 
-/* --- ВХОД БЕЗ ПАРОЛЯ ---
-   Гостевой режим удалён (build 41), ключ Администратора убран (build 43).
-   Доступ открыт всем: инструменты, запись файлов, создание приложений. */
 /* 🔓 ПАРОЛЕЙ НЕТ (по приказу Босса).
-   Ни ключа Босса, ни гостевого — доступ открыт всем.
-   Кнопка 🔑 больше не нужна и скрыта. */
-function bossToken() { return ''; }
-function isBossMode() { return true; }
-function paintBossKey() {
-    const btn = document.getElementById('bossKeyBtn');
-    if (btn) btn.style.display = 'none';
-}
-function toggleBossMode() { alert('Пароли убраны — доступ открыт.'); }
+   Гостевой режим и ключ Администратора удалены полностью.
+   Доступ открыт всем: инструменты, запись файлов, создание приложений. */
 
 function renderChatList() {
     chatListEl.innerHTML = '';
