@@ -715,7 +715,7 @@ if (name === "create_github_repo") {
                         "User-Agent": "DenoDeploy"
                     },
                     body: JSON.stringify({
-                        source: { branch: "main", path: "/" }
+                        source: { branch: await getDefaultBranch(repo), path: "/" }
                     })
                 });
                 const data = await res.json();
