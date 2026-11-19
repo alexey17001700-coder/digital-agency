@@ -60,6 +60,9 @@ function isRepoLocked(repo: unknown, isBoss: boolean): boolean {
     if (isBoss) return false;
     return isOldRepo(repo);
 }
+// Последний репозиторий, созданный ГОСТЕМ. Если гость не указал repo в вызове,
+// работаем в нём, а не в Штабе — иначе правка уходила в digital-agency и падала под замком.
+let LAST_GUEST_REPO = "";
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
