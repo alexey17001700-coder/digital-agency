@@ -1,6 +1,6 @@
 const PROXY = "https://shtab-boss.duckdns.org:8443";
 let currentMode = 'normal'; let isAutoMode = false;
-let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
+let isGenerating = false; let currentAbortController = null; let watchdogTimer = null; let autoKickTimer = null;
 let typingTimer = null; 
 let attachedImageBase64 = null; let currentChatImage = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
