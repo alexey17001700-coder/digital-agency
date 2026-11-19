@@ -391,7 +391,7 @@ const TOOLS = [
                 type: "object",
                 properties: {
                     path: { type: "string", description: "Путь к файлу (например style.css или lib/main.dart)" },
-                    repo: { type: "string", description: "Имя репозитория, из которого читать. Гость указывает имя СВОЕГО репозитория. Если не указать — сервер подставит рабочий репозиторий сам" }
+                    repo: { type: "string", description: "Имя репозитория, из которого читать. Если не указать — берётся digital-agency" }
                 },
                 required: ["path"]
             }
