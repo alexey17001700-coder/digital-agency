@@ -573,8 +573,10 @@ const TOOLS = [
 // =========================================
 async function executeTool(name: string, args: any, isBoss: boolean = false): Promise<string> {
     try {
-        // Определяем репозиторий (любой, который укажет ИИ)
-        const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
+        // Определяем репозиторий (любой, который укажет ИИ).
+        // ГОСТЬ: repo не указан → берём последний созданный им репозиторий (не Штаб).
+        const askedRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : "";
+        const targetRepo = askedRepo || (!isBoss && LAST_GUEST_REPO ? LAST_GUEST_REPO : REPO_NAME);
         const isProtected = targetRepo === REPO_NAME;
 
         // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
