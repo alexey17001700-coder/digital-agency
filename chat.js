@@ -713,16 +713,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 }
             } catch (e) { if (e.name === 'AbortError') return; lastError = `Сбой сети: ${e.message}`; }
             clearTimeout(timeoutId);
-        } else {
-            renderMessage('🔑 *[Система: нет ключа доступа. Нажми 🔑 в меню ☰ и введи ключ Администратора — тогда я смогу создавать приложения и писать код.]*', 'director', 'Оркестратор');
-            await new Promise(resolve => setTimeout(resolve, 1000)); 
-            if (typeof generateLocalResponse === 'function') {
-                try { aiText = await generateLocalResponse(activeAgent, text, PROXY, currentAbortController.signal); success = true; } 
-                catch (e) { if (e.name === 'AbortError') return; lastError = `Ошибка локального ИИ: ${e.message}`; }
-            } else { lastError = "Локальный ИИ не загружен."; }
-            clearTimeout(timeoutId);
-        }
-        
+
         if (success) {
             playSound('receive'); 
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
