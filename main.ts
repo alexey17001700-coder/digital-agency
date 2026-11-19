@@ -685,7 +685,8 @@ if (name === "create_github_repo") {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || `Ошибка создания репозитория`);
-        return `Успех: репозиторий "${args.name}" создан! Ссылка: ${data.html_url}`;
+        if (!isBoss) LAST_GUEST_REPO = String(args.name).trim();
+        return `Успех: репозиторий "${args.name}" создан! Ссылка: ${data.html_url}. Теперь пиши файлы с repo="${args.name}" — это твой рабочий репозиторий.`;
     } catch (e: any) { return `Ошибка создания репозитория: ${e.message}`; }
 }
               if (name === "list_github_repos") {
