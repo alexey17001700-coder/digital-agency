@@ -407,7 +407,7 @@ const TOOLS = [
                 properties: {
                     path: { type: "string", description: "Путь к файлу" },
                     content: { type: "string", description: "ПОЛНЫЙ новый код файла" },
-                    repo: { type: "string", description: "Имя репозитория — твоей рабочей папки (у гостя — созданный им). Если не указать, сервер подставит твой последний созданный репозиторий" }
+                    repo: { type: "string", description: "Имя репозитория — рабочей папки. Если не указать — берётся digital-agency" }
                 },
                 required: ["path", "content"]
             }
