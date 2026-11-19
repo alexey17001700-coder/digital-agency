@@ -135,9 +135,14 @@
     // Все системные «Слишком много шагов».
     function scanTooMany() { return scan('.chat-msg.msg-director', RE_TOOMANY, MAX_TOOMANY_LEN, 'many'); }
 
-    // Первое сообщение из списка, чей хеш ещё не отработан.
+    // Первое сообщение из списка, чей хеш ещё не отработан И которое лежит
+    // в хвосте чата. Старые сообщения (не хвост) молча помечаем — они прошлое.
     function firstNew(list) {
-        for (let i = 0; i < list.length; i++) if (!isDone(list[i].hash)) return list[i];
+        for (let i = 0; i < list.length; i++) {
+            if (isDone(list[i].hash)) continue;
+            if (!isLastMsg(list[i].el)) { markDone(list[i].hash); continue; }
+            return list[i];
+        }
         return null;
     }
 
