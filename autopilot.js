@@ -58,6 +58,7 @@
     let lastKickAt = 0;     // когда последний раз отправляли «разбей на задачи»
     let lastChatId = null;  // какой чат открыт сейчас
     let lastMsgCount = -1;  // сколько сообщений было в прошлый тик
+    let primed = false;     // история текущего чата уже принята как «виденная»
 
     function isOn() { return localStorage.getItem(LS_ON) !== 'off'; }
 
