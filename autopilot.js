@@ -21,6 +21,11 @@
     const RE_COMMENT = /<!--\s*NEXT\s*-->/i;
     const RE_PLAIN = /\[\[\s*NEXT\s*\]\]/i;
 
+    // --- ПИНОК: ловим системное «Слишком много шагов. Задача прервана.» ---
+    const LS_KICK = 'shtabAutopilotKickCount';   // сколько таких сообщений уже отработано
+    const RE_TOOMANY = /Слишком\s+много\s+шагов/gi;
+    const KICK_TEXT = 'разбей на задачи по шагам';
+
     let timer = null;
     let busy = false;      // уже отправляем — второй раз не дёргаем
     let waiting = 0;       // сколько циклов ждём, пока Архитектор договорит
