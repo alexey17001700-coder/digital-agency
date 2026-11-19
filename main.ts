@@ -854,7 +854,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}): Promise<string>
                     continue;
                 }
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
-                const result = await executeTool(fnName, fnArgs, isBoss);
+                const result = await executeTool(fnName, fnArgs);
 
                 let toolResult = result;
                 if (fnName === "get_weather") {
