@@ -458,6 +458,41 @@
             // Вернулся к телефону из другого приложения — проверяем сразу.
             document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
         });
+
+        // === СТОРОЖ ОБОЛОЧКИ (лечим залипшую оболочку ИЗ КАДРА) ===
+        // app.html грузится с ?v=<timestamp>, поэтому он ВСЕГДА свежий. А оболочка
+        // (index.html) может залипнуть в кэше телефона/PWA и слать старые запросы
+        // бэкапа/отката — сервер отвечает «Бэкап и откат доступны только с ключом
+        // Администратора». Свежий кадр сверяет метку сборки оболочки с version.json
+        // и, если оболочка старая (или метки нет вовсе), жёстко перезагружает её
+        // в обход кэша. Один раз — флаг в sessionStorage, петли нет.
+        const SHELL_BUILD = 55;
+        (function () {
+            const KEY = 'shtabShellHealBuild';
+            if (window.parent === window) return; // кадр открыт отдельно — оболочки нет
+            function parentBuild() {
+                try { return Number(window.parent.SHTAB_SHELL_BUILD) || 0; } catch (e) { return 0; }
+            }
+            async function healShell() {
+                let build = 0;
+                try {
+                    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+                    if (r.ok) build = Number((await r.json()).build) || 0;
+                } catch (e) { return; }
+                if (!build) return;
+                if (parentBuild() === build) { try { sessionStorage.removeItem(KEY); } catch (e) {} return; }
+                let already = null;
+                try { already = sessionStorage.getItem(KEY); } catch (e) { return; }
+                if (already === String(build)) return; // уже лечили — не зацикливаемся
+                try { sessionStorage.setItem(KEY, String(build)); } catch (e) {}
+                try {
+                    if ('caches' in window) caches.keys().then(ns => ns.forEach(n => caches.delete(n)));
+                    const p = window.parent;
+                    p.location.replace(p.location.pathname + '?v=' + Date.now());
+                } catch (e) {}
+            }
+            setTimeout(healShell, 1500);
+        })();
     })();
     </script>
 </body>
