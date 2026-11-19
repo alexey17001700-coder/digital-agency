@@ -174,31 +174,44 @@
         return out;
     }
 
-    // Новое сообщение Босса со словом «Пинок» (ещё не помеченное).
-    function findNewKick() {
+    /* --- ЗАЩИТА ОТ ЗАЦИКЛИВАНИЯ ---
+       Реагируем ТОЛЬКО на самое последнее сообщение в чате.
+       Раньше просматривалась вся история: при перерисовке чата data-атрибуты
+       терялись, старая команда ловилась заново — и автопилот бесконечно слал
+       «разбей на задачи по шагам». Плюс жёсткий кулдаун 60 секунд. */
+
+    const LS_KICK_TS = 'shtabAutopilotKickTs';
+    function kickCooldown() {
+        const ts = parseInt(localStorage.getItem(LS_KICK_TS) || '0', 10);
+        return Date.now() - ts < 60000;
+    }
+    function markKick() { localStorage.setItem(LS_KICK_TS, String(Date.now())); }
+
+    // Последнее сообщение в чате (или null).
+    function lastMsg() {
         const box = document.getElementById('chatContainer');
         if (!box) return null;
-        const msgs = box.querySelectorAll('.chat-msg.msg-boss');
-        for (let i = 0; i < msgs.length; i++) {
-            const el = msgs[i];
-            if (el.dataset[ATTR_KICK]) continue;
-            if (RE_KICK_WORD.test(el.innerText || '')) return el;
-            el.dataset[ATTR_KICK] = '1';   // без «пинка» — больше не проверяем
-        }
+        const all = box.querySelectorAll('.chat-msg');
+        return all.length ? all[all.length - 1] : null;
+    }
+
+    // Новое сообщение Босса со словом «Пинок» — только если оно ПОСЛЕДНЕЕ.
+    function findNewKick() {
+        const el = lastMsg();
+        if (!el || !el.classList.contains('msg-boss')) return null;
+        if (el.dataset[ATTR_KICK]) return null;
+        if (RE_KICK_WORD.test(el.innerText || '')) return el;
+        el.dataset[ATTR_KICK] = '1';
         return null;
     }
 
-    // Новое системное «Слишком много шагов» (ещё не помеченное).
+    // Системное «Слишком много шагов» — только если оно ПОСЛЕДНЕЕ.
     function findNewTooMany() {
-        const box = document.getElementById('chatContainer');
-        if (!box) return null;
-        const msgs = box.querySelectorAll('.chat-msg.msg-director');
-        for (let i = 0; i < msgs.length; i++) {
-            const el = msgs[i];
-            if (el.dataset[ATTR_TOOMANY]) continue;
-            if (RE_TOOMANY.test(el.innerText || '')) return el;
-            el.dataset[ATTR_TOOMANY] = '1';
-        }
+        const el = lastMsg();
+        if (!el || !el.classList.contains('msg-director')) return null;
+        if (el.dataset[ATTR_TOOMANY]) return null;
+        if (RE_TOOMANY.test(el.innerText || '')) return el;
+        el.dataset[ATTR_TOOMANY] = '1';
         return null;
     }
 
