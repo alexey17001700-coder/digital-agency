@@ -244,7 +244,9 @@ async function updateFileInRepo(path: string, content: string, repoName: string 
     };
     if (existing && existing.sha) payload.sha = existing.sha;
     const res = await gitAPI(`contents/${path}`, "PUT", payload, repoName);
-    if (!res || !res.commit) throw new Error("GitHub не вернул commit");
+    // Понятный текст вместо «GitHub не вернул commit»: модель читала эту фразу
+    // как отказ в правах и отвечала «я не могу писать код».
+    if (!res || !res.commit) throw new Error(`папка "${repoName}" не найдена или закрыта для записи`);
     return true;
 }
 
