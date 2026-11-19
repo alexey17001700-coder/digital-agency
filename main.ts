@@ -1085,8 +1085,8 @@ Deno.serve(async (request) => {
         }
 
         // Определяем, с каким репозиторием работаем
-        const targetRepo = (body.repo && typeof body.repo === "string" && body.repo.trim()) ? body.repo.trim() : REPO_NAME;
-        const isProtected = targetRepo === REPO_NAME;
+        let targetRepo = (body.repo && typeof body.repo === "string" && body.repo.trim()) ? body.repo.trim() : REPO_NAME;
+        let isProtected = targetRepo === REPO_NAME;
 
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
