@@ -144,49 +144,21 @@
         function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
         function clearSafePin() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; }
         function checkSafePin() { if (safePin === CORRECT_PIN) { document.getElementById('safe-display').innerText = "OK"; document.getElementById('safe-display').style.color = "#00ff00"; setTimeout(() => { document.getElementById('safe-lock-container').style.display = 'none'; document.getElementById('save-action-container').style.display = 'block'; }, 300); } else { document.getElementById('safe-display').innerText = "ERR"; document.getElementById('safe-display').style.color = "#ff0000"; setTimeout(clearSafePin, 1000); } }
-        // === БЭКАП И ОТКАТ НАПРЯМУЮ С GITHUB (без запроса на сервер Vivo) ===
-        const GH_OWNER = "alexey17001700-coder";
-        const GH_REPO = "digital-agency";
-        function ghToken() {
-            let t = localStorage.getItem('shtabGhToken') || "";
-            if (!t) { t = (prompt("🔑 GitHub-токен (хранится только на этом телефоне, в репозиторий не пишется):") || "").trim(); if (t) localStorage.setItem('shtabGhToken', t); }
-            return t;
-        }
-        async function ghAPI(path, method = "GET", body = null) {
-            const token = ghToken();
-            if (!token) throw new Error("нужен GitHub-токен");
-            const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/${path}`, {
-                method,
-                headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" },
-                body: body ? JSON.stringify(body) : undefined
+        // === БЭКАП И ОТКАТ ЧЕРЕЗ СЕРВЕР (токен только в памяти сервера, у пользователя не спрашиваем) ===
+        async function shtabBackup(isBackup) {
+            const res = await fetch(PROXY, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(isBackup ? { isBackup: true } : { isRollback: true })
             });
-            if (res.status === 404) return null;
-            if (!res.ok) { let m = "HTTP " + res.status; try { const d = await res.json(); m = d.message || m; } catch (_e) {} if (res.status === 401) localStorage.removeItem('shtabGhToken'); throw new Error(m); }
-            return res.json();
+            let data = null;
+            try { data = await res.json(); } catch (_e) { data = null; }
+            if (!data) throw new Error("Сервер не ответил");
+            if (!data.success) throw new Error(data.error || "Ошибка сервера");
+            return data.message || "Готово";
         }
-        async function ghBackup(isBackup) {
-            const info = await ghAPI("");
-            const branch = (info && info.default_branch) || "main";
-            const ref = await ghAPI(`git/refs/heads/${branch}`);
-            if (!ref) throw new Error("Ветка " + branch + " не найдена");
-            const commit = await ghAPI(`git/commits/${ref.object.sha}`);
-            let sourceFiles = [];
-            if (isBackup) {
-                const root = await ghAPI("contents/");
-                if (Array.isArray(root)) sourceFiles = root.filter(i => i.type === 'file' && ![".gitignore", "README.md", "ai_brain.json"].includes(i.name)).map(i => ({ name: i.name, sha: i.sha }));
-            } else {
-                const bk = await ghAPI("contents/backup");
-                if (Array.isArray(bk)) sourceFiles = bk.filter(i => i.type === 'file').map(i => ({ name: i.name, sha: i.sha }));
-            }
-            if (sourceFiles.length === 0) throw new Error(isBackup ? "Нет файлов в корне" : "Папка backup пуста");
-            const tree = sourceFiles.map(f => ({ path: isBackup ? `backup/${f.name}` : f.name, mode: "100644", type: "blob", sha: f.sha }));
-            const newTree = await ghAPI("git/trees", "POST", { base_tree: commit.tree.sha, tree });
-            const newCommit = await ghAPI("git/commits", "POST", { message: isBackup ? "Auto-backup" : "Rollback", tree: newTree.sha, parents: [ref.object.sha] });
-            await ghAPI(`git/refs/heads/${branch}`, "PATCH", { sha: newCommit.sha, force: true });
-            return tree.length;
-        }
-        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const n = await ghBackup(true); alert(`✅ Эталон сохранён (${n} файлов)!`); } catch (e) { alert("❌ " + e.message); } }
-        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const n = await ghBackup(false); alert(`✅ Откат выполнен (${n} файлов)!`); appFrame.src = "app.html?v=" + Date.now(); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { alert("✅ " + await shtabBackup(true)); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { alert("✅ " + await shtabBackup(false)); appFrame.src = "app.html?v=" + Date.now(); } catch (e) { alert("❌ " + e.message); } }
     </script>
 </body>
 </html>
