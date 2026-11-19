@@ -248,9 +248,11 @@
         // 1) ПИНОК — задача развалилась на «слишком много шагов»
         const tooManyEl = findNewTooMany();
         if (tooManyEl) {
+            if (kickCooldown()) return;   // защита от зацикливания
             if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
             busy = true; waiting = 0;
             tooManyEl.dataset[ATTR_TOOMANY] = '1';
+            markKick();
             log('Поймал «слишком много шагов» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
@@ -260,9 +262,11 @@
         // 1б) ПИНОК СЛОВОМ — Босс написал «Пинок»
         const kickEl = findNewKick();
         if (kickEl) {
+            if (kickCooldown()) return;   // защита от зацикливания
             if (typeof isGenerating !== 'undefined' && isGenerating) { waiting++; return; }
             busy = true; waiting = 0;
             kickEl.dataset[ATTR_KICK] = '1';
+            markKick();
             log('Босс сказал «Пинок» → отправляю «' + KICK_TEXT + '»');
             sendText(KICK_TEXT);
             setTimeout(function () { busy = false; }, 4000);
