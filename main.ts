@@ -510,7 +510,7 @@ const TOOLS = [
                 type: "object",
                 properties: {
                     path: { type: "string", description: "Имя файла для удаления (например test1.js)" },
-                    repo: { type: "string", description: "Имя репозитория. Гость указывает имя СВОЕГО репозитория; если не указать — сервер подставит его сам" }
+                    repo: { type: "string", description: "Имя репозитория. Если не указать — берётся digital-agency" }
                 },
                 required: ["path"]
             }
