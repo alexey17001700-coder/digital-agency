@@ -691,12 +691,13 @@ if (name === "create_github_repo") {
                 return "Ошибка: удаление этого файла запрещено.";
             }
             try {
-                const existing = await gitAPI(`contents/${args.path}`, "GET", null, repo);
+                const branch = await getDefaultBranch(repo);
+                const existing = await gitAPI(`contents/${args.path}?ref=${branch}`, "GET", null, repo);
                 if (!existing || !existing.sha) return `Ошибка: файл "${args.path}" не найден.`;
                 const res = await gitAPI(`contents/${args.path}`, "DELETE", {
                     message: `Delete ${args.path} by AI`,
                     sha: existing.sha,
-                    branch: "main"
+                    branch
                 }, repo);
                 if (res && res.commit) return `Успех: файл "${args.path}" удален из ${repo}.`;
                 throw new Error("GitHub не вернул commit.");
