@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- build 57 — Пинок по таймауту 300 сек в чате Штаба: вместо молчаливого abort теперь autoKick() — снимает зависший запрос, пишет в чат сообщение Босса «Разбей на задачи и делай по одной задаче, отчитывайся после каждой» и автоматически отправляет его Архитектору. Таймер autoKickTimer сбрасывается при ответе и при ручной остановке кнопкой. build 56→57.. Файлы: chat.js, version.json
+
 - build 56 — Пинок по таймауту 300 сек в чате Штаба: autoKick() по истечении 300 с без ответа снимает зависший запрос и сам отправляет сообщение Босса «Разбей на задачи и делай по одной задаче, отчитывайся после каждой» (renderMessage + addMessageToHistory + sendMessage). Добавлен сброс таймера: clearTimeout(autoKickTimer) в finally (ответ пришёл — пинок не летит) и при ручной остановке кнопкой ➤.. Файлы: chat.js, version.json
 
 - build 55 — Фикс «Откатить Штаб снова выдаёт: Бэкап и откат доступны только с ключом Администратора». Проверено: в main.ts замка нет (ветка isBackup/isRollback пропускает всегда, body.isBoss принудительно true, токен только из Deno.env.get("GITHUB_TOKEN")), в index.html флаг isBoss:true уже стоял — значит ошибку отдаёт залипшая в кэше оболочка. Сторож оболочки перенесён в свежий кадр app.html: читает window.parent.SHTAB_SHELL_BUILD, сверяет с version.json и жёстко перезагружает оболочку в обход кэша (флаг shtabShellHealBuild в sessionStorage, без петли). index.html выставляет window.SHTAB_SHELL_BUILD=55, SHELL_BUILD=55, убран дублирующий сторож (SHELL_BUILD=53). build 54 → 55.. Файлы: index.html, app.html, version.json, SERVER_DIAGNOSTICS.md
