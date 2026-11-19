@@ -583,7 +583,7 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
         // Новый репозиторий гость создаёт сам и работает внутри него свободно.
         if (!isBoss && isOldRepo(targetRepo) &&
             ["write_file", "replace_in_file", "delete_file", "enable_github_pages", "remember_step"].includes(name)) {
-            return `Ошибка: без ключа Администратора менять старый проект "${targetRepo}" запрещено. Разрешено только чтение. Гость может создать свой репозиторий через create_github_repo и менять файлы в нём.`;
+            return `Ошибка: без ключа Администратора менять старый проект "${targetRepo}" запрещено — только чтение. Ты можешь писать код: создай свой репозиторий через create_github_repo, а затем вызывай write_file / replace_in_file с полем repo = имя ЭТОГО нового репозитория. Без поля repo правка уходит в Штаб и отклоняется.`;
         }
 
         if (name === "read_file") {
