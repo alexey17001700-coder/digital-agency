@@ -483,6 +483,9 @@ const MAX_KICKS = 3;           // максимум 3 пинка подряд п�
 let kickCount = 0;             // сколько пинков уже ушло
 let gotAnswer = false;         // пришёл ли ответ на текущий вопрос
 function autoKick(){
+    if (gotAnswer) return;                    // ответ уже пришёл — пинать нечего
+    if (kickCount >= MAX_KICKS) return;       // защита от бесконечной петли
+    kickCount++;
     autoKickTimer = null;
     if (!isGenerating) return;   // ответ уже пришёл или Босс остановил вручную — пинок не нужен
     try { currentAbortController.abort(); } catch(e){}
