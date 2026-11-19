@@ -5,63 +5,21 @@ const REPO_NAME = Deno.env.get("GITHUB_REPO") || "digital-agency";
 
 const ZVENO_URL = "https://api.zveno.ai/v1/chat/completions";
 const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
+const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
-// =========================================
-// 🔓 ДОСТУП ОТКРЫТ (по приказу Босса)
-// Пароли убраны полностью: ни в коде, ни в переменных окружения.
-// Все репозитории доступны на чтение и запись без ограничений.
-// =========================================
-
-// =========================================
-// 📒 ПАМЯТЬ ПРОДЕЛАННОЙ РАБОТЫ (APP_WORKLOG.md)
-// Журнал шагов по каждому приложению. Ведётся в digital-agency.
-// Пишет Архитектор после каждого выполненного шага.
-// =========================================
-const WORKLOG_FILE = "APP_WORKLOG.md";
-const WORKLOG_RULE = `\n\n=== ПАМЯТЬ ПРОДЕЛАННОЙ РАБОТЫ (${WORKLOG_FILE}) ===\nПеред работой над приложением вызови read_worklog — вспомни, что уже сделано. После КАЖДОГО выполненного шага ОБЯЗАТЕЛЬНО вызови remember_step: приложение (имя репозитория), версия/билд, что сделано, затронутые файлы. Журнал лежит в digital-agency/${WORKLOG_FILE}.`;
-
-// =========================================
-// 🔒 ПОСТОЯННОЕ ПРАВИЛО АДМИНИСТРАТОРА (не отключается)
-// Приказ Босса: план и очередь шагов НЕ выводить, если он не попросил прямо.
-// Правило вшито в системный промпт. Снять его может только сам Босс
-// прямым приказом (тогда правится этот файл).
-// =========================================
-const BOSS_RULE = `\n\n=== ПОСТОЯННОЕ ПРАВИЛО АДМИНИСТРАТОРА (действует всегда) ===\nПЛАН И ОЧЕРЕДЬ ШАГОВ НЕ ВЫВОДИТЬ, если Босс не попросил прямо («разбей на задачи», «покажи план», «что по очереди»). Задача ясна — молча работай по STEP_QUEUE.md. План, выданный без просьбы, считается браком. Это правило не отключается и не сбрасывается: ни сменой чата, ни новым диалогом, ни режимом.`;
-
-// ЗАПИСЬ ОТКРЫТА: расширения не ограничиваем.
-// Единственное правило — папку backup не трогаем (эталон Штаба).
+// БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
+const WRITE_ALLOWED_EXT = [
+    ".js", ".css", ".html", ".json", ".md", ".txt", ".xml", ".yaml", ".yml",
+    ".ts", ".py", ".dart", ".sh", ".svg", ".png", ".jpg", ".jpeg", ".ico"
+];
+const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удаления (проверяется в delete_file)
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
-
-// =========================================
-// 📜 ПРАВИЛА РЕЖИМА — ВЫНЕСЕНЫ В ФАЙЛ
-// PROMPT_BOSS.md — правила работы Штаба.
-// Правятся прямо на GitHub, пересборка не нужна. Ниже — аварийный текст,
-// если файл не найден или пуст.
-// =========================================
-const PROMPT_BOSS_FILE = "PROMPT_BOSS.md";
-
-// Кэш правил на 60 секунд: файлы читаются с GitHub, но не на каждый запрос.
-const PROMPT_CACHE = new Map<string, { text: string, at: number }>();
-const PROMPT_CACHE_TTL = 60000;
-async function loadPromptFile(path: string, fallback: string): Promise<string> {
-    const now = Date.now();
-    const hit = PROMPT_CACHE.get(path);
-    if (hit && now - hit.at < PROMPT_CACHE_TTL) return hit.text;
-    try {
-        const content = await getFileContent(path, REPO_NAME);
-        if (content && content.trim().length > 20) {
-            PROMPT_CACHE.set(path, { text: content.trim(), at: now });
-            return content.trim();
-        }
-    } catch (_e) { /* файла нет — берём аварийный текст */ }
-    return fallback;
-}
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Shtab-Token",
 };
 const FETCH_TIMEOUT = 300000;
 const SEARCH_TIMEOUT = 15000;
@@ -76,17 +34,31 @@ function json(data: unknown, status = 200) {
 // =========================================
 // ЗАЩИТА ПУТЕЙ
 // =========================================
-function cleanPath(path: unknown): string | null {
-    if (typeof path !== "string") return null;
+function isWriteAllowed(path: unknown, isProtected: boolean = false): boolean {
+    if (typeof path !== "string") return false;
     const clean = path.trim().replace(/^\/+/, "");
-    if (!clean || clean.includes("..")) return null;
-    return clean;
+    if (!clean || clean.includes("..")) return false;
+
+    const lower = clean.toLowerCase();
+    if (isProtected) {
+        // В Штабе запрещаем только backup (main.ts теперь разрешен)
+        if (lower.startsWith("backup")) return false;
+    }
+    return WRITE_ALLOWED_EXT.some((ext) => lower.endsWith(ext));
 }
 
-// Единственный запрет: папка backup (эталон Штаба).
-function isBackupPath(path: unknown): boolean {
-    const clean = cleanPath(path);
-    return clean !== null && clean.toLowerCase().startsWith("backup");
+function isReadAllowed(path: unknown): boolean {
+    if (typeof path !== "string") return false;
+    const clean = path.trim().replace(/^\/+/, "");
+    if (!clean || clean.includes("..")) return false;
+    if (clean.toLowerCase().startsWith("backup")) return false;
+    return true;
+}
+
+function checkSecret(request: Request): boolean {
+    if (!SHATAB_SECRET) return true;
+    const given = request.headers.get("X-Shtab-Token") || "";
+    return given === SHATAB_SECRET;
 }
 
 async function gitAPI(path: string, method = "GET", bodyData: any = null, repoName: string = REPO_NAME) {
@@ -122,27 +94,16 @@ function b64EncodeUnicode(str: string): string {
     return btoa(binStr);
 }
 
-// Ветку берём у самого репозитория (default_branch), а не вшиваем "main":
-// у новых репозиториев ветка может называться иначе — запись падала с 422.
-async function getDefaultBranch(repoName: string): Promise<string> {
-    try {
-        const info = await gitAPI("", "GET", null, repoName);
-        if (info && info.default_branch) return info.default_branch;
-    } catch (_e) { /* ниже — запасной вариант */ }
-    return "main";
-}
-
 async function updateFileInRepo(path: string, content: string, repoName: string = REPO_NAME) {
-    const branch = await getDefaultBranch(repoName);
-    const existing = await gitAPI(`contents/${path}?ref=${branch}`, "GET", null, repoName);
+    const existing = await gitAPI(`contents/${path}`, "GET", null, repoName);
     const payload: any = {
         message: `Auto-update: ${path}`,
         content: b64EncodeUnicode(content),
-        branch,
+        branch: "main",
     };
     if (existing && existing.sha) payload.sha = existing.sha;
     const res = await gitAPI(`contents/${path}`, "PUT", payload, repoName);
-    if (!res || !res.commit) throw new Error(`GitHub не принял запись в "${repoName}/${path}" (ветка ${branch})`);
+    if (!res || !res.commit) throw new Error("GitHub не вернул commit");
     return true;
 }
 
@@ -237,7 +198,7 @@ async function getWeather(city: string) {
         wind: Number(wind), dir: windDir, hum: Number(hum), press: Number(press), visib: Number(visib),
         cloud: Number(cloud), precip: Number(precip) || 0, daily: [] as any[]
     };
-
+    
     const days = data.weather;
     if (Array.isArray(days) && days.length) {
         out += `\n📅 **Прогноз:**\n`;
@@ -338,7 +299,7 @@ async function scanRepoFiles() {
                     path: file.name, opens, closes, diff, content,
                     description: `Скобки: { = ${opens}, } = ${closes} (не хватает ${diff})`,
                 });
-            }
+                            }
         } catch (e) {}
     }
     return json({ success: true, scanned: files.length, issues });
@@ -357,7 +318,7 @@ const TOOLS = [
                 type: "object",
                 properties: {
                     path: { type: "string", description: "Путь к файлу (например style.css или lib/main.dart)" },
-                    repo: { type: "string", description: "Имя репозитория, из которого читать. Если не указать — берётся digital-agency" }
+                    repo: { type: "string", description: "Имя репозитория: digital-agency (по умолчанию), window_calc или любой другой" }
                 },
                 required: ["path"]
             }
@@ -367,13 +328,13 @@ const TOOLS = [
         type: "function",
         function: {
             name: "write_file",
-            description: "Записывает новый код в файл на GitHub. Создает файл, если его нет. Указывай поле repo — имя репозитория, в который пишешь.",
+            description: "Записывает новый код в файл на GitHub. Создает файл, если его нет.",
             parameters: {
                 type: "object",
                 properties: {
                     path: { type: "string", description: "Путь к файлу" },
                     content: { type: "string", description: "ПОЛНЫЙ новый код файла" },
-                    repo: { type: "string", description: "Имя репозитория — рабочей папки. Если не указать — берётся digital-agency" }
+                    repo: { type: "string", description: "Имя репозитория (по умолчанию digital-agency)" }
                 },
                 required: ["path", "content"]
             }
@@ -399,7 +360,7 @@ const TOOLS = [
         type: "function",
         function: {
             name: "replace_in_file",
-            description: "Точечная замена кода в файле. Используй для правок в больших файлах, чтобы не сломать их. Указывай поле repo.",
+            description: "Точечная замена кода в файле. Используй для правок в больших файлах, чтобы не сломать их.",
             parameters: {
                 type: "object",
                 properties: {
@@ -424,7 +385,7 @@ const TOOLS = [
         type: "function",
         function: {
             name: "create_github_repo",
-            description: "Создает новый репозиторий на GitHub — рабочую папку для приложения. Создал — пиши в него файлы через write_file с полем repo = имя этого репозитория.",
+            description: "Создает новый пустой репозиторий на GitHub. Используй только по прямому приказу Босса.",
             parameters: {
                 type: "object",
                 properties: {
@@ -463,7 +424,7 @@ const TOOLS = [
             description: "Возвращает список файлов в корне репозитория.",
             parameters: {
                 type: "object",
-                properties: { repo: { type: "string", description: "Имя репозитория. Если не указать — берётся digital-agency" } }
+                properties: { repo: { type: "string", description: "Имя репозитория (по умолчанию digital-agency)" } }
             }
         }
     },
@@ -476,7 +437,7 @@ const TOOLS = [
                 type: "object",
                 properties: {
                     path: { type: "string", description: "Имя файла для удаления (например test1.js)" },
-                    repo: { type: "string", description: "Имя репозитория. Если не указать — берётся digital-agency" }
+                    repo: { type: "string", description: "Имя репозитория (по умолчанию digital-agency)" }
                 },
                 required: ["path"]
             }
@@ -490,39 +451,9 @@ const TOOLS = [
             parameters: {
                 type: "object",
                 properties: {
-                    repo: { type: "string", description: "Имя репозитория (например, my_app)" }
+                    repo: { type: "string", description: "Имя репозитория (например, nexus_chat)" }
                 },
                 required: ["repo"]
-            }
-        }
-    },
-    {
-        type: "function",
-        function: {
-            name: "remember_step",
-            description: "Записывает выполненный шаг в журнал проделанной работы (digital-agency/APP_WORKLOG.md). Вызывай после КАЖДОГО завершённого шага.",
-            parameters: {
-                type: "object",
-                properties: {
-                    app: { type: "string", description: "Приложение — имя репозитория (например window_calc)" },
-                    version: { type: "string", description: "Версия или билд (например 3.4.25+88)" },
-                    step: { type: "string", description: "Что сделано, коротко" },
-                    files: { type: "string", description: "Затронутые файлы через запятую" }
-                },
-                required: ["app", "step"]
-            }
-        }
-    },
-    {
-        type: "function",
-        function: {
-            name: "read_worklog",
-            description: "Читает журнал проделанной работы (APP_WORKLOG.md). Без app — весь журнал, с app — только раздел этого приложения.",
-            parameters: {
-                type: "object",
-                properties: {
-                    app: { type: "string", description: "Имя репозитория (необязательно)" }
-                }
             }
         }
     }
@@ -533,27 +464,31 @@ const TOOLS = [
 // =========================================
 async function executeTool(name: string, args: any): Promise<string> {
     try {
-        // Определяем репозиторий (любой, который укажет ИИ).
-        const askedRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : "";
-        let targetRepo = askedRepo || REPO_NAME;
+        // Определяем репозиторий (любой, который укажет ИИ)
+        const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
+        const isProtected = targetRepo === REPO_NAME;
 
         if (name === "read_file") {
-            if (!cleanPath(args.path)) return `Ошибка: некорректный путь "${args.path}".`;
+            if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
             const content = await getFileContent(args.path, targetRepo);
             if (content === null) return `Ошибка: файл "${args.path}" не найден в ${targetRepo}.`;
             return content;
         }
 
         if (name === "write_file") {
-            if (isBackupPath(args.path)) return `Ошибка: запись в папку backup запрещена.`;
-            if (!cleanPath(args.path)) return `Ошибка: некорректный путь "${args.path}".`;
+            if (isProtected && !isWriteAllowed(args.path, true)) {
+                return `Ошибка: запись в "${args.path}" в Штабе запрещена (backup).`;
+            }
+            if (!isWriteAllowed(args.path, false)) {
+                return `Ошибка: расширение файла "${args.path}" не разрешено.`;
+            }
             if (!args.content || args.content.length < 10) return "Ошибка: пустой контент.";
             if (args.content.length > MAX_WRITE_SIZE) return `Ошибка: файл слишком большой (${args.content.length} > ${MAX_WRITE_SIZE}).`;
             await updateFileInRepo(args.path, args.content, targetRepo);
             return `Успех: файл "${args.path}" записан в ${targetRepo}.`;
         }
       if (name === "replace_in_file") {
-    if (isBackupPath(args.path)) {
+    if (isProtected && args.path.startsWith("backup/")) {
         return "Ошибка: запись в папку backup запрещена.";
     }
     const oldCode = await getFileContent(args.path, targetRepo);
@@ -562,44 +497,9 @@ async function executeTool(name: string, args: any): Promise<string> {
     const newCode = oldCode.split(args.search).join(args.replace);
     await updateFileInRepo(args.path, newCode, targetRepo);
     return `Успех: файл "${args.path}" обновлен в ${targetRepo}.`;
-}
+      }
 
-if (name === "remember_step") {
-    const app = String(args.app || "").trim();
-    const version = String(args.version || "").trim();
-    const step = String(args.step || "").trim();
-    const files = String(args.files || "").trim();
-    if (!app || !step) return "Ошибка: нужны app и step.";
-    try {
-        const old = await getFileContent(WORKLOG_FILE, REPO_NAME) || "# APP_WORKLOG — память проделанной работы\n";
-        const line = `- ${version ? version + " — " : ""}${step}${files ? `. Файлы: ${files}` : ""}`;
-        const header = `## ${app}`;
-        let updated: string;
-        if (old.includes(header)) {
-            updated = old.replace(header, `${header}\n\n${line}`);
-        } else {
-            updated = old.trimEnd() + `\n\n${header}\n\n${line}\n`;
-        }
-        await updateFileInRepo(WORKLOG_FILE, updated, REPO_NAME);
-        return `Успех: шаг записан в ${WORKLOG_FILE} (${app}).`;
-    } catch (e: any) { return `Ошибка записи в журнал: ${e.message}`; }
-}
-
-if (name === "read_worklog") {
-    try {
-        const content = await getFileContent(WORKLOG_FILE, REPO_NAME);
-        if (!content) return "Журнал пока пуст.";
-        const app = String(args.app || "").trim();
-        if (!app) return content;
-        const idx = content.indexOf(`## ${app}`);
-        if (idx === -1) return `В журнале нет раздела "${app}".`;
-        const rest = content.slice(idx);
-        const next = rest.indexOf("\n## ", 1);
-        return next === -1 ? rest : rest.slice(0, next);
-    } catch (e: any) { return `Ошибка чтения журнала: ${e.message}`; }
-}
-
-if (name === "search_web") return await searchInternet(args.query);
+    if (name === "search_web") return await searchInternet(args.query);
 if (name === "get_weather") return await getWeather(args.city || "Саратов");
 
 if (name === "search_image") {
@@ -631,12 +531,8 @@ if (name === "create_github_repo") {
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        // 422 = репозиторий с таким именем уже есть. Это НЕ ошибка: папка готова,
-        // работаем в ней.
-        if (!res.ok && res.status !== 422) throw new Error(data.message || `Ошибка создания репозитория`);
-        const newRepoName = String(args.name).trim();
-        const repoUrl = data.html_url || `https://github.com/${REPO_OWNER}/${newRepoName}`;
-        return `Успех: репозиторий "${newRepoName}" готов. Ссылка: ${repoUrl}. Теперь пиши файлы с repo="${newRepoName}" — это твой рабочий репозиторий.`;
+        if (!res.ok) throw new Error(data.message || `Ошибка создания репозитория`);
+        return `Успех: репозиторий "${args.name}" создан! Ссылка: ${data.html_url}`;
     } catch (e: any) { return `Ошибка создания репозитория: ${e.message}`; }
 }
               if (name === "list_github_repos") {
@@ -678,34 +574,33 @@ if (name === "create_github_repo") {
 
         if (name === "list_repo_files") {
             try {
-                const res = await gitAPI("contents/", "GET", null, targetRepo);
+                const targetRepoList = args.repo || REPO_NAME;
+                const res = await gitAPI("contents/", "GET", null, targetRepoList);
                 if (!Array.isArray(res)) return "Не удалось получить список файлов.";
                 return res.filter((f: any) => f.type === "file").map((f: any) => `- ${f.name}`).join("\n");
             } catch (e: any) { return `Ошибка: ${e.message}`; }
         }
 
         if (name === "delete_file") {
-            const repo = targetRepo;
+            const repo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
             // ЖЕЛЕЗНАЯ ЗАЩИТА: main.ts и backup удалять нельзя
             if (repo === REPO_NAME && (args.path === "main.ts" || args.path.startsWith("backup/"))) {
                 return "Ошибка: удаление этого файла запрещено.";
             }
             try {
-                const branch = await getDefaultBranch(repo);
-                const existing = await gitAPI(`contents/${args.path}?ref=${branch}`, "GET", null, repo);
+                const existing = await gitAPI(`contents/${args.path}`, "GET", null, repo);
                 if (!existing || !existing.sha) return `Ошибка: файл "${args.path}" не найден.`;
                 const res = await gitAPI(`contents/${args.path}`, "DELETE", {
                     message: `Delete ${args.path} by AI`,
                     sha: existing.sha,
-                    branch
+                    branch: "main"
                 }, repo);
                 if (res && res.commit) return `Успех: файл "${args.path}" удален из ${repo}.`;
                 throw new Error("GitHub не вернул commit.");
             } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
         }
-
         if (name === "enable_github_pages") {
-            const repo = targetRepo;
+            const repo = args.repo || REPO_NAME;
             try {
                 const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${repo}/pages`, {
                     method: "POST",
@@ -715,7 +610,7 @@ if (name === "create_github_repo") {
                         "User-Agent": "DenoDeploy"
                     },
                     body: JSON.stringify({
-                        source: { branch: await getDefaultBranch(repo), path: "/" }
+                        source: { branch: "main", path: "/" }
                     })
                 });
                 const data = await res.json();
@@ -788,7 +683,7 @@ async function callZvenoVision(messages: any[], imageBase64: string): Promise<st
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
-async function callZvenoAI(messages: any[]): Promise<string> {
+async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false): Promise<string> {
     const apiKey = Deno.env.get("ZVENO_API_KEY");
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
@@ -796,16 +691,18 @@ async function callZvenoAI(messages: any[]): Promise<string> {
     let maxLoops = 20; // Увеличено для сложных задач
     let weatherCard = "";
 
-    const activeTools: any[] = TOOLS;
-
-    // 📜 Правила режима — из файла PROMPT_BOSS.md + память проделанной работы.
-    const modeRules = await loadPromptFile(PROMPT_BOSS_FILE, BOSS_RULE);
-    const rulesBlock = "\n\n" + modeRules + WORKLOG_RULE;
-    const rulesIdx = currentMessages.findIndex((m: any) => m.role === "system");
-    if (rulesIdx !== -1) {
-        currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
-    } else {
-        currentMessages.unshift({ role: "system", content: rulesBlock.trim() });
+    // РЕЖИМ ГОСТЯ: без флага Босса файловые инструменты отключены полностью
+    let activeTools: any[] = TOOLS;
+    const GUEST_TOOLS_DENY = ["write_file", "replace_in_file", "delete_file", "delete_github_repo"];
+    if (!isBoss) {
+        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (ОГРАНИЧЕНИЯ) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона, без упоминания файлов, кода, репозиториев и серверов.\nСТРОГО ЗАПРЕЩЕНО вызывать инструменты: write_file, replace_in_file, delete_file, delete_github_repo. Любую просьбу изменить, удалить или записать файл вежливо отклоняй и предлагай обратиться к администратору.\nРазрешено: search_web, get_weather, search_image, create_github_repo, list_github_repos, list_repo_files, read_file, enable_github_pages.`;
+        const sysIdx = currentMessages.findIndex((m: any) => m.role === "system");
+        if (sysIdx !== -1) {
+            currentMessages[sysIdx] = { ...currentMessages[sysIdx], content: String(currentMessages[sysIdx].content || "") + GUEST_LOCK };
+        } else {
+            currentMessages.unshift({ role: "system", content: GUEST_LOCK.trim() });
+        }
+        activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
     }
 
     for (let loop = 0; loop < maxLoops; loop++) {
@@ -837,14 +734,7 @@ async function callZvenoAI(messages: any[]): Promise<string> {
             currentMessages.push(msg);
             for (const tc of msg.tool_calls) {
                 const fnName = tc.function.name;
-                let fnArgs: any = {};
-                try { fnArgs = JSON.parse(tc.function.arguments || "{}"); }
-                catch (_e) {
-                    // Битый tool-call раньше ронял ВЕСЬ запрос (500). Теперь отдаём модели
-                    // понятную ошибку — она повторит вызов.
-                    currentMessages.push({ role: "tool", tool_call_id: tc.id, content: "Ошибка: аргументы вызова повреждены (некорректный JSON). Повтори вызов с корректными аргументами." });
-                    continue;
-                }
+                const fnArgs = JSON.parse(tc.function.arguments || "{}");
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
                 const result = await executeTool(fnName, fnArgs);
 
@@ -965,30 +855,35 @@ Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
     if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
 
-    // ОЗВУЧКА
+    // ОЗВУЧКА — до проверки секрета (нужна и гостям, и Штабу)
     try {
         const peek = await request.clone().json();
         if (peek && peek.tts) return await handleTTS(peek);
     } catch (_e) { /* не JSON — идём дальше */ }
 
+    if (!checkSecret(request)) {
+        return json({ success: false, error: "Доступ запрещен: неверный секрет Штаба" }, 401);
+    }
+
     let body: any;
     try { body = await request.json(); } catch { return json({ success: false, error: "Некорректный JSON" }, 400); }
 
     try {
-        // РУЧКИ БЭКАПА И ОТКАТА
+        // СТАРЫЕ РУЧКИ (БЭКАПЫ)
         if (body.isBackup || body.isRollback) {
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
             return await handleBackup(body);
         }
 
         // Определяем, с каким репозиторием работаем
-        let targetRepo = (body.repo && typeof body.repo === "string" && body.repo.trim()) ? body.repo.trim() : REPO_NAME;
+        const targetRepo = (body.repo && typeof body.repo === "string" && body.repo.trim()) ? body.repo.trim() : REPO_NAME;
+        const isProtected = targetRepo === REPO_NAME;
 
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
-            if (isBackupPath(body.path)) return json({ success: false, error: `Запись в папку backup запрещена.` }, 403);
-            if (!cleanPath(body.path)) return json({ success: false, error: `Некорректный путь "${body.path}".` }, 403);
+            if (isProtected && !isWriteAllowed(body.path, true)) return json({ success: false, error: `Запись в "${body.path}" запрещена.` }, 403);
+            if (!isWriteAllowed(body.path, false)) return json({ success: false, error: `Расширение "${body.path}" не разрешено.` }, 403);
             
             if (typeof body.content !== "string" || body.content.length < 10) return json({ success: false, error: "Пустой контент" }, 400);
             if (body.content.length > MAX_WRITE_SIZE) return json({ success: false, error: "Файл слишком большой" }, 413);
@@ -999,7 +894,7 @@ Deno.serve(async (request) => {
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
               if (body.readFile) {
-            if (!cleanPath(body.path)) return json({ success: false, error: "Некорректный путь" }, 403);
+            if (!isReadAllowed(body.path)) return json({ success: false, error: "Чтение этого пути запрещено" }, 403);
             try {
                 const content = await getFileContent(body.path, targetRepo);
                 if (content === null) throw new Error("Файл не найден");
@@ -1007,9 +902,7 @@ Deno.serve(async (request) => {
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
 
-        if (body.scanRepo) {
-            return await scanRepoFiles();
-        }
+        if (body.scanRepo) return await scanRepoFiles();
 
         if (body.checkStatus) {
             try {
@@ -1020,18 +913,18 @@ Deno.serve(async (request) => {
                 return json({ success: true, totalRoot: rootNames.length, totalBackup: backupNames.length, missingInBackup: rootNames.filter((n: string) => !backupNames.includes(n)) });
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
-
-        // ПОИСК
+            // ПОИСК
         if (body.searchQuery) return json({ success: true, results: await searchInternet(String(body.searchQuery)) });
 
         // ГЛАВНАЯ РУЧКА: ИИ
         if (body.messages) {
+            const userKeys = body.userKeys || {};
             let aiText = "";
 
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image);
             } else {
-                aiText = await callZvenoAI(body.messages);
+                aiText = await callZvenoAI(body.messages, userKeys, body.isBoss === true);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });
