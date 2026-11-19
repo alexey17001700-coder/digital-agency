@@ -944,6 +944,17 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             for (const tc of msg.tool_calls) {
                 const fnName = tc.function.name;
                 const fnArgs = JSON.parse(tc.function.arguments || "{}");
+                // ГОСТЬ: write_file / replace_in_file / delete_file без поля repo уходили в Штаб
+                // и падали под замком («старый репозиторий только с ключом»). Модель читала это
+                // как «у меня только чтение» и отказывалась работать. Подставляем репозиторий
+                // гостя ДО вызова инструмента — правка всегда попадает в его папку.
+                if (!isBoss && ["write_file", "replace_in_file", "delete_file"].includes(fnName)) {
+                    const asked = String(fnArgs?.repo || "").trim();
+                    if (!asked || isOldRepo(asked)) {
+                        const own = await findGuestRepo();
+                        if (own) fnArgs.repo = own;
+                    }
+                }
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
                 const result = await executeTool(fnName, fnArgs, isBoss);
 
