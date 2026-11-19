@@ -479,7 +479,10 @@ function kickAI(agentName) {
    Босса с приказом разбить работу на задачи и делать их по одной с отчётом. */
 const AUTO_KICK_TEXT = "Разбей на задачи и делай по одной задаче, отчитывайся после каждой.";
 function autoKick(){
-    if (isGenerating){ try { currentAbortController.abort(); } catch(e){} isGenerating = false; clearTimeout(typingTimer); }
+    autoKickTimer = null;
+    if (!isGenerating) return;   // ответ уже пришёл или Босс остановил вручную — пинок не нужен
+    try { currentAbortController.abort(); } catch(e){}
+    isGenerating = false; clearTimeout(typingTimer);
     renderMessage('⏰ *[Система: 300 секунд истекли — ответа нет. Пинок: разбиваю на задачи.]*', 'director', 'Оркестратор');
     renderMessage(AUTO_KICK_TEXT, 'boss');
     addMessageToHistory(AUTO_KICK_TEXT, 'boss');
