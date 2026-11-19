@@ -665,6 +665,8 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
 setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
-    if (window.speakPhoneVoice !== speakAny) window.speakPhoneVoice = speakAny;     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
-    positionVoiceBtn();
+    if (window.speakPhoneVoice !== speakAny) window.speakPhoneVoice = speakAny;
+    // Кнопку 🎛 больше не возвращаем — она убрана насовсем.
+    const _stray = document.getElementById('vlabBtn2');
+    if (_stray) _stray.remove();
 }, 1500);
