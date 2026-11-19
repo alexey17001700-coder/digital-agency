@@ -385,5 +385,74 @@
         document.body.removeChild(ta);
     }
     </script>
+
+    <script>
+    // === ПРОВЕРКА ОБНОВЛЕНИЙ ШТАБА ===
+    // Раз в 30 сек Штаб спрашивает version.json (в обход кэша) и сравнивает build
+    // с тем, что был при загрузке. Если build изменился — кнопка «Обновить штаб»
+    // начинает мигать, в шапке появляется бейдж «⬆ ОБНОВЛЕНИЕ», телефон вибрирует.
+    // Фолбэк: если version.json нет — следим за ETag app.html.
+    (function () {
+        const CHECK_MS = 30000;
+        let currentBuild = null;
+        let notified = false;
+
+        async function fetchBuild() {
+            try {
+                const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+                if (r.ok) {
+                    const j = await r.json();
+                    const v = String(j.build || j.version || '');
+                    if (v) return v;
+                }
+            } catch (e) { /* нет version.json — идём в фолбэк */ }
+            try {
+                const h = await fetch('app.html?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+                return h.headers.get('etag') || h.headers.get('last-modified') || null;
+            } catch (e) { return null; }
+        }
+
+        function markUpdate(build) {
+            if (notified) return;
+            notified = true;
+
+            const btn = document.getElementById('btnRefreshShtab');
+            if (btn) {
+                btn.classList.add('update-flash');
+                btn.textContent = '🔄 НОВАЯ ВЕРСИЯ';
+                btn.title = 'Доступна новая версия Штаба (build ' + build + ')';
+            }
+
+            const bar = document.querySelector('.status-bar');
+            if (bar && !document.getElementById('status-update')) {
+                const b = document.createElement('div');
+                b.id = 'status-update';
+                b.className = 'status-item';
+                b.style.cssText = 'cursor:pointer; border-color:#00e5ff; color:#00e5ff;';
+                b.textContent = '⬆ ОБНОВЛЕНИЕ';
+                b.title = 'Нажми, чтобы обновить Штаб';
+                b.onclick = () => refreshShtab();
+                bar.appendChild(b);
+            }
+
+            if (navigator.vibrate) { try { navigator.vibrate([80, 60, 80]); } catch (e) {} }
+            console.log('Штаб: доступна новая версия, build =', build);
+        }
+
+        async function check() {
+            const build = await fetchBuild();
+            if (!build) return;
+            if (currentBuild === null) { currentBuild = build; return; }
+            if (build !== currentBuild) markUpdate(build);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            check();
+            setInterval(check, CHECK_MS);
+            // Вернулся к телефону из другого приложения — проверяем сразу.
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+        });
+    })();
+    </script>
 </body>
 </html>
