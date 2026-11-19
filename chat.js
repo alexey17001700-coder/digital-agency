@@ -93,50 +93,16 @@ function toggleSidebar() { document.getElementById('sidebar').classList.toggle('
    Гостевой режим удалён (build 41): он держался на флаге в браузере,
    прав гостю всё равно не хватало, а дыр в защите добавлял.
    Без ключа — локальный ИИ без инструментов, писать он не умеет. */
-/* Ключ Администратора живёт ТОЛЬКО на сервере (переменная окружения BOSS_KEY).
-   В этом файле его больше нет — исходник страницы читает любой желающий.
-   Клиент отправляет ключ один раз на ручку verifyKey и получает токен сессии.
-   Режим Босса определяется наличием токена, а не флагом в браузере. */
-function bossToken() { return localStorage.getItem('shtab_boss_token') || ''; }
-function isBossMode() { return !!bossToken(); }
+/* 🔓 ПАРОЛЕЙ НЕТ (по приказу Босса).
+   Ни ключа Босса, ни гостевого — доступ открыт всем.
+   Кнопка 🔑 больше не нужна и скрыта. */
+function bossToken() { return ''; }
+function isBossMode() { return true; }
 function paintBossKey() {
     const btn = document.getElementById('bossKeyBtn');
-    if (!btn) return;
-    if (isBossMode()) { btn.innerText = '🟢'; btn.classList.add('boss-on'); btn.title = 'Режим Босса: ВКЛ'; }
-    else { btn.innerText = '🔑'; btn.classList.remove('boss-on'); btn.title = 'Служебный вход'; }
+    if (btn) btn.style.display = 'none';
 }
-async function toggleBossMode() {
-    if (isBossMode()) {
-        if (confirm('Выйти из режима Босса?')) {
-            localStorage.removeItem('shtab_boss_token');
-            localStorage.removeItem('shtab_boss');
-            paintBossKey();
-            alert('Режим Босса выключен');
-        }
-        return;
-    }
-    const pin = prompt('Введите ключ Администратора:');
-    if (pin === null) return;
-    const key = pin.trim();
-    if (!key) return;
-    try {
-        const res = await fetch(PROXY, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ verifyKey: key })
-        });
-        const data = await res.json();
-        if (data && data.success && data.token) {
-            localStorage.setItem('shtab_boss_token', data.token);
-            localStorage.removeItem('shtab_boss');
-            paintBossKey();
-            alert('Режим Босса активирован!');
-        } else {
-            alert('Неверный ключ' + (data && data.error ? '\n' + data.error : ''));
-        }
-    } catch (e) {
-        alert('Сервер недоступен: ' + e.message);
-    }
-}
+function toggleBossMode() { alert('Пароли убраны — доступ открыт.'); }
 
 function renderChatList() {
     chatListEl.innerHTML = '';
