@@ -1,35 +1,31 @@
 /* ============================================================
-   АВТОПИЛОТ ШТАБА — «ДАЛЬШЕ» ПО МЕТКЕ В ЧАТЕ
-   Работает ЛОКАЛЬНО: следит за самим чатом на экране.
-   Никаких запросов в GitHub — интернет не нужен вообще.
+   АВТОПИЛОТ ШТАБА — «ДАЛЬШЕ» ПО СКРЫТОЙ МЕТКЕ В ЧАТЕ
+   Работает БЕЗ интернета и без GitHub: следит за живым чатом.
+   Архитектор в конце ответа ставит невидимую метку — скрипт её
+   видит и сам отправляет в чат сообщение «дальше».
 
-   Как работает:
-   1. Архитектор, закончив шаг, пишет в ответе метку [NEXT: шаг N].
-   2. Скрипт видит метку прямо в чате, убирает её из текста
-      (чтобы не мешала) и сам отправляет «дальше».
-   3. Одну и ту же метку дважды не отработает — даже после
-      перезагрузки страницы (подпись метки хранится локально).
+   Метки, которые ловятся (любая из трёх):
+     1) невидимые символы (основная) — Босс их не видит вообще;
+     2) <!--NEXT--> — HTML-комментарий, в чате не отображается;
+     3) [[NEXT]] — обычный текст (аварийный вариант).
    ============================================================ */
 (function () {
-    const POLL_MS = 1500;                 // как часто смотрим в чат
-    const LS_ON = 'shtabAutopilotOn';     // вкл/выкл
-    const LS_DONE = 'shtabAutopilotDone'; // уже отработанные метки
-    const MARKER_RE = /\[\[?NEXT(?::\s*([^\]\[]*))?\]\]?/i;
+    const LS_ON = 'shtabAutopilotOn';
+    const LS_DONE = 'shtabAutopilotDone';   // хеши уже отработанных сообщений
+    const POLL_MS = 1200;                   // как часто смотрим чат
+    const MAX_DONE = 30;
+
+    // Невидимая метка: word-joiner + zero-width space (в тексте не видно)
+    const ZW = '\u2060\u200B\u2060\u200B\u2060';
+    const RE_ZW = /\u2060\u200B\u2060\u200B\u2060/;
+    const RE_COMMENT = /<!--\s*NEXT\s*-->/i;
+    const RE_PLAIN = /\[\[\s*NEXT\s*\]\]/i;
 
     let timer = null;
-    let waiting = 0;
+    let busy = false;      // уже отправляем — второй раз не дёргаем
+    let waiting = 0;       // сколько циклов ждём, пока Архитектор договорит
 
     function isOn() { return localStorage.getItem(LS_ON) !== 'off'; }
-
-    function doneList() {
-        try { return JSON.parse(localStorage.getItem(LS_DONE)) || []; } catch (e) { return []; }
-    }
-    function markDone(sig) {
-        const list = doneList();
-        list.push(sig);
-        while (list.length > 60) list.shift();
-        try { localStorage.setItem(LS_DONE, JSON.stringify(list)); } catch (e) {}
-    }
 
     function setBtn() {
         const b = document.getElementById('autopilotBtn');
@@ -55,60 +51,65 @@
         while (el.children.length > 30) el.removeChild(el.firstChild);
     }
 
-    // Убираем метку из текста на экране — Боссу она не нужна.
-    function stripMarker(el) {
-        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-        const nodes = [];
-        while (walker.nextNode()) nodes.push(walker.currentNode);
-        nodes.forEach(n => {
-            if (MARKER_RE.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(MARKER_RE, '').replace(/\s{2,}/g, ' ').trim();
-        });
+    function hash(s) {
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+        return 'h' + (h >>> 0).toString(36) + '_' + s.length;
     }
 
-    function scan() {
-        if (!isOn()) return;
+    function doneList() {
+        try { return JSON.parse(localStorage.getItem(LS_DONE) || '[]'); } catch (e) { return []; }
+    }
+    function markDone(h) {
+        const list = doneList();
+        list.push(h);
+        while (list.length > MAX_DONE) list.shift();
+        localStorage.setItem(LS_DONE, JSON.stringify(list));
+    }
+
+    // Ищем метку только в ответах Архитектора (msg-director), не в своих сообщениях
+    function findSignal() {
         const box = document.getElementById('chatContainer');
-        if (!box) return;
-        const msgs = box.querySelectorAll('.chat-msg');
-        if (!msgs.length) return;
-
-        const chatId = (typeof currentChatId !== 'undefined' && currentChatId) ? currentChatId : 'chat';
-        const done = doneList();
-
-        // Смотрим только последние сообщения — метка всегда в свежем ответе.
-        for (let i = Math.max(0, msgs.length - 6); i < msgs.length; i++) {
+        if (!box) return null;
+        const msgs = box.querySelectorAll('.chat-msg.msg-director');
+        for (let i = msgs.length - 1; i >= 0; i--) {
             const el = msgs[i];
-            if (!el.classList.contains('msg-director')) continue;
+            const html = el.innerHTML || '';
             const txt = el.innerText || '';
-            const m = txt.match(MARKER_RE);
-            if (!m) continue;
-
-            const sig = chatId + '#' + i + '#' + m[0].toLowerCase();
-            if (done.indexOf(sig) !== -1) continue;
-
-            markDone(sig);
-            stripMarker(el);
-            const step = (m[1] || '').trim();
-            log('Метка поймана' + (step ? ' (' + step + ')' : '') + ' → отправляю «дальше»');
-            fire();
-            return;
+            if (!RE_ZW.test(txt) && !RE_COMMENT.test(html) && !RE_PLAIN.test(txt)) continue;
+            const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
+            const h = hash(clean.slice(-400));
+            if (doneList().indexOf(h) !== -1) return null;   // уже отработано
+            return { el: el, hash: h, text: clean };
         }
+        return null;
     }
 
-    function fire() {
-        // Архитектор ещё печатает — ждём, пока закончит.
+    function tick() {
+        if (!isOn() || busy) return;
+        const sig = findSignal();
+        if (!sig) { waiting = 0; return; }
+
+        // Архитектор ещё печатает или думает — ждём, метка никуда не денется
         if (typeof isGenerating !== 'undefined' && isGenerating) {
             waiting++;
-            if (waiting > 80) { waiting = 0; log('Долго ждал — отправляю «дальше» всё равно'); }
-            else { setTimeout(fire, 1000); return; }
+            if (waiting === 1) log('Метка найдена, жду окончания ответа...');
+            return;
         }
+
+        busy = true;
         waiting = 0;
+        markDone(sig.hash);
+        const step = (sig.text.match(/ШАГ\s*(\d+)/i) || [])[1];
+        log('Метка поймана' + (step ? ' (шаг ' + step + ')' : '') + ' → отправляю «дальше»');
+
         const input = document.getElementById('chatInput');
-        if (!input) { log('Ошибка: поле ввода не найдено'); return; }
-        input.value = 'дальше';
-        input.style.height = 'auto';
-        if (typeof sendMessage === 'function') sendMessage();
-        else log('Ошибка: чат не готов');
+        if (input) { input.value = 'дальше'; input.style.height = 'auto'; }
+        try {
+            if (typeof sendMessage === 'function') sendMessage();
+            else log('Ошибка: чат не готов');
+        } catch (e) { log('Сбой отправки: ' + e.message); }
+        setTimeout(function () { busy = false; }, 4000);
     }
 
     function start() {
@@ -116,8 +117,8 @@
         const b = document.getElementById('autopilotBtn');
         if (b) b.onclick = toggle;
         if (timer) clearInterval(timer);
-        timer = setInterval(scan, POLL_MS);
-        log('Автопилот на связи — читаю чат напрямую');
+        timer = setInterval(tick, POLL_MS);
+        log('Автопилот на связи. Слежу за чатом (без GitHub).');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
