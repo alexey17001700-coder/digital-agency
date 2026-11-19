@@ -96,11 +96,12 @@ function closeModal(e) { if (e && e.target !== e.currentTarget) return; document
 
 function setMode(mode) {
     currentMode = mode;
-    document.getElementById('btnNormal').className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
-    document.getElementById('btnHacker').className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
+    const bn = document.getElementById('btnNormal');
+    const bh = document.getElementById('btnHacker');
+    if (bn) bn.className = mode === 'normal' ? 'mode-btn active' : 'mode-btn';
+    if (bh) bh.className = mode === 'hacker' ? 'mode-btn hacker-active' : 'mode-btn';
     if (allChats[currentChatId] && allChats[currentChatId].messages[0]) {
-        if (mode === 'hacker') { allChats[currentChatId].messages[0].content = "Ты - Этичный Хакер."; }
-        else { allChats[currentChatId].messages[0].content = SYSTEM_PROMPT; }
+        allChats[currentChatId].messages[0].content = SYSTEM_PROMPT;
     }
     saveAll();
 }
