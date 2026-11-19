@@ -908,10 +908,19 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         : await loadPromptFile(PROMPT_GUEST_FILE, GUEST_RULE);
     const rulesBlock = "\n\n" + modeRules + (isBoss ? WORKLOG_RULE : WORKLOG_RULE_GUEST);
     const rulesIdx = currentMessages.findIndex((m: any) => m.role === "system");
-    if (rulesIdx !== -1) {
-        currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
+    if (isBoss) {
+        if (rulesIdx !== -1) {
+            currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: String(currentMessages[rulesIdx].content || "") + rulesBlock };
+        } else {
+            currentMessages.unshift({ role: "system", content: rulesBlock.trim() });
+        }
     } else {
-        currentMessages.unshift({ role: "system", content: rulesBlock.trim() });
+        // ГОСТЬ: системный промпт Босса («старые репозитории — ТОЛЬКО ЧТЕНИЕ») до модели
+        // доходить не должен. Она читала это как «писать нельзя вообще» и отказывалась
+        // собирать приложение. Гостю системный промпт ПОЛНОСТЬЮ заменяется правилами гостя.
+        const guestContent = rulesBlock.trim();
+        if (rulesIdx !== -1) currentMessages[rulesIdx] = { ...currentMessages[rulesIdx], content: guestContent };
+        else currentMessages.unshift({ role: "system", content: guestContent });
     }
 
     for (let loop = 0; loop < maxLoops; loop++) {
