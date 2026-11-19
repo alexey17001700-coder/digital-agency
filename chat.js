@@ -679,7 +679,6 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                if (isBossSecret) modelToUse = 'zveno';
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
