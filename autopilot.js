@@ -187,13 +187,19 @@
         const box = document.getElementById('chatContainer');
         if (!box) return false;
         const id = (typeof currentChatId !== 'undefined') ? currentChatId : null;
-        const count = box.querySelectorAll('.chat-msg').length;
-        if (id !== lastChatId || count < lastMsgCount) {
-            lastChatId = id; lastMsgCount = count;
+        // Смотрим на «отпечаток» первого сообщения, а НЕ на количество.
+        // При асинхронной перерисовке счётчик успевал вырасти, проверка
+        // «count < lastMsgCount» молчала, и старый «Пинок» из истории снова
+        // запускал авто-отправку «разбей на задачи по шагам».
+        const first = box.querySelector('.chat-msg');
+        const head = first ? hash((first.innerText || '').slice(0, 200)) : '(пусто)';
+        if (id !== lastChatId || head !== lastHead) {
+            lastChatId = id;
+            lastHead = head;
             primeSeen();
+            switchCooldown = 3;   // даём DOM дорисоваться — команды не слушаем
             return true;
         }
-        lastMsgCount = count;
         return false;
     }
 
