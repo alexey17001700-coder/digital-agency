@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- 58 — Найдена настоящая причина ошибки «Бэкап и откат доступны только с ключом Администратора» (вылезала на любом телефоне): sync.sh тянул из GitHub только main.ts, весь фронтенд (index.html, app.html, chat.js и др.) на диске сервера не обновлялся никогда — Caddy отдавал древние файлы со старым замком isBoss. sync.sh переписан: синхронизирует 22 файла Штаба (фронтенд + main.ts) атомарно, с проверкой размера по Content-Length, flock, валидацией main.ts (Deno.serve + });), авто-определением папки Штаба. В index.html добавлен Cache-Control: no-store. build 57 → 58.. Файлы: sync.sh, index.html, version.json, SERVER_DIAGNOSTICS.md
+
 - build 57 — Починен «Откатить Штаб»: подтверждено, что index.html шлёт {isRollback:true,isBoss:true}/{isBackup:true,isBoss:true}, а в main.ts замка на isBoss нет (флаг принудительно ставится в true, запрос пропускается). Настоящая причина красной ошибки — старая оболочка index.html на диске телефона (sync.sh тянет только main.ts). Добавлено жёсткое лечение оболочки: app.html качает свежий index.html с GitHub raw и переписывает родительский документ. SHELL_BUILD 56→57, version.json build 57.. Файлы: index.html, app.html, version.json
 
 - build 56 — Пинок по таймеру 300 сек: если ответа нет, автопилот обрывает зависший запрос и сам отправляет «Разбей на задачи и делай по одной задаче, отчитывайся после каждой». В autopilot.js добавлены checkTimeoutKick / fireTimeoutKick / directorCount / sendBtnElapsed (порог 298 с, пауза 120 с, максимум 3 пинка подряд без ответа, работает даже при выключенном автопилоте, не мешает тексту Босса в поле ввода). build 55 → 56, метки оболочки синхронизированы.. Файлы: autopilot.js, version.json, index.html, app.html
