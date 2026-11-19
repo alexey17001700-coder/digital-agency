@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- Диагностика «кнопка Откатить Штаб просит права администратора»: в репозитории сейфа нет — CORRECT_PIN и клавиатура-сейф убраны из index.html ещё в build 46 (ЭТАП 1 чистки), кнопки «Сохранить эталон»/«Откатить Штаб» показываются сразу. Значит на телефоне Босса открыта старая закэшированная страница Штаба (GitHub Pages / кэш браузера). Серверный main.ts тоже без замков: ручка isRollback/isBackup доступна без ключа. Правок в код не вносил.. Файлы: index.html, main.ts, version.json
+
 - build 46 — ЭТАП 1 чистки: убран ключ Босса из index.html (CORRECT_PIN="8452", клавиатура-сейф, функции pressSafeKey/clearSafePin/checkSafePin/resetSafe, CSS сейфа). Кнопки «Сохранить эталон» и «Откатить Штаб» показываются сразу, без сейфа. Создан план чистки TASKS_CLEANUP.md (5 этапов).. Файлы: index.html, version.json, TASKS_CLEANUP.md
 
 - build 45 — ЭТАП 1 чистки (остатки ключей/гостя/замка): в main.ts убраны вызовы удалённых isReadAllowed/isWriteAllowed, переменная isProtected, параметр userKeys у callZvenoAI, фраза «папка не найдена или закрыта для записи»; защита папки backup переведена на isBackupPath/cleanPath; ветка для записи/удаления/Pages берётся у репозитория (getDefaultBranch) вместо вшитой main; комментарий «ключ Администратора введён» убран. Проверено: BOSS_KEY, SHATAB_SECRET, verifyKey, isBoss, guest_workspace, PROMPT_GUEST — в main.ts отсутствуют.. Файлы: main.ts
