@@ -601,7 +601,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearTimeout(typingTimer); 
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text) return;
-    if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
+    if (!overrideText) { resetSearchGuard(); kickCount = 0; gotAnswer = false; } // новый вопрос Босса = чистый лист
 
     if (!overrideText && !isKick) {
         chatInputEl.value = ''; chatInputEl.style.height = 'auto'; playSound('send'); 
