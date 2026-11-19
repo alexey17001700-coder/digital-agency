@@ -616,10 +616,19 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
         let isProtected = targetRepo === REPO_NAME;
 
         // ГОСТЬ (ключ Администратора не введён): старые проекты — только чтение.
-        // Новый репозиторий гость создаёт сам и работает внутри него свободно.
-        if (!isBoss && isOldRepo(targetRepo) &&
-            ["write_file", "replace_in_file", "delete_file", "enable_github_pages", "remember_step"].includes(name)) {
-            return `Ошибка: без ключа Администратора менять старый проект "${targetRepo}" запрещено — только чтение. Ты УМЕЕШЬ писать код: вызови create_github_repo (создай НОВЫЙ репозиторий), а затем write_file / replace_in_file с полем repo = имя ЭТОГО нового репозитория. Не отвечай «я не могу писать код» — это неверно.`;
+        // ВАЖНО: здесь НЕ отказ, а ПЕРЕВОД работы в репозиторий гостя.
+        // Раньше возвращался текст «запрещено» — модель читала его как «у меня нет прав»
+        // и отвечала «я не могу писать код», хотя писать ей можно. Теперь молча
+        // подставляем рабочую папку гостя, и запись проходит.
+        const GUEST_WRITE_TOOLS = ["write_file", "replace_in_file", "delete_file", "enable_github_pages"];
+        if (!isBoss && isOldRepo(targetRepo) && GUEST_WRITE_TOOLS.includes(name)) {
+            const ownRepo = await findGuestRepo();
+            if (ownRepo && !isOldRepo(ownRepo)) {
+                targetRepo = ownRepo;
+                isProtected = targetRepo === REPO_NAME;
+            } else {
+                return `Служебный репозиторий "${targetRepo}" тебе не нужен — это не твоя папка. Сначала вызови create_github_repo (например my_app) и повтори ${name} с repo = имя этого репозитория. Писать код ты умеешь.`;
+            }
         }
 
         // Журнал проделанной работы заполняет только Архитектор с ключом. Читать — можно всем.
