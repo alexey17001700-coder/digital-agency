@@ -562,7 +562,7 @@ const TOOLS = [
             parameters: {
                 type: "object",
                 properties: {
-                    repo: { type: "string", description: "Имя репозитория (например, nexus_chat)" }
+                    repo: { type: "string", description: "Имя репозитория — СВОЕГО, созданного тобой (например, my_app)" }
                 },
                 required: ["repo"]
             }
