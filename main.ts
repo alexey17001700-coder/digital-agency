@@ -997,10 +997,19 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
                 // гостя ДО вызова инструмента — правка всегда попадает в его папку.
                 if (!isBoss && ["write_file", "replace_in_file", "delete_file"].includes(fnName)) {
                     const asked = String(fnArgs?.repo || "").trim();
-                    if (!asked || isOldRepo(asked)) {
-                        // Рабочая папка гостя гарантированно существует: нет — создадим.
-                        fnArgs.repo = await ensureGuestRepo();
+                    // Рабочая папка гостя гарантированно существует: нет — создадим.
+                    const own = await ensureGuestRepo();
+                    // Гость пишет ТОЛЬКО в свою папку. Раньше проверялось лишь «пусто или старый»,
+                    // а опечатка в имени (например «redmi MD» с пробелом или несуществующее имя)
+                    // проходила дальше → GitHub отдавал 404 → модель делала вывод «писать не могу».
+                    // Теперь проверяем, что папка реально есть, иначе молча переводим в свою.
+                    if (!asked || isOldRepo(asked) || !(await repoExists(asked))) {
+                        fnArgs.repo = own;
                     }
+                }
+                if (!isBoss && ["read_file", "list_repo_files"].includes(fnName)) {
+                    const askedRead = String(fnArgs?.repo || "").trim();
+                    if (!askedRead) fnArgs.repo = await ensureGuestRepo();
                 }
                 console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
                 const result = await executeTool(fnName, fnArgs, isBoss);
