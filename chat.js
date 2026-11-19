@@ -487,7 +487,7 @@ function autoKick(){
     if (kickCount >= MAX_KICKS) return;       // защита от бесконечной петли
     kickCount++;
     autoKickTimer = null;
-    if (!isGenerating) return;   // ответ уже пришёл или Босс остановил вручную — пинок не нужен
+    if (isGenerating){ try { currentAbortController.abort(); } catch(e){} isGenerating = false; clearTimeout(typingTimer); }
     try { currentAbortController.abort(); } catch(e){}
     isGenerating = false; clearTimeout(typingTimer);
     renderMessage(`⏰ *[Система: ${KICK_AFTER_MS/1000} секунд без ответа. Пинок ${kickCount}/${MAX_KICKS}: разбиваю на задачи.]*`, 'director', 'Оркестратор');
