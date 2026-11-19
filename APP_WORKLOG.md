@@ -24,6 +24,8 @@
 
 ## digital-agency
 
+- 49 — Найдена причина «Бекап и откат доступны только с ключем администратора»: сервер на Vivo (старый main.ts) требует флаг isBoss в запросах бэкапа/отката. В triggerBackup и triggerRollback добавлен isBoss:true в тело запроса. build 48 → 49. Файлы: index.html, version.json
+
 - 48 — Починен сейф Штаба: клавиатура переведена на делегирование кликов (data-k + type=button, перехват на document) — цифры теперь вводятся всегда; в triggerBackup/triggerRollback проверка safeUnlocked() перенесена ДО toggleMenu() (раньше закрытие меню сбрасывало сейф и кнопки отвечали «Сейф закрыт»). Файлы: index.html, version.json
 
 - build 47 — Возврат сейфа в index.html: клавиатура-сейф (#safe-lock-container, #safe-display, .safe-keypad, .safe-key), функции pressSafeKey/clearSafePin/checkSafePin/resetSafe/safeUnlocked. Кнопки «Сохранить эталон»/«Откатить Штаб» скрыты в #safe-actions и показываются только после ввода кода Босса. Код не в открытом виде — хранится как массив кодов символов SAFE_CODES. Сейф сбрасывается при закрытии меню 🛠️. build 46 → 47.. Файлы: index.html, version.json
