@@ -535,7 +535,7 @@ const TOOLS = [
 // =========================================
 // ВЫПОЛНЕНИЕ ИНСТРУМЕНТОВ
 // =========================================
-async function executeTool(name: string, args: any, isBoss: boolean = false): Promise<string> {
+async function executeTool(name: string, args: any): Promise<string> {
     try {
         // Определяем репозиторий (любой, который укажет ИИ).
         const askedRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : "";
