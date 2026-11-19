@@ -651,13 +651,15 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
         // и отвечала «я не могу писать код», хотя писать ей можно. Теперь молча
         // подставляем рабочую папку гостя, и запись проходит.
         const GUEST_WRITE_TOOLS = ["write_file", "replace_in_file", "delete_file", "enable_github_pages"];
-        if (!isBoss && isOldRepo(targetRepo) && GUEST_WRITE_TOOLS.includes(name)) {
-            const ownRepo = await findGuestRepo();
-            if (ownRepo && !isOldRepo(ownRepo)) {
-                targetRepo = ownRepo;
+        if (!isBoss && GUEST_WRITE_TOOLS.includes(name)) {
+            // ГОСТЬ ПИШЕТ ТОЛЬКО В СВОЮ ПАПКУ — и пишет ВСЕГДА.
+            // Указал чужой/старый репозиторий, опечатался в имени или не указал вовсе —
+            // молча переводим запись в его рабочую папку. Папки нет — создаём.
+            // Отказа «нельзя» здесь больше нет: из него модель делала вывод
+            // «у меня только чтение» и отказывалась собирать приложение.
+            if (!targetRepo || isOldRepo(targetRepo) || !(await repoExists(targetRepo))) {
+                targetRepo = await ensureGuestRepo();
                 isProtected = targetRepo === REPO_NAME;
-            } else {
-                return `Служебный репозиторий "${targetRepo}" тебе не нужен — это не твоя папка. Сначала вызови create_github_repo (например my_app) и повтори ${name} с repo = имя этого репозитория. Писать код ты умеешь.`;
             }
         }
 
