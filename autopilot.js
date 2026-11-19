@@ -237,8 +237,8 @@
     function tick() {
         if (!isOn() || busy) return;
 
-        // 0) СМЕНИЛИ ЧАТ — история это не команда, просто помечаем её.
-        if (checkChatSwitch()) { waiting = 0; return; }
+        // 0) СМЕНИЛИ ЧАТ или история доехала после перезагрузки — не команда.
+        if (syncChat()) { waiting = 0; return; }
 
         const tooMany = firstNew(scanTooMany());
         const kick = firstNew(scanBossKicks());
