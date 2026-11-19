@@ -1031,14 +1031,6 @@ Deno.serve(async (request) => {
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
-            // ГОСТЬ: кнопка «🛠️ Внедрить в файл» и авто-внедрение не передают repo —
-            // запрос уходил в Штаб и падал под замком («менять digital-agency запрещено»).
-            // Теперь молча переводим запись в репозиторий гостя.
-            if (body.isBoss !== true && isRepoLocked(targetRepo, false)) {
-                // Рабочая папка гостя создаётся сама — отказа «сначала создай репозиторий» больше нет.
-                targetRepo = await ensureGuestRepo();
-                isProtected = targetRepo === REPO_NAME;
-            }
             if (isRepoLocked(targetRepo, body.isBoss === true)) return json({ success: false, error: REPO_LOCK_TEXT }, 403);
             if (isProtected && !isWriteAllowed(body.path, true)) return json({ success: false, error: `Запись в "${body.path}" запрещена.` }, 403);
             if (!isWriteAllowed(body.path, false)) return json({ success: false, error: `Расширение "${body.path}" не разрешено.` }, 403);
