@@ -213,8 +213,12 @@
     function tick() {
         if (!isOn() || busy) return;
 
-        // 0) СМЕНИЛИ ЧАТ — история это не команда, просто помечаем её.
-        if (checkChatSwitch()) { waiting = 0; return; }
+        // 0) СМЕНИЛИ ЧАТ / ЧАТ ПЕРЕРИСОВАЛСЯ — история это не команда.
+        //    Остываем несколько тиков: DOM может дорисоваться не сразу, а без
+        //    паузы старое «Пинок» из истории снова запускало авто-отправку.
+        const switched = checkChatSwitch();
+        if (switchCooldown > 0) { switchCooldown--; waiting = 0; return; }
+        if (switched) { waiting = 0; return; }
 
         // 1) ПИНОК — задача развалилась на «слишком много шагов»
         const tooManyEl = findNewTooMany();
