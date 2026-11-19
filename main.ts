@@ -35,27 +35,6 @@ const WRITE_ALLOWED_EXT = [
 ];
 const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удаления (проверяется в delete_file)
 
-// =========================================
-// СТАРЫЕ ПРОЕКТЫ — ТОЛЬКО ЧТЕНИЕ БЕЗ КЛЮЧА
-// Без ключа Администратора (isBoss !== true) можно:
-//   1) создать НОВЫЙ репозиторий (create_github_repo);
-//   2) читать и менять файлы внутри ЭТОГО нового репозитория.
-// Всё, что перечислено ниже, без ключа не меняется — только чтение.
-// =========================================
-const OLD_REPOS = [
-    "digital-agency", "nexus_chat", "nexus_ws", "nexus_snake", "ac_luxury_calc",
-    "window_measure_pro", "window_calc", "shtab-site", "okna", "nexus_space",
-    "racing_game", "shtab_watchdog", "test_access_repo_xyz"
-];
-function isOldRepo(repo: unknown): boolean {
-    const r = String(repo || "").trim().toLowerCase();
-    return OLD_REPOS.includes(r);
-}
-// Замок: старый репозиторий закрыт на запись, пока не введён ключ Администратора.
-function isRepoLocked(repo: unknown, isBoss: boolean): boolean {
-    if (isBoss) return false;
-    return isOldRepo(repo);
-}
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
