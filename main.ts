@@ -575,6 +575,41 @@ async function executeTool(name: string, args: any, isBoss: boolean = false): Pr
     return `Успех: файл "${args.path}" обновлен в ${targetRepo}.`;
 }
 
+if (name === "remember_step") {
+    const app = String(args.app || "").trim();
+    const version = String(args.version || "").trim();
+    const step = String(args.step || "").trim();
+    const files = String(args.files || "").trim();
+    if (!app || !step) return "Ошибка: нужны app и step.";
+    try {
+        const old = await getFileContent(WORKLOG_FILE, REPO_NAME) || "# APP_WORKLOG — память проделанной работы\n";
+        const line = `- ${version ? version + " — " : ""}${step}${files ? `. Файлы: ${files}` : ""}`;
+        const header = `## ${app}`;
+        let updated: string;
+        if (old.includes(header)) {
+            updated = old.replace(header, `${header}\n\n${line}`);
+        } else {
+            updated = old.trimEnd() + `\n\n${header}\n\n${line}\n`;
+        }
+        await updateFileInRepo(WORKLOG_FILE, updated, REPO_NAME);
+        return `Успех: шаг записан в ${WORKLOG_FILE} (${app}).`;
+    } catch (e: any) { return `Ошибка записи в журнал: ${e.message}`; }
+}
+
+if (name === "read_worklog") {
+    try {
+        const content = await getFileContent(WORKLOG_FILE, REPO_NAME);
+        if (!content) return "Журнал пока пуст.";
+        const app = String(args.app || "").trim();
+        if (!app) return content;
+        const idx = content.indexOf(`## ${app}`);
+        if (idx === -1) return `В журнале нет раздела "${app}".`;
+        const rest = content.slice(idx);
+        const next = rest.indexOf("\n## ", 1);
+        return next === -1 ? rest : rest.slice(0, next);
+    } catch (e: any) { return `Ошибка чтения журнала: ${e.message}`; }
+}
+
 if (name === "search_web") return await searchInternet(args.query);
 if (name === "get_weather") return await getWeather(args.city || "Саратов");
 
