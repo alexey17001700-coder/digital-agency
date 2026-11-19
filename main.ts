@@ -1021,7 +1021,6 @@ Deno.serve(async (request) => {
         }
 
         if (body.checkStatus) {
-            if (!isBoss) return json({ success: false, error: "🔒 Статус файлов доступен только с ключом Администратора." }, 403);
             try {
                 const rootFiles = await gitAPI("contents/");
                 const backupFiles = await gitAPI("contents/backup");
