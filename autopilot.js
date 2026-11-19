@@ -22,13 +22,28 @@
     const RE_PLAIN = /\[\[\s*NEXT\s*\]\]/i;
 
     // --- ПИНОК: ловим системное «Слишком много шагов. Задача прервана.» ---
-    const LS_KICK = 'shtabAutopilotKickCount';   // сколько таких сообщений уже отработано
+    const LS_KICK = 'shtabAutopilotKickCount';   // {id чата: сколько уже отработано}
     const RE_TOOMANY = /Слишком\s+много\s+шагов/gi;
     const KICK_TEXT = 'разбей на задачи по шагам';
 
     // --- ПИНОК СЛОВОМ: Босс пишет «Пинок» — это тоже команда «разбей на задачи» ---
     const LS_KICK2 = 'shtabAutopilotKick2Count';
     const RE_KICK_WORD = /пинок/gi;
+
+    /* Счётчики храним ПО КАЖДОМУ ЧАТУ.
+       Раньше счётчик был один на весь Штаб: при переключении чатов он сравнивался
+       с содержимым ДРУГОГО чата — «Пинок» из старого чата срабатывал заново,
+       и в новый чат прилетало «разбей на задачи по шагам» без команды Босса. */
+    function chatKey() {
+        try { return localStorage.getItem('shtabCurrentChatId') || 'default'; } catch (e) { return 'default'; }
+    }
+    function loadCounts(lsKey) {
+        try { const v = JSON.parse(localStorage.getItem(lsKey) || '{}'); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; } catch (e) { return {}; }
+    }
+    function saveCount(lsKey, chatId, n) {
+        const m = loadCounts(lsKey); m[chatId] = n;
+        try { localStorage.setItem(lsKey, JSON.stringify(m)); } catch (e) {}
+    }
 
     let timer = null;
     let busy = false;      // уже отправляем — второй раз не дёргаем
