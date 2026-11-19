@@ -113,20 +113,55 @@
     function primeSeen() {
         const box = document.getElementById('chatContainer');
         if (!box) return;
-        box.querySelectorAll('.chat-msg.msg-boss').forEach(function (el) {
-            if (RE_KICK_WORD.test(el.innerText || '')) el.dataset[ATTR_KICK] = '1';
-        });
+        // Пинок словом — помечаем по хешу (переживает перерисовку чата).
+        scanBossKicks().forEach(function (m) { markDone(m.hash); });
+        // Системное «слишком много шагов» — тоже по хешу.
+        scanTooMany().forEach(function (m) { markDone(m.hash); });
+        // Метку «дальше» из истории тоже считаем отработанной — иначе при
+        // переключении чата автопилот отправит «дальше» в чужой чат.
         box.querySelectorAll('.chat-msg.msg-director').forEach(function (el) {
             const txt = el.innerText || '';
             const html = el.innerHTML || '';
-            if (RE_TOOMANY.test(txt)) el.dataset[ATTR_TOOMANY] = '1';
-            // Метку «дальше» из истории тоже считаем отработанной — иначе при
-            // переключении чата автопилот отправит «дальше» в чужой чат.
             if (RE_ZW.test(txt) || RE_COMMENT.test(html) || RE_PLAIN.test(txt)) {
                 const clean = txt.replace(RE_ZW, '').replace(RE_PLAIN, '').replace(/\s+/g, ' ').trim();
                 markDone(hash(clean.slice(-400)));
             }
         });
+    }
+
+    /* --- УСТОЙЧИВЫЙ ХЕШ ---
+       Хеш = текст + номер такого же сообщения по счёту. При перерисовке чата
+       порядок сообщений не меняется → хеш тот же → повторной отправки нет.
+       Два одинаковых сообщения Босса при этом остаются разными (n = 1 и 2). */
+
+    // Все сообщения Босса со словом «Пинок».
+    function scanBossKicks() {
+        const box = document.getElementById('chatContainer');
+        if (!box) return [];
+        const out = [];
+        const seen = {};
+        box.querySelectorAll('.chat-msg.msg-boss').forEach(function (el) {
+            const txt = (el.innerText || '').replace(/\s+/g, ' ').trim();
+            if (!RE_KICK_WORD.test(txt) || txt.length > MAX_KICK_LEN) return;
+            const n = (seen[txt] = (seen[txt] || 0) + 1);
+            out.push({ el: el, hash: hash('kick|' + txt + '|' + n) });
+        });
+        return out;
+    }
+
+    // Все системные «Слишком много шагов».
+    function scanTooMany() {
+        const box = document.getElementById('chatContainer');
+        if (!box) return [];
+        const out = [];
+        const seen = {};
+        box.querySelectorAll('.chat-msg.msg-director').forEach(function (el) {
+            const txt = (el.innerText || '').replace(/\s+/g, ' ').trim();
+            if (!RE_TOOMANY.test(txt) || txt.length > MAX_TOOMANY_LEN) return;
+            const n = (seen[txt] = (seen[txt] || 0) + 1);
+            out.push({ el: el, hash: hash('many|' + txt + '|' + n) });
+        });
+        return out;
     }
 
     // Новое сообщение Босса со словом «Пинок» (ещё не помеченное).
