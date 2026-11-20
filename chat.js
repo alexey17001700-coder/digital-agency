@@ -472,6 +472,35 @@ async function runBackgroundTask(agentName, taskDescription) {
     }, 15000);
 }
 
+/* --- СТОРОЖ ТИШИНЫ --- */
+function resetStallKicks() { stallKicks = 0; }
+function stopStallWatchdog() { clearTimeout(stallWatchdog); stallWatchdog = null; }
+function startStallWatchdog() {
+    clearTimeout(stallWatchdog);
+    stallWatchdog = setTimeout(() => {
+        if (!isGenerating) return;
+        if (stallKicks >= STALL_MAX_KICKS) {
+            renderMessage(`⏹️ *[Система: ${STALL_MAX_KICKS} авто-пинка без ответа — останавливаюсь. Жду Босса.]*`, 'director', 'Оркестратор');
+            return;
+        }
+        stallKicks++;
+        if (currentAbortController) currentAbortController.abort();
+        isGenerating = false; clearTimeout(typingTimer);
+        renderMessage(`⚡ *[Система: тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
+        renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
+        sendMessage('продолжи', true);
+    }, STALL_TIMEOUT_MS);
+}
+// Признак оборванного ответа: незакрытый блок кода, многоточие или союз на конце.
+function looksTruncated(t) {
+    const s = String(t || '').trim();
+    if (s.length < 120) return false;
+    if ((s.match(/```/g) || []).length % 2 !== 0) return true;
+    if (/(\.\.\.|…)$/.test(s)) return true;
+    if (/\b(и|а|но|или|что|как|чтобы|который|поэтому|значит)$/i.test(s)) return true;
+    return false;
+}
+
 function kickAI(agentName) {
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; clearTimeout(typingTimer); }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
