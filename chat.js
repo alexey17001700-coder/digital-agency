@@ -2,6 +2,15 @@ const PROXY = "https://shtab-boss.duckdns.org:8443";
 let currentMode = 'normal'; let isAutoMode = false;
 let isGenerating = false; let currentAbortController = null; let watchdogTimer = null;
 let typingTimer = null; 
+/* --- АВТО-ПИНОК ПРИ ОБРЫВЕ ОТВЕТА ---
+   Если Архитектор замолчал (обрыв связи, таймаут, тишина) — скрипт сам,
+   от имени Босса, пишет в чат «продолжи» и повторяет запрос.
+   Не более STALL_MAX_KICKS раз подряд, чтобы не зациклиться. */
+const STALL_TIMEOUT_MS = 120000;
+const STALL_MAX_KICKS = 3;
+let stallWatchdog = null;
+let stallKicks = 0;
+let sendSeq = 0;
 let attachedImageBase64 = null; let currentChatImage = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
