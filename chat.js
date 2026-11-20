@@ -580,6 +580,7 @@ async function askAgentOnce(agentName, topic, spoken) {
             signal: ctrl.signal
         });
         const data = await res.json();
+        if (typeof window.zvenoAddUsage === 'function') window.zvenoAddUsage(data.usage);   // реплика Совета тоже тратит токены
         if (data.choices && data.choices.length) {
             return String(data.choices[0].message.content || '')
                 .replace(/^\s*(?:\*\*)?\[?[А-Яа-яA-Za-z\s]+\]?(?:\*\*)?:\s*/, '')   // убираем «Имя:» в начале
