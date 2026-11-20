@@ -955,8 +955,9 @@ async function sendMessage(overrideText = null, isKick = false) {
                 setTimeout(() => sendMessage(nextStageText, true), 900);
             }
             // Ответ пришёл, но оборван на середине — просим продолжить.
-            else if (!isKick && looksTruncated(aiText) && stallKicks < STALL_MAX_KICKS) {
+            else if (!isKick && !kickGuardActive() && looksTruncated(aiText) && stallKicks < STALL_MAX_KICKS) {
                 stallKicks++;
+                markKickSent();
                 renderMessage(`⚡ *[Система: ответ оборван на середине. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
                 renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
                 setTimeout(() => sendMessage('продолжи', true), 900);
