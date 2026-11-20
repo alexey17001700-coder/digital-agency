@@ -2167,6 +2167,16 @@ function startScene(office) {
             screens[i].material.emissiveIntensity = 1.35 + Math.sin(t * 3 + i) * 0.18;
         }
 
+        // рабочие терминалы: занят — экран горит ярко и «строчит», свободен — ровно тлеет
+        const tscr = scene.userData.terminalScreens || [];
+        for (let i = 0; i < tscr.length; i++) {
+            let busy = false;
+            for (let k = 0; k < agents.length; k++) {
+                if (agents[k].terminal === i) { busy = true; break; }
+            }
+            tscr[i].material.emissiveIntensity = (busy ? 2.2 : 1.25) + Math.sin(t * (busy ? 9 : 3) + i) * 0.2;
+        }
+
         // голо-панель Босса вспыхивает при докладе
         const bh = scene.userData.bossHolo;
         if (bh) {
