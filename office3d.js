@@ -1406,6 +1406,62 @@ function routeToBossFrom(x, z) {
 /* Все агенты сцены — нужны, чтобы понять, какой терминал свободен. */
 let ALL_AGENTS = [];
 
+function agentByNameGlobal(name) {
+    for (let i = 0; i < ALL_AGENTS.length; i++) {
+        if (ALL_AGENTS[i] && ALL_AGENTS[i].name === name) return ALL_AGENTS[i];
+    }
+    return null;
+}
+
+/* --- ОТЧЁТ РЕАЛЬНЫМ ТЕКСТОМ ОТВЕТА -----------------------------------
+   Агент идёт к столу Босса не с «Готово, Босс!», а с началом настоящего
+   ответа, который пришёл в чат. Текст ловим на выводе — renderMessage(). */
+let LAST_ANSWER = { who: '', text: '' };
+
+function trimAnswer(s) {
+    let t = String(s || '');
+    t = t.replace(/```[\s\S]*?```/g, ' ');          // блоки кода — вон
+    t = t.replace(/\[FILE:[^\]]*\]/g, ' ');
+    t = t.replace(/[#*_>`|]/g, '').replace(/\s+/g, ' ').trim();
+    if (t.length > 88) t = t.slice(0, 86).trim() + '…';
+    return t;
+}
+
+/* Кому отдавать ответ: сначала по имени агента из чата, иначе — тому,
+   кто сейчас сидит за рабочим терминалом. */
+function captureAnswer(text, who) {
+    const t = trimAnswer(text);
+    if (!t) return;
+    LAST_ANSWER = { who: who || '', text: t };
+    let target = who ? agentByNameGlobal(who) : null;
+    if (!target) {
+        for (let i = 0; i < ALL_AGENTS.length; i++) {
+            if (ALL_AGENTS[i] && ALL_AGENTS[i].terminal >= 0) { target = ALL_AGENTS[i]; break; }
+        }
+    }
+    if (!target) {
+        for (let i = 0; i < ALL_AGENTS.length; i++) {
+            const a = ALL_AGENTS[i];
+            if (a && (a.state === 'deskwork' || a.state === 'type' || a.reportPending)) { target = a; break; }
+        }
+    }
+    if (target) target.reportText = t;
+}
+
+function hookRenderMessage() {
+    const prev = window.renderMessage;
+    if (typeof prev !== 'function' || prev.__o3dHook) return !!prev;
+    const fn = function (text, type, who) {
+        try {
+            if (type !== 'user' && text) captureAnswer(text, who);
+        } catch (e) {}
+        return prev.apply(this, arguments);
+    };
+    fn.__o3dHook = true;
+    window.renderMessage = fn;
+    return true;
+}
+
 function terminalOf(a) { return a.terminal >= 0 ? TERMINALS[a.terminal] : null; }
 function releaseTerminal(a) { a.terminal = -1; a.reportPending = false; a.reportText = null; }
 
