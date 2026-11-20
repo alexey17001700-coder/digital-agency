@@ -1576,6 +1576,8 @@ function agentTick(a, dt, t) {
             rig.torso.rotation.x = 0.06;
         }
     } else if (a.state === 'sit') {
+        // задача пришла, пока агент был в пути — вернулся за стол и сразу идёт печатать
+        if (a.workPending) { a.workPending = false; sendToComputer(a); }
         poseSit(a);
         rig.torso.rotation.x = 0.12 + Math.sin(t * 2.2 + a.phase) * 0.03;
         rig.armL.rotation.x = -1.30 + Math.sin(t * 7 + a.phase) * 0.10;
