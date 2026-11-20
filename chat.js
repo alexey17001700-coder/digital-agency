@@ -681,26 +681,22 @@ let lastTimerChange = 0;
 function startTimerFreezeWatchdog() {
     stopTimerFreezeWatchdog();
     lastTimerText = ''; lastTimerChange = Date.now();
+    const startedAt = Date.now();
     timerFreezeWatchdog = setInterval(() => {
-        if (!isGenerating) { stopTimerFreezeWatchdog(); return; }
         const now = Date.now();
         const cur = sendBtn ? String(sendBtn.innerText || '') : '';
-        if (!/\d/.test(cur)) { lastTimerText = cur; lastTimerChange = now; return; }  // на кнопке не счётчик — не наш случай
-        if (cur !== lastTimerText) { lastTimerText = cur; lastTimerChange = now; return; }
-        if (now - lastTimerChange < TIMER_FREEZE_MS) return;
-        stopTimerFreezeWatchdog();
-        if (kickGuardActive()) return;   // пинок недавно уже был — дубль не нужен
-        if (stallKicks >= STALL_MAX_KICKS) {
-            renderMessage('⏸️ *[Система: счётчик застыл, лимит пинков исчерпан. Жду Босса.]*', 'director', 'Оркестратор');
+        const hasTimer = /\d/.test(cur);
+        if (hasTimer) {
+            // Счётчик идёт — запоминаем движение.
+            if (cur !== lastTimerText) { lastTimerText = cur; lastTimerChange = now; return; }
+            // Счётчик застыл на месте, а ответа нет — обрыв потока.
+            if (now - lastTimerChange >= TIMER_FREEZE_MS) fireAutoKick(`счётчик застыл на ${cur || '—'}`);
             return;
         }
-        stallKicks++;
-        markKickSent();
-        renderMessage(`⚡ *[Система: счётчик застыл на ${cur || '—'} — ответа нет. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS}.]*`, 'director', 'Оркестратор');
-        renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
-        try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
-        isGenerating = false;
-        setTimeout(() => sendMessage('продолжи', true), 900);
+        // Счётчика на кнопке нет. Ответ пришёл — сторож больше не нужен.
+        if (lastSendSuccess) { stopTimerFreezeWatchdog(); return; }
+        // Счётчик «оборвался» (запрос умер без ответа) — пинаем сразу, не ждём 300 с.
+        if (now - startedAt >= TIMER_FREEZE_MS) fireAutoKick('счётчик оборвался, ответа нет');
     }, 1000);
 }
 function stopTimerFreezeWatchdog() { if (timerFreezeWatchdog) { clearInterval(timerFreezeWatchdog); timerFreezeWatchdog = null; } }
