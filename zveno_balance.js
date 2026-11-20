@@ -74,6 +74,10 @@
         if (!usage || typeof usage !== 'object') return false;
         var p = Number(usage.prompt_tokens || usage.input_tokens || usage.promptTokens || usage.inputTokens || 0);
         var c = Number(usage.completion_tokens || usage.output_tokens || usage.completionTokens || usage.outputTokens || 0);
+        // Скрытые reasoning-токены (размышления модели) тоже платные — учитываем.
+        var det = usage.completion_tokens_details || usage.output_tokens_details || {};
+        var reas = Number(det.reasoning_tokens || det.reasoningTokens || usage.reasoning_tokens || 0);
+        if (isFinite(reas) && reas > 0) c += reas;
         var total = Number(usage.total_tokens || usage.totalTokens || 0);
         if (!total) total = p + c;
         if (!isFinite(total) || total <= 0) return false;
