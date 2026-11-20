@@ -1029,6 +1029,7 @@ function focusAgentCard(agentName) {
 
 function init() {
     restoreKickState();   // подхватываем счётчик пинков после F5 — лишних не шлём
+    startUpdateWatch();   // следим за обновлениями с сервера — кнопка «Обновить штаб» мигает
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
