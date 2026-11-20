@@ -1402,4 +1402,6 @@ function init() {
     }
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
     if (typeof bindAIModelButton === 'function') bindAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
 }
