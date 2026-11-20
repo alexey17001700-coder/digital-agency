@@ -773,21 +773,38 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             tool_choice: "auto"
         };
 
-        const res = await fetch(ZVENO_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(FETCH_TIMEOUT)
-        });
+        let data: any = null;
+        try {
+            const res = await fetch(ZVENO_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT)
+            });
+            data = await res.json();
+            if (!res.ok) {
+                lastError = `${activeModel}: ${data?.error?.message || res.status}`;
+                console.log(`[FALLBACK] ${lastError}`);
+                modelFailed = true;
+                break;
+            }
+        } catch (e: any) {
+            lastError = `${activeModel}: ${e?.message || e}`;
+            console.log(`[FALLBACK] ${lastError}`);
+            modelFailed = true;
+            break;
+        }
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || `Ошибка Zveno: ${res.status}`);
-
-        const msg = data.choices?.[0]?.message;
-        if (!msg) throw new Error("Пустой ответ от Zveno");
+        const msg = data?.choices?.[0]?.message;
+        if (!msg) {
+            lastError = `${activeModel}: пустой ответ`;
+            console.log(`[FALLBACK] ${lastError}`);
+            modelFailed = true;
+            break;
+        }
 
         if (msg.tool_calls && msg.tool_calls.length > 0) {
             currentMessages.push(msg);
