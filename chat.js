@@ -1200,7 +1200,12 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
     } finally {
-        if (mySeq === sendSeq) { stopTimerFreezeWatchdog(); stopHardWatchdog(); if (lastSendSuccess) stopStallWatchdog(); }
+        if (mySeq === sendSeq) {
+            stopHardWatchdog();
+            if (lastSendSuccess) { stopStallWatchdog(); stopTimerFreezeWatchdog(); }
+            // Ответа нет — сторожа счётчика и тишины оставляем жить: они поймают
+            // «оборвавшийся секундомер» и пошлют авто-пинок, а не будут молчать.
+        }
         isGenerating = false; clearInterval(timerInterval); 
         attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
