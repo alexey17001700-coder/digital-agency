@@ -995,6 +995,7 @@ function focusAgentCard(agentName) {
 }
 
 function init() {
+    restoreKickState();   // подхватываем счётчик пинков после F5 — лишних не шлём
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
