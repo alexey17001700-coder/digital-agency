@@ -35,6 +35,7 @@ let stallStartCount = 0;           // сколько ответов было в 
 let stallLastLen = -1;             // длина последнего ответа (детект «застыл»)
 let stallLastChange = 0;           // когда последний ответ менялся
 let sendSeq = 0;
+let lastSendSuccess = false;   // пришёл ли ответ — от этого зависит, гасить ли сторож тишины
 let attachedImageBase64 = null; let currentChatImage = null;
 let attachedFile = null;   // приложенный файл Босса: { name, size, content }
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
