@@ -185,11 +185,19 @@
     window.zvenoBalanceRefresh = show;
     window.zvenoBalanceSetManual = openPanel;
     window.zvenoAddUsage = addUsage;   // chat.js зовёт после каждого ответа модели
-    // Если шлюз не вернул usage — считаем токены по длине текста (~4 символа на токен).
-    window.zvenoAddText = function (text) {
-        var s = String(text || '');
-        if (!s) return;
-        addUsage({ total_tokens: Math.max(1, Math.round(s.length / 4)) });
+    window.zvenoAddText = addText;     // если шлюз не вернул usage — считаем по длине текста
+
+    // ГЛАВНАЯ функция учёта: chat.js зовёт её на каждый ответ модели.
+    // Берём usage от шлюза; если его нет или он пустой — считаем по тексту ответа.
+    // Так расход не теряется никогда, даже если сервер usage не пробросил.
+    window.zvenoAccount = function (data, text) {
+        var usage = data && data.usage;
+        if (addUsage(usage)) return true;
+        var t = text;
+        if (!t && data && data.choices && data.choices[0] && data.choices[0].message) {
+            t = data.choices[0].message.content;
+        }
+        return addText(t);
     };
 
     function boot() {
