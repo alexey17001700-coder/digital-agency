@@ -527,6 +527,7 @@ function doStallKick(reason) {
         return;
     }
     stallKicks++;
+    markKickSent();
     if (currentAbortController) currentAbortController.abort();
     isGenerating = false; clearTimeout(typingTimer);
     renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
