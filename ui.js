@@ -123,19 +123,84 @@ async function clearContentFromButton() {
     }
 }
 
-function toggleAIModel() {
-    selectedAIModel = (selectedAIModel === 'yandex') ? 'deepseek' : 'yandex';
-    localStorage.setItem('shtabAIModel', selectedAIModel);
+/* --- КНОПКА ВЫБОРА МОДЕЛИ ---
+   Тап — следующая модель по кругу. Долгое нажатие — список всех моделей,
+   где можно выбрать нужную сразу. Список берётся из AI_MODELS (chat.js). */
+function applyAIModelButton() {
     const btn = document.getElementById('btnAIModel');
-    if (selectedAIModel === 'deepseek') {
-        btn.innerText = '🧠 ИИ: DeepSeek';
-        btn.style.background = '#4CAF50'; // Зеленый для DeepSeek
-        btn.style.color = '#fff';
-    } else {
-        btn.innerText = '🧠 ИИ: Yandex';
-        btn.style.background = '#333'; // Стандартный для Яндекса
-        btn.style.color = '#aaa';
-    }
+    if (!btn) return;
+    const m = (typeof getModelInfo === 'function') ? getModelInfo(selectedAIModel) : { label: selectedAIModel, color: '#333', text: '#aaa' };
+    btn.innerText = '🧠 ИИ: ' + m.label;
+    btn.style.background = m.color || '#333';
+    btn.style.color = m.text || '#aaa';
+}
+
+function toggleAIModel() {
+    const list = (typeof AI_MODELS !== 'undefined' && AI_MODELS.length) ? AI_MODELS : [{ id: 'yandex' }];
+    let idx = list.findIndex(m => m.id === selectedAIModel);
+    if (idx < 0) idx = 0;
+    selectedAIModel = list[(idx + 1) % list.length].id;
+    localStorage.setItem('shtabAIModel', selectedAIModel);
+    applyAIModelButton();
+    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: модель переключена на ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
+}
+
+function openAIModelPanel() {
+    if (document.getElementById('aiModelPanel')) return;
+    const list = (typeof AI_MODELS !== 'undefined') ? AI_MODELS : [];
+    const ov = document.createElement('div');
+    ov.id = 'aiModelPanel';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:340px;background:#101418;border:1px solid #2a333d;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6);max-height:80vh;overflow-y:auto;';
+    const title = document.createElement('div');
+    title.textContent = '🧠 МОДЕЛЬ ИИ';
+    title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;';
+    box.appendChild(title);
+    list.forEach(m => {
+        const row = document.createElement('button');
+        const active = m.id === selectedAIModel;
+        row.textContent = (active ? '✅ ' : '') + m.label + (m.free ? '  🆓' : '');
+        row.style.cssText = 'display:block;width:100%;text-align:left;padding:11px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid ' + (active ? '#00e5ff' : '#2a333d') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'transparent') + ';color:#e6edf3;';
+        row.onclick = () => {
+            selectedAIModel = m.id;
+            localStorage.setItem('shtabAIModel', selectedAIModel);
+            applyAIModelButton();
+            ov.remove();
+        };
+        box.appendChild(row);
+    });
+    const close = document.createElement('button');
+    close.textContent = 'ЗАКРЫТЬ';
+    close.style.cssText = 'width:100%;padding:9px;border:1px solid #2a333d;border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;margin-top:4px;';
+    close.onclick = () => ov.remove();
+    box.appendChild(close);
+    ov.appendChild(box);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+}
+
+function bindAIModelButton() {
+    const btn = document.getElementById('btnAIModel');
+    if (!btn || btn.dataset.aiBound === '1') return;
+    btn.dataset.aiBound = '1';
+    let pressTimer = null, longPressed = false;
+    const start = () => {
+        longPressed = false;
+        pressTimer = setTimeout(() => { longPressed = true; openAIModelPanel(); }, 600);
+    };
+    const cancel = () => { clearTimeout(pressTimer); };
+    btn.addEventListener('touchstart', start, { passive: true });
+    btn.addEventListener('touchend', cancel);
+    btn.addEventListener('touchcancel', cancel);
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('mouseup', cancel);
+    btn.addEventListener('mouseleave', cancel);
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (longPressed) { longPressed = false; return; }
+        toggleAIModel();
+    });
 }
 function refreshShtab() {
     if (!confirm("🔄 Обновить Штаб? Страница перезагрузится.")) return;
