@@ -1041,13 +1041,8 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (!overrideText && !isKick) { startButtonWatchdog(); startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startButtonWatchdog(); startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
     sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
-    stopSendTimer();                       // гасим старый счётчик — иначе два таймера накладываются
     const startTime = sendStartTime = Date.now();
-    sendTimerInterval = setInterval(() => {
-        if (!isGenerating) return;
-        const elapsed = ((Date.now() - sendStartTime) / 1000).toFixed(1);
-        sendBtn.innerText = elapsed + "s";
-    }, 100);
+    startSendTimer();                      // один счётчик на всё приложение, без наложения
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
     const activeAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор';
