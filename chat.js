@@ -1069,6 +1069,8 @@ async function sendMessage(overrideText = null, isKick = false) {
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
+    // 3D-ОФИС: задействованный агент встаёт из-за стола и уходит к компьютеру печатать
+    if (typeof window.office3dWork === 'function') window.office3dWork(activeAgent);
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
     // Контроллер — локальный (myCtrl). Раньше таймаут аборта держался за общую
