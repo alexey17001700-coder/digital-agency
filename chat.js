@@ -1323,6 +1323,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
+            if (usedModel) renderMessage(modelBadgeText(usedModel), 'director', 'Оркестратор');
 
             // Модель ответила монологом (или реплики одного и того же агента), а в Совете
             // 2+ агентов — включаем короткий диалог между ними, чтобы Совет реально общался.
