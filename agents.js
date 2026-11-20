@@ -316,7 +316,7 @@ function _lineFor(agent, slot, topic) {
    Ведущий — Оркестратор (если выбран), иначе случайный. Порядок участников
    перемешивается, итог — случайный из Приемная/Критик/Тестировщик/Результат.
    Каждая реплика берётся из 3 вариантов → диалог каждый раз разный. */
-function buildAgentDialogue(agents, topic) {
+function buildAgentDialogue(agents, topic) { return []; // СКРИПТОВАННЫЙ ДИАЛОГ ОТКЛЮЧЁН: Совет говорит живьём — runAgentRoundtable() в chat.js.
     const list = (agents || []).filter(a => AGENT_ICONS[a]);
     if (list.length < 2) return [];
     const t = String(topic || 'задача Босса').replace(/\s+/g, ' ').trim().slice(0, 70) || 'задача Босса';
