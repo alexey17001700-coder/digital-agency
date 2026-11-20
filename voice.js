@@ -662,6 +662,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // возвращаем свою версию. Иначе открывалась СТАРАЯ лаборатория без диагностики.
 setInterval(function () {
     if (window.openVoiceLab !== openVoiceLab2) window.openVoiceLab = openVoiceLab2;
-    if (window.speakPhoneVoice !== speakAny) window.speakPhoneVoice = speakAny;     if (!document.getElementById('vlabBtn2')) injectVoiceLab();
-    positionVoiceBtn();
+    if (window.speakPhoneVoice !== speakAny) window.speakPhoneVoice = speakAny;
+    const _leftover = document.getElementById('vlabBtn2');   // плавающая кнопка убрана — если осталась от старой версии, сносим
+    if (_leftover) _leftover.remove();
 }, 1500);
