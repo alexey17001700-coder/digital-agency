@@ -102,12 +102,16 @@ const AI_MODELS_DEFAULT = [
     { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra', color: '#76b900', text: '#000', free: true },
     { id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning', color: '#76b900', text: '#000', free: true },
     { id: 'nvidia/nemotron-3.5-super-vl:free', label: 'Nemotron 3.5 Super VL', color: '#76b900', text: '#000', free: true },
-    { id: 'recursive/flint-v1.0:free', label: 'Flint', color: '#ff7043', text: '#000', free: true }
+    { id: 'recursive/flint-v1.0:free', label: 'Flint', color: '#ff7043', text: '#000', free: true },
+    /* --- ЛОКАЛЬНАЯ МОДЕЛЬ НА ПК (Ollama) ---
+       Работает без ключей и без оплаты: запрос уходит на свой ПК через
+       шлюз Caddy (путь /ollama/*). Имя модели хранится в localStorage. */
+    { id: 'ollama', label: 'Ollama (ПК)', color: '#ff9800', text: '#000', free: true }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
    перезаписывается новым (иначе у Босса остался бы старый набор моделей). */
-const AI_MODELS_VERSION = '2026-02-14-free6';   // embed-модели убраны: они не умеют чат и роняли запрос
+const AI_MODELS_VERSION = '2026-02-14-free7-ollama';   // добавлена локальная модель Ollama (ПК)
 try {
     const ver = localStorage.getItem('shtabAIModelsVer');
     const sm = localStorage.getItem('shtabAIModels');
