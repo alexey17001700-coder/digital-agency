@@ -242,9 +242,13 @@
             if (addUsage(data.usage)) return true;
         }
 
-        // 2) Нет usage — считаем по длине: вход (вся история) + выход (ответ).
-        var inTok = promptText ? Math.max(1, Math.round(String(promptText).length / 4)) : 0;
-        var outTok = out ? Math.max(1, Math.round(String(out).length / 4)) : 0;
+        // 2) Нет usage — считаем по длине: вход (вся история + системный промпт) + выход.
+        var inTok = promptText
+            ? Math.max(1, Math.round(String(promptText).length / 4)) + INPUT_OVERHEAD
+            : 0;
+        var outTok = out
+            ? Math.max(1, Math.round(String(out).length / 4 * REASONING_FACTOR))
+            : 0;
         var total = inTok + outTok;
         if (total > 0) return addUsage({ total_tokens: total });
         return false;
