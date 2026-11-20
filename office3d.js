@@ -1526,20 +1526,70 @@ let WALKERS = 0;   // сколько агентов сейчас идут — ч
 /* ХАОТИЧНОЕ РАСПИСАНИЕ: агент сам решает, когда встать и куда пойти.
    Время подъёма — случайное (18–93 с), цель — тоже случайная: свои задачи
    за компьютером, кулер, серверная, переговорная, приемная, дверь «ВЫХОД». */
+const STRETCH_TEXTS = ['Разомнусь…', 'Минуту передышки', 'Спина затекла', 'Глазам нужен отдых', 'Кофе бы…'];
+const TALK_TEXTS = ['Слушай, вопрос есть…', 'Как там с задачей?', 'Глянь мою ветку', 'Есть минута?', 'Сверимся по срокам'];
+const TALK_REPLY = ['Да, слушаю', 'Сейчас гляну', 'Потом, я в работе', 'Ага, понял', 'Через пару минут'];
+
+/* Пешком по опенспейсу от своего места к чужому столу */
+function routeToDesk(fromZ, tx, tz) {
+    return [
+        new THREE.Vector3(2.2, 0, fromZ + 1.0),
+        new THREE.Vector3(2.2, 0, tz + 1.0),
+        new THREE.Vector3(tx, 0, tz + 1.0)
+    ];
+}
+
+/* Пошёл к коллеге — «по делу»: подошёл, спросил, получил ответ */
+function walkToColleague(a) {
+    const others = [];
+    for (let i = 0; i < ALL_AGENTS.length; i++) {
+        const b = ALL_AGENTS[i];
+        if (b && b !== a && b.state === 'sit' && !b.working) others.push(b);
+    }
+    if (!others.length) return false;
+    const b = others[(Math.random() * others.length) | 0];
+    releaseTerminal(a);
+    goTo(a, routeToDesk(a.model.position.z, b.home.x, b.home.z), () => {
+        a.state = 'chat';
+        a.waitTimer = 5 + Math.random() * 7;
+        a.model.rotation.y = Math.atan2(
+            b.model.position.x - a.model.position.x,
+            b.model.position.z - a.model.position.z
+        );
+        say(a, TALK_TEXTS[(Math.random() * TALK_TEXTS.length) | 0], 3400);
+        if (b.state === 'sit') say(b, TALK_REPLY[(Math.random() * TALK_REPLY.length) | 0], 3400);
+    });
+    return true;
+}
+
+/* ХАОТИЧНОЕ РАСПИСАНИЕ: агент САМ решает, когда встать и куда пойти.
+   Пауза каждый раз новая и «рваная» — от 8 секунд до двух минут: иногда
+   встаёт почти сразу, иногда долго сидит. Варианты дел — случайные. */
 function agentBreak(a, dt) {
     if (a.state !== 'sit' || a.working) return;
     a.breakTimer -= dt;
     if (a.breakTimer > 0) return;
-    a.breakTimer = 18 + Math.random() * 75;
+    a.breakTimer = 8 + Math.random() * 112;
     if (WALKERS >= 3) return;
-    // 1) сам решил пойти поработать за компьютером — по делу, без задачи Босса
-    if (Math.random() < 0.22) { if (sendToComputer(a, 'Свои задачи в работе')) return; }
-    // 2) перекур: кулер, серверная, переговорная, приемная, выход
+
+    const r = Math.random();
+    // 1) свои дела за компьютером (22%) — встал, ушёл печатать
+    if (r < 0.22) { if (sendToComputer(a, 'Свои задачи в работе')) return; }
+    // 2) пошёл к коллеге — спросить/обсудить (18%)
+    if (r < 0.40) { if (walkToColleague(a)) return; }
+    // 3) просто размялся у стола (14%)
+    if (r < 0.54) {
+        a.state = 'stretch';
+        a.waitTimer = 3 + Math.random() * 6;
+        say(a, STRETCH_TEXTS[(Math.random() * STRETCH_TEXTS.length) | 0], 2400);
+        return;
+    }
+    // 4) перекур: кулер, серверная, переговорная, приемная, выход (46%)
     const s = BREAK_SPOTS[(Math.random() * BREAK_SPOTS.length) | 0];
     releaseTerminal(a);
     goTo(a, routeOut(a.model.position.z, s.x, s.z), () => {
         a.state = 'idle';
-        a.waitTimer = 4 + Math.random() * 7;
+        a.waitTimer = 4 + Math.random() * 9;
     });
 }
 
