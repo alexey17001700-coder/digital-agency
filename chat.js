@@ -417,6 +417,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор', file 
         const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(text, agentName); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; header.onclick = () => speakText(text, agentName); div.appendChild(header);
     }
+    if (sender === 'boss' && file) div.appendChild(buildFileChip(file, false));
     const wcParsed = extractWeatherCards(text);
     if (wcParsed.cards.length) div.classList.add('has-weather');
     const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(wcParsed.cleanText);
