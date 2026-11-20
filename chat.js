@@ -762,6 +762,33 @@ function startHardWatchdog() {
 }
 function stopHardWatchdog() { if (hardWatchdog) { clearInterval(hardWatchdog); hardWatchdog = null; } }
 
+/* --- ТАЙМЕР 303 СЕКУНДЫ, ВСТРОЕННЫЙ В КНОПКУ «ОТПРАВИТЬ» ---
+   Босс нажал «Отправить» → на кнопке бегут секунды. Ровно через 303 с,
+   если ответа в чате так и нет, скрипт САМ, от имени Босса, пишет
+   «продолжи» и повторяет запрос. Один сторож на всё — без гонок таймеров.
+   Ловит и обрыв: счётчик на кнопке замер или пропал, а ответа нет. */
+const BUTTON_TIMEOUT_MS = 303000;
+let buttonWatchdog = null;
+let buttonWatchStart = 0;
+let buttonWatchCount = 0;
+function startButtonWatchdog() {
+    stopButtonWatchdog();
+    buttonWatchStart = Date.now();
+    buttonWatchCount = countDirectorMsgs();
+    buttonWatchdog = setInterval(() => {
+        if (!isGenerating && lastSendSuccess) { stopButtonWatchdog(); return; }
+        const answered = countDirectorMsgs() > buttonWatchCount;
+        if (answered) { stopButtonWatchdog(); return; }
+        // Счётчик на кнопке оборвался (запрос умер), а ответа нет — пинок сразу.
+        const btnText = sendBtn ? String(sendBtn.innerText || '') : '';
+        const btnAlive = /\d/.test(btnText) || (sendBtn && sendBtn.classList.contains('stop-active'));
+        if (!btnAlive && !isGenerating && !lastSendSuccess) { fireAutoKick('счётчик на кнопке оборвался, ответа нет'); return; }
+        // Прошло 303 с — пинок от имени Босса.
+        if (Date.now() - buttonWatchStart >= BUTTON_TIMEOUT_MS) { fireAutoKick('на кнопке прошло 303 с, ответа нет'); return; }
+    }, 1000);
+}
+function stopButtonWatchdog() { if (buttonWatchdog) { clearInterval(buttonWatchdog); buttonWatchdog = null; } }
+
 function handleSendClick() {
     if (isGenerating) { 
         if (currentAbortController) currentAbortController.abort(); 
