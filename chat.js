@@ -580,7 +580,7 @@ async function askAgentOnce(agentName, topic, spoken) {
             signal: ctrl.signal
         });
         const data = await res.json();
-        if (typeof window.zvenoAccount === 'function') window.zvenoAccount(data, data.choices && data.choices[0] ? data.choices[0].message.content : '');   // реплика Совета тоже тратит токены
+        if (typeof window.zvenoAccount === 'function') window.zvenoAccount(data, data.choices && data.choices[0] ? data.choices[0].message.content : '', msgs.map(m => m.content || '').join('\n'));   // реплика Совета: вход + выход
         if (data.choices && data.choices.length) {
             return String(data.choices[0].message.content || '')
                 .replace(/^\s*(?:\*\*)?\[?[А-Яа-яA-Za-z\s]+\]?(?:\*\*)?:\s*/, '')   // убираем «Имя:» в начале
