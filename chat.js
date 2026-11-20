@@ -956,7 +956,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 
                 if (selectedAgents.length > 0) {
                     let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-                    if (selectedAgents.length > 1) agentPrompt += `Это Совет. Каждый агент пишет с новой строки: [ИмяАгента]: Текст.\n`;
+                    if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
                     else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
                     selectedAgents.forEach(agentName => {
                         let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
