@@ -17,7 +17,11 @@
     var LS_KEY = 'zvenoApiKey';         // сам ключ
     var LS_PATH = 'zvenoBalancePath';   // свой путь к балансу (если авто не угадал)
     var LS_CACHE = 'zvenoBalanceCache'; // последний ответ API
-    var LS_MANUAL = 'zvenoBalanceManual'; // ручное значение баланса
+    var LS_MANUAL = 'zvenoBalanceManual'; // стартовый баланс (вводит Босс)
+    var LS_SPENT = 'zvenoSpentTokens';    // накопленные токены (все ответы через Штаб)
+    var LS_SPENT_RUB = 'zvenoSpentRub';   // накопленный расход, ₽
+    var LS_PRICE = 'zvenoPricePerM';      // цена за 1 млн токенов, ₽
+    var DEFAULT_PRICE = 8.17;             // ₽ за 1 млн токенов (средняя по моделям)
     var BASE = 'https://api.zveno.ai/v1';
 
     // Шлюзы отдают баланс по-разному — пробуем по очереди, пока не найдём число.
