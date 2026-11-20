@@ -2144,9 +2144,14 @@ function startScene(office) {
         const a = agentByName[name];
         if (!a) return;
         const busy = BUSY_STATES.includes(status);
+        const wasWorking = a.working;
         a.working = busy;
-        if (busy && a.state !== 'walk' && a.state !== 'hidden') {
-            goHome(a);
+        if (busy && !wasWorking) {
+            // ЗАДАЧА ОТ БОССА: агент встаёт из-за стола и уходит к компьютеру печатать.
+            sendToComputer(a);
+        } else if (!busy && wasWorking) {
+            // ОТВЕТ ПРИШЁЛ В ЧАТ: бросает печать и идёт с докладом к столу Босса.
+            sendReportToBoss(a, 'Готово, Босс!');
         }
     };
 
