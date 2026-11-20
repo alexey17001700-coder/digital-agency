@@ -216,8 +216,13 @@
         if (data && data.usage) {
             var u = data.usage;
             var t = Number(u.total_tokens || u.totalTokens || 0);
-            if (!t) t = Number(u.prompt_tokens || u.input_tokens || u.promptTokens || u.inputTokens || 0)
-                      + Number(u.completion_tokens || u.output_tokens || u.completionTokens || u.outputTokens || 0);
+            if (!t) {
+                var det = u.completion_tokens_details || u.output_tokens_details || {};
+                var reas = Number(det.reasoning_tokens || det.reasoningTokens || u.reasoning_tokens || 0);
+                t = Number(u.prompt_tokens || u.input_tokens || u.promptTokens || u.inputTokens || 0)
+                  + Number(u.completion_tokens || u.output_tokens || u.completionTokens || u.outputTokens || 0)
+                  + (isFinite(reas) ? reas : 0);
+            }
             if (isFinite(t) && t > 0) return addUsage({ total_tokens: t });
         }
 
