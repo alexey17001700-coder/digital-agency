@@ -129,20 +129,73 @@ async function clearContentFromButton() {
 function applyAIModelButton() {
     const btn = document.getElementById('btnAIModel');
     if (!btn) return;
+    // Платная модель выбрана, а платные отключены — молча уходим на бесплатную.
+    if (typeof resolveAllowedModel === 'function') {
+        const fixed = resolveAllowedModel(selectedAIModel);
+        if (fixed !== selectedAIModel) { selectedAIModel = fixed; localStorage.setItem('shtabAIModel', fixed); }
+    }
     const m = (typeof getModelInfo === 'function') ? getModelInfo(selectedAIModel) : { label: selectedAIModel, color: '#333', text: '#aaa' };
     btn.innerText = '🧠 ИИ: ' + m.label;
     btn.style.background = m.color || '#333';
     btn.style.color = m.text || '#aaa';
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
 }
 
 function toggleAIModel() {
-    const list = (typeof AI_MODELS !== 'undefined' && AI_MODELS.length) ? AI_MODELS : [{ id: 'yandex' }];
+    const list = (typeof allowedModels === 'function' && allowedModels().length) ? allowedModels() : [{ id: 'yandex' }];
     let idx = list.findIndex(m => m.id === selectedAIModel);
     if (idx < 0) idx = 0;
     selectedAIModel = list[(idx + 1) % list.length].id;
     localStorage.setItem('shtabAIModel', selectedAIModel);
     applyAIModelButton();
     if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: модель переключена на ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
+}
+
+/* --- КНОПКА 🆓 БЕСПЛАТНЫЕ ---
+   Листает ТОЛЬКО бесплатные модели (free: true). Платные не трогает.
+   Долгое нажатие — та же панель выбора моделей. */
+function applyFreeModelButton() {
+    const btn = document.getElementById('btnFreeModel');
+    if (!btn) return;
+    const f = (typeof freeModels === 'function') ? freeModels() : [];
+    const cur = f.find(m => m.id === selectedAIModel);
+    btn.innerText = '🆓 Бесплатные: ' + (cur ? cur.label : (f.length ? f[0].label : 'нет'));
+    btn.style.background = cur ? (cur.color || '#333') : '#333';
+    btn.style.color = cur ? (cur.text || '#fff') : '#aaa';
+}
+
+function toggleFreeModel() {
+    const f = (typeof freeModels === 'function') ? freeModels() : [];
+    if (!f.length) {
+        if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатных моделей в списке нет.]*', 'director', 'Оркестратор');
+        return;
+    }
+    let idx = f.findIndex(m => m.id === selectedAIModel);
+    if (idx < 0) idx = -1;
+    selectedAIModel = f[(idx + 1) % f.length].id;
+    localStorage.setItem('shtabAIModel', selectedAIModel);
+    applyAIModelButton();
+    if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
+}
+
+function bindFreeModelButton() {
+    const btn = document.getElementById('btnFreeModel');
+    if (!btn || btn.dataset.freeBound === '1') return;
+    btn.dataset.freeBound = '1';
+    let pressTimer = null, longPressed = false;
+    const start = () => { longPressed = false; pressTimer = setTimeout(() => { longPressed = true; openAIModelPanel(); }, 600); };
+    const cancel = () => { clearTimeout(pressTimer); };
+    btn.addEventListener('touchstart', start, { passive: true });
+    btn.addEventListener('touchend', cancel);
+    btn.addEventListener('touchcancel', cancel);
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('mouseup', cancel);
+    btn.addEventListener('mouseleave', cancel);
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (longPressed) { longPressed = false; return; }
+        toggleFreeModel();
+    });
 }
 
 function openAIModelPanel() {
