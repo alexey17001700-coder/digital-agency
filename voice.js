@@ -456,7 +456,7 @@ function openVoiceLab2() {
     const names = (typeof AGENT_VOICES !== 'undefined') ? Object.keys(AGENT_VOICES) : [];
     if (!names.length) abox.innerHTML = '<div class="vlab-tag">AGENT_VOICES не найден</div>';
     names.forEach(function (name) {
-        const base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[name]) ? AGENT_VOICES[name] : { voice: 'alena', emotion: 'neutral' };
+        const base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[name]) ? AGENT_VOICES[name] : { voice: 'ru-RU-SvetlanaNeural', emotion: 'neutral' };
         const cur = voiceOverrides[name] || (defaultVoice ? { voice: defaultVoice, emotion: base.emotion } : base);
         const curVoice = edgeVoice(cur.voice);
         const row = document.createElement('div');
