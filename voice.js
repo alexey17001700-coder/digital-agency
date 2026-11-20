@@ -629,13 +629,8 @@ function injectVoiceLab() {
             'background:linear-gradient(145deg,#E3C766,#8E6F14)}';
         document.head.appendChild(st);
     }
-    const b = document.createElement('button');
-    b.id = 'vlabBtn2';
-    b.title = 'Лаборатория голосов v4';
-    b.textContent = '🎛';
-    b.onclick = openVoiceLab2;
-    document.body.appendChild(b);
-    positionVoiceBtn();
+    // Плавающая кнопка 🎛 ПОД кнопкой отправки убрана по приказу Босса.
+    // Лаборатория голосов открывается кнопкой «🎛 Голоса» в панели режимов.
     window.openVoiceLab = openVoiceLab2;
 }
 
