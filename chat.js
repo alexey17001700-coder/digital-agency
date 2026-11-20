@@ -36,6 +36,16 @@ let stallLastLen = -1;             // длина последнего ответ
 let stallLastChange = 0;           // когда последний ответ менялся
 let sendSeq = 0;
 let lastSendSuccess = false;   // пришёл ли ответ — от этого зависит, гасить ли сторож тишины
+/* --- ОДИН СЧЁТЧИК НА КНОПКЕ (без наложения) ---
+   Раньше каждый вызов sendMessage (в т.ч. авто-пинок и «продолжи этап»)
+   заводил СВОЙ setInterval и не убивал предыдущий. Два-три счётчика писали
+   в кнопку одновременно: цифры прыгали «друг на друга», а старый таймер
+   продолжал считать от своего старта — отсюда зашкал за 500 с.
+   Теперь счётчик один: перед стартом старый гасится, отсчёт идёт от
+   единого sendStartTime. */
+let sendTimerInterval = null;
+let sendStartTime = 0;
+function stopSendTimer() { if (sendTimerInterval) { clearInterval(sendTimerInterval); sendTimerInterval = null; } }
 let attachedImageBase64 = null; let currentChatImage = null;
 let attachedFile = null;   // приложенный файл Босса: { name, size, content }
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
