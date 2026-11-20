@@ -196,7 +196,7 @@ function addMessageToHistory(text, sender, agentName = null, file = null) {
         const lastMsg = msgs[msgs.length - 1];
         // Дубль: то же самое сообщение подряд в течение 5 с второй раз не пишем (защита после F5).
         if (lastMsg && lastMsg.role === role && lastMsg.content === text && lastMsg.t && (Date.now() - lastMsg.t) < 5000) return;
-        msgs.push({ role, content: text, agentName, t: Date.now() });
+        msgs.push({ role, content: text, agentName, t: Date.now(), file: file || undefined });
         if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
             allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
             chatTitleEl.innerText = allChats[currentChatId].title;
