@@ -1523,6 +1523,7 @@ function sendReportToBoss(a, text) {
         a.state = 'report';
         a.waitTimer = 4 + Math.random() * 3;
         a.taskCube.visible = false;
+        a.reportText = null;
         say(a, msg, 5200, '#00ff88');
         if (S && S.scene && S.scene.userData.bossHolo) S.scene.userData.bossHolo.userData.flash = 1;
     });
