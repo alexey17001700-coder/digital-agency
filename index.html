@@ -150,6 +150,9 @@
         startMatrix();
         let appLoaded = false, minTimePassed = false, aiReady = false;
         setTimeout(() => { minTimePassed = true; hideSplashIfReady(); }, 6000); 
+        // СТРАХОВКА: нейросеть не отчиталась (модель не скачалась, сеть отвалилась) —
+        // не держим Босса на заставке вечно. Через 20 с пускаем в Штаб в любом случае.
+        setTimeout(() => { aiReady = true; hideSplashIfReady(); }, 20000);
         appFrame.onload = () => { appLoaded = true; hideSplashIfReady(); };
         window.updateAILoading = function(pct, status, modelsHtml) {
             const s = document.getElementById('ai-loading-status');
