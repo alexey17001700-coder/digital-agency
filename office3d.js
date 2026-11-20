@@ -1445,7 +1445,11 @@ function captureAnswer(text, who) {
             if (a && (a.state === 'deskwork' || a.state === 'type' || a.reportPending)) { target = a; break; }
         }
     }
-    if (target) target.reportText = t;
+    if (target) {
+        target.reportText = t;
+        target.reportPending = true;   // ответ пришёл — пойдёт с докладом
+        target.working = false;        // и больше не «печатает»
+    }
 }
 
 /* ЗАДАЧА БОССА В ЧАТЕ. Чат не всегда помечает, кто именно занят, поэтому
