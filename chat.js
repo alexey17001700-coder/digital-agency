@@ -624,6 +624,39 @@ function startTimerFreezeWatchdog() {
 }
 function stopTimerFreezeWatchdog() { if (timerFreezeWatchdog) { clearInterval(timerFreezeWatchdog); timerFreezeWatchdog = null; } }
 
+/* --- МИГАНИЕ КНОПКИ «ОБНОВИТЬ ШТАБ» ---
+   sync.sh тянет новый код каждые 10 с, но открытая страница остаётся старой.
+   Раз в 30 с проверяем, не изменился ли chat.js на сервере (по Last-Modified /
+   ETag). Изменился — кнопка «🔄 Обновить штаб» начинает мигать жёлтым. */
+const UPDATE_CHECK_MS = 30000;
+let updateWatchTimer = null;
+let serverBuildMark = null;
+function findRefreshBtn() {
+    return document.getElementById('btnRefreshShtab') || (function () {
+        const btns = document.querySelectorAll('.mode-switch .mode-btn');
+        for (let i = 0; i < btns.length; i++) {
+            const oc = btns[i].getAttribute('onclick') || '';
+            if (oc.indexOf('refreshShtab') !== -1) return btns[i];
+        }
+        return null;
+    })();
+}
+async function checkServerBuild() {
+    try {
+        const res = await fetch('chat.js?probe=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+        if (!res.ok) return;
+        const mark = res.headers.get('last-modified') || res.headers.get('etag') || res.headers.get('content-length');
+        if (!mark) return;
+        if (serverBuildMark === null) { serverBuildMark = mark; return; }   // первый замер — точка отсчёта
+        if (mark !== serverBuildMark) {
+            const btn = findRefreshBtn();
+            if (btn) { btn.classList.add('needs-update'); btn.innerText = '🔄 Обновить штаб ⬤'; }
+        }
+    } catch (e) {}
+}
+function startUpdateWatch() { stopUpdateWatch(); checkServerBuild(); updateWatchTimer = setInterval(checkServerBuild, UPDATE_CHECK_MS); }
+function stopUpdateWatch() { if (updateWatchTimer) { clearInterval(updateWatchTimer); updateWatchTimer = null; } }
+
 function kickAI(agentName) {
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
 }
