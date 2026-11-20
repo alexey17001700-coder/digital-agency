@@ -1166,7 +1166,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             const distinctSpeakers = new Set(replies.map(r => r.agent)).size;
             if (!isKick && typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
                 && selectedAgents.length > 1 && distinctSpeakers < 2) {
-                await playAgentDialogue(text);
+                await runAgentRoundtable(text);
             }
 
             // Метка [ЭТАП N/M] — этап закрыт, просим продолжить следующий.
