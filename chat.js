@@ -1207,6 +1207,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 while (currentAttempt < maxAttempts) {
                     currentAttempt++;
+                    if (!takeTurnCall()) { lastError = 'Лимит запросов на один вопрос исчерпан (экономия баланса).'; break; }
                     currentMessages = trimHistory(currentMessages);
                     const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
