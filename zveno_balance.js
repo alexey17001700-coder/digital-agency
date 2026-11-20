@@ -73,20 +73,42 @@
     }
 
     // Учёт токенов от модели. Возвращает true, если токены реально списаны.
+    // Ставка — средняя из логов ZvenoAI (17 ₽ за 1 млн). Кешированный вход
+    // дешевле, скрытые reasoning-токены платные — всё учтено.
     function addUsage(usage) {
         if (!usage || typeof usage !== 'object') return false;
+
         var p = Number(usage.prompt_tokens || usage.input_tokens || usage.promptTokens || usage.inputTokens || 0);
         var c = Number(usage.completion_tokens || usage.output_tokens || usage.completionTokens || usage.outputTokens || 0);
-        // Скрытые reasoning-токены (размышления модели) тоже платные — учитываем.
+
+        // Скрытые reasoning-токены (размышления модели) тоже платные.
         var det = usage.completion_tokens_details || usage.output_tokens_details || {};
         var reas = Number(det.reasoning_tokens || det.reasoningTokens || usage.reasoning_tokens || 0);
         if (isFinite(reas) && reas > 0) c += reas;
+
+        // Прочитанное из кеша биллингуется со скидкой.
+        var pdet = usage.prompt_tokens_details || usage.input_tokens_details || {};
+        var cached = Number(pdet.cached_tokens || pdet.cachedTokens || usage.cached_tokens || 0);
+        if (!isFinite(cached) || cached < 0) cached = 0;
+        if (cached > p) cached = p;
+        var fresh = p - cached;
+
         var total = Number(usage.total_tokens || usage.totalTokens || 0);
         if (!total) total = p + c;
         if (!isFinite(total) || total <= 0) return false;
+
+        // Платные токены: свежий вход + кеш со скидкой + выход (с рассуждениями).
+        var billable = (fresh + cached * CACHE_DISCOUNT) + c;
+        if (!isFinite(billable) || billable <= 0) billable = total;
+
+        var rub = (billable / 1000000) * getPrice();
         lsSet(LS_SPENT, String(getSpentTokens() + total));
-        lsSet(LS_SPENT_RUB, String(getSpentRub() + (total / 1000000) * getPrice()));
-        try { console.log('[zveno] списано токенов:', total, '· баланс:', currentBalance().toFixed(2), '₽'); } catch (e) {}
+        lsSet(LS_SPENT_RUB, String(getSpentRub() + rub));
+        try {
+            console.log('[zveno] токенов:', Math.round(total),
+                        '(кеш ' + Math.round(cached) + ') · списано:', rub.toFixed(4),
+                        '₽ · баланс:', currentBalance().toFixed(2), '₽');
+        } catch (e) {}
         show();
         return true;
     }
