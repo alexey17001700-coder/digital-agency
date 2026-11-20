@@ -2396,7 +2396,7 @@ function startScene(office) {
     toiletTimer = 30;
     // ХАОС ПО РАСПИСАНИЮ: у каждого агента своё случайное время подъёма,
     // поэтому офис «просыпается» вразнобой, а не строем.
-    agents.forEach((a, i) => { a.breakTimer = 1 + i * 1.3 + Math.random() * 4; });
+    agents.forEach((a) => { a.breakTimer = 0.4 + Math.random() * 20; });
 
     S = {
         renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office,
