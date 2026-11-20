@@ -611,6 +611,7 @@ function handleSendClick() {
     if (isGenerating) { 
         if (currentAbortController) currentAbortController.abort(); 
         isGenerating = false; 
+        stopHardWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog();
         clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
