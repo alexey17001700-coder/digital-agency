@@ -27,9 +27,9 @@
     }
     function getStart() {
         var raw = lsGet(LS_START);
-        if (raw === null || raw === '') return null;
-        var v = num(raw, null);
-        return v === null ? null : v;
+        if (raw === null || raw === '') return 0;   // не задан → ноль
+        var v = num(raw, 0);
+        return v === null ? 0 : v;
     }
     function getPrice() {
         var v = num(lsGet(LS_PRICE), DEFAULT_PRICE);
