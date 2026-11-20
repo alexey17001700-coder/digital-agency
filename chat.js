@@ -1203,6 +1203,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (isBossSecret) modelToUse = 'zveno';
                 // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
                 if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
+                // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
+                // Раньше секрет-ключ (deepseekKey = "zveno"/"boss") молча подменял выбор на
+                // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
+                // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
+                const selModelInfo = getModelInfo(selectedAIModel);
+                if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
                 usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
