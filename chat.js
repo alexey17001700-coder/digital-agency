@@ -818,6 +818,7 @@ function handleSendClick() {
         isGenerating = false; 
         stopHardWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopButtonWatchdog();
         clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
+        stopSendTimer();           // гасим секундомер на кнопке
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
     }
