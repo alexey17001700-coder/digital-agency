@@ -600,10 +600,10 @@ function lastDirectorText() {
    функцию. Она сама проверяет защиту от дублей и лимит пинков, обрывает
    зависший запрос и пишет «продолжи» от имени Босса. */
 function fireAutoKick(reason) {
-    if (kickGuardActive()) { stopStallWatchdog(); stopTimerFreezeWatchdog(); return false; }   // пинок уже был — дубль после F5 не шлём
+    if (kickGuardActive()) { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); return false; }   // пинок уже был — дубль после F5 не шлём
     if (stallKicks >= STALL_MAX_KICKS) {
         renderMessage(`⏹️ *[Система: ${STALL_MAX_KICKS} авто-пинка без ответа — останавливаюсь. Жду Босса.]*`, 'director', 'Оркестратор');
-        stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+        stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
         return false;
     }
     stallKicks++;
@@ -612,7 +612,7 @@ function fireAutoKick(reason) {
     isGenerating = false; clearTimeout(typingTimer);
     renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
     renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
-    stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+    stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
     setTimeout(() => sendMessage('продолжи', true), 900);   // sendMessage сам перезапустит сторожа, пока пинков меньше лимита
     return true;
 }
