@@ -722,7 +722,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     isGenerating = true; const mySeq = ++sendSeq;
     // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
     // Авто-пинки и системные дозапросы сторож не перезапускают.
-    if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); } else { stopStallWatchdog(); stopTimerFreezeWatchdog(); }
+    if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
     sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
     let startTime = Date.now();
