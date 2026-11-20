@@ -84,6 +84,24 @@ let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
+/* --- СПИСОК МОДЕЛЕЙ ИИ (кнопка 🧠 ИИ переключает по тапу) ---
+   Бесплатные маршруты идут через тот же шлюз: при нулевом балансе они
+   доступны без оплаты и без карты, формат запроса — обычный OpenAI.
+   Список хранится в localStorage (shtabAIModels) — можно править без кода. */
+const AI_MODELS_DEFAULT = [
+    { id: 'yandex',   label: 'Yandex',    color: '#333',    text: '#aaa' },
+    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
+    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
+    { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000' },
+    { id: 'baidu/ernie-5.5-flash-preview', label: 'Ernie 5.5 Flash 🆓', color: '#ffd700', text: '#000' }
+];
+let AI_MODELS = AI_MODELS_DEFAULT;
+try {
+    const sm = localStorage.getItem('shtabAIModels');
+    if (sm) { const p = JSON.parse(sm); if (Array.isArray(p) && p.length) AI_MODELS = p; }
+} catch (e) {}
+function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
+
 const chatContainer = document.getElementById('chatContainer');
 // Делегированный обработчик: разворот миниатюр по клику (переживает перерисовку innerHTML).
 if (chatContainer) chatContainer.addEventListener('click', (e) => {
