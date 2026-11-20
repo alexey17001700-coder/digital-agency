@@ -83,11 +83,14 @@
     }
 
     function showManual() {
-        var v = getManual();
+        var v = currentBalance();
         if (v === null) return false;
         var color = v <= 0 ? '#ff0055' : (v < 100 ? '#ffd700' : '#00ff88');
         render('ZVENO ' + v.toFixed(2) + ' ₽', color,
-               'Баланс ZvenoAI (введён вручную): ' + v.toFixed(2) + ' ₽');
+               'Баланс ZvenoAI: ' + v.toFixed(2) + ' ₽\n' +
+               'Старт: ' + getManual().toFixed(2) + ' ₽ · расход: ' + getSpentRub().toFixed(2) + ' ₽\n' +
+               'Токенов: ' + Math.round(getSpentTokens()).toLocaleString('ru-RU') +
+               ' · цена: ' + getPrice().toFixed(2) + ' ₽ за 1 млн');
         return true;
     }
 
