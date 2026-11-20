@@ -642,6 +642,19 @@ function startStallWatchdog() {
         if (!isGenerating && newMsgs > 0) stopStallWatchdog();
     }, 3000);
 }
+/* --- ДЕТЕКТ ФРАЗЫ «ПУСТОЙ ОТВЕТ» ---
+   Бывает, модель не молчит, а присылает сообщение вида «Пустой ответ»,
+   «(пустой ответ)», «Ответ пустой» — по сути тот же обрыв, только текстом.
+   Такой ответ считаем пустым и пинаем «продолжи» от имени Босса. */
+const EMPTY_ANSWER_RE = /(?:^|[\s(\[«"'])(?:пуст(?:ой|ые|ая|ое|ым|ых)|нет\s+ответа|ответ\s+(?:пуст|отсутств)|empty\s+(?:answer|response)|no\s+(?:answer|response))(?=$|[\s)\]»"'.,!])/i;
+function isEmptyAnswerText(t) {
+    const s = String(t || '').replace(/\[[^\]]*\]/g, ' ').replace(/[*_`>#]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!s) return true;
+    // Фраза про пустой ответ, но сам ответ короткий (до 200 символов) — это заглушка, а не разбор.
+    if (s.length <= 200 && EMPTY_ANSWER_RE.test(s)) return true;
+    return false;
+}
+
 // Признак оборванного ответа: незакрытый блок кода, многоточие или союз на конце.
 function looksTruncated(t) {
     const s = String(t || '').trim();
