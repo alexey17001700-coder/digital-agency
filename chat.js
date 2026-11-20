@@ -55,6 +55,7 @@ function startSendTimer() {
     const handle = setInterval(() => {
         if (sendTimerInterval !== handle) { clearInterval(handle); return; }   // дубль — умирает
         if (!isGenerating) { stopSendTimer(); return; }                        // ответ пришёл — стоп
+        if (sendBtn.className.indexOf('stop-active') === -1) { stopSendTimer(); return; } // кнопка уже не в работе — стоп
         const elapsed = ((Date.now() - sendStartTime) / 1000).toFixed(1);
         sendBtn.innerText = elapsed + "s";
     }, 100);
