@@ -768,7 +768,7 @@ function looksTruncated(t) {
    метку [ЭТАП N/M]. Скрипт видит метку и сам, от имени Босса, пишет
    «продолжи этап N+1» — пока этапы не кончатся. Метка в чате не видна. */
 const STAGE_RE = /\[(?:ЭТАП|STAGE)\s*(\d+)\s*\/\s*(\d+)\]/i;
-const STAGE_MAX_KICKS = 12;        // предохранитель от бесконечной цепочки
+const STAGE_MAX_KICKS = 3;         // было 12: каждый этап — ОТДЕЛЬНЫЙ платный запрос с полной историей
 let stageKicks = 0;
 function resetStageKicks() { stageKicks = 0; }
 function parseStageMarker(text) {
