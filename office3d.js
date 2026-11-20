@@ -2051,11 +2051,25 @@ function startScene(office) {
     S = { renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office };
 }
 
+/* ЗАКРЫТИЕ ОФИСА — ТОЛЬКО СКРЫТИЕ.
+   Сцена НЕ уничтожается: агенты продолжают работать в фоне (ходят, носят
+   задачи Боссу, уходят на перерыв), поэтому при следующем открытии кнопки
+   Босс сразу видит живой офис, а не пустые кресла. */
 function hideOffice() {
     const chat = document.getElementById('chatContainer');
     const office = document.getElementById('office-container');
     const btn = document.getElementById('btnOffice');
 
+    if (S && S.setVisible) S.setVisible(false);
+
+    if (office) office.style.display = 'none';
+    if (chat) chat.style.display = 'flex';
+    if (btn) btn.classList.remove('active');
+}
+
+/* ПОЛНЫЙ РАЗБОР СЦЕНЫ — нужен только для кнопки «⟲ Повторить» в диагностике
+   и при аварийном пересборе. В обычной работе не вызывается. */
+function destroyScene() {
     if (S) {
         cancelAnimationFrame(S.raf);
         S.unbind();
@@ -2081,6 +2095,7 @@ function hideOffice() {
         S.renderer.dispose();
         S = null;
     }
+    scenePromise = null;
     GEO = null;
     SHARED_M = null;
     toiletCount = 0;
@@ -2090,9 +2105,8 @@ function hideOffice() {
     WALKERS = 0;
     delete window.office3dSay;
     delete window.office3dTask;
-    if (office) { office.innerHTML = ''; office.style.display = 'none'; }
-    if (chat) chat.style.display = 'flex';
-    if (btn) btn.classList.remove('active');
+    const office = document.getElementById('office-container');
+    if (office) office.innerHTML = '';
 }
 
 /* ------------------------------------------------------------------ */
