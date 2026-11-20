@@ -620,7 +620,7 @@ async function runBackgroundTask(agentName, taskDescription) {
         try {
             const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], temperature: 0.7, userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {} }) });
             const data = await response.json();
-            if (typeof window.zvenoAccount === 'function') window.zvenoAccount(data, data.choices && data.choices[0] ? data.choices[0].message.content : '');   // фоновая задача агента тоже тратит токены
+            if (typeof window.zvenoAccount === 'function') window.zvenoAccount(data, data.choices && data.choices[0] ? data.choices[0].message.content : '', `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.`);   // фоновая задача: вход + выход
             if (data.choices && data.choices.length > 0) { const r = data.choices[0].message.content; typeMessage(r, 'director', agentName); addMessageToHistory(r, 'director', agentName); }
         } catch(e) { console.error(e); }
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
