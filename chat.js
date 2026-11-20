@@ -1265,7 +1265,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             // Ответа нет — сторожа счётчика и тишины оставляем жить: они поймают
             // «оборвавшийся секундомер» и пошлют авто-пинок, а не будут молчать.
         }
-        isGenerating = false; clearInterval(timerInterval); 
+        isGenerating = false; stopSendTimer(); 
         attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
