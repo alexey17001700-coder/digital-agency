@@ -1794,6 +1794,8 @@ function agentTick(a, dt, t) {
         /* РАБОТА ЗА КОМПЬЮТЕРОМ: печатает, пока задача в работе.
            Ответ пришёл в чат (reportPending) — бросает печать и идёт к Боссу. */
         poseType(a, t);
+        a.workLeft = (a.workLeft || 0) - dt;
+        if (a.workLeft <= 0) a.working = false;   // предохранитель от вечной печати
         a.waitTimer -= dt;
         if (a.waitTimer <= 0) {
             if (a.reportPending) sendReportToBoss(a, a.reportText);
