@@ -1220,7 +1220,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     } finally {
         if (mySeq === sendSeq) {
             stopHardWatchdog();
-            if (lastSendSuccess) { stopStallWatchdog(); stopTimerFreezeWatchdog(); }
+            if (lastSendSuccess) { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); }
             // Ответа нет — сторожа счётчика и тишины оставляем жить: они поймают
             // «оборвавшийся секундомер» и пошлют авто-пинок, а не будут молчать.
         }
