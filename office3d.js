@@ -1752,6 +1752,7 @@ function showFail(err, stage) {
         'background:#00e5ff;color:#000;border:none;font-weight:bold;cursor:pointer;';
     again.onclick = () => {
         box.remove();
+        destroyScene();   // полный пересбор: сцена могла остаться в аварийном виде
         hideOffice();
         setTimeout(() => { isOpen = true; showOffice(); }, 80);
     };
