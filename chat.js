@@ -899,7 +899,11 @@ async function sendMessage(overrideText = null, isKick = false) {
 
     if (!overrideText && !isKick) {
         chatInputEl.value = ''; chatInputEl.style.height = 'auto'; playSound('send'); 
-        renderMessage(text, 'boss'); addMessageToHistory(text, 'boss');
+        const fileMeta = attachedFile ? { name: attachedFile.name, size: attachedFile.size } : null;
+        const displayText = text || (attachedFile ? '📄 ' + attachedFile.name : '');
+        renderMessage(displayText, 'boss', 'Оркестратор', fileMeta);
+        addMessageToHistory(displayText, 'boss', null, fileMeta);
+        clearAttachPreview();
     }
 
     isGenerating = true; const mySeq = ++sendSeq;
