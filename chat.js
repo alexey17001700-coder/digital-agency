@@ -1112,10 +1112,12 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
-            // Модель ответила монологами (или одним голосом), а в Совете 2+ агентов —
-            // включаем короткий диалог между ними, чтобы Совет реально общался.
+            // Модель ответила монологом (или реплики одного и того же агента), а в Совете
+            // 2+ агентов — включаем короткий диалог между ними, чтобы Совет реально общался.
+            // Считаем именно РАЗНЫХ говорящих: если реплики повторяет один агент — это не диалог.
+            const distinctSpeakers = new Set(replies.map(r => r.agent)).size;
             if (!isKick && typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
-                && selectedAgents.length > 1 && replies.length < 2) {
+                && selectedAgents.length > 1 && distinctSpeakers < 2) {
                 await playAgentDialogue(text);
             }
 
