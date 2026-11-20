@@ -1257,6 +1257,26 @@ async function sendMessage(overrideText = null, isKick = false) {
     }
 }
 
+/* --- «ПУСТОЙ ОТВЕТ» КАК ЕДИНСТВЕННЫЙ ТЕКСТ ---
+   Пинок даём ТОЛЬКО если сообщение целиком состоит из заглушки
+   («Пустой ответ», «(пустой ответ)», «Нет ответа» и т.п.).
+   Если заглушка лишь упомянута внутри нормального текста — не пинаем. */
+const EMPTY_ANSWER_STUBS = [
+    'пустой ответ', 'ответ пустой', 'пустой ответ от модели', 'модель вернула пустой ответ',
+    'нет ответа', 'ответа нет', 'ответ отсутствует', 'пусто',
+    'empty answer', 'empty response', 'no response', 'no answer'
+];
+function isOnlyEmptyAnswerText(text) {
+    let t = String(text || '');
+    t = t.replace(/\[[^\]]*\]/g, ' ');                       // служебные метки [FILE:...], [TASK:...]
+    t = t.replace(/[*_`>#~]/g, ' ');                          // разметка
+    t = t.replace(/[«»"'()\[\]{}]/g, ' ');                    // кавычки и скобки
+    t = t.replace(/[.,:;!?\-–—•…]+/g, ' ');                   // пунктуация
+    t = t.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!t) return false;                                     // совсем пусто — это ловит emptyCheck
+    return EMPTY_ANSWER_STUBS.some(s => t === s);
+}
+
 function focusAgentCard(agentName) {
     document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active-agent-glow'));
     const activeCard = document.getElementById('agent-' + agentName);
