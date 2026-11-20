@@ -225,14 +225,38 @@
         refresh();
     }
 
+    function askPrice() {
+        var p = prompt('Цена за 1 млн токенов, ₽ (сейчас ' + getPrice().toFixed(2) + ').\nПусто — вернуть 8.17.',
+                       String(getPrice()));
+        if (p === null) return;
+        p = p.replace(/\s/g, '').replace(',', '.').trim();
+        if (!p) { lsDel(LS_PRICE); showManual(); return; }
+        var v = parseFloat(p);
+        if (!isFinite(v) || v <= 0) { alert('Не понял число.'); return; }
+        lsSet(LS_PRICE, String(v));
+        showManual();
+    }
+
+    function showSpent() {
+        var bal = currentBalance();
+        alert('ZvenoAI — расход через Штаб:\n\n' +
+              'Токенов: ' + Math.round(getSpentTokens()).toLocaleString('ru-RU') + '\n' +
+              'Расход: ' + getSpentRub().toFixed(2) + ' ₽\n' +
+              'Цена: ' + getPrice().toFixed(2) + ' ₽ за 1 млн\n' +
+              'Баланс: ' + (bal === null ? '—' : bal.toFixed(2) + ' ₽'));
+    }
+
     function menu() {
         var ans = prompt(
             'ZVENOAI — что сделать?\n' +
-            '1 — ввести баланс вручную\n' +
+            '1 — ввести стартовый баланс\n' +
             '2 — ввести / сменить API-ключ\n' +
             '3 — задать путь к балансу (авто)\n' +
             '4 — обновить с API\n' +
-            '5 — очистить ручной баланс',
+            '5 — очистить баланс\n' +
+            '6 — цена за 1 млн токенов\n' +
+            '7 — показать расход\n' +
+            '8 — сбросить расход',
             '1');
         if (ans === null) return;
         ans = ans.trim();
@@ -240,7 +264,10 @@
         else if (ans === '2') askKey();
         else if (ans === '3') askPath();
         else if (ans === '4') refresh();
-        else if (ans === '5') { lsDel(LS_MANUAL); refresh(); }
+        else if (ans === '5') { lsDel(LS_MANUAL); lsDel(LS_SPENT); lsDel(LS_SPENT_RUB); refresh(); }
+        else if (ans === '6') askPrice();
+        else if (ans === '7') showSpent();
+        else if (ans === '8') { lsDel(LS_SPENT); lsDel(LS_SPENT_RUB); showManual(); }
     }
 
     function bind() {
