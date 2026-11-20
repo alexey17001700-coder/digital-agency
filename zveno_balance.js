@@ -1,7 +1,8 @@
 // ============================================================
 //  БАЛАНС ZVENOAI В ШАПКЕ ШТАБА
-//  Просто: нажал на ZVENO → ввёл свой баланс → он висит вверху
-//  и сам уменьшается с каждым потраченным токеном.
+//  Вверху видно сам баланс. Тык по нему → окошко с полями:
+//  баланс, цена за 1 млн токенов, расход. Баланс сам уменьшается
+//  с каждым ответом модели.
 //  Всё хранится ТОЛЬКО в localStorage этого устройства.
 // ============================================================
 (function () {
@@ -12,9 +13,6 @@
     var LS_SPENT_RUB = 'zvenoSpentRub';   // накопленный расход, ₽
     var LS_PRICE = 'zvenoPricePerM';      // цена за 1 млн токенов, ₽
     var DEFAULT_PRICE = 8.17;             // ₽ за 1 млн токенов (средняя по моделям)
-
-    var longFired = false;
-    var pressTimer = null;
 
     function box() { return document.getElementById('status-zveno'); }
     function label() { return document.getElementById('zveno-balance-text'); }
@@ -46,6 +44,8 @@
         return s === null ? null : s - getSpentRub();
     }
 
+    function fmt(n) { return n.toFixed(2).replace('.', ','); }
+
     function render(text, color, title) {
         var e = label();
         if (e) { e.textContent = text; if (color) e.style.color = color; }
@@ -56,17 +56,15 @@
     function show() {
         var v = currentBalance();
         if (v === null) {
-            render('ZVENO — ₽', '#888', 'Нажми, чтобы ввести текущий баланс ZvenoAI');
-            return false;
+            render('— ₽', '#888', 'Нажми, чтобы ввести баланс ZvenoAI');
+            return;
         }
         var color = v <= 0 ? '#ff0055' : (v < 100 ? '#ffd700' : '#00ff88');
-        render('ZVENO ' + v.toFixed(2) + ' ₽', color,
-               'Баланс ZvenoAI: ' + v.toFixed(2) + ' ₽\n' +
-               'Введён: ' + getStart().toFixed(2) + ' ₽ · израсходовано: ' + getSpentRub().toFixed(2) + ' ₽\n' +
+        render(fmt(v) + ' ₽', color,
+               'Баланс ZvenoAI: ' + fmt(v) + ' ₽\n' +
+               'Введён: ' + fmt(getStart()) + ' ₽ · израсходовано: ' + fmt(getSpentRub()) + ' ₽\n' +
                'Токенов: ' + Math.round(getSpentTokens()).toLocaleString('ru-RU') +
-               ' · цена: ' + getPrice().toFixed(2) + ' ₽ за 1 млн\n' +
-               'Нажатие — сменить баланс · долгое нажатие — расход');
-        return true;
+               ' · цена: ' + fmt(getPrice()) + ' ₽ за 1 млн');
     }
 
     // Учёт токенов от модели. Зовётся из chat.js после каждого ответа.
@@ -82,67 +80,100 @@
         show();
     }
 
-    // Ввод текущего баланса — единственное, что нужно от Босса.
-    function askBalance() {
-        var cur = currentBalance();
-        var p = prompt('Текущий баланс ZvenoAI, ₽ (например 582.41).\nДальше он сам уменьшается с каждым потраченным токеном.',
-                       cur !== null ? cur.toFixed(2) : '');
-        if (p === null) return;
-        p = String(p).replace(/\s/g, '').replace(',', '.').trim();
-        if (!p) { lsDel(LS_START); lsDel(LS_SPENT); lsDel(LS_SPENT_RUB); show(); return; }
-        var v = parseFloat(p);
-        if (!isFinite(v)) { alert('Не понял число.'); return; }
-        lsSet(LS_START, String(v));
-        lsSet(LS_SPENT, '0');
-        lsSet(LS_SPENT_RUB, '0');
-        show();
-    }
+    // ---------- ОКНО НАСТРОЕК ----------
+    function openPanel() {
+        if (document.getElementById('zveno-panel')) return;
 
-    function showSpent() {
         var bal = currentBalance();
-        var ans = prompt(
-            'ZvenoAI — расход через Штаб\n\n' +
-            'Баланс: ' + (bal === null ? '—' : bal.toFixed(2) + ' ₽') + '\n' +
-            'Израсходовано: ' + getSpentRub().toFixed(2) + ' ₽\n' +
-            'Токенов: ' + Math.round(getSpentTokens()).toLocaleString('ru-RU') + '\n' +
-            'Цена: ' + getPrice().toFixed(2) + ' ₽ за 1 млн\n\n' +
-            'Введи цену за 1 млн токенов, ₽ (Enter — оставить как есть).',
-            String(getPrice()));
-        if (ans === null) return;
-        ans = String(ans).replace(/\s/g, '').replace(',', '.').trim();
-        if (!ans) return;
-        var v = parseFloat(ans);
-        if (!isFinite(v) || v <= 0) { alert('Не понял число.'); return; }
-        lsSet(LS_PRICE, String(v));
-        show();
+
+        var ov = document.createElement('div');
+        ov.id = 'zveno-panel';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);' +
+            'display:flex;align-items:center;justify-content:center;padding:16px;' +
+            'font-family:inherit;';
+
+        ov.innerHTML =
+            '<div style="width:100%;max-width:340px;background:#101418;border:1px solid #2a333d;' +
+            'border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6)">' +
+              '<div style="font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:14px">' +
+                'БАЛАНС ZVENOAI</div>' +
+
+              '<label style="display:block;font-size:11px;color:#8b98a5;margin-bottom:4px">' +
+                'ТЕКУЩИЙ БАЛАНС, ₽</label>' +
+              '<input id="zv-bal" type="text" inputmode="decimal" ' +
+                'value="' + (bal === null ? '' : bal.toFixed(2)) + '" ' +
+                'placeholder="582.41" ' +
+                'style="width:100%;box-sizing:border-box;background:#0a0d10;border:1px solid #2a333d;' +
+                'border-radius:8px;padding:10px;color:#e6edf3;font-size:16px;margin-bottom:12px">' +
+
+              '<label style="display:block;font-size:11px;color:#8b98a5;margin-bottom:4px">' +
+                'ЦЕНА ЗА 1 МЛН ТОКЕНОВ, ₽</label>' +
+              '<input id="zv-price" type="text" inputmode="decimal" ' +
+                'value="' + getPrice().toFixed(2) + '" ' +
+                'style="width:100%;box-sizing:border-box;background:#0a0d10;border:1px solid #2a333d;' +
+                'border-radius:8px;padding:10px;color:#e6edf3;font-size:16px;margin-bottom:12px">' +
+
+              '<div style="font-size:12px;color:#8b98a5;line-height:1.6;margin-bottom:14px">' +
+                'Израсходовано: <b style="color:#e6edf3">' + fmt(getSpentRub()) + ' ₽</b><br>' +
+                'Токенов: <b style="color:#e6edf3">' +
+                  Math.round(getSpentTokens()).toLocaleString('ru-RU') + '</b>' +
+              '</div>' +
+
+              '<button id="zv-save" style="width:100%;padding:11px;border:0;border-radius:8px;' +
+                'background:#00ff88;color:#04120a;font-weight:700;font-size:14px;margin-bottom:8px;' +
+                'cursor:pointer">СОХРАНИТЬ</button>' +
+
+              '<button id="zv-reset" style="width:100%;padding:9px;border:1px solid #2a333d;' +
+                'border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;' +
+                'margin-bottom:8px;cursor:pointer">СБРОСИТЬ РАСХОД</button>' +
+
+              '<button id="zv-close" style="width:100%;padding:9px;border:1px solid #2a333d;' +
+                'border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;' +
+                'cursor:pointer">ЗАКРЫТЬ</button>' +
+            '</div>';
+
+        document.body.appendChild(ov);
+
+        function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+
+        ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+        ov.querySelector('#zv-close').addEventListener('click', close);
+
+        ov.querySelector('#zv-save').addEventListener('click', function () {
+            var b = num(ov.querySelector('#zv-bal').value, null);
+            var pr = num(ov.querySelector('#zv-price').value, null);
+            if (pr !== null && pr > 0) lsSet(LS_PRICE, String(pr));
+            if (b === null) { lsDel(LS_START); lsDel(LS_SPENT); lsDel(LS_SPENT_RUB); }
+            else {
+                // Введённое число = баланс СЕЙЧАС, расход начинаем с нуля.
+                lsSet(LS_START, String(b));
+                lsSet(LS_SPENT, '0');
+                lsSet(LS_SPENT_RUB, '0');
+            }
+            show();
+            close();
+        });
+
+        ov.querySelector('#zv-reset').addEventListener('click', function () {
+            var s = getStart();
+            lsSet(LS_SPENT, '0');
+            lsSet(LS_SPENT_RUB, '0');
+            if (s !== null) lsSet(LS_START, String(s));
+            show();
+            close();
+        });
     }
 
     function bind() {
         var b = box();
         if (!b) return;
-
-        function startPress() {
-            clearTimeout(pressTimer);
-            pressTimer = setTimeout(function () { longFired = true; showSpent(); }, 700);
-        }
-        function cancelPress() { clearTimeout(pressTimer); }
-
-        b.addEventListener('touchstart', startPress, { passive: true });
-        b.addEventListener('touchend', cancelPress);
-        b.addEventListener('touchmove', cancelPress);
-        b.addEventListener('mousedown', startPress);
-        b.addEventListener('mouseup', cancelPress);
-        b.addEventListener('mouseleave', cancelPress);
-        b.addEventListener('contextmenu', function (e) { e.preventDefault(); askBalance(); });
-
-        b.addEventListener('click', function () {
-            if (longFired) { longFired = false; return; }
-            askBalance();
-        });
+        b.style.cursor = 'pointer';
+        b.addEventListener('click', function (e) { e.preventDefault(); openPanel(); });
+        b.addEventListener('contextmenu', function (e) { e.preventDefault(); openPanel(); });
     }
 
     window.zvenoBalanceRefresh = show;
-    window.zvenoBalanceSetManual = askBalance;
+    window.zvenoBalanceSetManual = openPanel;
     window.zvenoAddUsage = addUsage;   // chat.js зовёт после каждого ответа модели
     // Если шлюз не вернул usage — считаем токены по длине текста (~4 символа на токен).
     window.zvenoAddText = function (text) {
@@ -152,6 +183,8 @@
     };
 
     function boot() {
+        var b = box();
+        if (b) b.innerHTML = '<span id="zveno-balance-text"></span>';
         bind();
         show();
     }
