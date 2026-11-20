@@ -124,6 +124,15 @@ try {
     }
 } catch (e) {}
 function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
+
+/* --- ЛОКАЛЬНАЯ МОДЕЛЬ OLLAMA (ПК) ---
+   Адрес задаётся путём через шлюз: Caddy проксирует /ollama/* на ПК:11434,
+   поэтому IP в коде не нужен — Штаб стучится в свой же домен по HTTPS.
+   Имя модели меняется в localStorage (shtabOllamaModel), по умолчанию
+   qwen2.5-coder:7b. Запрос идёт на OpenAI-совместимый endpoint Ollama. */
+const OLLAMA_ENDPOINT = PROXY + '/ollama/v1/chat/completions';
+function ollamaModel() { return localStorage.getItem('shtabOllamaModel') || 'qwen2.5-coder:7b'; }
+function isOllamaModel(id) { return id === 'ollama'; }
 /* --- МЕТКА «КТО ОТВЕТИЛ» ---
    Босс должен видеть, какая модель реально ответила: бесплатная (0 ₽) или платная.
    Строчка ставится в чат после каждого ответа. */
