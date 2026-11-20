@@ -654,11 +654,16 @@ if (name === "create_github_repo") {
 // =========================================
 // ЗАПРОС К ZVENO (ЗРЕНИЕ)
 // =========================================
-async function callZvenoVision(messages: any[], imageBase64: string): Promise<string> {
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
+async function callZvenoVision(messages: any[], imageBase64: string, userKeys: any = {}, requestedModel: string = ""): Promise<string> {
+    const apiKey = (userKeys && userKeys.freeKey) || Deno.env.get("ZVENO_API_KEY");
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
-    const visionModel = "openai/gpt-4o-mini";
+    // ЦЕПОЧКА FALLBACK: выбранная VL-модель → бесплатные VL → платный резерв (последним).
+    const visionChain: string[] = [];
+    const reqModel = String(requestedModel || "").trim();
+    if (reqModel && (reqModel.endsWith(":free") || reqModel.toLowerCase().includes("-vl"))) visionChain.push(reqModel);
+    for (const m of FREE_VISION_MODELS) if (!visionChain.includes(m)) visionChain.push(m);
+    if (!visionChain.includes("openai/gpt-4o-mini")) visionChain.push("openai/gpt-4o-mini");
 
     let visionMessages = JSON.parse(JSON.stringify(messages));
 
