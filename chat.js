@@ -1264,9 +1264,11 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (lastSendSuccess) { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); }
             // Ответа нет — сторожа счётчика и тишины оставляем жить: они поймают
             // «оборвавшийся секундомер» и пошлют авто-пинок, а не будут молчать.
+            // Всё глобальное состояние гасит ТОЛЬКО актуальный запрос: иначе
+            // дохлый старый вызов сбрасывал бы флаг и счётчик живого.
+            isGenerating = false; stopSendTimer();
+            attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
         }
-        isGenerating = false; stopSendTimer(); 
-        attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
         sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
