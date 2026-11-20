@@ -737,8 +737,7 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
 // =========================================
 async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false, requestedModel: string = ""): Promise<string> {
     const envKey = Deno.env.get("ZVENO_API_KEY");
-    const apiKey = (userKeys && userKeys.freeKey) || envKey;
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
+    const freeKey = (userKeys && userKeys.freeKey) || "";
 
     // ЦЕПОЧКА FALLBACK: первая — выбранная пользователем, дальше — все бесплатные по списку.
     // Embed-модели в FREE_TEXT_MODELS не входят специально.
@@ -748,6 +747,10 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     else modelChain.push(ZVENO_MODEL);
 
     const isFreeReq = reqModel.endsWith(":free") || FREE_TEXT_MODELS.includes(reqModel);
+    // Бесплатный маршрут — ключ бесплатный (если Босс его вписал), иначе серверный.
+    // Платный маршрут — серверный ключ, чтобы freeKey не ронял платную модель.
+    const apiKey = isFreeReq ? (freeKey || envKey) : (envKey || freeKey);
+    if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
     const tailModels = isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS];
     for (const m of tailModels) if (!modelChain.includes(m)) modelChain.push(m);
 
