@@ -45,19 +45,37 @@ let lastSendSuccess = false;   // пришёл ли ответ — от этог
    единого sendStartTime. */
 let sendTimerInterval = null;
 let sendStartTime = 0;
-function stopSendTimer() { if (sendTimerInterval) { clearInterval(sendTimerInterval); sendTimerInterval = null; } }
-/* ЕДИНСТВЕННЫЙ счётчик на кнопке. Любой дубль самоуничтожается:
-   если интервал не зарегистрирован в sendTimerInterval — он гасит сам себя.
-   Поэтому два счётчика не могут писать в кнопку одновременно (цифры «прыгали
-   друг на друга»), и подвешенный таймер не считает после ответа (зашкал за 500 с). */
+const TIMER_MAX_MS = 400000;   // 400 с — предел: дольше счётчик расти не имеет права
+/* stopSendTimer гасит интервал И обнуляет метку старта. Обнуление важно:
+   любой осиротевший интервал на следующем тике видит sendStartTime !== myStart
+   и убивает себя сам — поэтому два счётчика физически не могут писать в кнопку. */
+function stopSendTimer() {
+    if (sendTimerInterval) { clearInterval(sendTimerInterval); sendTimerInterval = null; }
+    sendStartTime = 0;
+}
+/* ЕДИНСТВЕННЫЙ счётчик на кнопке, привязанный к КОНКРЕТНОМУ запросу.
+   Каждый интервал считает от СВОЕГО myStart (а не от общей переменной) и
+   умирает, если его вытеснил новый запрос (sendTimerInterval !== handle
+   ИЛИ sendStartTime !== myStart). Так цифры не могут наложиться друг на
+   друга, а подвешенный таймер не считает после ответа (зашкал за 500 с).
+   На пределе TIMER_MAX_MS счётчик сбрасывается и освобождает кнопку. */
 function startSendTimer() {
     stopSendTimer();
+    const myStart = sendStartTime = Date.now();
     const handle = setInterval(() => {
-        if (sendTimerInterval !== handle) { clearInterval(handle); return; }   // дубль — умирает
+        if (sendTimerInterval !== handle || sendStartTime !== myStart) { clearInterval(handle); return; } // вытеснен — умирает
         if (!isGenerating) { stopSendTimer(); return; }                        // ответ пришёл — стоп
-        if (sendBtn.className.indexOf('stop-active') === -1) { stopSendTimer(); return; } // кнопка уже не в работе — стоп
-        const elapsed = ((Date.now() - sendStartTime) / 1000).toFixed(1);
-        sendBtn.innerText = elapsed + "s";
+        if (!sendBtn || sendBtn.className.indexOf('stop-active') === -1) { stopSendTimer(); return; } // кнопка уже не в работе — стоп
+        const ms = Date.now() - myStart;
+        if (ms >= TIMER_MAX_MS) {                                              // запрос мёртв — не зашкаливаем
+            stopSendTimer();
+            isGenerating = false;
+            try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
+            sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = '➤'; sendBtn.style.fontSize = '';
+            renderMessage(`⏱️ *[Система: запрос висел больше ${Math.round(TIMER_MAX_MS / 1000)} с — счётчик сброшен, кнопка освобождена.]*`, 'director', 'Оркестратор');
+            return;
+        }
+        sendBtn.innerText = (ms / 1000).toFixed(1) + "s";
     }, 100);
     sendTimerInterval = handle;
 }
