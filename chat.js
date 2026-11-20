@@ -619,7 +619,7 @@ function fireAutoKick(reason) {
     stallKicks++;
     markKickSent();
     try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
-    isGenerating = false; clearTimeout(typingTimer);
+    isGenerating = false; clearTimeout(typingTimer); stopSendTimer();
     renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
     renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
     stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
