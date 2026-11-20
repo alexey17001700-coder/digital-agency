@@ -762,7 +762,6 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         let currentMessages = JSON.parse(JSON.stringify(messages));
         let weatherCard = "";
         let modelFailed = false;
-        let overflow = true;
 
     for (let loop = 0; loop < 20; loop++) {
         const payload: any = {
