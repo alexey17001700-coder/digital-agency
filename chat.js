@@ -1167,6 +1167,7 @@ function init() {
     restoreKickState();   // подхватываем счётчик пинков после F5 — лишних не шлём
     startUpdateWatch();   // следим за обновлениями с сервера — кнопка «Обновить штаб» мигает
     if (typeof renderAgentsGrid === 'function') renderAgentsGrid();
+    if (typeof syncAgentDialogueBtn === 'function') syncAgentDialogueBtn();   // кнопка «💬 Диалог» показывает сохранённое состояние
     if (typeof checkPing === 'function') checkPing();
     if (typeof updateNetStatus === 'function') updateNetStatus();
     
