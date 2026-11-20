@@ -576,6 +576,37 @@ function kickAI(agentName) {
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
 }
 
+/* --- ЖЁСТКИЙ СТОРОЖ 300 СЕКУНД (отдельный скрипт) ---
+   Следит за кнопкой «Отправить» и общим временем ответа.
+   Прошло 300 с с момента отправки, а ответа в чате так и нет — пинок «продолжи».
+   Работает независимо от сторожа застывшего счётчика. */
+const HARD_TIMEOUT_MS = 300000;
+let hardWatchdog = null;
+let hardStartTime = 0;
+let hardStartCount = 0;
+function startHardWatchdog() {
+    stopHardWatchdog();
+    hardStartTime = Date.now();
+    hardStartCount = chatContainer ? chatContainer.children.length : 0;
+    hardWatchdog = setInterval(() => {
+        if (!isGenerating) { stopHardWatchdog(); return; }
+        const answered = chatContainer && chatContainer.children.length > hardStartCount;
+        if (answered) { stopHardWatchdog(); return; }
+        if (Date.now() - hardStartTime >= HARD_TIMEOUT_MS) {
+            stopHardWatchdog(); stopStallWatchdog();
+            if (stallKicks < STALL_MAX_KICKS) {
+                stallKicks++;
+                renderMessage(`⏱️ *[Система: прошло 300 с, ответа нет. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
+                renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
+                try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
+                isGenerating = false;
+                setTimeout(() => sendMessage('продолжи', true), 900);
+            }
+        }
+    }, 3000);
+}
+function stopHardWatchdog() { if (hardWatchdog) { clearInterval(hardWatchdog); hardWatchdog = null; } }
+
 function handleSendClick() {
     if (isGenerating) { 
         if (currentAbortController) currentAbortController.abort(); 
