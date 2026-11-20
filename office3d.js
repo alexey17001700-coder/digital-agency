@@ -2346,8 +2346,11 @@ function destroyScene() {
     bossCount = 0;
     bossTimer = 12 + Math.random() * 10;
     WALKERS = 0;
+    ALL_AGENTS = [];
     delete window.office3dSay;
     delete window.office3dTask;
+    delete window.office3dWork;
+    delete window.office3dReport;
     const office = document.getElementById('office-container');
     if (office) office.innerHTML = '';
 }
