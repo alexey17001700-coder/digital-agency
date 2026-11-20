@@ -1768,6 +1768,36 @@ function showFail(err, stage) {
     else document.body.appendChild(box);
 }
 
+/* СЦЕНА СТРОИТСЯ ОДИН РАЗ И ЖИВЁТ ПОСТОЯННО.
+   Раньше офис собирался при нажатии кнопки и полностью уничтожался при
+   закрытии — поэтому Босс видел заставку «ЗАГРУЗКА 3D-ОФИСА…» и пустой офис.
+   Теперь сцена поднимается сразу при запуске приложения (prewarm), агенты
+   работают в фоне, а кнопка «Офис» только показывает уже живой офис. */
+let scenePromise = null;
+
+function ensureScene(office) {
+    if (S) return Promise.resolve(S);
+    if (scenePromise) return scenePromise;
+    scenePromise = loadThree().then(() => {
+        if (!S) startScene(office);
+        return S;
+    }).catch((err) => {
+        scenePromise = null;
+        throw err;
+    });
+    return scenePromise;
+}
+
+/* Подсказка по управлению показывается при КАЖДОМ открытии офиса,
+   а не один раз при сборке сцены. */
+function showHint(office) {
+    const hint = office.querySelector('.o3d-hint');
+    if (!hint) return;
+    hint.classList.remove('hide');
+    clearTimeout(hint.__t);
+    hint.__t = setTimeout(() => hint.classList.add('hide'), 6000);
+}
+
 function showOffice() {
     injectStyles();
     const chat = document.getElementById('chatContainer');
@@ -1779,33 +1809,36 @@ function showOffice() {
     office.style.display = 'block';
     if (btn) btn.classList.add('active');
 
-    if (!S) {
-        office.innerHTML = '<div class="o3d-load">ЗАГРУЗКА 3D-ОФИСА…</div>';
-        // СТОРОЖ: если загрузка не завершилась за 25 с — показываем причину,
-        // а не бесконечный спиннер.
-        const wd = setTimeout(() => {
-            if (isOpen && !S) {
-                const e = new Error('загрузка Three.js не завершилась за 25 с');
-                e.details = ['проверь доступность ./three.module.js в корне репозитория'];
-                showFail(e, 'таймаут загрузки');
-            }
-        }, 25000);
-        loadThree().then(() => {
-            clearTimeout(wd);
-            if (!isOpen) return;
-            try {
-                startScene(office);
-            } catch (e) {
-                if (e && !e.__stage) e.__stage = 'сборка сцены (buildScene / startScene)';
-                throw e;
-            }
-        }).catch((err) => {
-            clearTimeout(wd);
-            // НИКАКОГО молчаливого фолбэка: показываем полноэкранную диагностику
-            console.warn('[office3d] 3D-офис не запустился', err);
-            showFail(err, (err && err.__stage) || 'загрузка Three.js');
-        });
+    // СЦЕНА УЖЕ РАБОТАЕТ В ФОНЕ — показываем мгновенно, без заставки
+    if (S) {
+        if (S.setVisible) S.setVisible(true);
+        if (S.onResize) S.onResize();
+        showHint(office);
+        return;
     }
+
+    office.innerHTML = '<div class="o3d-load">ЗАГРУЗКА 3D-ОФИСА…</div>';
+    // СТОРОЖ: если загрузка не завершилась за 25 с — показываем причину,
+    // а не бесконечный спиннер.
+    const wd = setTimeout(() => {
+        if (isOpen && !S) {
+            const e = new Error('загрузка Three.js не завершилась за 25 с');
+            e.details = ['проверь доступность ./three.module.js в корне репозитория'];
+            showFail(e, 'таймаут загрузки');
+        }
+    }, 25000);
+    ensureScene(office).then(() => {
+        clearTimeout(wd);
+        if (!isOpen) return;
+        if (S && S.setVisible) S.setVisible(true);
+        if (S && S.onResize) S.onResize();
+        showHint(office);
+    }).catch((err) => {
+        clearTimeout(wd);
+        // НИКАКОГО молчаливого фолбэка: показываем полноэкранную диагностику
+        console.warn('[office3d] 3D-офис не запустился', err);
+        showFail(err, (err && err.__stage) || 'загрузка Three.js');
+    });
 }
 
 function startScene(office) {
