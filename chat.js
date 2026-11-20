@@ -682,9 +682,14 @@ async function runBackgroundTask(agentName, taskDescription) {
     updateAgentStatus(agentName, 'working');
     setTimeout(async () => {
         try {
-            const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], temperature: 0.7, userKeys: JSON.parse(localStorage.getItem('shtabUserKeys')) || {} }) });
+            if (!takeTurnCall()) { setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free'); return; }   // бюджет исчерпан — фон не тратит деньги
+            const keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {};
+            const bgModel = (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(selectedAIModel) : selectedAIModel;
+            const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "system", content: `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.` }], temperature: 0.7, model: bgModel, userKeys: keys, freeKey: keys.freeKey || '', isBoss: true }) });
             const data = await response.json();
-            if (typeof window.zvenoAccount === 'function') window.zvenoAccount(data, data.choices && data.choices[0] ? data.choices[0].message.content : '', `Ты — ${agentName}. Выполнена задача: "${taskDescription}". Напиши краткий отчет.`);   // фоновая задача: вход + выход
+            // Учёт токенов делает перехватчик fetch в zveno_balance.js — РОВНО ОДИН раз.
+            // Раньше здесь был ещё и явный zvenoAccount с ДРУГИМ текстом промпта:
+            // подпись не совпадала, и фоновая задача списывалась ДВАЖДЫ.
             if (data.choices && data.choices.length > 0) { const r = data.choices[0].message.content; typeMessage(r, 'director', agentName); addMessageToHistory(r, 'director', agentName); }
         } catch(e) { console.error(e); }
         setAgentStatus(agentName, 'idle'); updateAgentStatus(agentName, 'free');
