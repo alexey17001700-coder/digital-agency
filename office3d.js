@@ -1429,7 +1429,18 @@ function trimAnswer(s) {
 
 /* Кому отдавать ответ: сначала по имени агента из чата, иначе — тому,
    кто сейчас сидит за рабочим терминалом. */
+/* Служебные строки (система, статусы, «Совет») — это НЕ ответ агента.
+   Раньше они попадали в доклад: агент шёл к столу Босса с текстом
+   «Система: агент ищет в интернете…». Теперь такие строки в доклад не берём. */
+function isServiceText(t) {
+    const s = String(t || '');
+    if (/\[Система:/.test(s)) return true;
+    if (/^\s*[\*_`>#\s]*\[?\s*(Система|System|Совет)\b/i.test(s)) return true;
+    return false;
+}
+
 function captureAnswer(text, who) {
+    if (isServiceText(text)) return;
     const t = trimAnswer(text);
     if (!t) return;
     LAST_ANSWER = { who: who || '', text: t };
