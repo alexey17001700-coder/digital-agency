@@ -7,7 +7,7 @@ let typingTimer = null;
    от имени Босса, пишет в чат «продолжи» и повторяет запрос.
    Не более STALL_MAX_KICKS раз подряд, чтобы не зациклиться. */
 const STALL_TIMEOUT_MS = 303000;   // 300 с лимита запроса + 3 с запаса
-const STALL_MAX_KICKS = 3;
+const STALL_MAX_KICKS = 2;         // было 3: каждый пинок — ОТДЕЛЬНЫЙ платный запрос с полной историей
 let stallWatchdog = null;
 let stallKicks = 0;
 /* --- ЗАЩИТА ОТ ДУБЛЕЙ ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ ---
