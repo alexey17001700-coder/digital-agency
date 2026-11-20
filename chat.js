@@ -1151,6 +1151,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                     
                     if (data.choices && data.choices.length > 0) {
                         aiText = data.choices[0].message.content;
+                        // БАЛАНС ZVENOAI: каждый ответ модели списывает токены с баланса в шапке.
+                        if (typeof window.zvenoAddUsage === 'function') window.zvenoAddUsage(data.usage);
                         
                         const readMatch = aiText.match(/\[READ:\s*([^\]]+)\]/);
                         if (readMatch) {
