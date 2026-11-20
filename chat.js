@@ -1070,7 +1070,12 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
     const elAi = document.getElementById('status-ai'); if (elAi) elAi.className = 'status-item loading';
 
-    currentAbortController = new AbortController(); const timeoutId = setTimeout(() => currentAbortController.abort(), 330000); clearTimeout(watchdogTimer);
+    // Контроллер — локальный (myCtrl). Раньше таймаут аборта держался за общую
+    // переменную currentAbortController: пока запрос висел, её перезаписывал
+    // следующий вызов, и старый таймаут обрывал ЧУЖОЙ запрос. Теперь каждый
+    // запрос абортится ровно своим контроллером через 330 с.
+    const myCtrl = new AbortController(); currentAbortController = myCtrl;
+    const timeoutId = setTimeout(() => myCtrl.abort(), 330000); clearTimeout(watchdogTimer);
 
     try {
         let success = false; let aiText = ""; let lastError = "";
