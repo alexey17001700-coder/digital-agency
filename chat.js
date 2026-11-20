@@ -182,7 +182,7 @@ function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_
     const msgs = allChats[id].messages;
     for (let i = 1; i < msgs.length; i++) { 
         const msg = msgs[i];
-        if (msg.role === 'user') renderMessage(msg.content, 'boss');
+        if (msg.role === 'user') renderMessage(msg.content, 'boss', 'Оркестратор', msg.file || null);
         else if (msg.agentName === 'Совет') parseAgentReplies(msg.content).forEach(r => renderMessage(r.text, 'director', r.agent));
         else renderMessage(msg.content, 'director', msg.agentName || 'Оркестратор');
     }
