@@ -1139,7 +1139,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     const timeoutId = setTimeout(() => myCtrl.abort(), 330000); clearTimeout(watchdogTimer);
 
     try {
-        let success = false; let aiText = ""; let lastError = "";
+        let success = false; let aiText = ""; let lastError = ""; let usedModel = "";
         
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
