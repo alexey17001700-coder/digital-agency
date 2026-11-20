@@ -6,7 +6,7 @@ let typingTimer = null;
    Если Архитектор замолчал (обрыв связи, таймаут, тишина) — скрипт сам,
    от имени Босса, пишет в чат «продолжи» и повторяет запрос.
    Не более STALL_MAX_KICKS раз подряд, чтобы не зациклиться. */
-const STALL_TIMEOUT_MS = 120000;
+const STALL_TIMEOUT_MS = 330000;   // 5.5 мин: больше лимита запроса (300 с), чтобы не пинать на живой ответ
 const STALL_MAX_KICKS = 3;
 let stallWatchdog = null;
 let stallKicks = 0;
