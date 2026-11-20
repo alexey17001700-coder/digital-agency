@@ -123,9 +123,9 @@ async function clearContentFromButton() {
     }
 }
 
-/* --- КНОПКА ВЫБОРА МОДЕЛИ ---
-   Тап — следующая модель по кругу. Долгое нажатие — список всех моделей,
-   где можно выбрать нужную сразу. Список берётся из AI_MODELS (chat.js). */
+/* --- КНОПКА 🧠 ПЛАТНЫЕ ---
+   Листает ТОЛЬКО платные модели. Бесплатные не трогает — у них своя кнопка.
+   Долгое нажатие — панель выбора моделей (там же переключатель платных). */
 function applyAIModelButton() {
     const btn = document.getElementById('btnAIModel');
     if (!btn) return;
@@ -134,21 +134,40 @@ function applyAIModelButton() {
         const fixed = resolveAllowedModel(selectedAIModel);
         if (fixed !== selectedAIModel) { selectedAIModel = fixed; localStorage.setItem('shtabAIModel', fixed); }
     }
-    const m = (typeof getModelInfo === 'function') ? getModelInfo(selectedAIModel) : { label: selectedAIModel, color: '#333', text: '#aaa' };
-    btn.innerText = '🧠 ИИ: ' + m.label;
-    btn.style.background = m.color || '#333';
-    btn.style.color = m.text || '#aaa';
+    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
+    const paid = (typeof paidModels === 'function') ? paidModels() : [];
+    const cur = paid.find(m => m.id === selectedAIModel);
+    if (cur) {
+        btn.innerText = '🧠 Платные: ' + cur.label;
+        btn.style.background = cur.color || '#333';
+        btn.style.color = cur.text || '#aaa';
+    } else if (!on) {
+        btn.innerText = '🧠 Платные: ВЫКЛ';
+        btn.style.background = '#333'; btn.style.color = '#777';
+    } else {
+        btn.innerText = '🧠 Платные: выбрать';
+        btn.style.background = '#333'; btn.style.color = '#aaa';
+    }
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
 }
 
 function toggleAIModel() {
-    const list = (typeof allowedModels === 'function' && allowedModels().length) ? allowedModels() : [{ id: 'yandex' }];
+    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
+    const list = (typeof paidModels === 'function') ? paidModels() : [];
+    if (!on) {
+        if (typeof renderMessage === 'function') renderMessage('🔒 *[Система: платные модели отключены. Долгое нажатие на 🧠 — включить.]*', 'director', 'Оркестратор');
+        return;
+    }
+    if (!list.length) {
+        if (typeof renderMessage === 'function') renderMessage('💳 *[Система: платных моделей в списке нет.]*', 'director', 'Оркестратор');
+        return;
+    }
     let idx = list.findIndex(m => m.id === selectedAIModel);
-    if (idx < 0) idx = 0;
+    if (idx < 0) idx = -1;
     selectedAIModel = list[(idx + 1) % list.length].id;
     localStorage.setItem('shtabAIModel', selectedAIModel);
     applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: модель переключена на ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
+    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
 }
 
 /* --- КНОПКА 🆓 БЕСПЛАТНЫЕ ---
