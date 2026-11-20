@@ -619,7 +619,10 @@ async function sendMessage(overrideText = null, isKick = false) {
         renderMessage(text, 'boss'); addMessageToHistory(text, 'boss');
     }
 
-    isGenerating = true; const mySeq = ++sendSeq; startStallWatchdog();
+    isGenerating = true; const mySeq = ++sendSeq;
+    // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
+    // Авто-пинки и системные дозапросы сторож не перезапускают.
+    if (!overrideText && !isKick) startStallWatchdog(); else stopStallWatchdog();
     sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
     let startTime = Date.now();
