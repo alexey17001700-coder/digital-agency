@@ -183,9 +183,25 @@
 
     function boot() {
         var b = box();
-        if (b) b.innerHTML = '<span id="zveno-balance-text"></span>';
+        if (!b) return;
+        // Если в разметке уже есть подпись — используем её, не плодим дубли.
+        if (!document.getElementById('zveno-balance-text')) {
+            b.innerHTML = '<span id="zveno-balance-text"></span>';
+        }
         bind();
         show();
+        // Страховка: другие скрипты могут перерисовать статус-бар —
+        // возвращаем подпись образа и цифру, чтобы в шапке всегда был баланс.
+        setInterval(function () {
+            var e = label();
+            if (!e) {
+                if (!document.getElementById('zveno-balance-text')) {
+                    var host = box();
+                    if (host) host.innerHTML = '<span id="zveno-balance-text"></span>';
+                }
+            }
+            show();
+        }, 3000);
     }
 
     if (document.readyState === 'loading') {
