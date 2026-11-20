@@ -572,48 +572,6 @@ function startTimerFreezeWatchdog() {
 }
 function stopTimerFreezeWatchdog() { if (timerFreezeWatchdog) { clearInterval(timerFreezeWatchdog); timerFreezeWatchdog = null; } }
 
-/* --- ЖЁСТКИЙ СТОРОЖ 300 СЕКУНД (отдельный, независимый) ---
-   Смотрит прямо на счётчик секунд на кнопке «Отправить».
-   Как только на кнопке 300 с и больше, а ответа в чате нет — пинок.
-   Работает параллельно со сторожем тишины и сторожем застывшего счётчика. */
-const HARD_TIMEOUT_S = 300;
-let hardTimerWatchdog = null;
-let hardKickFired = false;
-
-function readButtonSeconds() {
-    if (!sendBtn) return null;
-    const t = String(sendBtn.innerText || '').trim();
-    const m = t.match(/^([\d.]+)s$/);
-    if (!m) return null;
-    const v = parseFloat(m[1]);
-    return isNaN(v) ? null : v;
-}
-
-function startHardTimerWatchdog() {
-    stopHardTimerWatchdog();
-    hardKickFired = false;
-    hardTimerWatchdog = setInterval(() => {
-        if (!isGenerating) { stopHardTimerWatchdog(); return; }
-        const secs = readButtonSeconds();
-        if (secs === null) return;               // на кнопке не счётчик — не трогаем
-        if (secs < HARD_TIMEOUT_S) return;       // 300 с ещё не прошло
-        if (hardKickFired) return;               // уже пинали
-        hardKickFired = true;
-        stopHardTimerWatchdog();
-        if (stallKicks >= STALL_MAX_KICKS) {
-            renderMessage(`🛑 *[Система: прошло ${HARD_TIMEOUT_S} с, ответа нет. Лимит пинков исчерпан — жду Босса.]*`, 'director', 'Оркестратор');
-            return;
-        }
-        stallKicks++;
-        renderMessage(`⏱️ *[Система: на кнопке ${Math.round(secs)} с, ответа нет. Жёсткий пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
-        renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
-        try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
-        isGenerating = false;
-        setTimeout(() => sendMessage('продолжи', true), 900);
-    }, 1000);
-}
-function stopHardTimerWatchdog() { if (hardTimerWatchdog) { clearInterval(hardTimerWatchdog); hardTimerWatchdog = null; } }
-
 function kickAI(agentName) {
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
 }
