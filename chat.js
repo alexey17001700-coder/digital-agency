@@ -135,8 +135,8 @@ repo по умолчанию "digital-agency".
 - ac_luxury_calc — кондиционеры. window_measure_pro — замер окон. nexus_snake — змейка. window_calc — окна (Flutter). Ещё: shtab-site, Okna.
 
 === СЕРВЕР (VIVO) ===
-Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL). Синхронизация sync.sh каждые 10 сек.
-Алгоритм ремонта и история правок — в digital-agency/SERVER_DIAGNOSTICS.md.
+Vivo Y17 → Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL, DuckDNS). sync.sh каждые 10 сек.
+Память: digital-agency/SERVER_DIAGNOSTICS.md (ремонт, правки), nexus_chat/CHAT_AI_GUIDE.md (чат). Знай молча — списком не выводи.
 
 === ФОТО ===
 Босс прислал фото — ОБЯЗАН посмотреть и описать детально.
