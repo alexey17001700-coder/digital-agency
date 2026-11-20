@@ -1337,6 +1337,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
             const taskRegex = /\[TASK:\s*([^:]+):\s*([^\]]+)\]/g; let taskMatch; let tasksToRun = [];
             while ((taskMatch = taskRegex.exec(aiText)) !== null) tasksToRun.push({ agent: taskMatch[1].trim(), task: taskMatch[2].trim() });
+            tasksToRun = tasksToRun.slice(0, 2);   // не больше 2 фоновых задач за раз: каждая — платный запрос
             aiText = aiText.replace(taskRegex, '').trim();
             tasksToRun.forEach(t => { if (typeof updateAgentStatus === 'function') updateAgentStatus(t.agent, 'working'); runBackgroundTask(t.agent, t.task); });
             
