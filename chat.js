@@ -633,12 +633,14 @@ async function askAgentOnce(agentName, topic, spoken) {
         { role: 'system', content: sys },
         { role: 'user', content: `Задача Босса: «${topic}».\n${ctx}` }
     ];
+    if (!takeTurnCall()) return '';   // бюджет запросов на вопрос исчерпан — Совет молчит, деньги целы
+    const rtModel = (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(selectedAIModel) : selectedAIModel;
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), ROUNDTABLE_TIMEOUT_MS);
     try {
         const res = await fetch(PROXY, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: msgs, temperature: 0.75, model: selectedAIModel, userKeys: roundtableUserKeys(), freeKey: (roundtableUserKeys().freeKey || ''), isBoss: true }),
+            body: JSON.stringify({ messages: msgs, temperature: 0.75, model: rtModel, userKeys: roundtableUserKeys(), freeKey: (roundtableUserKeys().freeKey || ''), isBoss: true }),
             signal: ctrl.signal
         });
         const data = await res.json();
