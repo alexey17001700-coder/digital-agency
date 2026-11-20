@@ -1114,7 +1114,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
             // Модель ответила монологами (или одним голосом), а в Совете 2+ агентов —
             // включаем короткий диалог между ними, чтобы Совет реально общался.
-            if (typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
+            if (!isKick && typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
                 && selectedAgents.length > 1 && replies.length < 2) {
                 await playAgentDialogue(text);
             }
