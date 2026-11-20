@@ -892,7 +892,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         isGenerating = false; 
         clearTimeout(typingTimer); 
     }
-    const text = overrideText || chatInputEl.value.trim(); if (!text) return;
+    const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
