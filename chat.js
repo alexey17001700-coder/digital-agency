@@ -742,6 +742,95 @@ function handleImageSelect(event) {
     event.target.value = '';
 }
 
+/* --- ОТПРАВКА ФАЙЛОВ АРХИТЕКТОРУ ---
+   Босс прикладывает файл к задаче. Текстовые (код, конфиги, логи, json)
+   читаются и уходят в контекст модели. Бинарные — только имя и размер. */
+const MAX_FILE_SIZE = 200 * 1024;   // 200 КБ — больше не влезет в контекст модели
+const TEXT_FILE_RE = /\.(txt|md|markdown|json|jsonc|js|mjs|cjs|ts|tsx|jsx|html|htm|css|scss|sass|less|py|java|c|cpp|cc|h|hpp|cs|sh|bash|zsh|yml|yaml|xml|csv|tsv|log|ini|conf|cfg|env|sql|php|rb|go|rs|kt|kts|swift|dart|vue|svelte|toml|gradle|properties|gitignore|dockerfile)$/i;
+
+function isTextFile(file) {
+    if (!file) return false;
+    if (file.type && file.type.indexOf('text/') === 0) return true;
+    if (file.type === 'application/json' || file.type === 'application/xml' || file.type === 'application/javascript') return true;
+    return TEXT_FILE_RE.test(file.name || '');
+}
+function formatFileSize(b) {
+    if (b === undefined || b === null) return '';
+    if (b < 1024) return b + ' Б';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' КБ';
+    return (b / 1024 / 1024).toFixed(2) + ' МБ';
+}
+function _injectFileCss() {
+    if (document.getElementById('fileAttachCss')) return;
+    const st = document.createElement('style'); st.id = 'fileAttachCss';
+    st.textContent = `
+    .attach-preview { display: none; padding: 6px 10px; }
+    .attach-preview.show { display: block; }
+    .file-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        max-width: 100%; padding: 6px 10px; margin: 4px 0;
+        background: rgba(0,229,255,.10); border: 1px solid rgba(0,229,255,.45);
+        border-radius: 10px; font-size: 12px; color: #cfefff;
+    }
+    .file-chip-icon { font-size: 16px; }
+    .file-chip-info { min-width: 0; }
+    .file-chip-name { font-weight: 700; color: #00e5ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+    .file-chip-size { color: #8fb8c8; font-size: 11px; }
+    .file-chip-remove { background: none; border: none; color: #ff6688; font-size: 14px; cursor: pointer; padding: 0 2px; line-height: 1; }
+    `;
+    document.head.appendChild(st);
+}
+function buildFileChip(file, removable) {
+    _injectFileCss();
+    const chip = document.createElement('div'); chip.className = 'file-chip';
+    const icon = document.createElement('span'); icon.className = 'file-chip-icon'; icon.textContent = file.content ? '📄' : '🗄️';
+    const info = document.createElement('div'); info.className = 'file-chip-info';
+    const nm = document.createElement('div'); nm.className = 'file-chip-name'; nm.textContent = file.name || 'файл';
+    const sz = document.createElement('div'); sz.className = 'file-chip-size';
+    sz.textContent = formatFileSize(file.size) + (file.content ? ' · текст приложен' : ' · бинарный, только имя');
+    info.appendChild(nm); info.appendChild(sz);
+    chip.appendChild(icon); chip.appendChild(info);
+    if (removable) {
+        const rm = document.createElement('button'); rm.className = 'file-chip-remove'; rm.textContent = '✖'; rm.title = 'Убрать файл';
+        rm.onclick = () => { attachedFile = null; clearAttachPreview(); };
+        chip.appendChild(rm);
+    }
+    return chip;
+}
+function renderAttachPreview() {
+    const box = document.getElementById('attachPreview');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!attachedFile) { box.classList.remove('show'); return; }
+    box.appendChild(buildFileChip(attachedFile, true));
+    box.classList.add('show');
+}
+function clearAttachPreview() {
+    const box = document.getElementById('attachPreview');
+    if (box) { box.innerHTML = ''; box.classList.remove('show'); }
+}
+function handleFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+        alert('Файл «' + file.name + '» слишком большой: ' + formatFileSize(file.size) + '. Максимум ' + formatFileSize(MAX_FILE_SIZE) + '.');
+        return;
+    }
+    if (!isTextFile(file)) {
+        attachedFile = { name: file.name, size: file.size, content: null };
+        renderAttachPreview(); playSound('send');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        attachedFile = { name: file.name, size: file.size, content: String(e.target.result || '') };
+        renderAttachPreview(); playSound('send');
+    };
+    reader.onerror = function () { alert('Не удалось прочитать файл «' + file.name + '».'); };
+    reader.readAsText(file);
+}
+
 /* --- ЗАЩИТА ОТ ФАНТОМНОГО ПОИСКА ---
    Модель периодически копирует из системного промпта ПРИМЕР метки
    ([SEARCH: твой запрос]) или гоняет один и тот же запрос по кругу.
