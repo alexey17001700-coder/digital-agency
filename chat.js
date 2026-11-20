@@ -123,6 +123,15 @@ try {
     }
 } catch (e) {}
 function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
+/* --- МЕТКА «КТО ОТВЕТИЛ» ---
+   Босс должен видеть, какая модель реально ответила: бесплатная (0 ₽) или платная.
+   Строчка ставится в чат после каждого ответа. */
+function modelBadgeText(id) {
+    const info = AI_MODELS.find(m => m.id === id);
+    if (!info) return '❔ *[Модель: ' + id + ']*';
+    if (info.free) return '🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + info.label + ' — 0 ₽]*';
+    return '💳 *[Ответила платная модель: ' + info.label + ']*';
+}
 
 /* --- БЕСПЛАТНЫЕ / ПЛАТНЫЕ ---
    freeModels() — модели с пометкой free: true (кнопка 🆓 Бесплатные).
