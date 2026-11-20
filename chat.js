@@ -46,6 +46,20 @@ let lastSendSuccess = false;   // пришёл ли ответ — от этог
 let sendTimerInterval = null;
 let sendStartTime = 0;
 function stopSendTimer() { if (sendTimerInterval) { clearInterval(sendTimerInterval); sendTimerInterval = null; } }
+/* ЕДИНСТВЕННЫЙ счётчик на кнопке. Любой дубль самоуничтожается:
+   если интервал не зарегистрирован в sendTimerInterval — он гасит сам себя.
+   Поэтому два счётчика не могут писать в кнопку одновременно (цифры «прыгали
+   друг на друга»), и подвешенный таймер не считает после ответа (зашкал за 500 с). */
+function startSendTimer() {
+    stopSendTimer();
+    const handle = setInterval(() => {
+        if (sendTimerInterval !== handle) { clearInterval(handle); return; }   // дубль — умирает
+        if (!isGenerating) { stopSendTimer(); return; }                        // ответ пришёл — стоп
+        const elapsed = ((Date.now() - sendStartTime) / 1000).toFixed(1);
+        sendBtn.innerText = elapsed + "s";
+    }, 100);
+    sendTimerInterval = handle;
+}
 let attachedImageBase64 = null; let currentChatImage = null;
 let attachedFile = null;   // приложенный файл Босса: { name, size, content }
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
