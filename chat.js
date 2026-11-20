@@ -489,6 +489,8 @@ function startStallWatchdog() {
         renderMessage(`⚡ *[Система: тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
         renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
         sendMessage('продолжи', true);
+        // Если после пинка снова тишина — ещё один пинок (до STALL_MAX_KICKS).
+        if (stallKicks < STALL_MAX_KICKS) startStallWatchdog();
     }, STALL_TIMEOUT_MS);
 }
 // Признак оборванного ответа: незакрытый блок кода, многоточие или союз на конце.
