@@ -142,16 +142,13 @@
         ov.querySelector('#zv-close').addEventListener('click', close);
 
         ov.querySelector('#zv-save').addEventListener('click', function () {
-            var b = num(ov.querySelector('#zv-bal').value, null);
+            var b = num(ov.querySelector('#zv-bal').value, 0);
             var pr = num(ov.querySelector('#zv-price').value, null);
             if (pr !== null && pr > 0) lsSet(LS_PRICE, String(pr));
-            if (b === null) { lsDel(LS_START); lsDel(LS_SPENT); lsDel(LS_SPENT_RUB); }
-            else {
-                // Введённое число = баланс СЕЙЧАС, расход начинаем с нуля.
-                lsSet(LS_START, String(b));
-                lsSet(LS_SPENT, '0');
-                lsSet(LS_SPENT_RUB, '0');
-            }
+            // Пустое поле = ноль. Введённое число = баланс СЕЙЧАС, расход начинаем с нуля.
+            lsSet(LS_START, String(b === null ? 0 : b));
+            lsSet(LS_SPENT, '0');
+            lsSet(LS_SPENT_RUB, '0');
             show();
             close();
         });
