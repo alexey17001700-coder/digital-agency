@@ -14,7 +14,7 @@
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v3.5 · build 27';
+const OFFICE3D_VERSION = 'v3.6 · build 28';
 
 /* Локальный файл пробуется ОТДЕЛЬНО (два способа), CDN — только как резерв. */
 const THREE_URLS = [
