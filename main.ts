@@ -662,6 +662,7 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
     const visionChain: string[] = [];
     const reqModel = String(requestedModel || "").trim();
     if (reqModel && (reqModel.endsWith(":free") || reqModel.toLowerCase().includes("-vl"))) visionChain.push(reqModel);
+    else if (FREE_VISION_MODELS.length) visionChain.push(FREE_VISION_MODELS[0]);   // модель не пришла — бесплатная VL, не платная
     for (const m of FREE_VISION_MODELS) if (!visionChain.includes(m)) visionChain.push(m);
     if (!visionChain.includes("openai/gpt-4o-mini")) visionChain.push("openai/gpt-4o-mini");
 
