@@ -12,7 +12,10 @@
     var LS_SPENT = 'zvenoSpentTokens';    // накопленные токены
     var LS_SPENT_RUB = 'zvenoSpentRub';   // накопленный расход, ₽
     var LS_PRICE = 'zvenoPricePerM';      // цена за 1 млн токенов, ₽
-    var DEFAULT_PRICE = 17.0;             // ₽ за 1 млн токенов (реальная ставка из логов ZvenoAI)
+    var DEFAULT_PRICE = 17.0;             // ₽ за 1 млн токенов — средняя ставка из логов ZvenoAI
+    var CACHE_DISCOUNT = 0.4;             // прочитанное из кеша дешевле: 40% от ставки
+    var INPUT_OVERHEAD = 8000;            // системный промпт + инструменты + контекст агентов, токенов
+    var REASONING_FACTOR = 1.25;          // скрытые рассуждения модели ≈ +25% к ответу
 
     function box() { return document.getElementById('status-zveno'); }
     function label() { return document.getElementById('zveno-balance-text'); }
