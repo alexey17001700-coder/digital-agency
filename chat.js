@@ -1005,6 +1005,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (currentAbortController) currentAbortController.abort(); 
         isGenerating = false; 
         clearTimeout(typingTimer); 
+        stopSendTimer();   // старый секундомер гасим сразу, не ждём нового старта
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
