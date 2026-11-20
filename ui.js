@@ -342,7 +342,8 @@ function saveApiSettings() {
     const keys = {
         yandexKey: document.getElementById('userYandexKey').value.trim(),
         yandexFolder: document.getElementById('userYandexFolder').value.trim(),
-        deepseekKey: document.getElementById('userDeepseekKey').value.trim()
+        deepseekKey: document.getElementById('userDeepseekKey').value.trim(),
+        freeKey: (document.getElementById('userFreeKey') ? document.getElementById('userFreeKey').value.trim() : '')
     };
     localStorage.setItem('shtabUserKeys', JSON.stringify(keys));
     alert("Ключи сохранены! Теперь Штаб использует их.");
