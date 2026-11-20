@@ -301,6 +301,7 @@
     window.zvenoBalanceRefresh = function () { refresh(); };
     window.zvenoBalanceSetKey = askKey;
     window.zvenoBalanceSetManual = askManual;
+    window.zvenoAddUsage = addUsage;   // chat.js зовёт после каждого ответа модели
 
     function boot() {
         bind();
