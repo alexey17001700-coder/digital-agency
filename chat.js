@@ -502,24 +502,70 @@ async function playAgentReplies(replies) {
     }
 }
 
-/* --- ДИАЛОГ МЕЖДУ АГЕНТАМИ ---
-   Выбрано 2+ агентов, но модель ответила монологами (или ответа нет) —
-   включаем короткий живой диалог между ними, чтобы Совет реально общался.
-   Реплики берём из AGENT_DIALOGUE_LINES (agents.js), печатаем по очереди,
-   с подсветкой карточки говорящего агента. */
-async function playAgentDialogue(topic) {
-    if (typeof buildAgentDialogue !== 'function') return;
-    const lines = buildAgentDialogue(selectedAgents, topic);
-    if (!lines.length) return;
-    renderMessage('💬 *[Совет: агенты переговариваются между собой]*', 'director', 'Оркестратор');
-    for (const line of lines) {
-        focusAgentCard(line.agent);
-        setAgentStatus(line.agent, 'typing'); updateAgentStatus(line.agent, 'busy');
-        await new Promise(resolve => { typeMessage(line.text, 'director', line.agent, resolve); });
-        setAgentStatus(line.agent, 'idle'); updateAgentStatus(line.agent, 'free');
-        await new Promise(r => setTimeout(r, 500));
+/* --- КРУГЛЫЙ СТОЛ АГЕНТОВ (ЖИВОЙ ДИАЛОГ) ---
+   Никаких заготовок. Каждый выбранный агент отвечает САМ — отдельным
+   запросом к модели, по очереди, видя реплики предыдущих коллег.
+   Так Совет реально обсуждает задачу Босса, а не читает шаблоны. */
+const ROUNDTABLE_MAX_AGENTS = 4;       // больше 4 реплик за раз — долго
+const ROUNDTABLE_TIMEOUT_MS = 90000;   // лимит на одну реплику
+
+function roundtableUserKeys() {
+    try { return JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) { return {}; }
+}
+
+/* Один запрос к модели от лица одного агента. spoken — уже сказанное коллегами. */
+async function askAgentOnce(agentName, topic, spoken) {
+    const directive = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[agentName]) || '';
+    const sys = `Ты — ${agentName}, участник Совета Штаба. ${directive}
+Ты в живом обсуждении с коллегами. Отвечай ОДНОЙ короткой репликой: 1-2 предложения, строго по теме задачи Босса.
+Запрещено: приветствия, пересказ задачи, обращение к Боссу, выдуманные факты и пустые фразы без причины (вроде «тут дырка», если дыры нет).
+Если отвечаешь коллеге — назови его по имени. Выдай ТОЛЬКО текст реплики, без своего имени в начале.`;
+    const ctx = spoken.length
+        ? 'Что уже сказали коллеги:\n' + spoken.map(s => `${s.agent}: ${s.text}`).join('\n') + '\n\nОтветь своей репликой: по существу, можешь возразить, уточнить или добавить.'
+        : 'Ты открываешь обсуждение: сформулируй суть задачи и что предлагаешь.';
+    const msgs = [
+        { role: 'system', content: sys },
+        { role: 'user', content: `Задача Босса: «${topic}».\n${ctx}` }
+    ];
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), ROUNDTABLE_TIMEOUT_MS);
+    try {
+        const res = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: msgs, temperature: 0.75, model: selectedAIModel, userKeys: roundtableUserKeys() }),
+            signal: ctrl.signal
+        });
+        const data = await res.json();
+        if (data.choices && data.choices.length) {
+            return String(data.choices[0].message.content || '')
+                .replace(/^\s*(?:\*\*)?\[?[А-Яа-яA-Za-z\s]+\]?(?:\*\*)?:\s*/, '')   // убираем «Имя:» в начале
+                .replace(/\[[^\]]*\]/g, '')                                          // и служебные метки
+                .trim();
+        }
+        return '';
+    } catch (e) { return ''; }
+    finally { clearTimeout(tid); }
+}
+
+/* Круглый стол: агенты говорят по очереди, каждый — своим ответом модели. */
+async function runAgentRoundtable(topic) {
+    const list = (selectedAgents || [])
+        .filter(a => typeof AGENT_ICONS === 'undefined' || AGENT_ICONS[a])
+        .slice(0, ROUNDTABLE_MAX_AGENTS);
+    if (list.length < 2) return;
+    renderMessage('💬 *[Совет: агенты обсуждают задачу между собой]*', 'director', 'Оркестратор');
+    const spoken = [];
+    for (const agent of list) {
+        focusAgentCard(agent);
+        setAgentStatus(agent, 'typing'); updateAgentStatus(agent, 'busy');
+        let reply = await askAgentOnce(agent, topic, spoken);
+        if (!reply) reply = 'Нет данных по этому пункту — жду уточнения от коллег.';
+        spoken.push({ agent: agent, text: reply });
+        await new Promise(resolve => { typeMessage(reply, 'director', agent, resolve); });
+        setAgentStatus(agent, 'idle'); updateAgentStatus(agent, 'free');
+        await new Promise(r => setTimeout(r, 400));
     }
-    addMessageToHistory(lines.map(l => `[${l.agent}]: ${l.text}`).join('\n'), 'director', 'Совет');
+    addMessageToHistory(spoken.map(s => `[${s.agent}]: ${s.text}`).join('\n'), 'director', 'Совет');
 }
 
 async function runBackgroundTask(agentName, taskDescription) {
