@@ -161,6 +161,17 @@ function resolveAllowedModel(id) {
     return f.length ? f[0].id : id;
 }
 
+/* --- БЮДЖЕТ ЗАПРОСОВ НА ОДИН ВОПРОС БОССА ---
+   Каждый запрос к модели = деньги. Раньше цепочки (этапы, авто-пинки,
+   Совет, фоновые задачи) могли накрутить десятки запросов на ОДНО
+   сообщение Босса — и баланс таял. Теперь на один вопрос Босса —
+   не больше TURN_MAX_CALLS запросов к модели. Счётчик сбрасывается
+   только когда Босс пишет новое сообщение (не авто-пинок). */
+const TURN_MAX_CALLS = 8;
+let turnCalls = 0;
+function resetTurnCalls() { turnCalls = 0; }
+function takeTurnCall() { turnCalls++; return turnCalls <= TURN_MAX_CALLS; }
+
 const chatContainer = document.getElementById('chatContainer');
 // Делегированный обработчик: разворот миниатюр по клику (переживает перерисовку innerHTML).
 if (chatContainer) chatContainer.addEventListener('click', (e) => {
