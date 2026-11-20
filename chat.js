@@ -923,6 +923,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         if (success) {
             playSound('receive'); stallKicks = 0; stopStallWatchdog();
+            try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
