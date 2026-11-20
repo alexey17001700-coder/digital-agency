@@ -1811,6 +1811,8 @@ function agentTick(a, dt, t) {
         rig.elbowL.rotation.x = -0.62;
         rig.elbowR.rotation.x = -0.62;
         rig.head.rotation.y = Math.sin(t * 1.4 + a.phase) * 0.10;
+        a.workLeft = (a.workLeft || 0) - dt;
+        if (a.workLeft <= 0) a.working = false;   // предохранитель от вечной печати
         a.waitTimer -= dt;
         if (a.waitTimer <= 0) {
             if (a.reportPending) sendReportToBoss(a, a.reportText);
