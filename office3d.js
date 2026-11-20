@@ -1870,7 +1870,9 @@ function startScene(office) {
 
     const renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    renderer.setSize(office.clientWidth, office.clientHeight);
+    // при предзагрузке контейнер скрыт (clientWidth = 0) — берём размер окна,
+    // точный размер выставит onResize при открытии офиса
+    renderer.setSize(office.clientWidth || window.innerWidth || 360, office.clientHeight || window.innerHeight || 640);
     if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = false;
     office.appendChild(renderer.domElement);
