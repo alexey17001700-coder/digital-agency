@@ -476,26 +476,56 @@ async function runBackgroundTask(agentName, taskDescription) {
     }, 15000);
 }
 
-/* --- СТОРОЖ ТИШИНЫ --- */
+/* --- СТОРОЖ ТИШИНЫ ---
+   Проверяет чат каждые 3 секунды, а не только по таймеру:
+   1) ответа в чате нет вообще и прошло больше STALL_TIMEOUT_MS → пинок;
+   2) ответ пришёл, но застыл и оборван на середине → пинок сразу,
+      сколько бы секунд ни прошло.
+   Не более STALL_MAX_KICKS пинков подряд. */
 function resetStallKicks() { stallKicks = 0; }
-function stopStallWatchdog() { clearTimeout(stallWatchdog); stallWatchdog = null; }
+function stopStallWatchdog() { clearTimeout(stallWatchdog); stallWatchdog = null; clearInterval(stallInterval); stallInterval = null; }
+function countDirectorMsgs() { return chatContainer ? chatContainer.querySelectorAll('.msg-director').length : 0; }
+function lastDirectorText() {
+    if (!chatContainer) return '';
+    const nodes = chatContainer.querySelectorAll('.msg-director');
+    if (!nodes.length) return '';
+    return nodes[nodes.length - 1].innerText || '';
+}
+function doStallKick(reason) {
+    if (stallKicks >= STALL_MAX_KICKS) {
+        renderMessage(`⏹️ *[Система: ${STALL_MAX_KICKS} авто-пинка без ответа — останавливаюсь. Жду Босса.]*`, 'director', 'Оркестратор');
+        stopStallWatchdog();
+        return;
+    }
+    stallKicks++;
+    if (currentAbortController) currentAbortController.abort();
+    isGenerating = false; clearTimeout(typingTimer);
+    renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
+    renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
+    stopStallWatchdog();
+    sendMessage('продолжи', true);   // sendMessage сам перезапустит сторож, пока пинков меньше лимита
+}
 function startStallWatchdog() {
-    clearTimeout(stallWatchdog);
-    stallWatchdog = setTimeout(() => {
-        if (!isGenerating) return;
-        if (stallKicks >= STALL_MAX_KICKS) {
-            renderMessage(`⏹️ *[Система: ${STALL_MAX_KICKS} авто-пинка без ответа — останавливаюсь. Жду Босса.]*`, 'director', 'Оркестратор');
-            return;
+    stopStallWatchdog();
+    stallStartCount = countDirectorMsgs();
+    stallLastLen = -1; stallLastChange = Date.now();
+    const startedAt = Date.now();
+    stallInterval = setInterval(() => {
+        const now = Date.now();
+        const newMsgs = countDirectorMsgs() - stallStartCount;
+        const txt = lastDirectorText();
+        if (txt.length !== stallLastLen) { stallLastLen = txt.length; stallLastChange = now; }
+        // 1) Ответ есть, но застыл и оборван на середине — пинок сразу.
+        if (newMsgs > 0 && (now - stallLastChange) >= 3000 && looksTruncated(txt)) {
+            doStallKick('ответ оборван на середине'); return;
         }
-        stallKicks++;
-        if (currentAbortController) currentAbortController.abort();
-        isGenerating = false; clearTimeout(typingTimer);
-        renderMessage(`⚡ *[Система: тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
-        renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
-        sendMessage('продолжи', true);
-        // Если после пинка снова тишина — ещё один пинок (до STALL_MAX_KICKS).
-        if (stallKicks < STALL_MAX_KICKS) startStallWatchdog();
-    }, STALL_TIMEOUT_MS);
+        // 2) Ответа в чате нет вообще — пинок по таймауту.
+        if (isGenerating && newMsgs === 0 && (now - startedAt) >= STALL_TIMEOUT_MS) {
+            doStallKick(`тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с`); return;
+        }
+        // Ответ пришёл и в порядке — сторож больше не нужен.
+        if (!isGenerating && newMsgs > 0) stopStallWatchdog();
+    }, 3000);
 }
 // Признак оборванного ответа: незакрытый блок кода, многоточие или союз на конце.
 function looksTruncated(t) {
