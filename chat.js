@@ -927,7 +927,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearAttachPreview();
     }
 
-    isGenerating = true; const mySeq = ++sendSeq;
+    isGenerating = true; lastSendSuccess = false; const mySeq = ++sendSeq;
     // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
     // Авто-пинки и системные дозапросы сторож не перезапускают.
     if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
