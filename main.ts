@@ -735,21 +735,38 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
-async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false): Promise<string> {
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
+async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false, requestedModel: string = ""): Promise<string> {
+    const envKey = Deno.env.get("ZVENO_API_KEY");
+    const apiKey = (userKeys && userKeys.freeKey) || envKey;
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
-    let currentMessages = [...messages];
-    let maxLoops = 20; // Увеличено для сложных задач
-    let weatherCard = "";
+    // ЦЕПОЧКА FALLBACK: первая — выбранная пользователем, дальше — все бесплатные по списку.
+    // Embed-модели в FREE_TEXT_MODELS не входят специально.
+    const modelChain: string[] = [];
+    const reqModel = String(requestedModel || "").trim();
+    if (reqModel) modelChain.push(reqModel);
+    else modelChain.push(ZVENO_MODEL);
+
+    const isFreeReq = reqModel.endsWith(":free") || FREE_TEXT_MODELS.includes(reqModel);
+    const tailModels = isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS];
+    for (const m of tailModels) if (!modelChain.includes(m)) modelChain.push(m);
 
     // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
     // никаких паролей и ограничений. Флаг isBoss оставлен для совместимости.
     const activeTools: any[] = TOOLS;
 
-    for (let loop = 0; loop < maxLoops; loop++) {
+    let lastError = "Все модели не ответили";
+
+    for (let mi = 0; mi < modelChain.length; mi++) {
+        const activeModel = modelChain[mi];
+        let currentMessages = JSON.parse(JSON.stringify(messages));
+        let weatherCard = "";
+        let modelFailed = false;
+        let overflow = true;
+
+    for (let loop = 0; loop < 20; loop++) {
         const payload: any = {
-            model: ZVENO_MODEL,
+            model: activeModel,
             messages: currentMessages,
             temperature: 0.5,
             tools: activeTools,
