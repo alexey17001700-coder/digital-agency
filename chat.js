@@ -1158,6 +1158,14 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
         
         if (success) {
+            // ПУСТОЙ ОТВЕТ = обрыв. Модель вернула пустоту или одни служебные метки —
+            // это такой же обрыв, как тишина: пинаем «продолжи» от имени Босса.
+            const emptyCheck = String(aiText || '').replace(/\[[^\]]*\]/g, '').replace(/[\s*_`>#\-–—•.]/g, '');
+            if (!emptyCheck) {
+                lastSendSuccess = false;
+                if (!isKick) { fireAutoKick('пустой ответ от модели'); return; }
+                renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
+            }
             lastSendSuccess = true;
             playSound('receive'); stallKicks = 0; stopStallWatchdog(); stopButtonWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
