@@ -767,7 +767,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
         
         if (success) {
-            playSound('receive'); 
+            playSound('receive'); stallKicks = 0; stopStallWatchdog();
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
                 const targetFile = fileMatch[1].trim();
