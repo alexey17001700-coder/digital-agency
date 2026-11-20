@@ -12,7 +12,7 @@
     var LS_SPENT = 'zvenoSpentTokens';    // накопленные токены
     var LS_SPENT_RUB = 'zvenoSpentRub';   // накопленный расход, ₽
     var LS_PRICE = 'zvenoPricePerM';      // цена за 1 млн токенов, ₽
-    var DEFAULT_PRICE = 8.17;             // ₽ за 1 млн токенов (средняя по моделям)
+    var DEFAULT_PRICE = 17.0;             // ₽ за 1 млн токенов (реальная ставка из логов ZvenoAI)
 
     function box() { return document.getElementById('status-zveno'); }
     function label() { return document.getElementById('zveno-balance-text'); }
