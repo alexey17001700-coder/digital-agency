@@ -832,10 +832,15 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         }
 
         const answer = msg.content || "Пустой ответ";
+        console.log(`[MODEL] ответила: ${activeModel}`);
         return weatherCard ? weatherCard + "\n\n" + answer : answer;
     }
 
-    return "⚠️ Слишком много шагов. Задача прервана.";
+    if (!modelFailed) return "⚠️ Слишком много шагов. Задача прервана.";
+    // Модель не ответила — переходим к следующей в цепочке
+    }
+
+    throw new Error(lastError);
 }
 
 // =========================================
