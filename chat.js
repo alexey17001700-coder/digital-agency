@@ -580,7 +580,7 @@ function startStallWatchdog() {
             doStallKick('ответ оборван на середине'); return;
         }
         // 2) Ответа в чате нет вообще — пинок по таймауту.
-        if (isGenerating && newMsgs === 0 && (now - startedAt) >= STALL_TIMEOUT_MS) {
+        if (newMsgs === 0 && (now - startedAt) >= STALL_TIMEOUT_MS) {
             doStallKick(`тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с`); return;
         }
         // Ответ пришёл и в порядке — сторож больше не нужен.
