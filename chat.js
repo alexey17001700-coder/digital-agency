@@ -501,6 +501,26 @@ async function playAgentReplies(replies) {
     }
 }
 
+/* --- ДИАЛОГ МЕЖДУ АГЕНТАМИ ---
+   Выбрано 2+ агентов, но модель ответила монологами (или ответа нет) —
+   включаем короткий живой диалог между ними, чтобы Совет реально общался.
+   Реплики берём из AGENT_DIALOGUE_LINES (agents.js), печатаем по очереди,
+   с подсветкой карточки говорящего агента. */
+async function playAgentDialogue(topic) {
+    if (typeof buildAgentDialogue !== 'function') return;
+    const lines = buildAgentDialogue(selectedAgents, topic);
+    if (!lines.length) return;
+    renderMessage('💬 *[Совет: агенты переговариваются между собой]*', 'director', 'Оркестратор');
+    for (const line of lines) {
+        focusAgentCard(line.agent);
+        setAgentStatus(line.agent, 'typing'); updateAgentStatus(line.agent, 'busy');
+        await new Promise(resolve => { typeMessage(line.text, 'director', line.agent, resolve); });
+        setAgentStatus(line.agent, 'idle'); updateAgentStatus(line.agent, 'free');
+        await new Promise(r => setTimeout(r, 500));
+    }
+    addMessageToHistory(lines.map(l => `[${l.agent}]: ${l.text}`).join('\n'), 'director', 'Совет');
+}
+
 async function runBackgroundTask(agentName, taskDescription) {
     updateAgentStatus(agentName, 'working');
     setTimeout(async () => {
