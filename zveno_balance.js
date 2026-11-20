@@ -237,18 +237,9 @@
         var sig = String(promptText || '').slice(-300) + '||' + String(out || '').slice(0, 300);
         if (alreadyCounted(sig)) return false;
 
-        // 1) Реальный usage от шлюза — самый точный.
+        // 1) Реальный usage от шлюза — самый точный (кеш и рассуждения учтём внутри).
         if (data && data.usage) {
-            var u = data.usage;
-            var t = Number(u.total_tokens || u.totalTokens || 0);
-            if (!t) {
-                var det = u.completion_tokens_details || u.output_tokens_details || {};
-                var reas = Number(det.reasoning_tokens || det.reasoningTokens || u.reasoning_tokens || 0);
-                t = Number(u.prompt_tokens || u.input_tokens || u.promptTokens || u.inputTokens || 0)
-                  + Number(u.completion_tokens || u.output_tokens || u.completionTokens || u.outputTokens || 0)
-                  + (isFinite(reas) ? reas : 0);
-            }
-            if (isFinite(t) && t > 0) return addUsage({ total_tokens: t });
+            if (addUsage(data.usage)) return true;
         }
 
         // 2) Нет usage — считаем по длине: вход (вся история) + выход (ответ).
