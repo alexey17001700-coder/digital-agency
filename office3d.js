@@ -2136,6 +2136,15 @@ function startScene(office) {
         const a = agentByName[name];
         if (a) sendToBoss(a, text);
     };
+    // ЭТАП 4: две фазы работы — «ушёл печатать» и «пришёл с докладом».
+    window.office3dWork = function (name, text) {
+        const a = agentByName[name];
+        if (a) sendToComputer(a, text);
+    };
+    window.office3dReport = function (name, text) {
+        const a = agentByName[name];
+        if (a) sendReportToBoss(a, text);
+    };
 
     // СИНХРОНИЗАЦИЯ С СИСТЕМОЙ (статусы из ui.js → 3D-агенты)
     const prevUpdate = window.updateAgentInOffice;
