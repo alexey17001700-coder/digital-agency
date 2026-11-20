@@ -188,16 +188,16 @@
     window.zvenoAddText = addText;     // если шлюз не вернул usage — считаем по длине текста
 
     // ГЛАВНАЯ функция учёта: chat.js зовёт её на каждый ответ модели.
-    // Берём usage от шлюза; если его нет или он пустой — считаем по тексту ответа.
-    // Так расход не теряется никогда, даже если сервер usage не пробросил.
+    // СЧИТАЕМ ВСЕГДА ПО ДЛИНЕ ТЕКСТА (4 символа = 1 токен) — не ждём usage
+    // от шлюза, потому что он приходит не всегда и расход терялся.
+    // Если текста нет вообще — берём usage как запасной вариант.
     window.zvenoAccount = function (data, text) {
-        var usage = data && data.usage;
-        if (addUsage(usage)) return true;
         var t = text;
         if (!t && data && data.choices && data.choices[0] && data.choices[0].message) {
             t = data.choices[0].message.content;
         }
-        return addText(t);
+        if (addText(t)) return true;
+        return addUsage(data && data.usage);
     };
 
     function boot() {
