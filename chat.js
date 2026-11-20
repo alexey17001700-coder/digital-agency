@@ -619,7 +619,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         renderMessage(text, 'boss'); addMessageToHistory(text, 'boss');
     }
 
-    isGenerating = true; sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
+    isGenerating = true; const mySeq = ++sendSeq; startStallWatchdog();
+    sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
     let startTime = Date.now();
     let timerInterval = setInterval(() => { let elapsed = ((Date.now() - startTime) / 1000).toFixed(1); if(!isGenerating) return; sendBtn.innerText = elapsed + "s"; }, 100);
