@@ -206,7 +206,7 @@ async function vlabCheckServer() {
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: ttsBody('Проверка связи', 'alena', 'neutral')
+                body: ttsBody('Проверка связи', 'ru-RU-SvetlanaNeural', 'neutral')
             });
             const ms = Date.now() - t0;
             const ct = res.headers.get('Content-Type') || '';
