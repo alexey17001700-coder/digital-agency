@@ -410,7 +410,7 @@ function addDeployButton(container, text) {
     container.appendChild(btn);
 }
 
-function renderMessage(text, sender, agentName = 'Оркестратор') {
+function renderMessage(text, sender, agentName = 'Оркестратор', file = null) {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(text); div.appendChild(shareBtn);
     if (sender === 'director') {
