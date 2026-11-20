@@ -95,7 +95,9 @@
 
         return list.reduce(function (chain, path) {
             return chain.catch(function () {
-                var url = path.indexOf('http') === 0 ? path : BASE + path;
+                // /api/... — прокси Штаба на своём сервере (обход CORS), остальное — ZvenoAI напрямую.
+                var url = path.indexOf('http') === 0 ? path
+                        : (path.indexOf('/api/') === 0 ? path : BASE + path);
                 return fetch(url, {
                     headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
                 }).then(function (r) {
