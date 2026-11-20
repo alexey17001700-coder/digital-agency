@@ -1489,9 +1489,11 @@ function sendToBoss(a, taskText) {
 }
 
 const BREAK_SPOTS = [
-    { x: 9.6, z: 11.4 },   // кулер (приемная)
-    { x: 10.4, z: -13.6 }, // серверная стойка
-    { x: 18.5, z: -15.4 }  // дверь «ВЫХОД»
+    { x: 9.6, z: 11.4 },    // кулер (приемная)
+    { x: 10.4, z: -13.6 },  // серверные стойки
+    { x: 18.5, z: -15.4 },  // дверь «ВЫХОД»
+    { x: 13.0, z: 2.2 },    // переговорная
+    { x: 12.4, z: 12.6 }    // приемная, диван
 ];
 
 let toiletCount = 0;
@@ -1499,17 +1501,23 @@ let toiletTimer = 60 + Math.random() * 60;
 
 let WALKERS = 0;   // сколько агентов сейчас идут — чтобы офис не «кишел»
 
+/* ХАОТИЧНОЕ РАСПИСАНИЕ: агент сам решает, когда встать и куда пойти.
+   Время подъёма — случайное (18–93 с), цель — тоже случайная: свои задачи
+   за компьютером, кулер, серверная, переговорная, приемная, дверь «ВЫХОД». */
 function agentBreak(a, dt) {
     if (a.state !== 'sit' || a.working) return;
     a.breakTimer -= dt;
     if (a.breakTimer > 0) return;
-    // одновременно гуляют максимум 2 агента, иначе офис выглядит хаотично
-    if (WALKERS >= 2) { a.breakTimer = 15 + Math.random() * 20; return; }
-    a.breakTimer = 110 + Math.random() * 130;
+    a.breakTimer = 18 + Math.random() * 75;
+    if (WALKERS >= 3) return;
+    // 1) сам решил пойти поработать за компьютером — по делу, без задачи Босса
+    if (Math.random() < 0.22) { if (sendToComputer(a, 'Свои задачи в работе')) return; }
+    // 2) перекур: кулер, серверная, переговорная, приемная, выход
     const s = BREAK_SPOTS[(Math.random() * BREAK_SPOTS.length) | 0];
+    releaseTerminal(a);
     goTo(a, routeOut(a.model.position.z, s.x, s.z), () => {
         a.state = 'idle';
-        a.waitTimer = 5;
+        a.waitTimer = 4 + Math.random() * 7;
     });
 }
 
