@@ -537,7 +537,7 @@ function looksTruncated(t) {
     return false;
 }
 
-function kickAI(agentName) {
+
     if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; clearTimeout(typingTimer); }
     renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
