@@ -103,7 +103,7 @@
               '<label style="display:block;font-size:11px;color:#8b98a5;margin-bottom:4px">' +
                 'ТЕКУЩИЙ БАЛАНС, ₽</label>' +
               '<input id="zv-bal" type="text" inputmode="decimal" ' +
-                'value="' + (bal === null ? '0.00' : bal.toFixed(2)) + '" ' +
+                'value="' + (isFinite(bal) ? bal.toFixed(2) : '0.00') + '" ' +
                 'placeholder="0.00" ' +
                 'style="width:100%;box-sizing:border-box;background:#0a0d10;border:1px solid #2a333d;' +
                 'border-radius:8px;padding:10px;color:#e6edf3;font-size:16px;margin-bottom:12px">' +
