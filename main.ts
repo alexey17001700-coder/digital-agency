@@ -1006,10 +1006,12 @@ Deno.serve(async (request) => {
             const userKeys = body.userKeys || {};
             let aiText = "";
 
+            const reqModel = typeof body.model === "string" ? body.model.trim() : "";
+
             if (body.image) {
-                aiText = await callZvenoVision(body.messages, body.image);
+                aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
             } else {
-                aiText = await callZvenoAI(body.messages, userKeys, true);
+                aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });
