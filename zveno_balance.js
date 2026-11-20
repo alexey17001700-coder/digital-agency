@@ -302,6 +302,12 @@
     window.zvenoBalanceSetKey = askKey;
     window.zvenoBalanceSetManual = askManual;
     window.zvenoAddUsage = addUsage;   // chat.js зовёт после каждого ответа модели
+    // Если шлюз не вернул usage — считаем токены по длине текста (~4 символа на токен).
+    window.zvenoAddText = function (text) {
+        var s = String(text || '');
+        if (!s) return;
+        addUsage({ total_tokens: Math.max(1, Math.round(s.length / 4)) });
+    };
 
     function boot() {
         bind();
