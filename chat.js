@@ -36,6 +36,7 @@ let stallLastLen = -1;             // длина последнего ответ
 let stallLastChange = 0;           // когда последний ответ менялся
 let sendSeq = 0;
 let attachedImageBase64 = null; let currentChatImage = null;
+let attachedFile = null;   // приложенный файл Босса: { name, size, content }
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
