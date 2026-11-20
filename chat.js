@@ -1178,6 +1178,10 @@ async function sendMessage(overrideText = null, isKick = false) {
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
         }
+        // Локальная модель на ПК (Ollama) работает БЕЗ ключей и без оплаты —
+        // идём основным путём, только запрос уходит на свой ПК через шлюз.
+        const isOllama = isOllamaModel(selectedAIModel);
+        if (isOllama) hasAnyKeys = true;
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
