@@ -738,6 +738,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     const text = overrideText || chatInputEl.value.trim(); if (!text) return;
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
+    if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
 
     if (!overrideText && !isKick) {
         chatInputEl.value = ''; chatInputEl.style.height = 'auto'; playSound('send'); 
