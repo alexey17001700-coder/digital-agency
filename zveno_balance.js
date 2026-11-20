@@ -194,7 +194,7 @@
 
     function askManual() {
         var cur = getManual();
-        var p = prompt('Баланс ZvenoAI, ₽ (например 582.41).\nПусто — убрать ручной баланс.',
+        var p = prompt('Стартовый баланс ZvenoAI, ₽ (например 582.41).\nДальше Штаб сам вычитает потраченные токены.\nПусто — убрать баланс.',
                        cur !== null ? String(cur) : '');
         if (p === null) return;
         p = p.replace(/\s/g, '').replace(',', '.').trim();
