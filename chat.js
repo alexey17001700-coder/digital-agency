@@ -1226,7 +1226,10 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
                 const selModelInfo = getModelInfo(selectedAIModel);
                 if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
-                usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
+                // Ollama: на ПК уходит ИМЯ локальной модели (например qwen2.5-coder:7b),
+                // а в бейдже остаётся 'ollama' — чтобы Босс видел верную подпись.
+                if (isOllama) modelToUse = ollamaModel();
+                usedModel = isOllama ? 'ollama' : modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
