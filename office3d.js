@@ -1967,6 +1967,7 @@ function startScene(office) {
     const clock = new THREE.Clock();
     let raf = 0;
     let elapsed = 0;
+    let vis = false;   // офис виден? если нет — симуляция идёт, рендер пропускаем
 
     const tick = () => {
         raf = requestAnimationFrame(tick);
