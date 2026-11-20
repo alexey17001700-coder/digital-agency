@@ -121,7 +121,7 @@ repo по умолчанию "digital-agency".
 === ПРОЕКТЫ ===
 digital-agency — Штаб (app.html, style.css, chat.js, ui.js, network.js, voice.js, agents.js, main.ts).
 nexus_chat — чат (index.html), nexus_ws — сервер чата (main.ts, :8001).
-- ac_luxury_calc — кондиционеры. window_measure_pro — замер окон. nexus_snake — змейка. window_calc — окна (Flutter). Ещё: shtab-site, Okna.
+ac_luxury_calc — кондиционеры. window_measure_pro — замер окон. nexus_snake — змейка. window_calc — окна (Flutter). Ещё: shtab-site, Okna.
 
 === СЕРВЕР (VIVO) ===
 Vivo Y17 → Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL, DuckDNS). sync.sh каждые 10 сек.
