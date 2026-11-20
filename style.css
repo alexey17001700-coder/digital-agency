@@ -190,6 +190,16 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 @keyframes blink-red-api { 0%, 100% { background-color: transparent; border: 2px solid #ff0055; color: #ff0055; } 50% { background-color: rgba(255, 0, 85, 0.3); border: 2px solid #ff0055; color: #ff0055; box-shadow: 0 0 10px #ff0055; } }
 #btnApiKeys.needs-keys { animation: blink-red-api 1s infinite !important; border: 2px solid #ff0055 !important; color: #ff0055 !important; }
 
+/* --- МИГАНИЕ КНОПКИ «ОБНОВИТЬ ШТАБ» ---
+   sync.sh подтягивает новый код каждые 10 с, но страница в телефоне остаётся
+   старой, пока её не обновишь. Как только chat.js на сервере изменился —
+   кнопка «🔄 Обновить штаб» начинает мигать жёлтым. */
+@keyframes blink-refresh {
+    0%, 100% { background: #333; color: #aaa; box-shadow: none; }
+    50% { background: #ffd700; color: #000; box-shadow: 0 0 12px #ffd700; }
+}
+.mode-btn.needs-update { animation: blink-refresh 1s infinite !important; }
+
 /* =========================================
    --- ПОГОДНАЯ КАРТОЧКА ---
    ========================================= */
