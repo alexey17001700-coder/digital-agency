@@ -2046,11 +2046,16 @@ function startScene(office) {
             if (zEl.__z !== z) { zEl.__z = z; zEl.textContent = '🔍 зум ' + z; }
         }
 
-        renderer.render(scene, cam);
+        // РЕНДЕР ТОЛЬКО КОГДА ОФИС ОТКРЫТ. Пока он скрыт, агенты продолжают
+        // жить (симуляция идёт), но кадры не рисуются — экономия батареи.
+        if (vis) renderer.render(scene, cam);
     };
     tick();
 
-    S = { renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office };
+    S = {
+        renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office,
+        setVisible: (v) => { vis = !!v; }
+    };
 }
 
 /* ЗАКРЫТИЕ ОФИСА — ТОЛЬКО СКРЫТИЕ.
