@@ -1157,6 +1157,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
                 if (isBossSecret) modelToUse = 'zveno';
+                // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
+                if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
