@@ -156,7 +156,9 @@
               '<div style="font-size:12px;color:#8b98a5;line-height:1.6;margin-bottom:14px">' +
                 'Израсходовано: <b style="color:#e6edf3">' + fmt(getSpentRub()) + ' ₽</b><br>' +
                 'Токенов: <b style="color:#e6edf3">' +
-                  Math.round(getSpentTokens()).toLocaleString('ru-RU') + '</b>' +
+                  Math.round(getSpentTokens()).toLocaleString('ru-RU') + '</b><br>' +
+                '<span style="font-size:11px">Ставка — средняя из логов. Кеш −60%, ' +
+                'рассуждения и системный промпт учтены.</span>' +
               '</div>' +
 
               '<button id="zv-save" style="width:100%;padding:11px;border:0;border-radius:8px;' +
