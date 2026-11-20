@@ -1432,6 +1432,7 @@ function sendToComputer(a, taskText) {
     const ti = freeTerminalIndex();
     if (ti < 0) {
         a.terminal = -1;
+        a.workPending = false;
         a.state = 'deskwork';
         a.waitTimer = 6 + Math.random() * 5;
         return true;
@@ -1440,6 +1441,7 @@ function sendToComputer(a, taskText) {
     const t = TERMINALS[ti];
     goTo(a, routeToTerminal(a.model.position.x, a.model.position.z, t), () => {
         a.state = 'type';
+        a.workPending = false;                     // уже дошёл — повторный вызов не нужен
         a.model.rotation.y = Math.PI / 2;          // лицом к экрану
         a.waitTimer = a.reportPending ? 1.2 : (6 + Math.random() * 5);
         say(a, 'Печатаю…', 2600, '#00e5ff');
