@@ -6,10 +6,14 @@ let typingTimer = null;
    Если Архитектор замолчал (обрыв связи, таймаут, тишина) — скрипт сам,
    от имени Босса, пишет в чат «продолжи» и повторяет запрос.
    Не более STALL_MAX_KICKS раз подряд, чтобы не зациклиться. */
-const STALL_TIMEOUT_MS = 330000;   // 5.5 мин: больше лимита запроса (300 с), чтобы не пинать на живой ответ
+const STALL_TIMEOUT_MS = 303000;   // 300 с лимита запроса + 3 с запаса
 const STALL_MAX_KICKS = 3;
 let stallWatchdog = null;
 let stallKicks = 0;
+let stallInterval = null;          // сторож проверяет чат каждые 3 с, а не только по таймеру
+let stallStartCount = 0;           // сколько ответов было в чате на момент старта
+let stallLastLen = -1;             // длина последнего ответа (детект «застыл»)
+let stallLastChange = 0;           // когда последний ответ менялся
 let sendSeq = 0;
 let attachedImageBase64 = null; let currentChatImage = null;
 let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
