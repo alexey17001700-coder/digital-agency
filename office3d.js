@@ -1257,6 +1257,7 @@ function poseSit(a) {
     a.rig.legR.rotation.x = -1.45;
     a.rig.kneeL.rotation.x = 1.40;
     a.rig.kneeR.rotation.x = 1.40;
+    a.rig.head.rotation.x = 0;
 }
 
 function poseStand(a) {
@@ -1265,6 +1266,25 @@ function poseStand(a) {
     a.rig.legR.rotation.x = 0;
     a.rig.kneeL.rotation.x = 0;
     a.rig.kneeR.rotation.x = 0;
+    a.rig.head.rotation.x = 0;
+}
+
+/* Поза «печатает за терминалом»: стоит, корпус наклонён к монитору,
+   руки на клавиатуре, кисти ходят в своём ритме. */
+function poseType(a, t) {
+    a.model.position.y = 0.90;
+    a.rig.legL.rotation.x = 0.04;
+    a.rig.legR.rotation.x = -0.04;
+    a.rig.kneeL.rotation.x = 0.05;
+    a.rig.kneeR.rotation.x = 0.05;
+    a.rig.torso.rotation.x = 0.16;
+    const s = Math.sin(t * 11 + a.phase);
+    a.rig.armL.rotation.x = -1.42 + s * 0.10;
+    a.rig.armR.rotation.x = -1.42 - s * 0.10;
+    a.rig.elbowL.rotation.x = -0.85 + s * 0.12;
+    a.rig.elbowR.rotation.x = -0.85 - s * 0.12;
+    a.rig.head.rotation.y = Math.sin(t * 1.3 + a.phase) * 0.14;
+    a.rig.head.rotation.x = 0.12;
 }
 
 function goTo(a, path, onDone) {
