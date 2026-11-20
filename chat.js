@@ -10,6 +10,26 @@ const STALL_TIMEOUT_MS = 303000;   // 300 с лимита запроса + 3 с 
 const STALL_MAX_KICKS = 3;
 let stallWatchdog = null;
 let stallKicks = 0;
+/* --- ЗАЩИТА ОТ ДУБЛЕЙ ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ ---
+   Сторожа живут в памяти и умирают по F5. Раньше после обновления пинок
+   срабатывал заново и в чат летело ВТОРОЕ «продолжи». Теперь метка о пинке
+   и счётчик пинков лежат в localStorage — обновил страницу, дубля нет. */
+const KICK_GUARD_MS = 25000;   // 25 с после пинка повторный пинок запрещён
+function kickGuardKey() { return 'shtabKickGuard_' + (currentChatId || 'none'); }
+function kickGuardActive() {
+    try {
+        const at = parseInt(localStorage.getItem(kickGuardKey()) || '0', 10);
+        return !!at && (Date.now() - at) < KICK_GUARD_MS;
+    } catch (e) { return false; }
+}
+function markKickSent() {
+    try { localStorage.setItem(kickGuardKey(), String(Date.now())); } catch (e) {}
+    try { localStorage.setItem('shtabStallKicks', String(stallKicks)); } catch (e) {}
+}
+function restoreKickState() {
+    const k = parseInt(localStorage.getItem('shtabStallKicks') || '0', 10);
+    stallKicks = isNaN(k) ? 0 : k;
+}
 let stallInterval = null;          // сторож проверяет чат каждые 3 с, а не только по таймеру
 let stallStartCount = 0;           // сколько ответов было в чате на момент старта
 let stallLastLen = -1;             // длина последнего ответа (детект «застыл»)
