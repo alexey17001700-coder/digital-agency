@@ -1358,6 +1358,99 @@ function routeFromBoss(homeX, homeZ) {
     ];
 }
 
+/* --- МАРШРУТ К РАБОЧЕМУ ТЕРМИНАЛУ И ОТ НЕГО К БОССУ (ЭТАП 4) --- */
+function routeToTerminal(homeX, homeZ, t) {
+    const exitZ = exitGapZ(homeZ);
+    const path = [
+        new THREE.Vector3(2.2, 0, homeZ + 1.0),
+        new THREE.Vector3(2.2, 0, exitZ),
+        new THREE.Vector3(CORRIDOR_X, 0, exitZ)
+    ];
+    if (Math.abs(t.standZ - exitZ) > 0.4) path.push(new THREE.Vector3(CORRIDOR_X, 0, t.standZ));
+    path.push(new THREE.Vector3(t.standX, 0, t.standZ));
+    return path;
+}
+
+/* От терминала (или из коридора) — к столу Босса, через проходы в стене. */
+function routeToBossFrom(x, z) {
+    const exitZ = exitGapZ(z);
+    const path = [];
+    if (Math.abs(exitZ - z) > 0.4) path.push(new THREE.Vector3(CORRIDOR_X, 0, exitZ));
+    path.push(new THREE.Vector3(2.2, 0, exitZ));
+    path.push(new THREE.Vector3(2.2, 0, BOSS_AISLE_Z));
+    path.push(new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_AISLE_Z));
+    path.push(new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_SPOT.z));
+    return path;
+}
+
+/* Все агенты сцены — нужны, чтобы понять, какой терминал свободен. */
+let ALL_AGENTS = [];
+
+function terminalOf(a) { return a.terminal >= 0 ? TERMINALS[a.terminal] : null; }
+function releaseTerminal(a) { a.terminal = -1; a.reportPending = false; a.reportText = null; }
+
+function freeTerminalIndex() {
+    for (let i = 0; i < TERMINALS.length; i++) {
+        let taken = false;
+        for (let k = 0; k < ALL_AGENTS.length; k++) {
+            if (ALL_AGENTS[k] && ALL_AGENTS[k].terminal === i) { taken = true; break; }
+        }
+        if (!taken) return i;
+    }
+    return -1;
+}
+
+/* Агент встаёт из-за стола и уходит печатать. Если все терминалы заняты —
+   печатает за своим столом: работа всё равно видна. */
+function sendToComputer(a, taskText) {
+    if (a.state === 'type' || a.state === 'deskwork') return false;
+    if (a.state !== 'sit') { a.workPending = true; return false; }
+    const text = taskText || TASK_TEXTS[(Math.random() * TASK_TEXTS.length) | 0];
+    a.task = text;
+    a.taskCube.visible = true;
+    say(a, text, 6000);
+    const ti = freeTerminalIndex();
+    if (ti < 0) {
+        a.terminal = -1;
+        a.state = 'deskwork';
+        a.waitTimer = 6 + Math.random() * 5;
+        return true;
+    }
+    a.terminal = ti;
+    const t = TERMINALS[ti];
+    goTo(a, routeToTerminal(a.model.position.x, a.model.position.z, t), () => {
+        a.state = 'type';
+        a.model.rotation.y = Math.PI / 2;          // лицом к экрану
+        a.waitTimer = a.reportPending ? 1.2 : (6 + Math.random() * 5);
+        say(a, 'Печатаю…', 2600, '#00e5ff');
+    });
+    return true;
+}
+
+/* Ответ пришёл в чат — агент бросает печать и идёт с докладом к Боссу. */
+function sendReportToBoss(a, text) {
+    if (a.state === 'report') return false;
+    if (a.state !== 'type' && a.state !== 'deskwork') {
+        a.reportPending = true;
+        if (text) a.reportText = text;
+        return false;
+    }
+    const t = terminalOf(a);
+    const msg = text || a.reportText || DONE_TEXTS[(Math.random() * DONE_TEXTS.length) | 0];
+    const path = t ? routeToBossFrom(t.standX, t.standZ) : routeToBoss(a.home.x, a.home.z);
+    a.terminal = -1;
+    a.reportPending = false;
+    a.taskCube.visible = true;
+    goTo(a, path, () => {
+        a.state = 'report';
+        a.waitTimer = 4 + Math.random() * 3;
+        a.taskCube.visible = false;
+        say(a, msg, 5200, '#00ff88');
+        if (S && S.scene && S.scene.userData.bossHolo) S.scene.userData.bossHolo.userData.flash = 1;
+    });
+    return true;
+}
+
 /* Реплика над головой агента */
 function say(a, text, ms, color) {
     const col = color || ('#' + new THREE.Color(a.color).getHexString());
