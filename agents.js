@@ -8,18 +8,40 @@ const AGENT_ICONS = {
     "DevOps": "🚀", "Универсал": "🧠", "Приемная": "🏛️", "Результат": "🏆"
 };
 
+// ДВА ГОЛОСА НА ВЕСЬ ШТАБ (edge-tts, бесплатно):
+//   ru-RU-DmitryNeural   — мужской
+//   ru-RU-SvetlanaNeural — женский
+// Эмоции у edge-tts нет — она передаётся темпом речи (см. emotionRate в voice.js).
+const VOICE_M = "ru-RU-DmitryNeural";
+const VOICE_F = "ru-RU-SvetlanaNeural";
+
 const AGENT_VOICES = {
-    "GigaChat": { voice: "filipp", emotion: "neutral" },
-    "Оркестратор": { voice: "filipp", emotion: "neutral" },
-    "Хакер": { voice: "zahar", emotion: "evil" },
-    "Охранник": { voice: "alexander", emotion: "strict" },
-    "Исследователь": { voice: "alena", emotion: "neutral" },
-    "Дизайнер": { voice: "jane", emotion: "good" },
-    "Критик": { voice: "ermil", emotion: "evil" },
-    "Фронтенд": { voice: "kirill", emotion: "neutral" },
-    "Бэкенд": { voice: "madirus", emotion: "neutral" },
-    "DevOps": { voice: "anton", emotion: "good" },
-    "По умолчанию": { voice: "alena", emotion: "neutral" }
+    "GigaChat": { voice: VOICE_F, emotion: "neutral" },
+    "Оркестратор": { voice: VOICE_M, emotion: "strict" },
+    "Хакер": { voice: VOICE_M, emotion: "evil" },
+    "Охранник": { voice: VOICE_M, emotion: "strict" },
+    "Исследователь": { voice: VOICE_F, emotion: "neutral" },
+    "Планировщик": { voice: VOICE_F, emotion: "neutral" },
+    "Аналитик": { voice: VOICE_F, emotion: "neutral" },
+    "Исполнитель": { voice: VOICE_M, emotion: "neutral" },
+    "Архитектор": { voice: VOICE_M, emotion: "neutral" },
+    "Дизайнер": { voice: VOICE_F, emotion: "good" },
+    "Креативщик": { voice: VOICE_F, emotion: "happy" },
+    "Критик": { voice: VOICE_M, emotion: "evil" },
+    "Тестировщик": { voice: VOICE_M, emotion: "strict" },
+    "Переводчик": { voice: VOICE_F, emotion: "friendly" },
+    "Методолог": { voice: VOICE_F, emotion: "neutral" },
+    "Юрист": { voice: VOICE_M, emotion: "strict" },
+    "Маркетолог": { voice: VOICE_F, emotion: "happy" },
+    "Техпис": { voice: VOICE_F, emotion: "neutral" },
+    "Фронтенд": { voice: VOICE_M, emotion: "neutral" },
+    "Бэкенд": { voice: VOICE_M, emotion: "neutral" },
+    "Мобильный": { voice: VOICE_M, emotion: "neutral" },
+    "DevOps": { voice: VOICE_M, emotion: "good" },
+    "Универсал": { voice: VOICE_F, emotion: "neutral" },
+    "Приемная": { voice: VOICE_F, emotion: "friendly" },
+    "Результат": { voice: VOICE_M, emotion: "good" },
+    "По умолчанию": { voice: VOICE_F, emotion: "neutral" }
 };
 
 const AGENT_INFO = {
