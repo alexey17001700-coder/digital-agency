@@ -107,7 +107,7 @@ const AI_MODELS_DEFAULT = [
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
    перезаписывается новым (иначе у Босса остался бы старый набор моделей). */
-const AI_MODELS_VERSION = '2026-02-14-free9';
+const AI_MODELS_VERSION = '2026-02-14-free6';   // embed-модели убраны: они не умеют чат и роняли запрос
 try {
     const ver = localStorage.getItem('shtabAIModelsVer');
     const sm = localStorage.getItem('shtabAIModels');
