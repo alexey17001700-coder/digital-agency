@@ -17,6 +17,9 @@
 
 **Устройство:** Vivo Y17 → Termux → `proot-distro login ubuntu`
 
+**👤 Владелец (Босс):** GitHub — **https://github.com/alexey17001700-coder**
+(это аккаунт Босса; `GITHUB_OWNER="alexey17001700-coder"` — все репозитории проекта здесь)
+
 **SSL:** Let's Encrypt через `acme.sh` (DNS-проверка DuckDNS)
 - Файлы: `/root/ssl/cert.pem` и `/root/ssl/key.pem`
 - ⚠️ Порты **80 и 443 на Android заблокированы** → сертификат обновляется **ТОЛЬКО через DNS**
