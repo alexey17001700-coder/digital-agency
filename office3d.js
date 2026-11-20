@@ -2197,9 +2197,14 @@ function install() {
 
 /* Строит сцену заранее, не показывая её. Ошибку только логируем:
    при открытии кнопки она всплывёт полноэкранной диагностикой. */
-function prewarm() {
+function prewarm(tries) {
+    if (S || scenePromise) return;
     const office = document.getElementById('office-container');
-    if (!office || S || scenePromise) return;
+    if (!office) {
+        // контейнер ещё не создан — пробуем снова (до 20 попыток, ~10 с)
+        if ((tries || 0) < 20) setTimeout(() => prewarm((tries || 0) + 1), 500);
+        return;
+    }
     ensureScene(office).catch((e) => console.warn('[office3d] предзагрузка не удалась:', (e && e.message) || e));
 }
 
