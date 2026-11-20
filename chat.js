@@ -96,7 +96,16 @@ const AI_MODELS_DEFAULT = [
     { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
     { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
     { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000' },
-    { id: 'baidu/ernie-5.5-flash-preview', label: 'Ernie 5.5 Flash', color: '#ffd700', text: '#000', free: true }
+    /* --- БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход, без карты) --- */
+    { id: 'dots-studio/dots-3-note-preview:free', label: 'Dots3-Note', color: '#ffd700', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: 'Nemotron 3 Nano Omni', color: '#76b900', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra', color: '#76b900', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning', color: '#76b900', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3.5-super-vl:free', label: 'Nemotron 3.5 Super VL', color: '#76b900', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3-embed-1b:free', label: 'Nemotron 3 Embed 1B', color: '#76b900', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3.5-embed-1b:free', label: 'Nemotron 3.5 Embed 1B', color: '#76b900', text: '#000', free: true },
+    { id: 'nvidia/nemotron-3.5-embed-8b:free', label: 'Nemotron 3.5 Embed 8B', color: '#76b900', text: '#000', free: true },
+    { id: 'recursive/flint-v1.0:free', label: 'Flint', color: '#ff7043', text: '#000', free: true }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
 try {
