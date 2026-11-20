@@ -2484,6 +2484,7 @@ function install() {
             fn.__o3d = true;
             window.toggleOffice = fn;
         }
+        hookRenderMessage();   // ловим ответы из чата — агент докладывает их Боссу
         if (tries++ < 120) setTimeout(hook, 500);
         else console.warn('[office3d] toggleOffice не найден — 3D-офис не подключён');
     };
