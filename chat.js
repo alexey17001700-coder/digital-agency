@@ -1269,9 +1269,11 @@ async function sendMessage(overrideText = null, isKick = false) {
             isGenerating = false; stopSendTimer();
             attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
         }
-        let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
-        sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
+        if (mySeq === sendSeq) {
+            let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            if (timeBadge) { timeBadge.innerText = finalElapsed + "s"; timeBadge.classList.add('show'); setTimeout(() => { timeBadge.classList.remove('show'); }, 5000); }
+            sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = "➤"; sendBtn.style.fontSize = ""; sendBtn.style.background = "#00e5ff"; sendBtn.style.color = "#000";
+        }
     }
 }
 
