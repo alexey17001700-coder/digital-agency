@@ -93,7 +93,7 @@ const AI_MODELS_DEFAULT = [
     { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
     { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
     { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000' },
-    { id: 'baidu/ernie-5.5-flash-preview', label: 'Ernie 5.5 Flash 🆓', color: '#ffd700', text: '#000' }
+    { id: 'baidu/ernie-5.5-flash-preview', label: 'Ernie 5.5 Flash', color: '#ffd700', text: '#000', free: true }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
 try {
