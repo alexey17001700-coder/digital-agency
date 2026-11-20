@@ -1054,7 +1054,11 @@ async function sendMessage(overrideText = null, isKick = false) {
     isGenerating = true; lastSendSuccess = false; const mySeq = ++sendSeq;
     // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
     // Авто-пинки и системные дозапросы сторож не перезапускают.
-    if (!overrideText && !isKick) { startButtonWatchdog(); startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startButtonWatchdog(); startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
+    // Счётчик на кнопке ведёт ТОЛЬКО startSendTimer() — один интервал на всё приложение.
+    // startButtonWatchdog() больше НЕ запускается: он писал в ту же кнопку своим отсчётом
+    // и накладывался на основной счётчик — отсюда прыжки цифр и зашкал за 500 с.
+    // Тишину ловит сторож тишины, заморозку счётчика — timer-freeze, жёсткий предел — hard.
+    if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
     sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
     const startTime = sendStartTime = Date.now();
