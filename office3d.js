@@ -1853,7 +1853,6 @@ function startScene(office) {
     hint.className = 'o3d-hint';
     hint.textContent = 'Тапни агента — карточка · Потяни — панорама · Щипок или ＋/− — зум';
     office.appendChild(hint);
-    setTimeout(() => hint.classList.add('hide'), 6000);
 
     const reset = document.createElement('button');
     reset.className = 'o3d-reset';
