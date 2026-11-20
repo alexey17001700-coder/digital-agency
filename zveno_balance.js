@@ -187,22 +187,90 @@
     window.zvenoAddUsage = addUsage;   // chat.js зовёт после каждого ответа модели
     window.zvenoAddText = addText;     // если шлюз не вернул usage — считаем по длине текста
 
-    // ГЛАВНАЯ функция учёта: chat.js зовёт её на каждый ответ модели.
-    // РЕАЛЬНЫЙ расход = ВХОД (запрос: вся история переписки) + ВЫХОД (ответ).
-    // Раньше считали только ответ — поэтому баланс почти не падал, а по факту
-    // списывалось больше: каждый запрос шлёт модели всю историю чата.
-    // Считаем по длине текста (4 символа = 1 токен). Если текста нет — берём usage.
+    // ЗАЩИТА ОТ ДВОЙНОГО СПИСАНИЯ: один и тот же ответ может прийти
+    // и от chat.js, и от перехватчика fetch. Считаем его РОВНО ОДИН раз.
+    var lastSig = '', lastSigAt = 0;
+    function alreadyCounted(sig) {
+        var now = Date.now();
+        if (sig && sig === lastSig && (now - lastSigAt) < 3000) return true;
+        lastSig = sig; lastSigAt = now;
+        return false;
+    }
+
+    // ГЛАВНАЯ функция учёта. РЕАЛЬНЫЙ расход = ВХОД (запрос: вся история) + ВЫХОД (ответ).
+    // 1) Есть usage от шлюза — берём его (самый точный).
+    // 2) Нет usage — считаем по длине текста (4 символа = 1 токен).
     window.zvenoAccount = function (data, text, promptText) {
         var out = text;
         if (!out && data && data.choices && data.choices[0] && data.choices[0].message) {
             out = data.choices[0].message.content;
         }
+        var sig = String(promptText || '').slice(-300) + '||' + String(out || '').slice(0, 300);
+        if (alreadyCounted(sig)) return false;
+
+        // 1) Реальный usage от шлюза — самый точный.
+        if (data && data.usage) {
+            var u = data.usage;
+            var t = Number(u.total_tokens || u.totalTokens || 0);
+            if (!t) t = Number(u.prompt_tokens || u.input_tokens || u.promptTokens || u.inputTokens || 0)
+                      + Number(u.completion_tokens || u.output_tokens || u.completionTokens || u.outputTokens || 0);
+            if (isFinite(t) && t > 0) return addUsage({ total_tokens: t });
+        }
+
+        // 2) Нет usage — считаем по длине: вход (вся история) + выход (ответ).
         var inTok = promptText ? Math.max(1, Math.round(String(promptText).length / 4)) : 0;
         var outTok = out ? Math.max(1, Math.round(String(out).length / 4)) : 0;
         var total = inTok + outTok;
         if (total > 0) return addUsage({ total_tokens: total });
-        return addUsage(data && data.usage);
+        return false;
     };
+
+    // ---------- АВТО-УЧЁТ ЧЕРЕЗ fetch (ГЛАВНАЯ СТРАХОВКА) ----------
+    // ЛЮБОЙ запрос к модели — основной ответ, Совет, фоновая задача,
+    // дозапросы READ / SEARCH / WEATHER — идёт через fetch. Перехватываем
+    // его и считаем токены сами: баланс падает ВСЕГДА, даже если chat.js
+    // по какой-то причине не позвал zvenoAccount. Двойного списания нет —
+    // защита alreadyCounted() выше.
+    (function hookFetch() {
+        if (window.__zvenoFetchHooked) return;
+        window.__zvenoFetchHooked = true;
+        var orig = window.fetch;
+        if (typeof orig !== 'function') return;
+
+        window.fetch = function (input, init) {
+            var promptText = '', isModelCall = false;
+            try {
+                var method = (init && init.method) ? String(init.method).toUpperCase() : 'GET';
+                if (method === 'POST' && init && init.body && typeof init.body === 'string') {
+                    var body = JSON.parse(init.body);
+                    // Модельный запрос — это POST с массивом messages.
+                    // Поиск (searchQuery) и запись файла (updateFile) пропускаем.
+                    if (body && Array.isArray(body.messages) && body.messages.length) {
+                        isModelCall = true;
+                        promptText = body.messages.map(function (m) { return (m && m.content) || ''; }).join('\n');
+                    }
+                }
+            } catch (e) { isModelCall = false; }
+
+            var p = orig.apply(this, arguments);
+            if (!isModelCall) return p;
+
+            return p.then(function (res) {
+                try {
+                    if (res && res.ok) {
+                        res.clone().json().then(function (data) {
+                            var out = (data && data.choices && data.choices[0] && data.choices[0].message)
+                                ? data.choices[0].message.content : '';
+                            window.zvenoAccount(data, out, promptText);
+                        }).catch(function () {
+                            window.zvenoAccount(null, '', promptText);
+                        });
+                    }
+                } catch (e) {}
+                return res;
+            });
+        };
+    })();
 
     function boot() {
         var b = box();
