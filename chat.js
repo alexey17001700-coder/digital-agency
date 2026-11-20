@@ -1158,12 +1158,14 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
         
         if (success) {
-            // ПУСТОЙ ОТВЕТ = обрыв. Модель вернула пустоту или одни служебные метки —
-            // это такой же обрыв, как тишина: пинаем «продолжи» от имени Босса.
+            // ПУСТОЙ ОТВЕТ = обрыв. Модель вернула пустоту, одни служебные метки
+            // ИЛИ прямо написала «пустой ответ» — это такой же обрыв, как тишина:
+            // пинаем «продолжи» от имени Босса.
             const emptyCheck = String(aiText || '').replace(/\[[^\]]*\]/g, '').replace(/[\s*_`>#\-–—•.]/g, '');
-            if (!emptyCheck) {
+            const saidEmpty = isEmptyAnswerText(aiText);
+            if (!emptyCheck || saidEmpty) {
                 lastSendSuccess = false;
-                if (!isKick) { fireAutoKick('пустой ответ от модели'); return; }
+                if (!isKick) { fireAutoKick(saidEmpty ? 'модель написала «пустой ответ»' : 'пустой ответ от модели'); return; }
                 renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
             }
             lastSendSuccess = true;
