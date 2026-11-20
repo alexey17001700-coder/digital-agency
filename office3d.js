@@ -1007,6 +1007,52 @@ function buildBossDesk(scene, M, screenTex) {
     return g;
 }
 
+/* ------------------------------------------------------------------ */
+/*  РАБОЧИЕ ТЕРМИНАЛЫ (ЭТАП 4)                                         */
+/* ------------------------------------------------------------------ */
+/* Агент не просто «сидит и работает»: когда Босс даёт задачу в чате,
+   задействованный агент ВСТАЁТ из-за стола, уходит к рабочему терминалу
+   в коридоре, печатает — и только когда ответ реально пришёл в чат,
+   подходит к столу Босса и докладывает. */
+const TERMINAL_X = 6.1;         // корпус терминала (у стеклянной стены x=7)
+const TERMINAL_STAND_X = 5.05;  // где стоит агент — лицом к экрану
+const TERMINALS = [
+    { x: TERMINAL_X, standX: TERMINAL_STAND_X, standZ: -4.0 },
+    { x: TERMINAL_X, standX: TERMINAL_STAND_X, standZ: -1.8 },
+    { x: TERMINAL_X, standX: TERMINAL_STAND_X, standZ: 2.8 }
+];
+
+function buildTerminals(scene, M, screenTex) {
+    const screens = [];
+    TERMINALS.forEach(t => {
+        const g = new THREE.Group();
+        const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.14, 1.0), M.desk);
+        top.position.y = 1.05; g.add(top);
+        const legGeo = new THREE.BoxGeometry(0.14, 1.0, 0.14);
+        [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].forEach(p => {
+            const l = new THREE.Mesh(legGeo, M.dark);
+            l.position.set(p[0], 0.5, p[1]); g.add(l);
+        });
+        const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, 0.4, 8), M.plastic);
+        stand.position.set(0, 1.3, -0.2); g.add(stand);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 1.4), M.plastic);
+        body.position.set(0, 1.85, -0.2); g.add(body);
+        const scrMat = new THREE.MeshStandardMaterial({
+            map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 1.25
+        });
+        const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.8), scrMat);
+        scr.position.set(-0.08, 1.85, -0.2);
+        scr.rotation.y = -Math.PI / 2;   // экран смотрит на агента
+        g.add(scr);
+        const kbd = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 1.1), M.plastic);
+        kbd.position.set(-0.35, 1.14, 0.05); g.add(kbd);
+        g.position.set(t.x, 0, t.z);
+        scene.add(g);
+        screens.push(scr);
+    });
+    return screens;
+}
+
 function buildScene() {
     const M = mats();
     const scene = new THREE.Scene();
