@@ -1187,6 +1187,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (isBossSecret) modelToUse = 'zveno';
                 // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
                 if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
+                usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
