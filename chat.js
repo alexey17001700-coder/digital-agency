@@ -1159,7 +1159,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         if (success) {
             lastSendSuccess = true;
-            playSound('receive'); stallKicks = 0; stopStallWatchdog();
+            playSound('receive'); stallKicks = 0; stopStallWatchdog(); stopButtonWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
             if (fileMatch && isAutoMode) {
