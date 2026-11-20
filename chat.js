@@ -510,7 +510,7 @@ async function runBackgroundTask(agentName, taskDescription) {
    2) ответ пришёл, но застыл и оборван на середине → пинок сразу,
       сколько бы секунд ни прошло.
    Не более STALL_MAX_KICKS пинков подряд. */
-function resetStallKicks() { stallKicks = 0; }
+function resetStallKicks() { stallKicks = 0; try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {} }
 function stopStallWatchdog() { clearTimeout(stallWatchdog); stallWatchdog = null; clearInterval(stallInterval); stallInterval = null; }
 function countDirectorMsgs() { return chatContainer ? chatContainer.querySelectorAll('.msg-director').length : 0; }
 function lastDirectorText() {
