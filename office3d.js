@@ -1480,7 +1480,7 @@ function scheduleFallbackTask(text) {
         // кто-то уже занят по метке чата — не вмешиваемся
         for (let i = 0; i < ALL_AGENTS.length; i++) {
             const a = ALL_AGENTS[i];
-            if (a && (a.working || a.workPending || a.state === 'type' || a.state === 'deskwork')) return;
+            if (a && (a.working || a.workPending || a.task || a.state === 'type' || a.state === 'deskwork')) return;
         }
         let name = pickAgentForTask(text);
         let a = name ? agentByNameGlobal(name) : null;
