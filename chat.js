@@ -1110,6 +1110,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
+    if (!overrideText && !isKick) resetTurnCalls();  // новый вопрос Босса = бюджет запросов с нуля
 
     if (!overrideText && !isKick) {
         chatInputEl.value = ''; chatInputEl.style.height = 'auto'; playSound('send'); 
@@ -1159,15 +1160,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         let isBossSecret = false;
         if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
             hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
-        }
-        /* --- БЕСПЛАТНАЯ МОДЕЛЬ = ПЛАТНЫЕ КЛЮЧИ НА СЕРВЕР НЕ УХОДЯТ ---
-           Иначе шлюз мог взять платный ключ и списать деньги, хотя выбрана
-           модель с пометкой :free. При бесплатной модели отправляем ТОЛЬКО
-           freeKey — платные ключи физически не покидают телефон. */
-        const _selInfo = (typeof getModelInfo === 'function') ? getModelInfo(selectedAIModel) : null;
-        if (!isBossSecret && _selInfo && _selInfo.free) {
-            userKeys = { freeKey: userKeys.freeKey || '' };
-            hasAnyKeys = !!(userKeys.freeKey && userKeys.freeKey.trim() !== '');
         }
                 if (hasAnyKeys) {
             try {
