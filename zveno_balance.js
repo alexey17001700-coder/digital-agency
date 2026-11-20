@@ -41,7 +41,8 @@
     // Текущий баланс = введённый минус потраченное.
     function currentBalance() {
         var s = getStart();
-        return s === null ? null : s - getSpentRub();
+        var v = s - getSpentRub();
+        return v < 0 ? 0 : v;      // ниже нуля не уходим
     }
 
     function fmt(n) { return n.toFixed(2).replace('.', ','); }
