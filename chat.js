@@ -520,6 +520,7 @@ function lastDirectorText() {
     return nodes[nodes.length - 1].innerText || '';
 }
 function doStallKick(reason) {
+    if (kickGuardActive()) { stopStallWatchdog(); return; }   // пинок уже был — дубль после F5 не шлём
     if (stallKicks >= STALL_MAX_KICKS) {
         renderMessage(`⏹️ *[Система: ${STALL_MAX_KICKS} авто-пинка без ответа — останавливаюсь. Жду Босса.]*`, 'director', 'Оркестратор');
         stopStallWatchdog();
