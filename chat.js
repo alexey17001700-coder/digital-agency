@@ -595,22 +595,28 @@ function lastDirectorText() {
     if (!nodes.length) return '';
     return nodes[nodes.length - 1].innerText || '';
 }
-function doStallKick(reason) {
-    if (kickGuardActive()) { stopStallWatchdog(); return; }   // пинок уже был — дубль после F5 не шлём
+/* --- ЕДИНЫЙ АВТО-ПИНОК ---
+   Все сторожа (тишина, оборвавшийся счётчик, жёсткий таймаут) зовут эту
+   функцию. Она сама проверяет защиту от дублей и лимит пинков, обрывает
+   зависший запрос и пишет «продолжи» от имени Босса. */
+function fireAutoKick(reason) {
+    if (kickGuardActive()) { stopStallWatchdog(); stopTimerFreezeWatchdog(); return false; }   // пинок уже был — дубль после F5 не шлём
     if (stallKicks >= STALL_MAX_KICKS) {
         renderMessage(`⏹️ *[Система: ${STALL_MAX_KICKS} авто-пинка без ответа — останавливаюсь. Жду Босса.]*`, 'director', 'Оркестратор');
-        stopStallWatchdog();
-        return;
+        stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+        return false;
     }
     stallKicks++;
     markKickSent();
-    if (currentAbortController) currentAbortController.abort();
+    try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
     isGenerating = false; clearTimeout(typingTimer);
     renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
     renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
-    stopStallWatchdog();
-    sendMessage('продолжи', true);   // sendMessage сам перезапустит сторож, пока пинков меньше лимита
+    stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+    setTimeout(() => sendMessage('продолжи', true), 900);   // sendMessage сам перезапустит сторожа, пока пинков меньше лимита
+    return true;
 }
+function doStallKick(reason) { fireAutoKick(reason); }
 function startStallWatchdog() {
     stopStallWatchdog();
     stallStartCount = countDirectorMsgs();
