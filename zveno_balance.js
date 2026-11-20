@@ -42,6 +42,38 @@
         var v = parseFloat((lsGet(LS_MANUAL) || '').replace(',', '.'));
         return isFinite(v) ? v : null;
     }
+    function getPrice() {
+        var v = parseFloat((lsGet(LS_PRICE) || '').replace(',', '.'));
+        return isFinite(v) && v > 0 ? v : DEFAULT_PRICE;
+    }
+    function getSpentTokens() {
+        var v = parseFloat(lsGet(LS_SPENT) || '0');
+        return isFinite(v) ? v : 0;
+    }
+    function getSpentRub() {
+        var v = parseFloat((lsGet(LS_SPENT_RUB) || '').replace(',', '.'));
+        return isFinite(v) ? v : 0;
+    }
+    // Баланс с учётом расхода: стартовый минус потраченное.
+    function currentBalance() {
+        var start = getManual();
+        if (start === null) return null;
+        return start - getSpentRub();
+    }
+    // Учёт токенов от модели. Зовётся из chat.js после каждого ответа.
+    function addUsage(usage) {
+        if (!usage || typeof usage !== 'object') return;
+        var p = Number(usage.prompt_tokens || usage.input_tokens || 0);
+        var c = Number(usage.completion_tokens || usage.output_tokens || 0);
+        var total = Number(usage.total_tokens || 0);
+        if (!total) total = p + c;
+        if (!isFinite(total) || total <= 0) return;
+        var tokens = getSpentTokens() + total;
+        var rub = getSpentRub() + (total / 1000000) * getPrice();
+        lsSet(LS_SPENT, String(tokens));
+        lsSet(LS_SPENT_RUB, String(rub));
+        showManual();
+    }
 
     function render(text, color, title) {
         var e = label();
