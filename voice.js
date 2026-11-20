@@ -69,7 +69,7 @@ async function speakText(text, agentName) {
     if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
 
     const _ov = voiceOverrides[agentName];
-    const _base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "alena", emotion: "neutral" };
+    const _base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "ru-RU-SvetlanaNeural", emotion: "neutral" };
     const v = _ov ? _ov : (defaultVoice ? { voice: defaultVoice, emotion: _base.emotion } : _base);
 
     try {
