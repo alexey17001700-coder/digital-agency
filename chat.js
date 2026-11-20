@@ -538,8 +538,39 @@ function looksTruncated(t) {
 }
 
 
-    if (isGenerating) { if (currentAbortController) currentAbortController.abort(); isGenerating = false; clearTimeout(typingTimer); }
-    renderMessage(`⚡ *[Система: ${agentName} слишком долго тянет время. Пинок...]*`, 'director', 'Оркестратор');
+/* --- СТОРОЖ ЗАСТЫВШЕГО ТАЙМЕРА ---
+   Босс нажал «Отправить» → на кнопке бегут секунды. Если счётчик внезапно
+   замер (ответ не пришёл, связь оборвалась, поток умер), а в чате тишина —
+   это тоже обрыв. Ловим и пинаем, сколько бы секунд ни прошло. */
+const TIMER_FREEZE_MS = 5000;      // счётчик не менялся 5 с — считаем застывшим
+let timerFreezeWatchdog = null;
+let lastTimerText = '';
+let lastTimerChange = 0;
+
+function startTimerFreezeWatchdog() {
+    stopTimerFreezeWatchdog();
+    lastTimerText = ''; lastTimerChange = Date.now();
+    timerFreezeWatchdog = setInterval(() => {
+        if (!isGenerating) { stopTimerFreezeWatchdog(); return; }
+        const now = Date.now();
+        const cur = sendBtn ? String(sendBtn.innerText || '') : '';
+        if (cur !== lastTimerText) { lastTimerText = cur; lastTimerChange = now; return; }
+        if (now - lastTimerChange < TIMER_FREEZE_MS) return;
+        stopTimerFreezeWatchdog();
+        if (stallKicks >= STALL_MAX_KICKS) {
+            renderMessage('⏸️ *[Система: счётчик застыл, лимит пинков исчерпан. Жду Босса.]*', 'director', 'Оркестратор');
+            return;
+        }
+        stallKicks++;
+        renderMessage(`⚡ *[Система: счётчик застыл на ${cur || '—'} — ответа нет. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS}.]*`, 'director', 'Оркестратор');
+        renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
+        try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
+        setTimeout(() => sendMessage('продолжи', true), 900);
+    }, 1000);
+}
+function stopTimerFreezeWatchdog() { if (timerFreezeWatchdog) { clearInterval(timerFreezeWatchdog); timerFreezeWatchdog = null; } }
+
+function kickAI(agentName) {
     sendMessage(`[СИСТЕМНОЕ СООБЩЕНИЕ: Время вышло. Ты ОБЯЗАН выдать финальный ответ. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать "подождите".]`, true);
 }
 
