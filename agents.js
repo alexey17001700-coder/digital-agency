@@ -114,36 +114,7 @@ const AGENT_DIRECTIVES = {
 
 /* (Старые скриптовые заготовки удалены — Совет говорит через модель.) */
 
-/* Сборщик мини-диалога: 5 коротких реплик между выбранными агентами.
-   Ведущий — Оркестратор (если выбран), иначе случайный. Порядок участников
-   перемешивается, итог — случайный из Приемная/Критик/Тестировщик/Результат.
-   Каждая реплика берётся из 3 вариантов → диалог каждый раз разный. */
-function buildAgentDialogue(agents, topic) { return []; // СКРИПТОВАННЫЙ ДИАЛОГ ОТКЛЮЧЁН: Совет говорит живьём — runAgentRoundtable() в chat.js.
-    const list = (agents || []).filter(a => AGENT_ICONS[a]);
-    if (list.length < 2) return [];
-    const t = String(topic || 'задача Босса').replace(/\s+/g, ' ').trim().slice(0, 70) || 'задача Босса';
-    const fill = (s, n) => String(s || '').replace(/\{t\}/g, t).replace(/\{n\}/g, n || 'коллеги');
-    const say = (agent, slot, to) => ({ agent, text: fill(_lineFor(agent, slot, t), to) });
-
-    const lead = list.includes('Оркестратор') ? 'Оркестратор' : list[Math.floor(Math.random() * list.length)];
-    const rest = list.filter(a => a !== lead).sort(() => Math.random() - 0.5);
-    const a1 = rest[0];
-    const a2 = rest[1] || null;
-    const closers = ['Приемная', 'Критик', 'Тестировщик', 'Результат'].filter(a => list.includes(a) && a !== a1);
-    const closer = closers.length ? closers[Math.floor(Math.random() * closers.length)] : lead;
-
-    const out = [];
-    out.push(say(lead, 'ask', a1));
-    out.push(say(a1, 'answer', lead));
-    if (a2) {
-        out.push(say(a2, 'add', a1));
-        out.push(say(a1, 'add', a2));
-    } else {
-        out.push(say(lead, 'add', a1));
-    }
-    out.push(say(closer, 'verdict', lead));
-    return out;
-}
+/* (Старый скриптовый сборщик диалога удалён — Совет говорит через модель.) */
 
 /* Переключатель «Диалог агентов»: включён по умолчанию. */
 let isAgentDialogueEnabled = localStorage.getItem('shtabAgentDialogue') !== 'off';
