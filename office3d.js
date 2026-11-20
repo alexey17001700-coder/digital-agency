@@ -1448,12 +1448,64 @@ function captureAnswer(text, who) {
     if (target) target.reportText = t;
 }
 
+/* ЗАДАЧА БОССА В ЧАТЕ. Чат не всегда помечает, кто именно занят, поэтому
+   офис сам выбирает исполнителя по смыслу задачи: сервер — Оркестратор,
+   безопасность — Охранник, код — Хакер и так далее. Если чат кого-то
+   пометил, офис ждёт его метку и никого лишнего не трогает. */
+function pickAgentForTask(text) {
+    const t = String(text || '');
+    if (/безопас|пароль|токен|уязвим|взлом|защит|секрет|шифр/i.test(t)) return 'Охранник';
+    if (/сервер|termux|ubuntu|nginx|порт|ssl|деплой|sync\.sh|caddy/i.test(t)) return 'Оркестратор';
+    if (/код|скрипт|баг|функци|\.js|html|css2?|файл|логи|api/i.test(t)) return 'Хакер';
+    if (/дизайн|верстк|css|макет|интерфейс|кнопк|цвет/i.test(t)) return 'Дизайнер';
+    if (/смет|цен[аы]|расч[её]т|калькул|стоим|бюджет|замер/i.test(t)) return 'Аналитик';
+    if (/план|этап|roadmap|сроки|задач/i.test(t)) return 'Оркестратор';
+    if (/текст|письм|реклам|пост|описан|заголов/i.test(t)) return 'Копирайтер';
+    if (/тест|проверь|сборк|баг-репорт/i.test(t)) return 'Тестировщик';
+    if (/найд|поиск|узнай|курс|погод/i.test(t)) return 'Исследователь';
+    return null;
+}
+
+let fallbackTaskTimer = null;
+
+function scheduleFallbackTask(text) {
+    if (fallbackTaskTimer) clearTimeout(fallbackTaskTimer);
+    fallbackTaskTimer = setTimeout(() => {
+        fallbackTaskTimer = null;
+        if (!ALL_AGENTS.length) return;
+        // кто-то уже занят по метке чата — не вмешиваемся
+        for (let i = 0; i < ALL_AGENTS.length; i++) {
+            const a = ALL_AGENTS[i];
+            if (a && (a.working || a.workPending || a.state === 'type' || a.state === 'deskwork')) return;
+        }
+        let name = pickAgentForTask(text);
+        let a = name ? agentByNameGlobal(name) : null;
+        if (!a) {
+            const free = [];
+            for (let i = 0; i < ALL_AGENTS.length; i++) {
+                const b = ALL_AGENTS[i];
+                if (b && b.state === 'sit' && !b.working) free.push(b);
+            }
+            if (!free.length) return;
+            a = free[(Math.random() * free.length) | 0];
+        }
+        const t = trimAnswer(text) || 'Задача Босса';
+        a.working = true;                       // держим занятым до ответа
+        a.workUntil = 0;
+        sendToComputer(a, t.length > 46 ? t.slice(0, 44) + '…' : t);
+    }, 1500);
+}
+
 function hookRenderMessage() {
     const prev = window.renderMessage;
     if (typeof prev !== 'function' || prev.__o3dHook) return !!prev;
     const fn = function (text, type, who) {
         try {
-            if (type !== 'user' && text) captureAnswer(text, who);
+            if (type === 'user') {
+                scheduleFallbackTask(text);
+            } else if (text) {
+                captureAnswer(text, who);
+            }
         } catch (e) {}
         return prev.apply(this, arguments);
     };
