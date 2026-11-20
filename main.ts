@@ -5,6 +5,22 @@ const REPO_NAME = Deno.env.get("GITHUB_REPO") || "digital-agency";
 
 const ZVENO_URL = "https://api.zveno.ai/v1/chat/completions";
 const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
+
+// =========================================
+// БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход)
+// ВАЖНО: embed-модели сюда НЕ ВКЛЮЧАТЬ — они не умеют чат и дадут ошибку.
+// =========================================
+const FREE_TEXT_MODELS = [
+    "dots-studio/dots-3-note-preview:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "recursive/flint-v1.0:free",
+];
+
+const FREE_VISION_MODELS = [
+    "nvidia/nemotron-3.5-super-vl:free",
+];
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 // БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
