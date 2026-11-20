@@ -334,6 +334,7 @@ function openApiSettings() {
     document.getElementById('userYandexKey').value = keys.yandexKey || '';
     document.getElementById('userYandexFolder').value = keys.yandexFolder || '';
     document.getElementById('userDeepseekKey').value = keys.deepseekKey || '';
+    const fk = document.getElementById('userFreeKey'); if (fk) fk.value = keys.freeKey || '';
     document.getElementById('apiModal').classList.add('active');
 }
 
