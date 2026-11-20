@@ -642,8 +642,10 @@ function startHardWatchdog() {
         if (answered) { stopHardWatchdog(); return; }
         if (Date.now() - hardStartTime >= HARD_TIMEOUT_MS) {
             stopHardWatchdog(); stopStallWatchdog();
+            if (kickGuardActive()) return;   // пинок недавно уже был — дубль не нужен
             if (stallKicks < STALL_MAX_KICKS) {
                 stallKicks++;
+                markKickSent();
                 renderMessage(`⏱️ *[Система: прошло 300 с, ответа нет. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
                 renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
                 try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
