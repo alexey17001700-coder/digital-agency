@@ -604,6 +604,7 @@ function startTimerFreezeWatchdog() {
         if (cur !== lastTimerText) { lastTimerText = cur; lastTimerChange = now; return; }
         if (now - lastTimerChange < TIMER_FREEZE_MS) return;
         stopTimerFreezeWatchdog();
+        if (kickGuardActive()) return;   // пинок недавно уже был — дубль не нужен
         if (stallKicks >= STALL_MAX_KICKS) {
             renderMessage('⏸️ *[Система: счётчик застыл, лимит пинков исчерпан. Жду Босса.]*', 'director', 'Оркестратор');
             return;
