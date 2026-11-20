@@ -1715,6 +1715,14 @@ function agentTick(a, dt, t) {
         rig.elbowR.rotation.x = -0.55;
         rig.head.rotation.y = Math.sin(t * 0.7 + a.phase) * 0.25;
     } else if (a.state === 'hidden') {
+        // пришла задача от Босса — не сидит в санузле, выходит и идёт работать
+        if (a.workPending) {
+            a.workPending = false;
+            a.model.visible = true;
+            toiletCount = Math.max(0, toiletCount - 1);
+            goHome(a);
+            return;
+        }
         a.waitTimer -= dt;
         if (a.waitTimer <= 0) {
             a.model.visible = true;
