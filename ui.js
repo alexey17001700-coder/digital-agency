@@ -178,9 +178,14 @@ function applyFreeModelButton() {
     if (!btn) return;
     const f = (typeof freeModels === 'function') ? freeModels() : [];
     const cur = f.find(m => m.id === selectedAIModel);
-    btn.innerText = '🆓 Бесплатные: ' + (cur ? cur.label : (f.length ? f[0].label : 'нет'));
-    btn.style.background = cur ? (cur.color || '#333') : '#333';
-    btn.style.color = cur ? (cur.text || '#fff') : '#aaa';
+    if (cur) {
+        btn.innerText = '🆓 Бесплатные: ' + cur.label;
+        btn.style.background = cur.color || '#333';
+        btn.style.color = cur.text || '#fff';
+    } else {
+        btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'выбрать' : 'нет');
+        btn.style.background = '#333'; btn.style.color = '#aaa';
+    }
 }
 
 function toggleFreeModel() {
