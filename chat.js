@@ -545,6 +545,22 @@ function looksTruncated(t) {
     return false;
 }
 
+/* --- ЭТАПЫ БОЛЬШОЙ ЗАДАЧИ ---
+   Большая задача делится на этапы. В конце каждого этапа Архитектор ставит
+   метку [ЭТАП N/M]. Скрипт видит метку и сам, от имени Босса, пишет
+   «продолжи этап N+1» — пока этапы не кончатся. Метка в чате не видна. */
+const STAGE_RE = /\[(?:ЭТАП|STAGE)\s*(\d+)\s*\/\s*(\d+)\]/i;
+const STAGE_MAX_KICKS = 12;        // предохранитель от бесконечной цепочки
+let stageKicks = 0;
+function resetStageKicks() { stageKicks = 0; }
+function parseStageMarker(text) {
+    const m = String(text || '').match(STAGE_RE);
+    if (!m) return null;
+    const cur = parseInt(m[1], 10), total = parseInt(m[2], 10);
+    if (!cur || !total || cur >= total) return null;   // последний этап — метка не нужна
+    return { cur: cur, total: total };
+}
+
 
 /* --- СТОРОЖ ЗАСТЫВШЕГО ТАЙМЕРА ---
    Босс нажал «Отправить» → на кнопке бегут секунды. Если счётчик внезапно
