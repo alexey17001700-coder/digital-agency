@@ -1539,6 +1539,7 @@ function sendToComputer(a, taskText) {
     if (a.state !== 'sit') { a.workPending = true; return false; }
     const text = taskText || TASK_TEXTS[(Math.random() * TASK_TEXTS.length) | 0];
     a.task = text;
+    a.workLeft = 150;          // предохранитель: дольше 150 с за компьютером не сидит
     a.taskCube.visible = true;
     say(a, text, 6000);
     const ti = freeTerminalIndex();
