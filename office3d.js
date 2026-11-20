@@ -1596,6 +1596,31 @@ function agentTick(a, dt, t) {
                 poseSit(a);
             });
         }
+    } else if (a.state === 'type') {
+        /* РАБОТА ЗА КОМПЬЮТЕРОМ: печатает, пока задача в работе.
+           Ответ пришёл в чат (reportPending) — бросает печать и идёт к Боссу. */
+        poseType(a, t);
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            if (a.reportPending) sendReportToBoss(a, a.reportText);
+            else if (a.working) { a.waitTimer = 8 + Math.random() * 6; }
+            else { releaseTerminal(a); goHome(a); }
+        }
+    } else if (a.state === 'deskwork') {
+        /* Все терминалы заняты — печатает за своим столом, работа видна. */
+        poseSit(a);
+        rig.torso.rotation.x = 0.22;
+        rig.armL.rotation.x = -1.46 + Math.sin(t * 9 + a.phase) * 0.16;
+        rig.armR.rotation.x = -1.46 + Math.sin(t * 9 + a.phase + 1.3) * 0.16;
+        rig.elbowL.rotation.x = -0.62;
+        rig.elbowR.rotation.x = -0.62;
+        rig.head.rotation.y = Math.sin(t * 1.4 + a.phase) * 0.10;
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            if (a.reportPending) sendReportToBoss(a, a.reportText);
+            else if (a.working) { a.waitTimer = 7 + Math.random() * 5; }
+            else goHome(a);
+        }
     } else if (a.state === 'report') {
         poseStand(a);
         rig.torso.rotation.x = -0.10 + Math.sin(t * 2.0 + a.phase) * 0.03;
