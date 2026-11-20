@@ -532,7 +532,7 @@ async function askAgentOnce(agentName, topic, spoken) {
     try {
         const res = await fetch(PROXY, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: msgs, temperature: 0.75, model: selectedAIModel, userKeys: roundtableUserKeys() }),
+            body: JSON.stringify({ messages: msgs, temperature: 0.75, model: selectedAIModel, userKeys: roundtableUserKeys(), isBoss: true }),
             signal: ctrl.signal
         });
         const data = await res.json();
