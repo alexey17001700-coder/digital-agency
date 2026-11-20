@@ -120,7 +120,7 @@ repo по умолчанию "digital-agency".
 
 === ПРОЕКТЫ ===
 - digital-agency — Штаб (app.html, style.css, chat.js, ui.js, network.js, voice.js, agents.js, main.ts).
-- nexus_chat — чат (index.html). nexus_ws — сервер чата (main.ts, порт 8001).
+nexus_chat — чат (index.html), nexus_ws — сервер чата (main.ts, :8001).
 - ac_luxury_calc — кондиционеры. window_measure_pro — замер окон. nexus_snake — змейка. window_calc — окна (Flutter). Ещё: shtab-site, Okna.
 
 === СЕРВЕР (VIVO) ===
