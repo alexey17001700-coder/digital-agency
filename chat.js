@@ -1175,7 +1175,9 @@ async function sendMessage(overrideText = null, isKick = false) {
             // ИЛИ прямо написала «пустой ответ» — это такой же обрыв, как тишина:
             // пинаем «продолжи» от имени Босса.
             const emptyCheck = String(aiText || '').replace(/\[[^\]]*\]/g, '').replace(/[\s*_`>#\-–—•.]/g, '');
-            const saidEmpty = isEmptyAnswerText(aiText);
+            // «Пустой ответ» пинаем ТОЛЬКО когда это единственный текст сообщения.
+            // Если модель разбирает тему и лишь упомянула заглушку — пинка нет.
+            const saidEmpty = isOnlyEmptyAnswerText(aiText);
             if (!emptyCheck || saidEmpty) {
                 lastSendSuccess = false;
                 if (!isKick) { fireAutoKick(saidEmpty ? 'модель написала «пустой ответ»' : 'пустой ответ от модели'); return; }
