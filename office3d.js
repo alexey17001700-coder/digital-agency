@@ -1641,6 +1641,8 @@ function agentTick(a, dt, t) {
             });
         }
     } else {
+        // пришла задача, а агент стоит по делам — не задерживается, идёт к столу
+        if (a.workPending) { releaseTerminal(a); goHome(a); }
         poseStand(a);
         const s = Math.sin(t * 1.8 + a.phase);
         rig.torso.rotation.x = s * 0.04;
