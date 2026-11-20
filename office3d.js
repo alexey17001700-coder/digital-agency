@@ -2180,6 +2180,19 @@ function install() {
     });
 
     loadThree().catch(() => console.warn('[office3d] 3D недоступен, останется 2D-офис'));
+
+    // ПРЕДЗАГРУЗКА: сцена поднимается СРАЗУ при запуске приложения, в скрытом
+    // контейнере. Кнопка «Офис» открывает уже работающий офис — агенты в этот
+    // момент ходят и работают, а не стоят на заставке загрузки.
+    setTimeout(() => { try { prewarm(); } catch (e) {} }, 1200);
+}
+
+/* Строит сцену заранее, не показывая её. Ошибку только логируем:
+   при открытии кнопки она всплывёт полноэкранной диагностикой. */
+function prewarm() {
+    const office = document.getElementById('office-container');
+    if (!office || S || scenePromise) return;
+    ensureScene(office).catch((e) => console.warn('[office3d] предзагрузка не удалась:', (e && e.message) || e));
 }
 
 function boot() {
