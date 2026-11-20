@@ -1149,7 +1149,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
     } finally {
-        if (mySeq === sendSeq) { stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
+        if (mySeq === sendSeq) { stopTimerFreezeWatchdog(); stopHardWatchdog(); if (lastSendSuccess) stopStallWatchdog(); }
         isGenerating = false; clearInterval(timerInterval); 
         attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
         let finalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
