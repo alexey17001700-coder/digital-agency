@@ -2064,7 +2064,9 @@ function startScene(office) {
         if (e && !e.__stage) e.__stage = 'buildScene';
         throw e;
     }
-[object Object]
+    const { scene, screens, agents, groups } = built;
+    ALL_AGENTS = agents;   // список агентов нужен, чтобы делить рабочие терминалы
+    const { cam, st } = makeCamera(office);
     // кнопки зума подключаем ТОЛЬКО после того, как renderer/cam/st созданы
     zin.onclick = () => zoomAt(renderer.domElement, cam, st, st.distT * 0.78);
     zout.onclick = () => zoomAt(renderer.domElement, cam, st, st.distT * 1.28);
