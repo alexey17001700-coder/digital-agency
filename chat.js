@@ -919,8 +919,17 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
+            // Метка [ЭТАП N/M] — этап закрыт, просим продолжить следующий.
+            const stage = parseStageMarker(aiText);
+            if (!isKick && stage && stageKicks < STAGE_MAX_KICKS) {
+                stageKicks++;
+                renderMessage(`🧩 *[Система: этап ${stage.cur}/${stage.total} закрыт. Авто-пинок — прошу продолжить этап ${stage.cur + 1}.]*`, 'director', 'Оркестратор');
+                const nextStageText = `продолжи этап ${stage.cur + 1} из ${stage.total}`;
+                renderMessage(nextStageText, 'boss'); addMessageToHistory(nextStageText, 'boss');
+                setTimeout(() => sendMessage(nextStageText, true), 900);
+            }
             // Ответ пришёл, но оборван на середине — просим продолжить.
-            if (!isKick && looksTruncated(aiText) && stallKicks < STALL_MAX_KICKS) {
+            else if (!isKick && looksTruncated(aiText) && stallKicks < STALL_MAX_KICKS) {
                 stallKicks++;
                 renderMessage(`⚡ *[Система: ответ оборван на середине. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
                 renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
