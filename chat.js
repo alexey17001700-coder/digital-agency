@@ -43,30 +43,28 @@ let lastSendSuccess = false;   // пришёл ли ответ — от этог
    продолжал считать от своего старта — отсюда зашкал за 500 с.
    Теперь счётчик один: перед стартом старый гасится, отсчёт идёт от
    единого sendStartTime. */
-let sendTimerInterval = null;
+let sendTimerLoop = null;
 let sendStartTime = 0;
-const TIMER_MAX_MS = 400000;   // 400 с — предел: дольше счётчик расти не имеет права
-/* stopSendTimer гасит интервал И обнуляет метку старта. Обнуление важно:
-   любой осиротевший интервал на следующем тике видит sendStartTime !== myStart
-   и убивает себя сам — поэтому два счётчика физически не могут писать в кнопку. */
+const TIMER_MAX_MS = 330000;   // 330 с — предел (совпадает с таймаутом запроса): выше не растёт
+/* --- ОДИН СЧЁТЧИК НА ВСЁ ПРИЛОЖЕНИЕ ---
+   Раньше на КАЖДЫЙ вызов sendMessage (в т.ч. авто-пинок, «продолжи этап»)
+   создавался свой setInterval. Два-три интервала писали в кнопку по очереди:
+   цифры прыгали друг на друга, а старый считал от своего старта — отсюда
+   зашкал за 500 с. Теперь интервал ОДИН и создаётся один раз. Он не хранит
+   свой старт, а читает единственный sendStartTime — наложить два отсчёта
+   физически невозможно. */
 function stopSendTimer() {
-    if (sendTimerInterval) { clearInterval(sendTimerInterval); sendTimerInterval = null; }
     sendStartTime = 0;
+    if (sendTimerLoop) { clearInterval(sendTimerLoop); sendTimerLoop = null; }
 }
-/* ЕДИНСТВЕННЫЙ счётчик на кнопке, привязанный к КОНКРЕТНОМУ запросу.
-   Каждый интервал считает от СВОЕГО myStart (а не от общей переменной) и
-   умирает, если его вытеснил новый запрос (sendTimerInterval !== handle
-   ИЛИ sendStartTime !== myStart). Так цифры не могут наложиться друг на
-   друга, а подвешенный таймер не считает после ответа (зашкал за 500 с).
-   На пределе TIMER_MAX_MS счётчик сбрасывается и освобождает кнопку. */
 function startSendTimer() {
-    stopSendTimer();
-    const myStart = sendStartTime = Date.now();
-    const handle = setInterval(() => {
-        if (sendTimerInterval !== handle || sendStartTime !== myStart) { clearInterval(handle); return; } // вытеснен — умирает
+    sendStartTime = Date.now();          // точка отсчёта одна на всё приложение
+    if (sendTimerLoop) return;           // цикл уже идёт — второй не создаём
+    sendTimerLoop = setInterval(() => {
+        if (!sendStartTime) { stopSendTimer(); return; }                       // отсчёт не запущен — стоп
         if (!isGenerating) { stopSendTimer(); return; }                        // ответ пришёл — стоп
-        if (!sendBtn || sendBtn.className.indexOf('stop-active') === -1) { stopSendTimer(); return; } // кнопка уже не в работе — стоп
-        const ms = Date.now() - myStart;
+        if (!sendBtn || sendBtn.className.indexOf('stop-active') === -1) { stopSendTimer(); return; } // кнопка не в работе — стоп
+        const ms = Date.now() - sendStartTime;
         if (ms >= TIMER_MAX_MS) {                                              // запрос мёртв — не зашкаливаем
             stopSendTimer();
             isGenerating = false;
@@ -77,7 +75,6 @@ function startSendTimer() {
         }
         sendBtn.innerText = (ms / 1000).toFixed(1) + "s";
     }, 100);
-    sendTimerInterval = handle;
 }
 let attachedImageBase64 = null; let currentChatImage = null;
 let attachedFile = null;   // приложенный файл Босса: { name, size, content }
