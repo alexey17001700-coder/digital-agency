@@ -1239,7 +1239,9 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentAttempt++;
                     if (!takeTurnCall()) { lastError = 'Лимит запросов на один вопрос исчерпан (экономия баланса).'; break; }
                     currentMessages = trimHistory(currentMessages);
-                    const response = await fetch(PROXY, { 
+                    // Ollama (ПК) — свой OpenAI-совместимый адрес через шлюз; остальные — штатный PROXY.
+                    const endpoint = isOllama ? OLLAMA_ENDPOINT : PROXY;
+                    const response = await fetch(endpoint, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, freeKey: userKeys.freeKey || '', image: attachedImageBase64, isBoss: true }),
                         signal: currentAbortController.signal
