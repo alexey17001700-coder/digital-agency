@@ -939,6 +939,17 @@ async function sendMessage(overrideText = null, isKick = false) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
+                // Приложенный файл: подмешиваем содержимое в последнее сообщение Босса (только на этот запрос).
+                if (attachedFile && attachedFile.content) {
+                    for (let i = messagesToSend.length - 1; i >= 0; i--) {
+                        if (messagesToSend[i].role === 'user') {
+                            messagesToSend[i] = Object.assign({}, messagesToSend[i], {
+                                content: `[ФАЙЛ: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${messagesToSend[i].content}`
+                            });
+                            break;
+                        }
+                    }
+                }
 
                 let finalPrompt = SYSTEM_PROMPT;
                 if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
