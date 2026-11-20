@@ -687,26 +687,50 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
         ];
     }
 
-    const payload = {
-        model: visionModel,
-        messages: visionMessages,
-        max_tokens: 1024,
-        temperature: 0.7
-    };
+    let lastVisionError = "Все VL-модели не ответили";
 
-    const res = await fetch(ZVENO_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(FETCH_TIMEOUT)
-    });
+    for (let vi = 0; vi < visionChain.length; vi++) {
+        const visionModel = visionChain[vi];
+        const payload = {
+            model: visionModel,
+            messages: visionMessages,
+            max_tokens: 1024,
+            temperature: 0.7
+        };
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `Ошибка Vision: ${res.status}`);
-    return data.choices?.[0]?.message?.content || "Пустой ответ";
+        try {
+            const res = await fetch(ZVENO_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT)
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                lastVisionError = `${visionModel}: ${data?.error?.message || res.status}`;
+                console.log(`[VISION-FALLBACK] ${lastVisionError}`);
+                continue;
+            }
+            const text = data.choices?.[0]?.message?.content;
+            if (!text) {
+                lastVisionError = `${visionModel}: пустой ответ`;
+                console.log(`[VISION-FALLBACK] ${lastVisionError}`);
+                continue;
+            }
+            console.log(`[VISION] ответила модель: ${visionModel}`);
+            return text;
+        } catch (e: any) {
+            lastVisionError = `${visionModel}: ${e?.message || e}`;
+            console.log(`[VISION-FALLBACK] ${lastVisionError}`);
+            continue;
+        }
+    }
+
+    throw new Error(`Ошибка Vision: ${lastVisionError}`);
 }
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
