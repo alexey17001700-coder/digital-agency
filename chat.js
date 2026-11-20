@@ -84,10 +84,13 @@ let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
-/* --- СПИСОК МОДЕЛЕЙ ИИ (кнопка 🧠 ИИ переключает по тапу) ---
+/* --- СПИСОК МОДЕЛЕЙ ИИ ---
    Бесплатные маршруты идут через тот же шлюз: при нулевом балансе они
    доступны без оплаты и без карты, формат запроса — обычный OpenAI.
-   Список хранится в localStorage (shtabAIModels) — можно править без кода. */
+   Список хранится в localStorage (shtabAIModels) — можно править без кода.
+   Модель с полем free: true попадает на отдельную кнопку 🆓 Бесплатные.
+   Платные можно отключить целиком (флаг shtabPaidModels) — тогда они
+   не показываются в панели и не выбираются. */
 const AI_MODELS_DEFAULT = [
     { id: 'yandex',   label: 'Yandex',    color: '#333',    text: '#aaa' },
     { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
@@ -101,6 +104,34 @@ try {
     if (sm) { const p = JSON.parse(sm); if (Array.isArray(p) && p.length) AI_MODELS = p; }
 } catch (e) {}
 function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
+
+/* --- БЕСПЛАТНЫЕ / ПЛАТНЫЕ ---
+   freeModels() — модели с пометкой free: true (кнопка 🆓 Бесплатные).
+   paidEnabled() — разрешены ли платные (переключатель в панели 🧠 ИИ).
+   allowedModels() — то, что реально можно выбрать сейчас.
+   resolveAllowedModel() — страховка: платная модель при отключённых платных
+   не уйдёт на сервер, запрос уедет на бесплатный маршрут. */
+function freeModels() { return AI_MODELS.filter(m => m && m.free); }
+function paidModels() { return AI_MODELS.filter(m => m && !m.free); }
+function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
+function setPaidEnabled(on) {
+    localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
+    const cur = getModelInfo(selectedAIModel);
+    if (!on && cur && !cur.free) {
+        const f = freeModels();
+        if (f.length) { selectedAIModel = f[0].id; localStorage.setItem('shtabAIModel', selectedAIModel); }
+    }
+    if (typeof applyAIModelButton === 'function') applyAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+}
+function allowedModels() { return freeModels().concat(paidEnabled() ? paidModels() : []); }
+function resolveAllowedModel(id) {
+    const info = getModelInfo(id);
+    if (info && info.free) return id;
+    if (paidEnabled()) return id;
+    const f = freeModels();
+    return f.length ? f[0].id : id;
+}
 
 const chatContainer = document.getElementById('chatContainer');
 // Делегированный обработчик: разворот миниатюр по клику (переживает перерисовку innerHTML).
