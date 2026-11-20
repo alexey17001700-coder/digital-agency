@@ -2055,6 +2055,12 @@ function startScene(office) {
     };
     tick();
 
+    /* СТАРТОВАЯ ЖИЗНЬ: офис не «просыпается» при открытии кнопки — часть
+       агентов уже в пути с первых секунд, первый доклад Боссу через 2 с. */
+    bossTimer = 2;
+    toiletTimer = 30;
+    agents.forEach((a, i) => { a.breakTimer = 1.5 + i * 1.7; });
+
     S = {
         renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office,
         setVisible: (v) => { vis = !!v; }
