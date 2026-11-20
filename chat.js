@@ -1118,6 +1118,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             // 2+ агентов — включаем короткий диалог между ними, чтобы Совет реально общался.
             // Считаем именно РАЗНЫХ говорящих: если реплики повторяет один агент — это не диалог.
             const distinctSpeakers = new Set(replies.map(r => r.agent)).size;
+            const distinctAgents = new Set(replies.map(r => r.agent)).size;
             if (!isKick && typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
                 && selectedAgents.length > 1 && distinctSpeakers < 2) {
                 await playAgentDialogue(text);
