@@ -1968,6 +1968,9 @@ function startScene(office) {
     const clock = new THREE.Clock();
     let raf = 0;
     let elapsed = 0;
+    /* Офис может быть скрыт (Босс закрыл кнопку) — агенты продолжают жить,
+       но кадры не рисуем: экономия батареи без потери «жизни» офиса. */
+    let visible = true;
     let vis = false;   // офис виден? если нет — симуляция идёт, рендер пропускаем
 
     const tick = () => {
