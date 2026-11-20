@@ -167,6 +167,8 @@
         var b = box();
         if (!b) return;
         b.style.cursor = 'pointer';
+        if (b.dataset.zvBound === '1') return;   // уже повешено
+        b.dataset.zvBound = '1';
         b.addEventListener('click', function (e) { e.preventDefault(); openPanel(); });
         b.addEventListener('contextmenu', function (e) { e.preventDefault(); openPanel(); });
     }
