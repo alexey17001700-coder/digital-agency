@@ -188,7 +188,11 @@ function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_
 function addMessageToHistory(text, sender, agentName = null) {
     const role = sender === 'boss' ? 'user' : 'assistant';
     if (allChats[currentChatId]) {
-        allChats[currentChatId].messages.push({ role, content: text, agentName });
+        const msgs = allChats[currentChatId].messages;
+        const lastMsg = msgs[msgs.length - 1];
+        // Дубль: то же самое сообщение подряд в течение 5 с второй раз не пишем (защита после F5).
+        if (lastMsg && lastMsg.role === role && lastMsg.content === text && lastMsg.t && (Date.now() - lastMsg.t) < 5000) return;
+        msgs.push({ role, content: text, agentName, t: Date.now() });
         if (role === 'user' && allChats[currentChatId].title === "Новый чат") {
             allChats[currentChatId].title = text.substring(0, 20) + (text.length > 20 ? "..." : "");
             chatTitleEl.innerText = allChats[currentChatId].title;
