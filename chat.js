@@ -554,6 +554,7 @@ function startTimerFreezeWatchdog() {
         if (!isGenerating) { stopTimerFreezeWatchdog(); return; }
         const now = Date.now();
         const cur = sendBtn ? String(sendBtn.innerText || '') : '';
+        if (!/\d/.test(cur)) { lastTimerText = cur; lastTimerChange = now; return; }  // на кнопке не счётчик — не наш случай
         if (cur !== lastTimerText) { lastTimerText = cur; lastTimerChange = now; return; }
         if (now - lastTimerChange < TIMER_FREEZE_MS) return;
         stopTimerFreezeWatchdog();
