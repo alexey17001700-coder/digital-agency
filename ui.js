@@ -355,6 +355,7 @@ function clearApiSettings() {
         document.getElementById('userYandexKey').value = '';
         document.getElementById('userYandexFolder').value = '';
         document.getElementById('userDeepseekKey').value = '';
+        const fk = document.getElementById('userFreeKey'); if (fk) fk.value = '';
         alert("Ключи успешно удалены из памяти.");
         document.getElementById('apiModal').classList.remove('active');
     }
