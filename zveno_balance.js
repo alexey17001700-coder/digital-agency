@@ -21,7 +21,7 @@
     var BASE = 'https://api.zveno.ai/v1';
 
     // Шлюзы отдают баланс по-разному — пробуем по очереди, пока не найдём число.
-    var ENDPOINTS = ['/credits', '/balance', '/me', '/user/balance', '/dashboard/billing/credit_grants'];
+    var ENDPOINTS = ['/api/zveno/balance', '/credits', '/balance', '/me', '/user/balance', '/dashboard/billing/credit_grants'];
 
     var longFired = false;
     var pressTimer = null;
