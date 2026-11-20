@@ -102,9 +102,6 @@ const AI_MODELS_DEFAULT = [
     { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra', color: '#76b900', text: '#000', free: true },
     { id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning', color: '#76b900', text: '#000', free: true },
     { id: 'nvidia/nemotron-3.5-super-vl:free', label: 'Nemotron 3.5 Super VL', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3-embed-1b:free', label: 'Nemotron 3 Embed 1B', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3.5-embed-1b:free', label: 'Nemotron 3.5 Embed 1B', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3.5-embed-8b:free', label: 'Nemotron 3.5 Embed 8B', color: '#76b900', text: '#000', free: true },
     { id: 'recursive/flint-v1.0:free', label: 'Flint', color: '#ff7043', text: '#000', free: true }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
