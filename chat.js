@@ -539,7 +539,9 @@ async function playAgentReplies(replies) {
         await new Promise(resolve => { typeMessage(reply.text, 'director', reply.agent, resolve); });
         if (!isTaskAgent) { setAgentStatus(reply.agent, 'idle'); updateAgentStatus(reply.agent, 'free'); }
         // 3D-ОФИС: ответ пришёл в чат — агент бросает печать и идёт с докладом к Боссу
-        if (typeof window.office3dReport === 'function') window.office3dReport(reply.agent, 'Готово, Босс!');
+        // 3D-ОФИС: ответ пришёл в чат — агент бросает печать и идёт к столу Босса
+        // с НАЧАЛОМ НАСТОЯЩЕГО ответа, а не с дежурным «Готово, Босс!».
+        if (typeof window.office3dReport === 'function') window.office3dReport(reply.agent, reply.text);
         await new Promise(r => setTimeout(r, 800)); 
     }
 }
