@@ -790,6 +790,14 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
+            // Ответ пришёл, но оборван на середине — просим продолжить.
+            if (!isKick && looksTruncated(aiText) && stallKicks < STALL_MAX_KICKS) {
+                stallKicks++;
+                renderMessage(`⚡ *[Система: ответ оборван на середине. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
+                renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
+                setTimeout(() => sendMessage('продолжи', true), 900);
+            }
+
             const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу|дай мне секунду|гляну текущий код|сейчас выдам/i;
             if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 60000); 
 
