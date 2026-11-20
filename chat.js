@@ -1112,6 +1112,13 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
 
+            // Модель ответила монологами (или одним голосом), а в Совете 2+ агентов —
+            // включаем короткий диалог между ними, чтобы Совет реально общался.
+            if (typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
+                && selectedAgents.length > 1 && replies.length < 2) {
+                await playAgentDialogue(text);
+            }
+
             // Метка [ЭТАП N/M] — этап закрыт, просим продолжить следующий.
             const stage = parseStageMarker(aiText);
             if (!isKick && stage && stageKicks < STAGE_MAX_KICKS) {
