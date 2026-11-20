@@ -69,17 +69,26 @@
                ' · цена: ' + fmt(getPrice()) + ' ₽ за 1 млн');
     }
 
-    // Учёт токенов от модели. Зовётся из chat.js после каждого ответа.
+    // Учёт токенов от модели. Возвращает true, если токены реально списаны.
     function addUsage(usage) {
-        if (!usage || typeof usage !== 'object') return;
-        var p = Number(usage.prompt_tokens || usage.input_tokens || 0);
-        var c = Number(usage.completion_tokens || usage.output_tokens || 0);
-        var total = Number(usage.total_tokens || 0);
+        if (!usage || typeof usage !== 'object') return false;
+        var p = Number(usage.prompt_tokens || usage.input_tokens || usage.promptTokens || usage.inputTokens || 0);
+        var c = Number(usage.completion_tokens || usage.output_tokens || usage.completionTokens || usage.outputTokens || 0);
+        var total = Number(usage.total_tokens || usage.totalTokens || 0);
         if (!total) total = p + c;
-        if (!isFinite(total) || total <= 0) return;
+        if (!isFinite(total) || total <= 0) return false;
         lsSet(LS_SPENT, String(getSpentTokens() + total));
         lsSet(LS_SPENT_RUB, String(getSpentRub() + (total / 1000000) * getPrice()));
+        try { console.log('[zveno] списано токенов:', total, '· баланс:', currentBalance().toFixed(2), '₽'); } catch (e) {}
         show();
+        return true;
+    }
+
+    // Оценка токенов по длине текста (~4 символа на токен).
+    function addText(text) {
+        var s = String(text || '');
+        if (!s) return false;
+        return addUsage({ total_tokens: Math.max(1, Math.round(s.length / 4)) });
     }
 
     // ---------- ОКНО НАСТРОЕК ----------
