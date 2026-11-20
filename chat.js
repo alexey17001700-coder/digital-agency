@@ -1089,6 +1089,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
         
         if (success) {
+            lastSendSuccess = true;
             playSound('receive'); stallKicks = 0; stopStallWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
