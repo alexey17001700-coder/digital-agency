@@ -610,6 +610,7 @@ function startTimerFreezeWatchdog() {
             return;
         }
         stallKicks++;
+        markKickSent();
         renderMessage(`⚡ *[Система: счётчик застыл на ${cur || '—'} — ответа нет. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS}.]*`, 'director', 'Оркестратор');
         renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
         try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
