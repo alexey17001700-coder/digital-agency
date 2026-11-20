@@ -189,7 +189,7 @@ function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_
     chatContainer.scrollTop = chatContainer.scrollHeight; renderChatList();
 }
 
-function addMessageToHistory(text, sender, agentName = null) {
+function addMessageToHistory(text, sender, agentName = null, file = null) {
     const role = sender === 'boss' ? 'user' : 'assistant';
     if (allChats[currentChatId]) {
         const msgs = allChats[currentChatId].messages;
