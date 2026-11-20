@@ -605,6 +605,7 @@ async function runAgentRoundtable(topic) {
         spoken.push({ agent: agent, text: reply });
         await new Promise(resolve => { typeMessage(reply, 'director', agent, resolve); });
         setAgentStatus(agent, 'idle'); updateAgentStatus(agent, 'free');
+        if (typeof window.office3dReport === 'function') window.office3dReport(agent, 'Готово, Босс!');
         await new Promise(r => setTimeout(r, 400));
     }
     addMessageToHistory(spoken.map(s => `[${s.agent}]: ${s.text}`).join('\n'), 'director', 'Совет');
