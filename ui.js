@@ -200,7 +200,6 @@ function bindFreeModelButton() {
 
 function openAIModelPanel() {
     if (document.getElementById('aiModelPanel')) return;
-    const list = (typeof AI_MODELS !== 'undefined') ? AI_MODELS : [];
     const ov = document.createElement('div');
     ov.id = 'aiModelPanel';
     ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
@@ -210,19 +209,61 @@ function openAIModelPanel() {
     title.textContent = '🧠 МОДЕЛЬ ИИ';
     title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;';
     box.appendChild(title);
-    list.forEach(m => {
+
+    const rowStyle = (active) => 'display:block;width:100%;text-align:left;padding:11px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid ' + (active ? '#00e5ff' : '#2a333d') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'transparent') + ';color:#e6edf3;';
+    const pick = (m) => {
+        selectedAIModel = m.id;
+        localStorage.setItem('shtabAIModel', selectedAIModel);
+        applyAIModelButton();
+        ov.remove();
+    };
+    const section = (label, color) => {
+        const s = document.createElement('div');
+        s.textContent = label;
+        s.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:.6px;color:' + color + ';margin:10px 0 6px;';
+        box.appendChild(s);
+    };
+    const hint = (txt) => {
+        const e = document.createElement('div');
+        e.textContent = txt;
+        e.style.cssText = 'font-size:12px;color:#8b98a5;margin-bottom:8px;line-height:1.4;';
+        box.appendChild(e);
+    };
+
+    // БЕСПЛАТНЫЕ — всегда доступны, отдельным блоком.
+    const free = (typeof freeModels === 'function') ? freeModels() : [];
+    section('🆓 БЕСПЛАТНЫЕ', '#7ee08a');
+    if (!free.length) hint('Нет бесплатных моделей в списке.');
+    free.forEach(m => {
         const row = document.createElement('button');
-        const active = m.id === selectedAIModel;
-        row.textContent = (active ? '✅ ' : '') + m.label + (m.free ? '  🆓' : '');
-        row.style.cssText = 'display:block;width:100%;text-align:left;padding:11px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid ' + (active ? '#00e5ff' : '#2a333d') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'transparent') + ';color:#e6edf3;';
-        row.onclick = () => {
-            selectedAIModel = m.id;
-            localStorage.setItem('shtabAIModel', selectedAIModel);
-            applyAIModelButton();
-            ov.remove();
-        };
+        row.textContent = (m.id === selectedAIModel ? '✅ ' : '') + m.label + '  🆓';
+        row.style.cssText = rowStyle(m.id === selectedAIModel);
+        row.onclick = () => pick(m);
         box.appendChild(row);
     });
+
+    // ПЛАТНЫЕ — можно отключить целиком одним тапом.
+    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
+    section('💳 ПЛАТНЫЕ', '#ffd700');
+    const sw = document.createElement('button');
+    sw.textContent = on ? '🔓 Платные: ВКЛ — тап, чтобы отключить' : '🔒 Платные: ВЫКЛ — тап, чтобы включить';
+    sw.style.cssText = 'display:block;width:100%;text-align:left;padding:10px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;border:1px solid ' + (on ? '#ffd700' : '#2a333d') + ';background:' + (on ? 'rgba(255,215,0,.10)' : 'transparent') + ';color:' + (on ? '#ffd700' : '#8b98a5') + ';';
+    sw.onclick = () => { setPaidEnabled(!paidEnabled()); ov.remove(); openAIModelPanel(); };
+    box.appendChild(sw);
+
+    const paid = (typeof paidModels === 'function') ? paidModels() : [];
+    if (on) {
+        paid.forEach(m => {
+            const row = document.createElement('button');
+            row.textContent = (m.id === selectedAIModel ? '✅ ' : '') + m.label;
+            row.style.cssText = rowStyle(m.id === selectedAIModel);
+            row.onclick = () => pick(m);
+            box.appendChild(row);
+        });
+    } else {
+        hint('Платные отключены — скрыты и не выбираются. Запросы идут только на бесплатные.');
+    }
+
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';
     close.style.cssText = 'width:100%;padding:9px;border:1px solid #2a333d;border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;margin-top:4px;';
