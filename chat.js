@@ -1622,7 +1622,14 @@ async function sendMessage(overrideText = null, isKick = false) {
             const saidEmpty = isOnlyEmptyAnswerText(aiText);
             if (!emptyCheck || saidEmpty) {
                 lastSendSuccess = false;
-                if (!isKick) { fireAutoKick(saidEmpty ? 'модель написала «пустой ответ»' : 'пустой ответ от модели'); return; }
+                const emptyWhy = saidEmpty ? 'модель написала «пустой ответ»' : 'пустой ответ от модели';
+                if (!isKick) {
+                    // НАДЗИРАТЕЛЬ: пустой ответ = задача не сделана. Передаём её
+                    // следующему агенту (Помощник → бесплатная модель), а не
+                    // пинаем того же самого ещё раз.
+                    if (typeof supFailed === 'function') { supFailed('arch', emptyWhy); return; }
+                    fireAutoKick(emptyWhy); return;
+                }
                 renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
             }
             lastSendSuccess = true;
