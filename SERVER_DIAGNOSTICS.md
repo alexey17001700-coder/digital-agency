@@ -242,4 +242,100 @@ grep -c GIGACHAT_KEY /root/.env           # должно быть 1
 
 ---
 
+## 12. ПОЛНАЯ КАРТА СЕРВЕРА (факты, снятые с живой системы)
+
+> Снято командами `ls -la /root`, `cat /root/Caddyfile`, `cat /root/sync.sh`.
+> Это реальное состояние машины — точка отсчёта при ремонте.
+
+### 12.1. Содержимое /root (что реально лежит)
+
+| Файл / папка | Что это |
+|---|---|
+| `main.ts` (~58 КБ) | Сервер Штаба, порт 8000 |
+| `main.ts.bak` | Предыдущая версия от `sync.sh` |
+| `.env` (~822 Б) | Все ключи (ZVENO, GIGACHAT, GITHUB, VAPID, TELEGRAM) |
+| `.nexus_env`, `.nexus_ws_env` | Отдельные env для Чата |
+| `Caddyfile`, `Caddyfile.bak2` | Конфиг Caddy + бэкап |
+| `nexus_ws/` | Сервер Чата, порт 8001 |
+| `ssl/` | `cert.pem` + `key.pem` для Caddy |
+| `start_all.sh`, `start.sh`, `status.sh`, `sync.sh` | Скрипты запуска/статуса/курьера |
+| `shtab.log`, `chat.log`, `caddy.log`, `sync.log`, `zveno.log` | Логи по службам |
+| `server_info.txt`, `dump.txt` | Слепки состояния |
+| `root_ca.pem`, `sber_ca.pem` | Сертификаты (Минцифры / Сбер) |
+| `cloudflared-linux-arm64` | Бинарник Cloudflare Tunnel (резервный доступ) |
+| `.acme.sh`, `.deno`, `.ssh`, `.cache`, `.config` | Служебные папки |
+
+**КРИТИЧНО:** файлов `app.html`, `chat.js`, `ui.js`, `index.html` на сервере НЕТ.
+Фронтенд живёт только на GitHub Pages. На сервере — только `main.ts` и `nexus_ws/main.ts`.
+
+### 12.2. Caddyfile (дословно)
+
+```
+{
+    https_port 8443
+    auto_https disable_redirects
+}
+shtab-boss.duckdns.org {
+    tls /root/ssl/cert.pem /root/ssl/key.pem
+    handle /ws*    { reverse_proxy localhost:8001 }
+    handle /stats* { reverse_proxy localhost:8001 }
+    handle /tts*   { reverse_proxy localhost:8000 }
+    handle         { reverse_proxy localhost:8000 }
+}
+```
+- SSL-порт **8443**, редирект с HTTP отключён.
+- `/ws*` и `/stats*` → Чат (8001). Всё остальное + `/tts*` → Штаб (8000).
+
+### 12.3. sync.sh (дословно, логика)
+
+```bash
+URL="https://raw.githubusercontent.com/alexey17001700-coder/digital-agency/main/main.ts"
+DIR="/root"; TMP="$DIR/.main.ts.part"; DST="$DIR/main.ts"
+while true; do
+  if curl -fsSL -m 10 --connect-timeout 5 -o "$TMP" "$URL"; then
+    SIZE=$(stat -c%s "$TMP" 2>/dev/null || echo 0)
+    if [ "$SIZE" -gt 1000 ] && grep -q "Deno.serve" "$TMP"; then
+      H_OLD=$(sha256sum "$DST" | awk '{print $1}'); H_NEW=$(sha256sum "$TMP" | awk '{print $1}')
+      if [ "$H_OLD" != "$H_NEW" ]; then cp "$DST" "$DST.bak"; mv "$TMP" "$DST"; echo "$(date +%T): OK"; fi
+    fi
+  fi
+  rm -f "$TMP"
+  sleep 3
+done
+```
+- Тянет **только `main.ts`** каждые 3 сек, таймаут 10 сек.
+- Защита: размер > 1000 байт **и** наличие `Deno.serve`. Иначе файл не подменяется.
+- При изменении — старый уходит в `main.ts.bak`, новый встаёт на место.
+- **Фронтенд НЕ синхронизируется** — он и так с GitHub Pages.
+
+### 12.4. Алгоритм ремонта «сервер молчит»
+
+1. `bash /root/status.sh` — смотреть порты 8000 / 8001 / 8443 и процесс `sync.sh`.
+2. `tail -n 40 /root/shtab.log` — ошибки Deno.
+3. `tail -n 40 /root/zveno.log` — что с ИИ-маршрутами.
+4. `tail -n 20 /root/sync.log` — тянется ли `main.ts` из GitHub.
+5. Проверить ключи: `grep -c GIGACHAT_KEY /root/.env`, `grep -c ZVENO_KEY /root/.env`.
+6. Проверить токен GitHub (раздел 8).
+7. Перезапуск: `pkill -f "deno run"; pkill -f sync.sh; pkill -f caddy; bash /root/start_all.sh`.
+8. Проверить, что сервер отвечает:
+```bash
+curl -s -X POST http://localhost:8000/ -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"тест"}],"model":"gigachat"}' | head -c 300
+```
+
+### 12.5. Быстрые проверки одной строкой
+
+```bash
+# свежесть кода на сервере
+ls -l --time-style=+%H:%M /root/main.ts; grep -c 'gigachat/i.test' /root/main.ts
+# ключи на месте
+grep -c GIGACHAT_KEY /root/.env; grep -c ZVENO_KEY /root/.env
+# порты живы
+ss -ltnp 2>/dev/null | grep -E '8000|8001|8443'
+# процессы
+ps aux | grep -E 'deno|caddy|sync.sh' | grep -v grep
+```
+
+---
+
 === КОНЕЦ ИНСТРУКЦИИ ===
