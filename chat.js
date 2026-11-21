@@ -1638,6 +1638,8 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (!isKick && stallRegex.test(aiText) && selectedAgents.length === 1) watchdogTimer = setTimeout(() => { kickAI(selectedAgents[0]); }, 60000); 
 
         } else {
+            // НАДЗИРАТЕЛЬ: Архитектор сорвался — помечаем сбой в журнале.
+            if (typeof supFailed === 'function') supFailed('arch', lastError || 'сбой');
             renderMessage(`❌ **Ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
