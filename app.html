@@ -29,6 +29,15 @@
         background: rgba(126,224,138,.14); color: #7ee08a; border-color: #7ee08a;
         box-shadow: 0 0 8px rgba(126,224,138,.25);
     }
+
+    /* РЕЖИМ «ЧАТ ОТДЕЛЬНО» (app.html?chatonly=1)
+       Открывается кнопкой 🪟 Чат отдельно в новом окне. Прячем агентов,
+       панель Помощника и лишние панели — чат занимает весь экран. */
+    body.chat-only-mode .agents-wrapper,
+    body.chat-only-mode .chat-col-assistant { display: none !important; }
+    body.chat-only-mode .chat-split { grid-template-columns: 1fr !important; }
+    body.chat-only-mode .chat-col-main { width: 100% !important; }
+    body.chat-only-mode .chat-container { flex: 1 1 auto !important; min-height: 0 !important; }
     </style>
     <script>
         const timestamp = new Date().getTime();
