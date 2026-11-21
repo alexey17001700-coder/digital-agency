@@ -88,7 +88,7 @@ let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
    Переключатель над полем ввода. 'arch' — обычный путь (Архитектор Штаба),
    'assistant' — запрос уходит в ИИ-шлюз nexus_ws/ai.ts (:8002), ответ
    печатается в ЭТОТ ЖЕ чат. Выбор запоминается на устройстве. */
-let chatTarget = localStorage.getItem('shtabChatTarget') || 'arch';
+let chatTarget = 'arch';   // Помощник убран из Штаба — сообщения всегда идут Архитектору
 function setChatTarget(t) {
     chatTarget = (t === 'assistant') ? 'assistant' : 'arch';
     try { localStorage.setItem('shtabChatTarget', chatTarget); } catch (e) {}
