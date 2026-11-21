@@ -1481,8 +1481,52 @@ function focusAgentCard(agentName) {
     if (container && container.firstElementChild !== activeCard) container.prepend(activeCard);
 }
 
+/* --- АВТООБНОВЛЕНИЕ: НАКОПИЛОСЬ 5 ПРАВОК → САМ ПИШУ БОССУ «обновляй» ---
+   version.json хранит edits (накоплено правок) и limit (порог, 5).
+   Как только edits >= limit — скрипт сам, от имени Босса, отправляет
+   в чат «обновляй», и Архитектор поднимает версию приложения.
+   Повтор по одной и той же версии не шлём (ключ в localStorage). */
+const VERSION_UPDATE_POLL_MS = 60000;
+let versionUpdateTimer = null;
+function versionUpdateSent(v) {
+    try { return JSON.parse(localStorage.getItem('shtabUpdateSent') || '[]').indexOf(v) !== -1; }
+    catch (e) { return false; }
+}
+function markVersionUpdateSent(v) {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('shtabUpdateSent') || '[]'); } catch (e) {}
+    if (list.indexOf(v) === -1) list.push(v);
+    while (list.length > 20) list.shift();
+    try { localStorage.setItem('shtabUpdateSent', JSON.stringify(list)); } catch (e) {}
+}
+async function checkVersionUpdate() {
+    try {
+        const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        const edits = Number(d.edits) || 0;
+        const limit = Number(d.limit) || 5;
+        if (edits < limit) return;                          // порог не достигнут
+        const key = String(d.version || '') + '|' + edits;
+        if (versionUpdateSent(key)) return;                 // уже отправляли
+        if (isGenerating) return;                           // Архитектор ещё отвечает — подождём
+        const inp = document.getElementById('chatInput');
+        if (inp && inp.value && inp.value.trim()) return;   // Босс печатает — не мешаю
+        markVersionUpdateSent(key);
+        renderMessage(`📦 *[Система: накоплено ${edits}/${limit} правок — пора обновлять. Пишу «обновляй» от имени Босса.]*`, 'director', 'Оркестратор');
+        renderMessage('обновляй', 'boss'); addMessageToHistory('обновляй', 'boss');
+        setTimeout(() => sendMessage('обновляй', true), 900);
+    } catch (e) {}
+}
+function startVersionUpdateWatch() {
+    if (versionUpdateTimer) return;
+    checkVersionUpdate();
+    versionUpdateTimer = setInterval(checkVersionUpdate, VERSION_UPDATE_POLL_MS);
+}
+
 function init() {
     restoreKickState();   // подхватываем счётчик пинков после F5 — лишних не шлём
+    startVersionUpdateWatch();   // 5 правок накоплено → сам пишу Боссу «обновляй»
     startUpdateWatch();   // следим за обновлениями с сервера — кнопка «Обновить штаб» мигает
     if (typeof loadVersionCounter === 'function') loadVersionCounter();   // плашка «v3.4.55 · 1/5» в шапке
     setInterval(() => { if (typeof loadVersionCounter === 'function') loadVersionCounter(); }, 60000);   // обновляем раз в минуту
