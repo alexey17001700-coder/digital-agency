@@ -1411,10 +1411,19 @@ async function sendMessage(overrideText = null, isKick = false) {
             else if (!kickGuardActive() && (looksTruncated(aiText) || isTooManySteps(aiText)) && stallKicks < STALL_MAX_KICKS) {
                 stallKicks++;
                 markKickSent();
-                const kickWhy = isTooManySteps(aiText) ? 'упёрся в лимит шагов' : 'ответ оборван на середине';
-                renderMessage(`⚡ *[Система: ${kickWhy}. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
-                renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
-                setTimeout(() => sendMessage('продолжи', true), 900);
+                /* --- РАЗНЫЙ ПИНОК ДЛЯ РАЗНЫХ ОБРЫВОВ ---
+                   Сервер оборвал задачу на «Слишком много шагов. Задача прервана.» —
+                   простое «продолжи» снова упирается в тот же лимит шагов.
+                   Поэтому от имени Босса уходит «делай пошагово и отчитывайся»:
+                   модель дробит работу на этапы и ставит метку [ЭТАП N/M],
+                   а дальше этапы сам продолжает сторож этапов (шаг 2, 3...).
+                   Оборванный на середине ответ по-прежнему просим «продолжи». */
+                const tooMany = isTooManySteps(aiText);
+                const kickText = tooMany ? 'делай пошагово и отчитывайся' : 'продолжи';
+                const kickWhy = tooMany ? 'упёрся в лимит шагов' : 'ответ оборван на середине';
+                renderMessage(`⚡ *[Система: ${kickWhy}. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — пишу «${kickText}» от имени Босса.]*`, 'director', 'Оркестратор');
+                renderMessage(kickText, 'boss'); addMessageToHistory(kickText, 'boss');
+                setTimeout(() => sendMessage(kickText, true), 900);
             }
 
             const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу|дай мне секунду|гляну текущий код|сейчас выдам/i;
