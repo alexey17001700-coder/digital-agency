@@ -3,7 +3,7 @@
   "name": "Окна (Flutter)",
   "version": "3.4.54+117",
   "build": 117,
-  "edits": 2,
+  "edits": 4,
   "limit": 5,
-  "note": "Версия поднимается каждые 5 правок (правило 11 SERVER_DIAGNOSTICS.md)"
+  "note": "Версия поднимается каждые 5 правок (правило 11 SERVER_DIAGNOSTICS.md). На 5-й правке — bump pubspec.yaml + CHANGELOG, счётчик в 0/5."
 }
