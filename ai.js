@@ -396,6 +396,7 @@
     els.autoBtn = autoBtn;
     bar.appendChild(autoBtn);
     bar.appendChild(toolBtn('⚙️', 'Адрес ИИ-шлюза', openSettings));
+    bar.appendChild(toolBtn('🔍', 'Диагностика шлюза (стучится во все адреса)', diag));
     bar.appendChild(toolBtn('🧠', 'Характер Помощника', editSystem, '#ffd700'));
     bar.appendChild(toolBtn('🗑️', 'Очистить историю', clearAll, '#ff8888'));
 
