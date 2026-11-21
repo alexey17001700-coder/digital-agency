@@ -1,5 +1,9 @@
 /* ============================================================
-   ai.js — вкладка «Помощник» в Штабе.
+   ai.js — панель «Помощник» в Штабе (второй Архитектор).
+   Панель стоит РЯДОМ с чатом, а не поверх него: диалог Босса
+   с Архитектором остаётся видимым и не перекрывается.
+   На широком экране панель справа, на телефоне — снизу
+   (см. .chat-split в style.css).
    Фронт к ИИ-шлюзу nexus_ws/ai.ts (порт 8002).
    Ключи провайдеров живут на сервере, в браузер не попадают.
    История диалога — в localStorage этого устройства.
@@ -10,7 +14,6 @@
   var LS_HISTORY = 'assistant_history_v1';
   var LS_GATEWAY = 'assistant_gateway_v1';
   var LS_SYSTEM  = 'assistant_system_v1';
-  var LS_AUTO    = 'assistant_auto_v1';
   var MAX_MSGS   = 40;
   var AUTO_MAX   = 12;   // предохранитель: не больше 12 авто-шагов подряд
 
@@ -29,6 +32,7 @@
   var auto = false;        // авто-продолжение этапов («пинок»)
   var autoTimer = null;
   var autoSteps = 0;
+  var built = false;
 
   /* ---------- хранилище ---------- */
 
@@ -79,9 +83,12 @@
   }
 
   function setStatus(text, isError) {
-    if (!els.status) return;
-    els.status.textContent = text;
-    els.status.style.color = isError ? '#ff8888' : '#7ee08a';
+    if (els.status) {
+      els.status.textContent = text;
+      els.status.style.color = isError ? '#ff8888' : '#7ee08a';
+    }
+    var hint = document.getElementById('assistantHint');
+    if (hint && isError) hint.textContent = 'нет связи со шлюзом';
   }
 
   async function findGateway() {
@@ -94,13 +101,27 @@
           var j = await r.json().catch(function () { return {}; });
           gateway = list[i];
           var prov = (j.providers && j.providers.length) ? j.providers.join(', ') : 'ключей нет';
-          setStatus('Шлюз: ' + gateway + ' · ' + prov);
+          setStatus('шлюз ок · ' + prov);
           return gateway;
         }
       } catch (e) { /* пробуем следующий адрес */ }
     }
-    setStatus('Шлюз не найден. Проверь, что ai.ts запущен на :8002.', true);
+    setStatus('шлюз не найден (:8002)', true);
     return null;
+  }
+
+  /* ---------- панель ---------- */
+
+  function panelOn() {
+    var sp = document.getElementById('chatSplit');
+    return !!(sp && sp.classList.contains('split-on'));
+  }
+
+  function setPanel(on) {
+    var sp = document.getElementById('chatSplit');
+    if (!sp) return false;
+    sp.classList.toggle('split-on', !!on);
+    return !!on;
   }
 
   /* ---------- рендер ---------- */
@@ -110,7 +131,7 @@
     els.log.innerHTML = '';
     if (!history.length) {
       var hint = document.createElement('div');
-      hint.style.cssText = 'color:#666; font-size:13px; text-align:center; padding:24px 12px; line-height:1.5;';
+      hint.style.cssText = 'color:#666; font-size:12px; text-align:center; padding:20px 10px; line-height:1.5;';
       hint.textContent = 'Пусто. Напиши задачу — Помощник ответит. Ключи и лимиты живут на сервере.';
       els.log.appendChild(hint);
       return;
@@ -118,11 +139,11 @@
     history.forEach(function (m) {
       var row = document.createElement('div');
       var mine = m.role === 'user';
-      row.style.cssText = 'margin-bottom:12px; display:flex; flex-direction:column; align-items:' +
+      row.style.cssText = 'margin-bottom:10px; display:flex; flex-direction:column; align-items:' +
         (mine ? 'flex-end' : 'flex-start') + ';';
 
       var bubble = document.createElement('div');
-      bubble.style.cssText = 'max-width:88%; padding:10px 12px; border-radius:12px; font-size:14px; ' +
+      bubble.style.cssText = 'max-width:92%; padding:8px 11px; border-radius:12px; font-size:13px; ' +
         'line-height:1.5; white-space:pre-wrap; word-break:break-word; ' +
         (mine
           ? 'background:#003a44; border:1px solid #00e5ff; color:#dffcff;'
@@ -132,7 +153,7 @@
 
       if (m.meta) {
         var meta = document.createElement('div');
-        meta.style.cssText = 'font-size:10px; color:#666; margin-top:4px; font-family:monospace;';
+        meta.style.cssText = 'font-size:10px; color:#666; margin-top:3px; font-family:monospace;';
         meta.textContent = m.meta;
         row.appendChild(meta);
       }
@@ -146,7 +167,6 @@
     if (els.send) {
       els.send.disabled = v;
       els.send.textContent = v ? '…' : '➤';
-      els.send.style.opacity = v ? '0.5' : '1';
     }
     if (els.input) els.input.disabled = v;
   }
@@ -165,33 +185,32 @@
     if (auto) autoSteps = 0;
     if (els.autoBtn) {
       els.autoBtn.textContent = auto ? '⏸ Авто' : '▶ Авто';
-      els.autoBtn.style.borderColor = auto ? '#7ee08a' : '#333';
       els.autoBtn.style.color = auto ? '#7ee08a' : '#aaa';
     }
-    setStatus(auto ? 'Авто-режим включён' : 'Авто-режим выключен');
+    setStatus(auto ? 'авто-режим включён' : 'авто-режим выключен');
   }
 
   function maybeAuto(text) {
     if (!auto) return;
     if (/Готово,\s*Босс/i.test(text || '')) {
       setAuto(false);
-      setStatus('Авто: задача закрыта', false);
+      setStatus('авто: задача закрыта');
       return;
     }
     var st = stageMarker(text);
     if (!st || st.n >= st.total) {
       setAuto(false);
-      setStatus('Авто: этапов больше нет', false);
+      setStatus('авто: этапов больше нет');
       return;
     }
     if (autoSteps >= AUTO_MAX) {
       setAuto(false);
-      setStatus('Авто: стоп-лимит ' + AUTO_MAX + ' шагов', true);
+      setStatus('авто: стоп-лимит ' + AUTO_MAX + ' шагов', true);
       return;
     }
     autoSteps++;
     var next = 'продолжи этап ' + (st.n + 1) + ' из ' + st.total;
-    setStatus('Авто: ' + next + ' (' + autoSteps + '/' + AUTO_MAX + ')');
+    setStatus('авто: ' + next + ' (' + autoSteps + '/' + AUTO_MAX + ')');
     autoTimer = setTimeout(function () {
       if (!auto) return;
       if (els.input) els.input.value = next;
@@ -236,12 +255,12 @@
         content: j.text || '(пустой ответ)',
         meta: meta
       });
-      setStatus('Шлюз: ' + gw + ' · ' + (j.provider || '?'));
+      setStatus('шлюз ок · ' + (j.provider || '?'));
       maybeAuto(j.text || '');
     } catch (e) {
       var msg = e && e.name === 'AbortError' ? 'таймаут 95 сек' : (e && e.message || 'сбой');
       history.push({ role: 'assistant', content: '⚠️ Ошибка: ' + msg, meta: 'error' });
-      setStatus('Ошибка запроса: ' + msg, true);
+      setStatus('ошибка запроса: ' + msg, true);
     } finally {
       setBusy(false);
       saveHistory();
@@ -265,7 +284,7 @@
       else localStorage.removeItem(LS_GATEWAY);
     } catch (e) {}
     gateway = '';
-    setStatus('Адрес шлюза обновлён, проверяю…');
+    setStatus('адрес шлюза обновлён, проверяю…');
     findGateway();
   }
 
@@ -276,7 +295,7 @@
       if (val.trim()) localStorage.setItem(LS_SYSTEM, val.trim());
       else localStorage.removeItem(LS_SYSTEM);
     } catch (e) {}
-    setStatus('Характер сохранён');
+    setStatus('характер сохранён');
   }
 
   function clearAll() {
@@ -284,137 +303,124 @@
     history = [];
     try { localStorage.removeItem(LS_HISTORY); } catch (e) {}
     render();
-    setStatus('История очищена');
+    setStatus('история очищена');
   }
 
-  /* ---------- модалка ---------- */
+  /* ---------- сборка панели ---------- */
 
   function build() {
-    if (document.getElementById('assistantModal')) {
-      els.modal = document.getElementById('assistantModal');
-      return;
-    }
+    if (built && els.log && document.body.contains(els.log)) return;
+    var body = document.getElementById('assistantBody');
+    if (!body) return;   // разметки панели нет — собирать нечего
+    body.innerHTML = '';
 
-    var overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.id = 'assistantModal';
-    overlay.onclick = function (e) { if (e.target === overlay) close(); };
+    /* строка инструментов */
+    var bar = document.createElement('div');
+    bar.className = 'assistant-bar';
 
-    var box = document.createElement('div');
-    box.className = 'modal-content';
-    box.style.cssText = 'max-width:94%; width:720px; height:82vh; display:flex; flex-direction:column; border-color:#00e5ff;';
-    box.onclick = function (e) { e.stopPropagation(); };
-
-    /* шапка */
-    var head = document.createElement('div');
-    head.className = 'modal-header';
-    head.style.cssText = 'flex:0 0 auto;';
-
-    var title = document.createElement('h2');
-    title.style.cssText = 'color:#00e5ff; margin:0; font-size:16px;';
-    title.textContent = '🤖 Помощник';
-    head.appendChild(title);
-
-    var tools = document.createElement('div');
-    tools.style.cssText = 'display:flex; gap:8px; align-items:center;';
-
-    function toolBtn(label, title2, fn, color) {
+    function toolBtn(label, title, fn, color) {
       var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'assistant-tool';
       b.textContent = label;
-      b.title = title2 || '';
-      b.style.cssText = 'background:#1a1a1a; color:' + (color || '#aaa') +
-        '; border:1px solid #333; border-radius:8px; padding:5px 9px; font-size:13px; cursor:pointer;';
+      b.title = title || '';
+      if (color) b.style.color = color;
       b.onclick = fn;
       return b;
     }
 
     var autoBtn = toolBtn('▶ Авто', 'Авто-продолжение этапов', function () { setAuto(!auto); }, '#7ee08a');
     els.autoBtn = autoBtn;
-    tools.appendChild(autoBtn);
+    bar.appendChild(autoBtn);
+    bar.appendChild(toolBtn('⚙️', 'Адрес ИИ-шлюза', openSettings));
+    bar.appendChild(toolBtn('🧠', 'Характер Помощника', editSystem, '#ffd700'));
+    bar.appendChild(toolBtn('🗑️', 'Очистить историю', clearAll, '#ff8888'));
 
-    tools.appendChild(toolBtn('⚙️', 'Адрес шлюза', openSettings));
-    tools.appendChild(toolBtn('🧠', 'Характер Помощника', editSystem, '#ffd700'));
-    tools.appendChild(toolBtn('🗑️', 'Очистить историю', clearAll, '#ff8888'));
-
-    var closeBtn = document.createElement('button');
-    closeBtn.className = 'modal-close';
-    closeBtn.textContent = '✖';
-    closeBtn.onclick = close;
-    tools.appendChild(closeBtn);
-    head.appendChild(tools);
-    box.appendChild(head);
-
-    /* статус */
-    var status = document.createElement('div');
-    status.style.cssText = 'flex:0 0 auto; font:11px monospace; color:#7ee08a; padding:4px 2px 8px 2px;';
-    status.textContent = 'Шлюз: проверяю…';
+    var status = document.createElement('span');
+    status.className = 'assistant-status';
+    status.textContent = 'шлюз: проверяю…';
     els.status = status;
-    box.appendChild(status);
+    bar.appendChild(status);
+    body.appendChild(bar);
 
-    /* лог */
+    /* лента диалога */
     var log = document.createElement('div');
-    log.style.cssText = 'flex:1 1 auto; min-height:0; overflow-y:auto; background:#0b0b0b; ' +
-      'border:1px solid #222; border-radius:10px; padding:12px;';
+    log.className = 'assistant-log';
     els.log = log;
-    box.appendChild(log);
+    body.appendChild(log);
 
     /* ввод */
-    var inputRow = document.createElement('div');
-    inputRow.style.cssText = 'flex:0 0 auto; display:flex; gap:8px; margin-top:10px; align-items:flex-end;';
+    var row = document.createElement('div');
+    row.className = 'assistant-input-row';
 
     var input = document.createElement('textarea');
-    input.rows = 2;
-    input.placeholder = 'Задача Помощнику… (Enter — отправить, Shift+Enter — новая строка)';
-    input.style.cssText = 'flex:1 1 auto; resize:none; background:#141414; color:#eee; ' +
-      'border:1px solid #333; border-radius:10px; padding:10px; font:14px inherit; outline:none;';
+    input.rows = 1;
+    input.className = 'assistant-input';
+    input.placeholder = 'Задача Помощнику… (Enter — отправить)';
     input.onkeydown = function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     };
     els.input = input;
-    inputRow.appendChild(input);
+    row.appendChild(input);
 
     var sendBtn = document.createElement('button');
+    sendBtn.type = 'button';
+    sendBtn.className = 'assistant-send';
     sendBtn.textContent = '➤';
-    sendBtn.style.cssText = 'flex:0 0 auto; width:48px; height:48px; background:#00e5ff; color:#000; ' +
-      'border:none; border-radius:12px; font-size:20px; font-weight:bold; cursor:pointer;';
     sendBtn.onclick = send;
     els.send = sendBtn;
-    inputRow.appendChild(sendBtn);
+    row.appendChild(sendBtn);
 
-    box.appendChild(inputRow);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    els.modal = overlay;
+    body.appendChild(row);
+    built = true;
   }
+
+  /* ---------- открыть / закрыть ---------- */
 
   function open() {
     build();
-    els.modal.classList.add('active');
-    render();
-    findGateway();
-    setTimeout(function () { if (els.input) els.input.focus(); }, 120);
+    var on = setPanel(!panelOn());
+    if (on) {
+      render();
+      findGateway();
+      setTimeout(function () { if (els.input) els.input.focus(); }, 150);
+    } else if (auto) {
+      setAuto(false);   // свернул панель — авто-цикл останавливаем
+    }
   }
 
   function close() {
-    if (auto) setAuto(false);   // закрыл окно — авто-цикл останавливаем
-    if (els.modal) els.modal.classList.remove('active');
+    if (auto) setAuto(false);
+    setPanel(false);
+  }
+
+  /* Задача Помощнику от Архитектора (мост из chat.js).
+     Панель открывается сама, чтобы Босс видел, что происходит. */
+  function ask(text) {
+    if (!text) return;
+    setPanel(true);
+    build();
+    if (els.input) els.input.value = String(text);
+    send();
   }
 
   /* ---------- публичный API ---------- */
 
   window.openAssistant = open;
   window.closeAssistant = close;
+  window.closeAssistantPanel = close;
   window.assistantSend = send;
   window.assistantAuto = setAuto;
+  window.assistantAsk = ask;
 
   loadHistory();
   // app.html грузит скрипты уже внутри DOMContentLoaded, поэтому слушатель
   // на это событие мог бы не сработать — проверяем readyState.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { findGateway(); });
+    document.addEventListener('DOMContentLoaded', function () { build(); });
   } else {
-    setTimeout(function () { findGateway(); }, 300);
+    setTimeout(function () { build(); }, 300);
   }
 
-  console.log('[ai.js] Помощник готов. Шлюз ищется автоматически, ключи — на сервере.');
+  console.log('[ai.js] Панель Помощника готова. Шлюз ищется автоматически, ключи — на сервере.');
 })();
