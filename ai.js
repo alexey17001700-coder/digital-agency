@@ -229,12 +229,15 @@
       var j = await r.json().catch(function () { return {}; });
       if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
 
+      var meta = (j.provider || '?') + ' · ' + (j.model || '?') + ' · ' + (j.ms || 0) + ' мс';
+      if (j.actions && j.actions.length) meta += ' · 🔧 ' + j.actions.length;
       history.push({
         role: 'assistant',
         content: j.text || '(пустой ответ)',
-        meta: (j.provider || '?') + ' · ' + (j.model || '?') + ' · ' + (j.ms || 0) + ' мс'
+        meta: meta
       });
       setStatus('Шлюз: ' + gw + ' · ' + (j.provider || '?'));
+      maybeAuto(j.text || '');
     } catch (e) {
       var msg = e && e.name === 'AbortError' ? 'таймаут 95 сек' : (e && e.message || 'сбой');
       history.push({ role: 'assistant', content: '⚠️ Ошибка: ' + msg, meta: 'error' });
