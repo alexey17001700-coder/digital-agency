@@ -342,6 +342,10 @@
        иначе на HTTPS-странице браузер блокирует http-запрос (mixed content). */
     function supGatewayCandidates() {
         const out = [];
+        /* 1) ТОТ ЖЕ АДРЕС, ЧТО И ЧАТ (Caddy :8443, путь /ai) — основной путь.
+           Шлюз ИИ живёт рядом со Штабом, Caddy проксирует /ai → :8002.
+           Так Надзиратель видит шлюз и с телефона, и снаружи. */
+        try { if (typeof PROXY !== 'undefined' && PROXY) out.push(String(PROXY).replace(/\/+$/, '')); } catch (e) {}
         try {
             const saved = localStorage.getItem('shtabAiUrl');
             if (saved) out.push(String(saved).replace(/\/+$/, ''));
