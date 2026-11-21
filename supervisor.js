@@ -53,6 +53,9 @@
     const SUP_TIMER_GRACE_MS = 8000;    // первые 8 с счётчик на кнопке ещё не запущен — это не поломка
     const SUP_TIMER_FREEZE_MS = 6000;   // счётчик не менялся 6 с — застыл, значит поток умер
     const SUP_HANDOFF_GUARD_MS = 15000; // защита от двойной передачи: две проверки не передают задачу дважды
+    const SUP_ALIVE_MS = 120000;        // признак жизни держится 120 с: агент работает — передача запрещена
+    const SUP_ACTIVITY_MS = 45000;      // движение в ленте за это время = агент жив
+    const SUP_DISTRIBUTE_MAX = 3;       // не больше 3 агентов на одну большую задачу
 
     const OWNER_LABEL = { arch: '🏛 Архитектор', assistant: '🤖 Помощник', free: '🆓 Бесплатная модель' };
     const OWNER_NEXT = { arch: 'assistant', assistant: 'free' };   // цепочка замены
