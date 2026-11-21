@@ -289,15 +289,55 @@
         };
     }
 
+    /* ---------- ЛЕНТА: ЧТО УЖЕ ОТВЕТИЛ АГЕНТ ---------- */
+
+    /* Узлы ответов агентов в ленте. Свои записи (Надзиратель) не считаем. */
+    function supAgentNodes() {
+        try {
+            if (typeof chatContainer === 'undefined' || !chatContainer) return [];
+            const all = chatContainer.querySelectorAll('.msg-director');
+            const out = [];
+            for (let i = 0; i < all.length; i++) {
+                const nm = all[i].querySelector('.msg-name');
+                const name = nm ? String(nm.innerText || '') : '';
+                if (name.indexOf('Надзиратель') !== -1) continue;
+                out.push(all[i]);
+            }
+            return out;
+        } catch (e) { return []; }
+    }
+    /* Текст последнего ответа агента, появившегося ПОСЛЕ старта задачи. */
+    function supLastAgentText() {
+        const nodes = supAgentNodes();
+        if (nodes.length <= supStartCount) return '';
+        return String(nodes[nodes.length - 1].innerText || '');
+    }
+    /* Битый ответ: заглушка «пустой ответ» или обрыв по лимиту шагов сервера. */
+    function supBrokenReason(t) {
+        const s = String(t || '').replace(/\[[^\]]*\]/g, ' ').replace(/[*_`>#~]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!s) return '';
+        if (SUP_STEPS_RE.test(s)) return 'упёрся в лимит шагов';
+        if (s.length <= 200 && SUP_EMPTY_RE.test(s)) return 'пустой ответ';
+        return '';
+    }
+
     /* ---------- ДЕТЕКТ ОБРЫВА ---------- */
 
     function supTick() {
         const st = supLoad();
         if (!st) return;
         if (st.status !== 'waiting') return;
+        if (supBusy) return;                       // передача уже идёт — второй раз не дёргаем
 
         const now = Date.now();
         const waited = now - (st.startedAt || now);
+
+        // --- БИТЫЙ ОТВЕТ ---
+        // Ответ в ленте появился, но это заглушка «пустой ответ» либо обрыв
+        // «Слишком много шагов. Задача прервана» — задача не сделана,
+        // передаём её следующему агенту, а не пинаем того же самого.
+        const broken = supBrokenReason(supLastAgentText());
+        if (broken) { supBreak(broken); return; }
 
         // --- СЧЁТЧИК НА КНОПКЕ ---
         // Босс нажал «Отправить» → на кнопке бегут секунды. Пропал счётчик
