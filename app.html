@@ -266,7 +266,9 @@
             <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
         </div>
 
-        <div class="mode-switch">
+        <div class="mode-switch" id="modeSwitch">
+            <button class="mode-btn gear-btn" id="btnModeGear" onclick="toggleModeMenu()" title="Все кнопки Штаба">⚙️</button>
+            <div class="mode-extra" id="modeExtra">
             <button class="mode-btn active" id="btnDialogue" onclick="toggleAgentDialogue()">💬 Диалог: ВКЛ</button>
             <button class="mode-btn" id="btnVoiceToggle" onclick="toggleVoice()">🗣️ Озвучка: ВЫКЛ</button>
             <button class="mode-btn" id="btnVoiceLab" onclick="openVoiceLab()">🎛 Голоса</button>
@@ -277,6 +279,7 @@
             <button class="mode-btn" onclick="openApiSettings()">🔑 API Ключи</button>
             <button class="mode-btn" id="btnRefreshShtab" onclick="refreshShtab()">🔄 Обновить штаб</button>
             <button class="mode-btn" id="btnRecovery" onclick="openRecoveryGuide()" title="Пошаговая инструкция по восстановлению сервера" style="border-color:#00e5ff; color:#00e5ff;">🚑 Ремонт сервера</button>
+            </div>
         </div>
 
         <!-- РАЗДЕЛЁННЫЙ ЭКРАН: слева чат Босса с Архитектором, справа Помощник.
