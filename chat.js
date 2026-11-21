@@ -918,13 +918,14 @@ function startStallWatchdog() {
         if (newMsgs > 0 && (now - stallLastChange) >= 3000 && looksTruncated(txt)) {
             doStallKick('ответ оборван на середине'); return;
         }
-        // 2) Ответа в чате нет вообще — пинок по таймауту.
+        // 2) Ответа в чате нет вообще — прошёл лимит кнопки (300 с). Задача уходит
+        //    СЛЕДУЮЩЕМУ агенту, а не повторному пинку того же.
         if (newMsgs === 0 && (now - startedAt) >= STALL_TIMEOUT_MS) {
-            doStallKick(`тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с`); return;
+            handoffOrKick(`тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с`); return;
         }
-        // 3) Запрос завершился, а ответа в чате так и нет — обрыв. Пинаем сразу,
+        // 3) Запрос завершился, а ответа в чате так и нет — обрыв. Передаём сразу,
         //    не дожидаясь 300 с: так «оборвавшийся секундомер» больше не молчит.
-        if (!isGenerating && newMsgs === 0) { doStallKick('запрос оборвался без ответа'); return; }
+        if (!isGenerating && newMsgs === 0) { handoffOrKick('запрос оборвался без ответа'); return; }
         // Ответ пришёл и в порядке — сторож больше не нужен.
         if (!isGenerating && newMsgs > 0) stopStallWatchdog();
     }, 3000);
