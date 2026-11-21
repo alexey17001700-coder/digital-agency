@@ -893,6 +893,17 @@ function fireAutoKick(reason) {
     return true;
 }
 function doStallKick(reason) { fireAutoKick(reason); }
+/* --- ПЕРЕДАЧА ЗАДАЧИ ДРУГОМУ АГЕНТУ ВМЕСТО ПИНКА ТОМУ ЖЕ ---
+   Босс: агент молчит 300 с (лимит кнопки) ИЛИ счётчик на кнопке оборвался
+   (замер/пропал), а ответа нет — задача уходит СЛЕДУЮЩЕМУ по цепочке
+   (Архитектор → Помощник → Бесплатная модель). Надзиратель ведёт журнал
+   и сам решает, кому передать. Если надзирателя нет — старый авто-пинок. */
+function handoffOrKick(reason) {
+    if (typeof window.supTimerBroken === 'function') {
+        try { if (window.supTimerBroken(reason)) return true; } catch (e) {}
+    }
+    return fireAutoKick(reason);
+}
 function startStallWatchdog() {
     stopStallWatchdog();
     stallStartCount = countDirectorMsgs();
