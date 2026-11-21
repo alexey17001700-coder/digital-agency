@@ -3,39 +3,50 @@
    ------------------------------------------------------------
    Следит за диалогом Босса в Штабе и не даёт задаче умереть молча.
 
-   ЖИЗНЬ (передача НЕ делается):
-     • счётчик на кнопке «Отправить» тикает — запрос идёт, агент работает;
-     • идёт авто-пинок «продолжи» или следующий этап [ЭТАП N/M];
-     • большая задача разбита на этапы и этапы идут один за другим.
-     Пока агент жив — сколько бы он ни думал, задача остаётся у него.
+   Кто ведёт задачу (Архитектор или Помощник), когда ответил,
+   сколько ждём ответа — всё лежит в localStorage под ключом
+   shtabSupervisor. Оба агента пишут в один журнал и читают его,
+   поэтому видят, что делает второй.
 
-   СМЕРТЬ (задача уходит следующему по цепочке):
-     • счётчик на кнопке застыл и не меняется SUP_FREEZE_MS — поток умер;
-     • счётчик пропал (запрос оборвался), а ответа в чате нет;
-     • SUP_LIMIT_MS полной тишины — лимит кнопки отправки вышел;
-     • явный сбой: ошибка, пустой ответ, «слишком много шагов».
+   ЭТАП 1: журнал задач + детект молчания + запись в ленту чата.
+   ЭТАП 2: передача задачи второму агенту + бесплатная модель.
+   ЭТАП 3: компактный индикатор в ленте + стоп-кран + ловля
+           оборвавшегося счётчика на кнопке «Отправить».
 
    ЦЕПОЧКА ЗАМЕНЫ: Архитектор → Помощник → Бесплатная модель → стоп.
-   Передач не больше SUP_MAX_HANDOFFS — иначе два ИИ зациклятся.
+   Если агент молчит или сорвался, задача уходит следующему по цепочке.
+   Число передач ограничено SUP_MAX_HANDOFFS — иначе два ИИ зациклятся
+   и будут бесконечно пинать друг друга.
 
-   Файл самостоятельный: всё внешнее — через typeof-проверки.
-   Если chat.js не загрузился, надзиратель просто молчит.
+   СРОК МОЛЧАНИЯ = 300 с. Это лимит кнопки отправки. Пока он не вышел,
+   агент считается работающим — даже если ответа ещё нет. Передача
+   происходит только после 300 с тишины.
+
+   ОБОРВАВШИЙСЯ СЧЁТЧИК (Босс): на кнопке «Отправить» бегут секунды.
+   Если счётчик ЗАМЕР (не меняется 6 с) или ПРОПАЛ, а ответа в чате нет —
+   это обрыв потока, и задача уходит следующему СРАЗУ, не дожидаясь 300 с.
+
+   Файл самостоятельный: ни от чего не зависит, всё внешнее —
+   через typeof-проверки. Если chat.js не загрузился, надзиратель
+   просто молчит и ничего не ломает.
    ============================================================ */
 (function () {
     'use strict';
 
     const SUP_KEY = 'shtabSupervisor';
-    const SUP_LIMIT_MS = 300000;    // 300 с — лимит кнопки отправки: столько тишины терпим
-    const SUP_FREEZE_MS = 10000;    // счётчик на кнопке не менялся 10 с — считаем застывшим
-    const SUP_TICK_MS = 3000;       // проверка каждые 3 с
-    const SUP_MAX_HANDOFFS = 2;     // не больше 2 передач на одну задачу (стоп-кран)
-    const SUP_TEXT_LIMIT = 2000;    // столько текста задачи храним в журнале
+    const SUP_SILENCE_MS = 300000;      // 300 с — лимит кнопки отправки. Раньше этого срока агент может работать, это не молчание
+    const SUP_TICK_MS = 5000;           // проверка каждые 5 с
+    const SUP_MAX_HANDOFFS = 2;         // не больше 2 передач на одну задачу (стоп-кран)
+    const SUP_TEXT_LIMIT = 2000;        // столько текста задачи храним в журнале
+    const SUP_TIMER_GRACE_MS = 8000;    // первые 8 с счётчик на кнопке ещё не запущен — это не поломка
+    const SUP_TIMER_FREEZE_MS = 6000;   // счётчик не менялся 6 с — застыл, значит поток умер
+    const SUP_HANDOFF_GUARD_MS = 15000; // защита от двойной передачи: две проверки не передают задачу дважды
 
     const OWNER_LABEL = { arch: '🏛 Архитектор', assistant: '🤖 Помощник', free: '🆓 Бесплатная модель' };
     const OWNER_NEXT = { arch: 'assistant', assistant: 'free' };   // цепочка замены
 
     let supTimer = null;
-    let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
+    let supDispatching = false;   // надзиратель САМ ведёт запрос — счётчик кнопки в это время не наш, не проверяем
 
     /* ---------- ЖУРНАЛ ---------- */
 
@@ -51,6 +62,7 @@
     }
     function supClear() {
         try { localStorage.removeItem(SUP_KEY); } catch (e) {}
+        supIndicatorHide();
     }
     function ownerLabel(o) { return OWNER_LABEL[o] || ('❔ ' + o); }
 
@@ -58,35 +70,20 @@
     function supStart(text, owner) {
         const prev = supLoad();
         const history = (prev && Array.isArray(prev.history)) ? prev.history : [];
-        const now = Date.now();
         supSave({
             text: String(text || '').slice(0, SUP_TEXT_LIMIT),
             owner: owner || 'arch',
-            status: 'waiting',                 // waiting | answered | failed
+            status: 'waiting',                 // waiting | answered | stalled | failed
             handoffs: 0,
-            startedAt: now,
-            lastSeen: now,
-            lastTimerText: '',
-            lastTimerChange: now,
+            startedAt: Date.now(),
+            lastSeen: Date.now(),
+            timerText: '',
+            timerChange: Date.now(),
+            lastHandoffAt: 0,
             history: history
         });
         supLog('📋 *[Надзиратель: задачу взял ' + ownerLabel(owner) + '. Жду ответа.]*');
-    }
-
-    /* Задача продолжается: авто-пинок, следующий этап, повтор после сбоя.
-       Журнал переоткрываем — агент снова в работе, передавать некому. */
-    function supResume(owner) {
-        const st = supLoad();
-        if (!st) return;
-        const now = Date.now();
-        st.owner = owner || st.owner || 'arch';
-        st.status = 'waiting';
-        st.startedAt = now;
-        st.lastSeen = now;
-        st.lastTimerText = '';
-        st.lastTimerChange = now;
-        st.reason = '';
-        supSave(st);
+        supIndicator('waiting', ownerLabel(owner) + ' работает…');
     }
 
     /* Агент ответил — задача закрыта. */
@@ -98,6 +95,8 @@
         st.lastSeen = Date.now();
         supSave(st);
         supLog('✅ *[Надзиратель: ' + ownerLabel(st.owner) + ' ответил. Задача закрыта.]*');
+        supIndicator('answered', ownerLabel(st.owner) + ' ответил');
+        setTimeout(supClear, 1500);            // журнал чистим, чтобы не копить мусор
     }
 
     /* Агент сорвался (ошибка, пустой ответ, обрыв).
@@ -114,13 +113,31 @@
         supHandoff();                          // пробуем следующего по цепочке
     }
 
-    /* Пульс: агент ещё жив и работает (пинок, этап, длинный запрос). */
+    /* Пульс: агент ещё жив и работает (длинный запрос). */
     function supHeartbeat(owner) {
         const st = supLoad();
         if (!st) return;
         if (owner && st.owner && owner !== st.owner) return;
         st.lastSeen = Date.now();
+        if (st.status === 'stalled') st.status = 'waiting';
         supSave(st);
+    }
+
+    /* ---------- ОБРЫВ: МОЛЧАНИЕ / ЗАСТЫВШИЙ ИЛИ ПРОПАВШИЙ СЧЁТЧИК ----------
+       Единая точка: агент перестал отвечать (300 с тишины ЛИБО счётчик
+       на кнопке замер/пропал) — задача уходит следующему по цепочке.
+       Возвращает true, если надзиратель взял это на себя. */
+    function supBreak(reason) {
+        const st = supLoad();
+        if (!st || st.status !== 'waiting') return false;
+        st.status = 'stalled';
+        st.lastSeen = Date.now();
+        st.reason = String(reason || 'обрыв').slice(0, 300);
+        supSave(st);
+        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' — ' + st.reason + '. Передаю задачу дальше.]*');
+        supIndicator('stalled', '⚠️ ' + ownerLabel(st.owner) + ' молчит');
+        supHandoff();
+        return true;
     }
 
     /* ---------- ПЕРЕДАЧА ЗАДАЧИ ---------- */
@@ -131,21 +148,23 @@
         const st = supLoad();
         if (!st) return;
         if (st.status === 'answered') return;
+        if (st.lastHandoffAt && (Date.now() - st.lastHandoffAt) < SUP_HANDOFF_GUARD_MS) return;   // двойную передачу не делаем
         if ((st.handoffs || 0) >= SUP_MAX_HANDOFFS) { supStopKran(st); return; }
         const prev = st.owner;
         const next = OWNER_NEXT[prev];
         if (!next) { supStopKran(st); return; }
-        const now = Date.now();
         st.owner = next;
         st.handoffs = (st.handoffs || 0) + 1;
         st.status = 'waiting';
-        st.startedAt = now;
-        st.lastSeen = now;
-        st.lastTimerText = '';
-        st.lastTimerChange = now;
+        st.startedAt = Date.now();
+        st.lastSeen = Date.now();
+        st.timerText = '';
+        st.timerChange = Date.now();
+        st.lastHandoffAt = Date.now();
         st.reason = '';
         supSave(st);
         supLog('🔄 *[Надзиратель: ' + ownerLabel(prev) + ' не справился. Передаю задачу ' + ownerLabel(next) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ').]*');
+        supIndicator('handoff', '🔄 передал ' + ownerLabel(next));
         supDispatch(st.text, next);
     }
 
@@ -155,11 +174,12 @@
         st.lastSeen = Date.now();
         supSave(st);
         supLog('🛑 *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит, передачи исчерпаны (' + SUP_MAX_HANDOFFS + '/' + SUP_MAX_HANDOFFS + '). Нужен Босс.]*');
+        supIndicator('stop', '🛑 нужен Босс');
     }
 
     /* Отправляем задачу новому владельцу и следим за результатом. */
     async function supDispatch(text, owner) {
-        supBusyCount++;                        // пока идёт передача — свой же тик не мешает
+        supDispatching = true;   // запрос ведёт надзиратель — счётчик кнопки в это время не наш
         try {
             if (owner === 'assistant' && typeof window.sendToAssistant === 'function') {
                 const ok = await window.sendToAssistant(text);
@@ -175,7 +195,7 @@
         } catch (e) {
             supFailed(owner, (e && e.message) || 'сбой передачи');
         } finally {
-            supBusyCount--;
+            supDispatching = false;
         }
     }
 
@@ -187,50 +207,109 @@
         } catch (e) { /* лента недоступна — молчим */ }
     }
 
-    /* ---------- ДЕТЕКТ МОЛЧАНИЯ ---------- */
+    /* ---------- КОМПАКТНЫЙ ИНДИКАТОР (ЭТАП 3) ----------
+       Раньше каждая проверка писала в ленту длинную строку — Босс тонул
+       в служебных сообщениях. Теперь состояние видно в маленькой плашке
+       внизу слева: кто работает, кто молчит, кому передали задачу. */
+    function supIndicatorCss() {
+        if (document.getElementById('supIndicatorCss')) return;
+        const st = document.createElement('style'); st.id = 'supIndicatorCss';
+        st.textContent = `
+        .sup-indicator {
+            position: fixed; left: 10px; bottom: 78px; z-index: 9000;
+            display: none; align-items: center; gap: 6px;
+            max-width: 62vw; padding: 5px 10px;
+            font-size: 11px; font-weight: 700; font-family: inherit;
+            color: #cfefff; background: rgba(10,20,28,.86);
+            border: 1px solid rgba(0,229,255,.45); border-radius: 999px;
+            backdrop-filter: blur(6px); pointer-events: none;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sup-indicator.show { display: inline-flex; }
+        .sup-indicator.waiting { border-color: rgba(0,229,255,.45); color: #9fe8ff; }
+        .sup-indicator.stalled { border-color: rgba(255,193,7,.6); color: #ffd76a; }
+        .sup-indicator.handoff { border-color: rgba(123,97,255,.65); color: #c3b6ff; }
+        .sup-indicator.answered { border-color: rgba(76,175,80,.6); color: #8ee39a; }
+        .sup-indicator.stop { border-color: rgba(255,82,82,.7); color: #ff9a9a; }
+        `;
+        document.head.appendChild(st);
+    }
+    let supIndHideTimer = null;
+    function supIndicator(state, text) {
+        try {
+            supIndicatorCss();
+            let el = document.getElementById('supIndicator');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'supIndicator';
+                document.body.appendChild(el);
+            }
+            el.className = 'sup-indicator show ' + (state || 'waiting');
+            el.textContent = text || '';
+            if (supIndHideTimer) { clearTimeout(supIndHideTimer); supIndHideTimer = null; }
+            if (state === 'answered') supIndHideTimer = setTimeout(() => { el.classList.remove('show'); }, 2500);
+        } catch (e) { /* нет DOM — молчим */ }
+    }
+    function supIndicatorHide() {
+        try {
+            const el = document.getElementById('supIndicator');
+            if (el) el.classList.remove('show');
+        } catch (e) {}
+    }
+
+    /* ---------- СЧЁТЧИК НА КНОПКЕ «ОТПРАВИТЬ» ---------- */
+
+    function supButtonTimer() {
+        let txt = '';
+        try {
+            const b = document.getElementById('sendBtn');
+            txt = b ? String(b.innerText || '') : '';
+        } catch (e) {}
+        return {
+            txt: txt,
+            hasDigits: /\d/.test(txt),
+            generating: (typeof isGenerating !== 'undefined') ? !!isGenerating : false
+        };
+    }
+
+    /* ---------- ДЕТЕКТ ОБРЫВА ---------- */
 
     function supTick() {
         const st = supLoad();
-        if (!st || st.status !== 'waiting') return;
-        if (supBusyCount > 0) return;          // идёт передача — не мешаем
+        if (!st) return;
+        if (st.status !== 'waiting') return;
 
         const now = Date.now();
+        const waited = now - (st.startedAt || now);
 
-        // 1) СЧЁТЧИК НА КНОПКЕ ТИКАЕТ — агент работает, молчания нет.
-        const btnText = (typeof sendBtn !== 'undefined' && sendBtn) ? String(sendBtn.innerText || '') : '';
-        const timerAlive = /\d/.test(btnText);
-        if (timerAlive && btnText !== st.lastTimerText) {
-            st.lastTimerText = btnText;
-            st.lastTimerChange = now;
-            st.lastSeen = now;
-            supSave(st);
+        // --- СЧЁТЧИК НА КНОПКЕ ---
+        // Босс нажал «Отправить» → на кнопке бегут секунды. Пропал счётчик
+        // или замер на месте, а ответа нет — поток умер. Задача сразу уходит
+        // следующему, не ждём 300 с.
+        // Если запрос ведёт сам надзиратель (передача), счётчик кнопки не наш —
+        // проверку пропускаем, иначе передача ушла бы по кругу.
+        if (waited >= SUP_TIMER_GRACE_MS && !supDispatching) {
+            const t = supButtonTimer();
+            if (t.hasDigits) {
+                if (t.txt !== st.timerText) { st.timerText = t.txt; st.timerChange = now; supSave(st); }
+                else if (now - (st.timerChange || now) >= SUP_TIMER_FREEZE_MS) {
+                    supBreak('счётчик застыл на ' + t.txt); return;
+                }
+            } else if (!t.generating) {
+                supBreak('счётчик на кнопке пропал, ответа нет'); return;
+            } else if (now - (st.timerChange || now) >= SUP_TIMER_FREEZE_MS) {
+                supBreak('счётчик на кнопке не отображается'); return;
+            }
+        }
+
+        // --- ЛИМИТ 300 С (лимит кнопки отправки) ---
+        // Отсчёт ведём от момента, когда задача ушла агенту (startedAt).
+        // Пульс lastSeen его НЕ сбрасывает: 300 с — жёсткий лимит.
+        if (waited < SUP_SILENCE_MS) {
+            if (typeof isGenerating !== 'undefined' && isGenerating) supHeartbeat(st.owner);
             return;
         }
-
-        // 2) ПАУЗА МЕЖДУ ПИНКАМИ И ЭТАПАМИ (900 мс) — тоже не молчание.
-        const silent = now - (st.lastSeen || st.startedAt || now);
-        if (silent < SUP_FREEZE_MS) return;
-
-        const generating = (typeof isGenerating !== 'undefined') && isGenerating;
-
-        // 3) ПРИЧИНА ПЕРЕДАЧИ.
-        let why = '';
-        if (!generating && !timerAlive) {
-            why = 'счётчик оборвался, ответа нет';              // запрос умер без ответа
-        } else if (timerAlive) {
-            why = 'счётчик на кнопке застыл на ' + btnText;      // поток завис
-        } else if (silent >= SUP_LIMIT_MS) {
-            why = 'прошло ' + Math.round(silent / 1000) + ' с тишины (лимит 300 с)';
-        } else {
-            return;                                              // запрос идёт меньше 300 с — ждём
-        }
-
-        st.status = 'failed';
-        st.reason = why;
-        st.lastSeen = now;
-        supSave(st);
-        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' — ' + why + '. Передаю задачу дальше.]*');
-        supHandoff();
+        supBreak('молчит ' + Math.round(waited / 1000) + ' с (лимит 300 с)');
     }
 
     function supStartWatch() {
@@ -241,7 +320,6 @@
     /* ---------- НАРУЖУ ---------- */
 
     window.supStart = supStart;
-    window.supResume = supResume;
     window.supAnswered = supAnswered;
     window.supFailed = supFailed;
     window.supHeartbeat = supHeartbeat;
@@ -249,7 +327,9 @@
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.SUPERVISOR_VERSION = '1.3-stage2';
+    window.supTimerBroken = supBreak;   // chat.js: счётчик на кнопке оборвался → задача уходит дальше
+    window.supIndicator = supIndicator;
+    window.SUPERVISOR_VERSION = '1.3-stage3';
 
     supStartWatch();
 })();
