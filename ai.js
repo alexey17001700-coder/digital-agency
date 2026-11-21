@@ -151,6 +151,54 @@
     if (els.input) els.input.disabled = v;
   }
 
+  /* ---------- авто-продолжение этапов («пинок») ---------- */
+
+  function stageMarker(text) {
+    var m = /\[ЭТАП\s*(\d+)\s*\/\s*(\d+)\]/i.exec(text || '');
+    if (!m) return null;
+    return { n: parseInt(m[1], 10), total: parseInt(m[2], 10) };
+  }
+
+  function setAuto(v) {
+    auto = !!v;
+    if (!auto && autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+    if (auto) autoSteps = 0;
+    if (els.autoBtn) {
+      els.autoBtn.textContent = auto ? '⏸ Авто' : '▶ Авто';
+      els.autoBtn.style.borderColor = auto ? '#7ee08a' : '#333';
+      els.autoBtn.style.color = auto ? '#7ee08a' : '#aaa';
+    }
+    setStatus(auto ? 'Авто-режим включён' : 'Авто-режим выключен');
+  }
+
+  function maybeAuto(text) {
+    if (!auto) return;
+    if (/Готово,\s*Босс/i.test(text || '')) {
+      setAuto(false);
+      setStatus('Авто: задача закрыта', false);
+      return;
+    }
+    var st = stageMarker(text);
+    if (!st || st.n >= st.total) {
+      setAuto(false);
+      setStatus('Авто: этапов больше нет', false);
+      return;
+    }
+    if (autoSteps >= AUTO_MAX) {
+      setAuto(false);
+      setStatus('Авто: стоп-лимит ' + AUTO_MAX + ' шагов', true);
+      return;
+    }
+    autoSteps++;
+    var next = 'продолжи этап ' + (st.n + 1) + ' из ' + st.total;
+    setStatus('Авто: ' + next + ' (' + autoSteps + '/' + AUTO_MAX + ')');
+    autoTimer = setTimeout(function () {
+      if (!auto) return;
+      if (els.input) els.input.value = next;
+      send();
+    }, 1500);
+  }
+
   /* ---------- отправка ---------- */
 
   async function send() {
