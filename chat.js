@@ -89,32 +89,15 @@ let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
    больше нет — любое сообщение Босса уходит Архитектору Штаба. */
 
 /* --- БЕСПЛАТНАЯ МОДЕЛЬ — ПОСЛЕДНИЙ РУБЕЖ НАДЗИРАТЕЛЯ ---
-   Когда и Архитектор, и Помощник не ответили, надзиратель зовёт сюда.
-   Сначала пробуем шлюз ИИ (:8002) с пометкой free, затем — основной
-   сервер Штаба с бесплатным маршрутом (0 ₽, без карты). */
+   Когда Архитектор не ответил, надзиратель зовёт сюда: запрос уходит
+   на основной сервер Штаба с бесплатным маршрутом (0 ₽, без карты).
+   Отдельного ИИ-шлюза :8002 больше нет — только PROXY. */
 async function sendToFreeModel(text) {
     const freeList = (typeof freeModels === 'function') ? freeModels() : [];
     const freeId = freeList.length ? freeList[0].id : '';
     const freeLabel = freeList.length ? freeList[0].label : 'free';
-    const gw = await assistFindGateway();
-    if (gw) {
-        try {
-            const r = await assistFetch(gw + '/ai', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: [{ role: 'user', content: text }], temperature: 0.6, free: true, model: freeId })
-            }, 95000);
-            const j = await r.json().catch(() => ({}));
-            if (r.ok && j.ok && j.text) {
-                const meta = '🆓 ' + (j.provider || freeLabel) + ' · ' + (j.model || freeId || '?') + ' · ' + (j.ms || 0) + ' мс';
-                renderMessage(j.text, 'director', 'Бесплатная модель');
-                addMessageToHistory(j.text, 'director', 'Бесплатная модель');
-                renderMessage('*' + meta + '*', 'director', 'Бесплатная модель');
-                return true;
-            }
-        } catch (e) { /* шлюз молчит — идём на основной сервер */ }
-    }
     try {
-        const r = await assistFetch(PROXY, {
+        const r = await fetch(PROXY, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: [{ role: 'user', content: text }], temperature: 0.6, model: freeId, isBoss: true })
         }, 95000);
