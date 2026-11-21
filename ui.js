@@ -456,6 +456,27 @@ function openVersionPanel() {
         line('Сборка', String(d.build || '--'));
         line('Правок накоплено', edits + ' / ' + limit, edits >= limit ? '#ff0055' : '#7ee08a');
         line('До обновления', edits >= limit ? 'ПОРА ОБНОВЛЯТЬ' : ('ещё ' + left + ' правк' + (left === 1 ? 'а' : 'и')), edits >= limit ? '#ff0055' : '#00e5ff');
+        /* --- ЖУРНАЛ ПРАВОК ---
+           Босс видит, ЧТО именно считалось правкой и почему счётчик сдвинулся.
+           Никаких «само добавилось»: каждая цифра подписана. */
+        if (Array.isArray(d.log) && d.log.length) {
+            const h = document.createElement('div');
+            h.textContent = '📝 ЧТО СЧИТАЛОСЬ ПРАВКОЙ';
+            h.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:.6px;color:#8b98a5;margin:12px 0 6px;';
+            box.appendChild(h);
+            d.log.slice().reverse().forEach(it => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #1d242c;font-size:12px;line-height:1.35;';
+                const n = document.createElement('span');
+                n.textContent = '#' + (it.n || '?');
+                n.style.cssText = 'color:#ffd700;font-weight:700;flex:0 0 auto;';
+                const t = document.createElement('span');
+                t.textContent = it.text || '';
+                t.style.color = '#c9d6e2';
+                row.appendChild(n); row.appendChild(t);
+                box.appendChild(row);
+            });
+        }
         if (d.note) {
             const n = document.createElement('div');
             n.textContent = d.note;
