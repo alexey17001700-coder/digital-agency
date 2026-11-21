@@ -158,6 +158,7 @@
     /* Кому передаём дальше: Архитектор → Помощник → Бесплатная модель.
        Передачи ограничены — иначе два ИИ зациклятся. */
     function supHandoff() {
+        if (supBusy) return;              // передача уже идёт — вторую не запускаем
         const st = supLoad();
         if (!st) return;
         if (st.status === 'answered') return;
