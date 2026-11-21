@@ -890,8 +890,20 @@ async function checkServerBuild() {
         if (!mark) return;
         if (serverBuildMark === null) { serverBuildMark = mark; return; }   // первый замер — точка отсчёта
         if (mark !== serverBuildMark) {
+            serverBuildMark = mark;            // отметили один раз — больше не дёргаем кнопку
             const btn = findRefreshBtn();
-            if (btn) { btn.classList.add('needs-update'); btn.innerText = '🔄 Обновить штаб ⬤'; }
+            if (btn) {
+                btn.classList.remove('needs-update');   // мигание убрано совсем
+                if (!btn.dataset.baseText) btn.dataset.baseText = btn.innerText;
+                btn.innerText = btn.dataset.baseText;   // текст кнопки не меняется
+                if (!btn.querySelector('.update-dot')) {
+                    _injectUpdateDotCss();
+                    const dot = document.createElement('span');
+                    dot.className = 'update-dot';
+                    dot.title = 'На сервере свежий код — можно обновить';
+                    btn.appendChild(dot);
+                }
+            }
         }
     } catch (e) {}
 }
