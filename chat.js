@@ -176,11 +176,13 @@ async function sendToAssistant(text) {
         renderMessage(answer, 'director', 'Помощник');
         addMessageToHistory(answer, 'director', 'Помощник');
         renderMessage('*' + meta + '*', 'director', 'Помощник');
+        return true;   // ответ пришёл — надзиратель закроет задачу
     } catch (e) {
         const msg = (e && e.name === 'AbortError') ? 'таймаут 95 сек' : ((e && e.message) || 'сбой');
         const errText = '⚠️ Ошибка Помощника: ' + msg;
         renderMessage(errText, 'director', 'Помощник');
         addMessageToHistory(errText, 'director', 'Помощник');
+        return false;  // сорвался — надзиратель увидит и передаст задачу второму
     }
 }
 
