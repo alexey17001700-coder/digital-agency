@@ -373,6 +373,10 @@
         checkTimeoutKick();
         if (busy) return;
 
+        // АВТООБНОВЛЕНИЕ: накопилось 5 правок → сами шлём Боссу «обновляй»
+        checkVersionUpdate();
+        if (busy) return;
+
         if (!isOn()) return;
 
         // 0) СМЕНИЛИ ЧАТ / ЧАТ ПЕРЕРИСОВАЛСЯ — история это не команда.
