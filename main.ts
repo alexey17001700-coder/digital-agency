@@ -1175,8 +1175,18 @@ Deno.serve(async (request) => {
 
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
+            } else if (/^gigachat/i.test(reqModel)) {
+                // Босс явно выбрал GigaChat — идём напрямую в Сбер
+                aiText = await callGigaChat(body.messages, reqModel);
             } else {
-                aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
+                try {
+                    aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
+                } catch (zvenoErr: any) {
+                    // Все маршруты ZVENO упали — последний рубеж: GigaChat
+                    if (!GIGACHAT_KEY) throw zvenoErr;
+                    zlog(`[GIGACHAT] ZVENO упал (${zvenoErr?.message || zvenoErr}) — переключаюсь на Сбер`);
+                    aiText = await callGigaChat(body.messages, "");
+                }
             }
 
             return json({ choices: [{ message: { content: aiText } }] });
