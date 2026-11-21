@@ -1566,6 +1566,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                 renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
             }
             lastSendSuccess = true;
+            // НАДЗИРАТЕЛЬ: Архитектор ответил — задача закрыта.
+            if (typeof supAnswered === 'function') supAnswered('arch');
             playSound('receive'); stallKicks = 0; stopStallWatchdog(); stopButtonWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
