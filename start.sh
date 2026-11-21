@@ -54,5 +54,34 @@ else
   echo "⚠  edge-tts всё ещё не найден — озвучка уйдёт в голос телефона."
 fi
 
+# ============================================
+#  ИИ-ШЛЮЗ ПОМОЩНИКА (ai.ts, порт 8002)
+# ============================================
+#  Без него Помощник молчит: сообщение уходит, ответа нет.
+#  Поднимаем в фоне и следим — упал, значит поднимаем снова.
+AI_TS=""
+for p in "$PWD/gateway/ai.ts" "$PWD/../nexus_ws/ai.ts" "$HOME/nexus_ws/ai.ts"; do
+  if [ -f "$p" ]; then AI_TS="$p"; break; fi
+done
+
+start_gateway() {
+  if [ -z "$AI_TS" ]; then
+    echo "⚠  ai.ts не найден — Помощник будет молчать (ждём sync.sh)"
+    return
+  fi
+  # ключи моделей: .env рядом со шлюзом
+  if [ -f "$(dirname "$AI_TS")/.env" ]; then
+    set -a; . "$(dirname "$AI_TS")/.env"; set +a
+  fi
+  echo "🤖 ИИ-шлюз: $AI_TS (порт ${AI_PORT:-8002})"
+  while true; do
+    deno run --allow-net --allow-env --allow-read "$AI_TS"
+    echo "$(date): ИИ-шлюз упал — перезапуск через 5 с"
+    sleep 5
+  done
+}
+
+start_gateway &
+
 echo "🏢 Штаб запускается на порту 8000 (озвучка включена)..."
 exec deno run --allow-net --allow-env --allow-read --allow-run --allow-write --watch main.ts
