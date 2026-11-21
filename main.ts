@@ -32,6 +32,23 @@ const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удале
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
 
+// =========================================
+// ЛОГИ ZVENO — в ОТДЕЛЬНЫЙ файл, чтобы не засорять shtab.log
+// Смотреть:  tail -f /root/zveno.log
+// =========================================
+const ZVENO_LOG = Deno.env.get("ZVENO_LOG") || "/root/zveno.log";
+const ZVENO_LOG_MAX = 2 * 1024 * 1024; // 2 МБ — потом обнуляем
+function zlog(msg: string) {
+    const line = `[${new Date().toISOString()}] ${msg}\n`;
+    try {
+        try {
+            const st = Deno.statSync(ZVENO_LOG);
+            if (st.size > ZVENO_LOG_MAX) Deno.writeTextFileSync(ZVENO_LOG, "");
+        } catch (_e) { /* файла ещё нет — ок */ }
+        Deno.writeTextFileSync(ZVENO_LOG, line, { append: true });
+    } catch (_e) { /* нет прав на запись — молча пропускаем */ }
+}
+
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
