@@ -396,6 +396,7 @@
   }
 
   function close() {
+    if (auto) setAuto(false);   // закрыл окно — авто-цикл останавливаем
     if (els.modal) els.modal.classList.remove('active');
   }
 
