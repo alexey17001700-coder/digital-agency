@@ -1717,6 +1717,10 @@ async function sendMessage(overrideText = null, isKick = false) {
 
             // Метка [ЭТАП N/M] — этап закрыт, просим продолжить следующий.
             const stage = parseStageMarker(aiText);
+            // НАДЗИРАТЕЛЬ: задача разбита на этапы — это НЕ молчание, агент жив.
+            // Большая задача не передаётся другому, пока идут этапы.
+            if (typeof window.supStage === 'function') window.supStage(stage);
+            if (stage && typeof window.supAlive === 'function') window.supAlive();
             if (!isKick && stage && stageKicks < STAGE_MAX_KICKS) {
                 stageKicks++;
                 renderMessage(`🧩 *[Система: этап ${stage.cur}/${stage.total} закрыт. Авто-пинок — прошу продолжить этап ${stage.cur + 1}.]*`, 'director', 'Оркестратор');
