@@ -99,10 +99,11 @@
     var list = candidates();
     for (var i = 0; i < list.length; i++) {
       try {
-        var r = await fetchTimeout(list[i] + '/ai/health', { method: 'GET' }, 6000);
+        var r = await fetchTimeout(list[i] + '/ai/health', { method: 'GET' }, 3000);
         if (r.ok) {
           var j = await r.json().catch(function () { return {}; });
           gateway = list[i];
+          gwFails = false;
           var prov = (j.providers && j.providers.length) ? j.providers.join(', ') : 'ключей нет';
           setStatus('шлюз ок · ' + prov);
           return gateway;
