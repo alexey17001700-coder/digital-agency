@@ -1244,6 +1244,28 @@ async function sendMessage(overrideText = null, isKick = false) {
                     }
                 }
 
+                // --- 👁 ГЛАЗА: фото → описание → в контекст Архитектору ---
+                let visionBridgeUsed = false;
+                if (attachedImageBase64) {
+                    renderMessage('👁 *[Глаза: разбираю фото...]*', 'director', 'Оркестратор');
+                    const visionDesc = await describeAttachedImage(attachedImageBase64);
+                    if (visionDesc) {
+                        visionBridgeUsed = true;
+                        renderMessage(`👁 **Что я вижу на фото:**\n\n${visionDesc}`, 'director', 'Оркестратор');
+                        addMessageToHistory(`[ФОТО ОТ БОССА — ОПИСАНИЕ]: ${visionDesc}`, 'director', 'Оркестратор');
+                        for (let i = messagesToSend.length - 1; i >= 0; i--) {
+                            if (messagesToSend[i].role === 'user') {
+                                messagesToSend[i] = Object.assign({}, messagesToSend[i], {
+                                    content: `[ФОТО ОТ БОССА — ОПИСАНИЕ ЗРЕНИЯ]:\n${visionDesc}\n\n${messagesToSend[i].content}`
+                                });
+                                break;
+                            }
+                        }
+                    } else {
+                        renderMessage('👁 *[Глаза: описание не пришло — фото уходит в модель как есть.]*', 'director', 'Оркестратор');
+                    }
+                }
+
                 let finalPrompt = SYSTEM_PROMPT;
                 if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
