@@ -262,6 +262,19 @@
                 <button class="send-btn" id="sendBtn" onclick="handleSendClick()">➤</button>
             </div>
         </div>
+        </div>
+
+        <!-- ПАНЕЛЬ ПОМОЩНИКА (второй Архитектор). Наполняется из ai.js:
+             строка инструментов, лента диалога, поле ввода. -->
+        <div class="chat-col-assistant" id="assistantPanel">
+            <div class="assistant-head">
+                <span class="assistant-title">🤖 Помощник</span>
+                <span class="assistant-hint" id="assistantHint">второй Архитектор</span>
+                <button class="assistant-close" onclick="closeAssistantPanel()" title="Свернуть панель">✖</button>
+            </div>
+            <div class="assistant-body" id="assistantBody"></div>
+        </div>
+        </div>
 
         <div class="agents-wrapper">
             <div class="agents-grid" id="agents-grid"></div>
