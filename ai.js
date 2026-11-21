@@ -402,6 +402,7 @@
     var on = setPanel(!panelOn());
     if (on) {
       render();
+      gwFails = false;   // при каждом открытии проверяем шлюз заново
       findGateway();
       setTimeout(function () { if (els.input) els.input.focus(); }, 150);
     } else if (auto) {
