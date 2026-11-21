@@ -18,6 +18,10 @@ GW_REPO="alexey17001700-coder/nexus_ws"
 GW_URL="https://raw.githubusercontent.com/${GW_REPO}/main/ai.ts"
 GW_MEM_URL="https://raw.githubusercontent.com/${GW_REPO}/main/ai_memory.md"
 
+# --- СЕРВЕР ЧАТА (nexus_ws/main.ts) — качаем в ./chat ---
+# Раньше сервер чата никто не обновлял и не сторожил: упал — лежал.
+CHAT_URL="https://raw.githubusercontent.com/${GW_REPO}/main/main.ts"
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET="$DIR/main.ts"
 BACKUP="$DIR/main.ts.bak"
