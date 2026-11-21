@@ -862,6 +862,16 @@ function stopTimerFreezeWatchdog() { if (timerFreezeWatchdog) { clearInterval(ti
 const UPDATE_CHECK_MS = 30000;
 let updateWatchTimer = null;
 let serverBuildMark = null;
+/* --- ТИХИЙ ИНДИКАТОР ОБНОВЛЕНИЯ ---
+   Раньше кнопка на КАЖДУЮ правку кода меняла текст на «🔄 Обновить штаб ⬤»
+   и мигала жёлтым — Босса это раздражало. Теперь текст кнопки не трогаем:
+   справа от неё появляется маленькая жёлтая точка. Один раз и молча. */
+function _injectUpdateDotCss() {
+    if (document.getElementById('updateDotCss')) return;
+    const st = document.createElement('style'); st.id = 'updateDotCss';
+    st.textContent = '.update-dot{display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:#ffd700;box-shadow:0 0 5px rgba(255,215,0,.8);vertical-align:middle;}';
+    document.head.appendChild(st);
+}
 function findRefreshBtn() {
     return document.getElementById('btnRefreshShtab') || (function () {
         const btns = document.querySelectorAll('.mode-switch .mode-btn');
