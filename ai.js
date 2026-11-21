@@ -260,12 +260,28 @@
 
   async function send() {
     if (busy) return;
-    var text = (els.input && els.input.value || '').trim();
+    if (!els.input) build();     // панель могла не собраться — собираем сейчас
+    if (!els.input) {
+      if (typeof window.showBootError === 'function') {
+        window.showBootError('Панель Помощника не собралась (нет #assistantBody). Обнови страницу.');
+      }
+      return;
+    }
+    var text = (els.input.value || '').trim();
     if (!text) return;
 
+    // Сообщение Босса показываем СРАЗУ, до поиска шлюза: раньше при затянувшемся
+    // поиске в ленте ничего не появлялось и казалось, что кнопка не работает.
+    history.push({ role: 'user', content: text });
+    els.input.value = '';
+    saveHistory();
+    render();
+
     setStatus('ищу шлюз…');
-    var gw = await findGateway();
+    var gw = await withDeadline(findGateway(), 9000);
     if (!gw) {
+      gwFails = true;
+      gwFailTime = Date.now();
       history.push({
         role: 'assistant',
         content: '⚠️ Шлюз ИИ :8002 не отвечает — отправлять некуда.\n\n' +
