@@ -47,20 +47,6 @@ function handleAgentClick(name) {
     else { selectedAgents.push(name); card.classList.add('selected'); }
 }
 
-function toggleCouncil() {
-    const btn = document.getElementById('btnCouncil');
-    if (selectedAgents.length > 0) {
-        selectedAgents = [];
-        document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected'));
-        btn.className = 'mode-btn';
-        resetAllStatuses();
-    } else {
-        selectedAgents = Object.keys(AGENT_INFO);
-        document.querySelectorAll('.agent-card').forEach(c => c.classList.add('selected'));
-        btn.className = 'mode-btn active';
-    }
-}
-
 function unselectAgentFromModal() {
     const name = document.getElementById('modalTitle').innerText;
     selectedAgents = selectedAgents.filter(a => a !== name);
