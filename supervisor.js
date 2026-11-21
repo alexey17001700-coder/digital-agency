@@ -207,6 +207,8 @@
             }
         } catch (e) {
             supFailed(owner, (e && e.message) || 'сбой передачи');
+        } finally {
+            supBusy = false;              // передача завершена — надзиратель снова на связи
         }
     }
 
