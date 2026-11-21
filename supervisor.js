@@ -53,6 +53,10 @@
     const OWNER_NEXT = { arch: 'assistant', assistant: 'free' };   // цепочка замены
 
     let supTimer = null;
+    let supLastTimerText = '';        // текст счётчика на кнопке «Отправить» на прошлой проверке
+    let supLastTimerChange = 0;       // когда счётчик менялся в последний раз
+    let supStartCount = 0;            // сколько ответов было в ленте на момент старта задачи
+    let supBusy = false;              // передача уже идёт — второй раз не дёргаем
 
     /* ---------- ЖУРНАЛ ---------- */
 
