@@ -299,6 +299,7 @@ function modelBadgeText(id) {
     const info = AI_MODELS.find(m => m.id === id);
     if (!info) return '❔ *[Модель: ' + id + ']*';
     if (info.free) return '🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + info.label + ' — 0 ₽]*';
+    if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — по ключу GIGACHAT_KEY]*';
     return '💳 *[Ответила платная модель: ' + info.label + ']*';
 }
 
