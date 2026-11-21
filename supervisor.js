@@ -1,71 +1,52 @@
 /* ============================================================
-   НАДЗИРАТЕЛЬ — supervisor.js
+   НАДЗИРАТЕЛЬ — supervisor.js  v1.4-stage3
    ------------------------------------------------------------
    Следит за диалогом Босса в Штабе и не даёт задаче умереть молча.
 
-   Кто ведёт задачу (Архитектор или Помощник), когда ответил,
-   сколько ждём ответа — всё лежит в localStorage под ключом
-   shtabSupervisor. Оба агента пишут в один журнал и читают его,
-   поэтому видят, что делает второй.
+   ГЛАВНЫЙ ПОРОГ: 300 СЕКУНД (лимит кнопки «Отправить»).
+   Пока лимит не вышел — агент считается живым, передача НЕ делается,
+   сколько бы он ни думал.
 
-   ЭТАП 1: журнал задач + детект молчания + запись в ленту чата.
-   ЭТАП 2: передача задачи второму агенту + бесплатная модель.
-   ЭТАП 3: компактный индикатор + стоп-кран + ловля оборвавшегося
-           счётчика + ЗАЩИТА ЖИВОГО АГЕНТА + РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ.
+   ЖИЗНЬ (передача НЕ делается):
+     • на кнопке «Отправить» тикает счётчик;
+     • isGenerating == true и прошло меньше 300 с;
+     • идёт авто-пинок «продолжи», следующий этап [ЭТАП N/M];
+     • большая задача разбита на части — каждая часть у своего агента.
 
-   ЖИВОЙ АГЕНТ — НЕ ПЕРЕДАЁМ (Босс): если агент реально работает —
-   идёт запрос, печатается ответ, крутятся этапы [ЭТАП N/M], запущены
-   фоновые задачи [TASK:...] или «раздели задачу» — задача НЕ уходит
-   другому. Большая задача — это не молчание. Пока агент жив, надзиратель
-   только продлевает срок и ждёт. Передача — лишь когда агент МЁРТВ:
-   ни запроса, ни печати, ни этапов, ни движения в ленте.
-
-   БОЛЬШАЯ ЗАДАЧА — РАСПРЕДЕЛЯЕМ (Босс): если задача разбита на этапы
-   ([ЭТАП N/M], M > 1) или содержит фоновые задачи [TASK:...], надзиратель
-   не передаёт её целиком, а раскидывает этапы по СВОБОДНЫМ агентам —
-   те работают параллельно, и задача не ждёт одного.
+   СМЕРТЬ (задача/часть уходит следующему по цепочке):
+     • счётчик на кнопке ЗАСТЫЛ и не менялся 15 с;
+     • счётчик ПРОПАЛ (запрос оборвался), ответа в чате нет;
+     • прошло 300 с тишины — лимит кнопки истёк;
+     • явный сбой: ошибка, пустой ответ, «слишком много шагов».
 
    ЦЕПОЧКА ЗАМЕНЫ: Архитектор → Помощник → Бесплатная модель → стоп.
-   Если агент молчит или сорвался, задача уходит следующему по цепочке.
-   Число передач ограничено SUP_MAX_HANDOFFS — иначе два ИИ зациклятся
-   и будут бесконечно пинать друг друга.
+   Передач не больше SUP_MAX_HANDOFFS — иначе два ИИ зациклятся.
 
-   СРОК МОЛЧАНИЯ = 300 с. Это лимит кнопки отправки. Пока он не вышел,
-   агент считается работающим — даже если ответа ещё нет. Передача
-   происходит только после 300 с тишины.
+   РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ:
+     supSplit(text) — опрашивает агентов (кто онлайн), режет задачу
+     на части и раздаёт: каждый агент делает свою часть, другим не мешает.
 
-   ОБОРВАВШИЙСЯ СЧЁТЧИК (Босс): на кнопке «Отправить» бегут секунды.
-   Если счётчик ЗАМЕР (не меняется 6 с) или ПРОПАЛ, а ответа в чате нет —
-   это обрыв потока, и задача уходит следующему СРАЗУ, не дожидаясь 300 с.
-
-   Файл самостоятельный: ни от чего не зависит, всё внешнее —
-   через typeof-проверки. Если chat.js не загрузился, надзиратель
-   просто молчит и ничего не ломает.
+   Файл самостоятельный: всё внешнее — через typeof-проверки.
    ============================================================ */
 (function () {
     'use strict';
 
     const SUP_KEY = 'shtabSupervisor';
-    const SUP_SILENCE_MS = 300000;      // 300 с — лимит кнопки отправки. Раньше этого срока агент может работать, это не молчание
-    const SUP_TICK_MS = 5000;           // проверка каждые 5 с
-    const SUP_MAX_HANDOFFS = 2;         // не больше 2 передач на одну задачу (стоп-кран)
-    const SUP_TEXT_LIMIT = 2000;        // столько текста задачи храним в журнале
-    const SUP_TIMER_GRACE_MS = 8000;    // первые 8 с счётчик на кнопке ещё не запущен — это не поломка
-    const SUP_TIMER_FREEZE_MS = 6000;   // счётчик не менялся 6 с — застыл, значит поток умер
-    const SUP_HANDOFF_GUARD_MS = 15000; // защита от двойной передачи: две проверки не передают задачу дважды
-    const SUP_ALIVE_MS = 120000;        // признак жизни держится 120 с: агент работает — передача запрещена
-    const SUP_ACTIVITY_MS = 45000;      // движение в ленте за это время = агент жив
-    const SUP_DISTRIBUTE_MAX = 3;       // не больше 3 агентов на одну большую задачу
+    const SUP_LIMIT_MS = 300000;    // 300 с — лимит кнопки отправки: только после него передача по времени
+    const SUP_FREEZE_MS = 15000;    // счётчик не менялся 15 с — считаем застывшим
+    const SUP_TICK_MS = 3000;       // проверка каждые 3 с
+    const SUP_MAX_HANDOFFS = 2;     // не больше 2 передач на одну задачу (стоп-кран)
+    const SUP_TEXT_LIMIT = 2000;    // столько текста задачи храним в журнале
 
-    const OWNER_LABEL = { arch: '🏛 Архитектор', assistant: '🤖 Помощник', free: '🆓 Бесплатная модель' };
+    const OWNER_LABEL = {
+        arch: '🏛 Архитектор',
+        assistant: '🤖 Помощник',
+        free: '🆓 Бесплатная модель'
+    };
     const OWNER_NEXT = { arch: 'assistant', assistant: 'free' };   // цепочка замены
 
     let supTimer = null;
-    let supDispatching = false;   // надзиратель САМ ведёт запрос — счётчик кнопки в это время не наш, не проверяем
-    let supAliveUntil = 0;        // до этого времени задача считается ЖИВОЙ — передача запрещена
-    let supLastActivity = 0;      // когда в ленте последний раз было движение (печать/ответ)
-    let supStageInfo = null;      // { cur, total } — задача разбита на этапы, это НЕ молчание
-    let supDistributed = false;   // большую задачу уже раскидали по агентам — второй раз не раскидываем
+    let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
 
     /* ---------- ЖУРНАЛ ---------- */
 
@@ -81,41 +62,87 @@
     }
     function supClear() {
         try { localStorage.removeItem(SUP_KEY); } catch (e) {}
-        supIndicatorHide();
     }
-    function ownerLabel(o) { return OWNER_LABEL[o] || ('❔ ' + o); }
+    function ownerLabel(o) { return OWNER_LABEL[o] || ('👤 ' + o); }
 
-    /* Задача взята в работу. owner: 'arch' | 'assistant' */
+    /* Задача взята в работу. owner: 'arch' | 'assistant' | 'free' | имя агента */
     function supStart(text, owner) {
         const prev = supLoad();
         const history = (prev && Array.isArray(prev.history)) ? prev.history : [];
+        const now = Date.now();
         supSave({
             text: String(text || '').slice(0, SUP_TEXT_LIMIT),
             owner: owner || 'arch',
-            status: 'waiting',                 // waiting | answered | stalled | failed
+            status: 'waiting',                 // waiting | answered | failed
             handoffs: 0,
-            startedAt: Date.now(),
-            lastSeen: Date.now(),
-            timerText: '',
-            timerChange: Date.now(),
-            lastHandoffAt: 0,
+            startedAt: now,
+            lastSeen: now,
+            lastTimerText: '',
+            lastTimerChange: now,
+            parts: [],
+            partIndex: 0,
             history: history
         });
-        supLog('📋 *[Надзиратель: задачу взял ' + ownerLabel(owner) + '. Жду ответа.]*');
-        supIndicator('waiting', ownerLabel(owner) + ' работает…');
+        supLog('📋 Задачу взял ' + ownerLabel(owner));
     }
 
-    /* Агент ответил — задача закрыта. */
+    /* Задача продолжается: авто-пинок, следующий этап, повтор после сбоя.
+       Журнал переоткрываем — агент снова в работе, передавать некому. */
+    function supResume(owner) {
+        const st = supLoad();
+        if (!st) return;
+        const now = Date.now();
+        if (!st.parts || !st.parts.length) st.owner = owner || st.owner || 'arch';
+        st.status = 'waiting';
+        st.startedAt = now;
+        st.lastSeen = now;
+        st.lastTimerText = '';
+        st.lastTimerChange = now;
+        st.reason = '';
+        supSave(st);
+    }
+
+    /* Пульс: агент ещё жив и работает (пинок, этап, длинный запрос). */
+    function supHeartbeat(owner) {
+        const st = supLoad();
+        if (!st) return;
+        if (owner && !(st.parts && st.parts.length) && st.owner && owner !== st.owner) return;
+        st.lastSeen = Date.now();
+        supSave(st);
+    }
+
+    /* Агент ответил. Если задача разбита на части — двигаем очередь дальше. */
     function supAnswered(owner) {
         const st = supLoad();
         if (!st) return;
+
+        if (st.parts && st.parts.length) {
+            const p = st.parts[st.partIndex];
+            if (p) { p.status = 'done'; p.lastSeen = Date.now(); }
+            const nextIdx = st.parts.findIndex(function (x) { return x.status !== 'done' && x.status !== 'failed'; });
+            if (nextIdx === -1) {
+                st.status = 'answered';
+                st.lastSeen = Date.now();
+                supSave(st);
+                supLog('✅ Разбитая задача собрана — все ' + st.parts.length + ' частей готовы');
+                return;
+            }
+            st.partIndex = nextIdx;
+            st.status = 'waiting';
+            st.lastSeen = Date.now();
+            st.lastTimerChange = Date.now();
+            st.lastTimerText = '';
+            supSave(st);
+            supLog('🧩 Часть ' + (nextIdx + 1) + '/' + st.parts.length + ' → ' + ownerLabel(st.parts[nextIdx].owner));
+            supDispatchPart(st.parts[nextIdx]);
+            return;
+        }
+
         if (owner && st.owner && owner !== st.owner) return;   // ответил не тот, кто ведёт — не закрываем
         st.status = 'answered';
         st.lastSeen = Date.now();
         supSave(st);
-        supLog('✅ *[Надзиратель: ' + ownerLabel(st.owner) + ' ответил. Задача закрыта.]*');
-        supIndicator('answered', ownerLabel(st.owner) + ' ответил');
-        setTimeout(supClear, 1500);            // журнал чистим, чтобы не копить мусор
+        supLog('✅ ' + ownerLabel(st.owner) + ' ответил — задача закрыта');
     }
 
     /* Агент сорвался (ошибка, пустой ответ, обрыв).
@@ -128,62 +155,56 @@
         st.lastSeen = Date.now();
         st.reason = String(reason || 'сбой').slice(0, 300);
         supSave(st);
-        supLog('⚠️ *[Надзиратель: ' + ownerLabel(owner || st.owner) + ' сорвался — ' + st.reason + '.]*');
+        supLog('⚠️ ' + ownerLabel(owner || st.owner) + ' сорвался — ' + st.reason);
         supHandoff();                          // пробуем следующего по цепочке
-    }
-
-    /* Пульс: агент ещё жив и работает (длинный запрос). */
-    function supHeartbeat(owner) {
-        const st = supLoad();
-        if (!st) return;
-        if (owner && st.owner && owner !== st.owner) return;
-        st.lastSeen = Date.now();
-        if (st.status === 'stalled') st.status = 'waiting';
-        supSave(st);
-    }
-
-    /* ---------- ОБРЫВ: МОЛЧАНИЕ / ЗАСТЫВШИЙ ИЛИ ПРОПАВШИЙ СЧЁТЧИК ----------
-       Единая точка: агент перестал отвечать (300 с тишины ЛИБО счётчик
-       на кнопке замер/пропал) — задача уходит следующему по цепочке.
-       Возвращает true, если надзиратель взял это на себя. */
-    function supBreak(reason) {
-        const st = supLoad();
-        if (!st || st.status !== 'waiting') return false;
-        st.status = 'stalled';
-        st.lastSeen = Date.now();
-        st.reason = String(reason || 'обрыв').slice(0, 300);
-        supSave(st);
-        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' — ' + st.reason + '. Передаю задачу дальше.]*');
-        supIndicator('stalled', '⚠️ ' + ownerLabel(st.owner) + ' молчит');
-        supHandoff();
-        return true;
     }
 
     /* ---------- ПЕРЕДАЧА ЗАДАЧИ ---------- */
 
-    /* Кому передаём дальше: Архитектор → Помощник → Бесплатная модель.
-       Передачи ограничены — иначе два ИИ зациклятся. */
     function supHandoff() {
         const st = supLoad();
         if (!st) return;
         if (st.status === 'answered') return;
-        if (st.lastHandoffAt && (Date.now() - st.lastHandoffAt) < SUP_HANDOFF_GUARD_MS) return;   // двойную передачу не делаем
+
+        /* Разбитая задача: передаём ТОЛЬКО зависшую часть, остальные не трогаем. */
+        if (st.parts && st.parts.length) {
+            const p = st.parts[st.partIndex];
+            if (!p) { supStopKran(st); return; }
+            if ((p.handoffs || 0) >= SUP_MAX_HANDOFFS) {
+                p.status = 'failed';
+                supSave(st);
+                supLog('🛑 Часть ' + (st.partIndex + 1) + ' не сделана (' + ownerLabel(p.owner) + ') — нужен Босс');
+                return;
+            }
+            const next = OWNER_NEXT[p.owner] || 'free';
+            p.handoffs = (p.handoffs || 0) + 1;
+            const prev = p.owner;
+            p.owner = next;
+            p.lastSeen = Date.now();
+            st.lastSeen = Date.now();
+            st.lastTimerChange = Date.now();
+            st.lastTimerText = '';
+            supSave(st);
+            supLog('🔄 Часть ' + (st.partIndex + 1) + ': ' + ownerLabel(prev) + ' → ' + ownerLabel(next) + ' (' + p.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
+            supDispatchPart(p);
+            return;
+        }
+
         if ((st.handoffs || 0) >= SUP_MAX_HANDOFFS) { supStopKran(st); return; }
         const prev = st.owner;
         const next = OWNER_NEXT[prev];
         if (!next) { supStopKran(st); return; }
+        const now = Date.now();
         st.owner = next;
         st.handoffs = (st.handoffs || 0) + 1;
         st.status = 'waiting';
-        st.startedAt = Date.now();
-        st.lastSeen = Date.now();
-        st.timerText = '';
-        st.timerChange = Date.now();
-        st.lastHandoffAt = Date.now();
+        st.startedAt = now;
+        st.lastSeen = now;
+        st.lastTimerText = '';
+        st.lastTimerChange = now;
         st.reason = '';
         supSave(st);
-        supLog('🔄 *[Надзиратель: ' + ownerLabel(prev) + ' не справился. Передаю задачу ' + ownerLabel(next) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ').]*');
-        supIndicator('handoff', '🔄 передал ' + ownerLabel(next));
+        supLog('🔄 ' + ownerLabel(prev) + ' → ' + ownerLabel(next) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
         supDispatch(st.text, next);
     }
 
@@ -192,13 +213,12 @@
         st.status = 'failed';
         st.lastSeen = Date.now();
         supSave(st);
-        supLog('🛑 *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит, передачи исчерпаны (' + SUP_MAX_HANDOFFS + '/' + SUP_MAX_HANDOFFS + '). Нужен Босс.]*');
-        supIndicator('stop', '🛑 нужен Босс');
+        supLog('🛑 ' + ownerLabel(st.owner) + ' молчит, передачи исчерпаны — нужен Босс');
     }
 
     /* Отправляем задачу новому владельцу и следим за результатом. */
     async function supDispatch(text, owner) {
-        supDispatching = true;   // запрос ведёт надзиратель — счётчик кнопки в это время не наш
+        supBusyCount++;
         try {
             if (owner === 'assistant' && typeof window.sendToAssistant === 'function') {
                 const ok = await window.sendToAssistant(text);
@@ -207,15 +227,117 @@
                 const ok = await window.sendToFreeModel(text);
                 if (ok) supAnswered('free'); else supFailed('free', 'Бесплатная модель не ответила');
             } else if (owner === 'arch' && typeof window.sendMessage === 'function') {
-                window.sendMessage(text, true);   // Архитектор сам закроет журнал (supAnswered/supFailed)
+                window.sendMessage(text, true);   // Архитектор сам закроет журнал
+            } else if (typeof window.askAgent === 'function') {
+                const ok = await window.askAgent(owner, text);
+                if (ok) supAnswered(owner); else supFailed(owner, 'агент не ответил');
             } else {
                 supFailed(owner, 'нет канала для передачи');
             }
         } catch (e) {
             supFailed(owner, (e && e.message) || 'сбой передачи');
         } finally {
-            supDispatching = false;
+            supBusyCount--;
         }
+    }
+
+    async function supDispatchPart(p) {
+        if (!p) return;
+        await supDispatch(p.text, p.owner);
+    }
+
+    /* ---------- РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ ---------- */
+
+    /* Кто реально на связи. Базовые каналы есть всегда; агенты — если Штаб их отдал. */
+    function supOnlineAgents() {
+        const list = ['arch', 'assistant', 'free'];
+        try {
+            const candidates = [];
+            if (Array.isArray(window.AGENTS_LIST)) candidates.push.apply(candidates, window.AGENTS_LIST);
+            if (Array.isArray(window.agents)) candidates.push.apply(candidates, window.agents);
+            if (window.AGENT_REGISTRY && Array.isArray(window.AGENT_REGISTRY.list)) candidates.push.apply(candidates, window.AGENT_REGISTRY.list);
+            candidates.forEach(function (a) {
+                if (!a) return;
+                const name = (typeof a === 'string') ? a : (a.id || a.name);
+                const online = (typeof a === 'object') ? (a.online !== false) : true;
+                if (name && online && list.indexOf(name) === -1) list.push(name);
+            });
+        } catch (e) { /* нет реестра — работаем базовыми */ }
+        return list;
+    }
+
+    /* Режем задачу на части: по файлам → по пунктам → по абзацам. */
+    function supSplitText(text) {
+        const src = String(text || '').trim();
+        const parts = [];
+
+        // 1) по файлам [FILE: путь] / [READ: путь]
+        const fileRe = /\[(?:FILE|READ):\s*([^\]]+)\]/gi;
+        const files = [];
+        let m;
+        while ((m = fileRe.exec(src)) !== null) files.push(m[1].trim());
+        if (files.length >= 2) {
+            return files.map(function (f, i) {
+                return { text: 'Часть ' + (i + 1) + '/' + files.length + '. Работай только с файлом ' + f + '.\n\nОбщая задача: ' + src, file: f };
+            });
+        }
+
+        // 2) по пунктам списка
+        const lines = src.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+        const bullets = lines.filter(function (l) { return /^([-•*]|\d+[.)])\s+/.test(l); });
+        if (bullets.length >= 2) {
+            return bullets.map(function (l, i) {
+                return { text: 'Часть ' + (i + 1) + '/' + bullets.length + '. Сделай ТОЛЬКО этот пункт, остальные не трогай:\n' + l };
+            });
+        }
+
+        // 3) по абзацам
+        const paras = src.split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+        if (paras.length >= 2) {
+            return paras.map(function (p, i) {
+                return { text: 'Часть ' + (i + 1) + '/' + paras.length + '. Сделай ТОЛЬКО эту часть, остальные не трогай:\n' + p };
+            });
+        }
+
+        return [{ text: src }];
+    }
+
+    /* Разбить большую задачу и раздать частям разных агентов. */
+    function supSplit(text, owners) {
+        const chunks = supSplitText(text);
+        if (chunks.length < 2) {
+            supLog('🧩 Задача не делится — веду её целиком');
+            return false;
+        }
+        const pool = (Array.isArray(owners) && owners.length) ? owners : supOnlineAgents();
+        const now = Date.now();
+        const parts = chunks.map(function (c, i) {
+            return {
+                text: c.text,
+                file: c.file || '',
+                owner: pool[i % pool.length],
+                status: 'waiting',
+                handoffs: 0,
+                lastSeen: now
+            };
+        });
+        supSave({
+            text: String(text || '').slice(0, SUP_TEXT_LIMIT),
+            owner: parts[0].owner,
+            status: 'waiting',
+            handoffs: 0,
+            startedAt: now,
+            lastSeen: now,
+            lastTimerText: '',
+            lastTimerChange: now,
+            parts: parts,
+            partIndex: 0,
+            history: []
+        });
+        const who = parts.map(function (p) { return ownerLabel(p.owner); }).join(' · ');
+        supLog('🧩 Задача на ' + parts.length + ' частей: ' + who);
+        supDispatchPart(parts[0]);
+        return true;
     }
 
     /* ---------- ВЫВОД В ЛЕНТУ ---------- */
@@ -226,109 +348,52 @@
         } catch (e) { /* лента недоступна — молчим */ }
     }
 
-    /* ---------- КОМПАКТНЫЙ ИНДИКАТОР (ЭТАП 3) ----------
-       Раньше каждая проверка писала в ленту длинную строку — Босс тонул
-       в служебных сообщениях. Теперь состояние видно в маленькой плашке
-       внизу слева: кто работает, кто молчит, кому передали задачу. */
-    function supIndicatorCss() {
-        if (document.getElementById('supIndicatorCss')) return;
-        const st = document.createElement('style'); st.id = 'supIndicatorCss';
-        st.textContent = `
-        .sup-indicator {
-            position: fixed; left: 10px; bottom: 78px; z-index: 9000;
-            display: none; align-items: center; gap: 6px;
-            max-width: 62vw; padding: 5px 10px;
-            font-size: 11px; font-weight: 700; font-family: inherit;
-            color: #cfefff; background: rgba(10,20,28,.86);
-            border: 1px solid rgba(0,229,255,.45); border-radius: 999px;
-            backdrop-filter: blur(6px); pointer-events: none;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    /* ---------- ДЕТЕКТ МОЛЧАНИЯ ---------- */
+
+    function timerState(st, now) {
+        const btnText = (typeof sendBtn !== 'undefined' && sendBtn) ? String(sendBtn.innerText || '') : '';
+        const timerAlive = /\d/.test(btnText);
+        if (timerAlive && btnText !== st.lastTimerText) {
+            st.lastTimerText = btnText;
+            st.lastTimerChange = now;
+            st.lastSeen = now;
+            return { alive: true, text: btnText };
         }
-        .sup-indicator.show { display: inline-flex; }
-        .sup-indicator.waiting { border-color: rgba(0,229,255,.45); color: #9fe8ff; }
-        .sup-indicator.stalled { border-color: rgba(255,193,7,.6); color: #ffd76a; }
-        .sup-indicator.handoff { border-color: rgba(123,97,255,.65); color: #c3b6ff; }
-        .sup-indicator.answered { border-color: rgba(76,175,80,.6); color: #8ee39a; }
-        .sup-indicator.stop { border-color: rgba(255,82,82,.7); color: #ff9a9a; }
-        `;
-        document.head.appendChild(st);
+        return { alive: timerAlive, text: btnText };
     }
-    let supIndHideTimer = null;
-    function supIndicator(state, text) {
-        try {
-            supIndicatorCss();
-            let el = document.getElementById('supIndicator');
-            if (!el) {
-                el = document.createElement('div');
-                el.id = 'supIndicator';
-                document.body.appendChild(el);
-            }
-            el.className = 'sup-indicator show ' + (state || 'waiting');
-            el.textContent = text || '';
-            if (supIndHideTimer) { clearTimeout(supIndHideTimer); supIndHideTimer = null; }
-            if (state === 'answered') supIndHideTimer = setTimeout(() => { el.classList.remove('show'); }, 2500);
-        } catch (e) { /* нет DOM — молчим */ }
-    }
-    function supIndicatorHide() {
-        try {
-            const el = document.getElementById('supIndicator');
-            if (el) el.classList.remove('show');
-        } catch (e) {}
-    }
-
-    /* ---------- СЧЁТЧИК НА КНОПКЕ «ОТПРАВИТЬ» ---------- */
-
-    function supButtonTimer() {
-        let txt = '';
-        try {
-            const b = document.getElementById('sendBtn');
-            txt = b ? String(b.innerText || '') : '';
-        } catch (e) {}
-        return {
-            txt: txt,
-            hasDigits: /\d/.test(txt),
-            generating: (typeof isGenerating !== 'undefined') ? !!isGenerating : false
-        };
-    }
-
-    /* ---------- ДЕТЕКТ ОБРЫВА ---------- */
 
     function supTick() {
         const st = supLoad();
-        if (!st) return;
-        if (st.status !== 'waiting') return;
+        if (!st || st.status !== 'waiting') return;
+        if (supBusyCount > 0) return;
 
         const now = Date.now();
-        const waited = now - (st.startedAt || now);
+        const t = timerState(st, now);
+        if (t.alive && t.text === st.lastTimerText) supSave(st);
 
-        // --- СЧЁТЧИК НА КНОПКЕ ---
-        // Босс нажал «Отправить» → на кнопке бегут секунды. Пропал счётчик
-        // или замер на месте, а ответа нет — поток умер. Задача сразу уходит
-        // следующему, не ждём 300 с.
-        // Если запрос ведёт сам надзиратель (передача), счётчик кнопки не наш —
-        // проверку пропускаем, иначе передача ушла бы по кругу.
-        if (waited >= SUP_TIMER_GRACE_MS && !supDispatching) {
-            const t = supButtonTimer();
-            if (t.hasDigits) {
-                if (t.txt !== st.timerText) { st.timerText = t.txt; st.timerChange = now; supSave(st); }
-                else if (now - (st.timerChange || now) >= SUP_TIMER_FREEZE_MS) {
-                    supBreak('счётчик застыл на ' + t.txt); return;
-                }
-            } else if (!t.generating) {
-                supBreak('счётчик на кнопке пропал, ответа нет'); return;
-            } else if (now - (st.timerChange || now) >= SUP_TIMER_FREEZE_MS) {
-                supBreak('счётчик на кнопке не отображается'); return;
-            }
-        }
+        // 1) Счётчик тикает — агент работает.
+        if (t.alive && (now - (st.lastTimerChange || now)) < SUP_FREEZE_MS) return;
 
-        // --- ЛИМИТ 300 С (лимит кнопки отправки) ---
-        // Отсчёт ведём от момента, когда задача ушла агенту (startedAt).
-        // Пульс lastSeen его НЕ сбрасывает: 300 с — жёсткий лимит.
-        if (waited < SUP_SILENCE_MS) {
-            if (typeof isGenerating !== 'undefined' && isGenerating) supHeartbeat(st.owner);
-            return;
-        }
-        supBreak('молчит ' + Math.round(waited / 1000) + ' с (лимит 300 с)');
+        const generating = (typeof isGenerating !== 'undefined') && isGenerating;
+        const silent = now - (st.lastSeen || st.startedAt || now);
+
+        // 2) ГЛАВНОЕ: 300 с ещё не вышло и агент жив — не трогаем.
+        if (generating && silent < SUP_LIMIT_MS) return;
+        if (!generating && silent < SUP_FREEZE_MS) return;
+
+        // 3) Причина передачи.
+        let why = '';
+        if (silent >= SUP_LIMIT_MS) why = 'лимит 300 с истёк';
+        else if (!generating && !t.alive) why = 'счётчик пропал, ответа нет';
+        else if (t.alive) why = 'счётчик застыл на ' + t.text;
+        else return;
+
+        st.status = 'failed';
+        st.reason = why;
+        st.lastSeen = now;
+        supSave(st);
+        supLog('⏳ ' + ownerLabel(st.owner) + ' — ' + why);
+        supHandoff();
     }
 
     function supStartWatch() {
@@ -339,16 +404,17 @@
     /* ---------- НАРУЖУ ---------- */
 
     window.supStart = supStart;
+    window.supResume = supResume;
     window.supAnswered = supAnswered;
     window.supFailed = supFailed;
     window.supHeartbeat = supHeartbeat;
     window.supHandoff = supHandoff;
+    window.supSplit = supSplit;
+    window.supOnlineAgents = supOnlineAgents;
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.supTimerBroken = supBreak;   // chat.js: счётчик на кнопке оборвался → задача уходит дальше
-    window.supIndicator = supIndicator;
-    window.SUPERVISOR_VERSION = '1.3-stage3';
+    window.SUPERVISOR_VERSION = '1.4-stage3';
 
     supStartWatch();
 })();
