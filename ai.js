@@ -10,7 +10,9 @@
   var LS_HISTORY = 'assistant_history_v1';
   var LS_GATEWAY = 'assistant_gateway_v1';
   var LS_SYSTEM  = 'assistant_system_v1';
+  var LS_AUTO    = 'assistant_auto_v1';
   var MAX_MSGS   = 40;
+  var AUTO_MAX   = 12;   // предохранитель: не больше 12 авто-шагов подряд
 
   var DEFAULT_SYSTEM =
     'Ты — Помощник Штаба, второй Архитектор. Отвечай по-русски, коротко и по делу. ' +
