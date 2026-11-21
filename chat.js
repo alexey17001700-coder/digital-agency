@@ -1005,14 +1005,14 @@ function startTimerFreezeWatchdog() {
         if (hasTimer) {
             // Счётчик идёт — запоминаем движение.
             if (cur !== lastTimerText) { lastTimerText = cur; lastTimerChange = now; return; }
-            // Счётчик застыл на месте, а ответа нет — обрыв потока.
-            if (now - lastTimerChange >= TIMER_FREEZE_MS) fireAutoKick(`счётчик застыл на ${cur || '—'}`);
+            // Счётчик застыл на месте, а ответа нет — обрыв потока. Задачу — дальше.
+            if (now - lastTimerChange >= TIMER_FREEZE_MS) handoffOrKick(`счётчик застыл на ${cur || '—'}`);
             return;
         }
         // Счётчика на кнопке нет. Ответ пришёл — сторож больше не нужен.
         if (lastSendSuccess) { stopTimerFreezeWatchdog(); return; }
-        // Счётчик «оборвался» (запрос умер без ответа) — пинаем сразу, не ждём 300 с.
-        if (now - startedAt >= TIMER_FREEZE_MS) fireAutoKick('счётчик оборвался, ответа нет');
+        // Счётчик «оборвался» (запрос умер без ответа) — передаём сразу, не ждём 300 с.
+        if (now - startedAt >= TIMER_FREEZE_MS) handoffOrKick('счётчик оборвался, ответа нет');
     }, 1000);
 }
 function stopTimerFreezeWatchdog() { if (timerFreezeWatchdog) { clearInterval(timerFreezeWatchdog); timerFreezeWatchdog = null; } }
