@@ -340,7 +340,10 @@ function resolveAllowedModel(id) {
    Тап — включить, повторный тап — вернуть ту модель, что была до этого.
    Выбор запоминается на устройстве (shtabAIModel). */
 function isGigaChatActive() { return selectedAIModel === 'gigachat'; }
-function applyGigaChatButton() {
+/* ТОЛЬКО внешний вид кнопки — без вызова соседних apply-функций.
+   Так её можно звать из applyAIModelButton / applyFreeModelButton
+   без бесконечной рекурсии (те зовут её, она — их). */
+function updateGigaChatButtonVisual() {
     const b = document.getElementById('btnGigaChat');
     if (!b) return;
     if (isGigaChatActive()) {
@@ -356,6 +359,9 @@ function applyGigaChatButton() {
         b.style.color = '#7B61FF';
         b.style.background = '';
     }
+}
+function applyGigaChatButton() {
+    updateGigaChatButtonVisual();
     // Кнопки «Платные» / «Бесплатные» перерисовываем, чтобы не показывали чужой выбор.
     if (typeof applyAIModelButton === 'function') { try { applyAIModelButton(); } catch (e) {} }
     if (typeof applyFreeModelButton === 'function') { try { applyFreeModelButton(); } catch (e) {} }
