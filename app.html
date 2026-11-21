@@ -70,6 +70,14 @@
             showBootError('3D-офис недоступен: office3d.js не выполнился. Обнови страницу.');
         };
 
+        // Кнопка «Чат отдельно»: открывает ЭТУ ЖЕ страницу в отдельном окне
+        // в режиме ?chatonly=1 — без агентов и панелей, чат на весь экран.
+        window.openChatOnly = function () {
+            const url = window.location.pathname + '?chatonly=1';
+            const w = window.open(url, 'shtab_chat_only', 'width=520,height=820,menubar=no,toolbar=no,location=no,status=no');
+            if (!w) showBootError('Браузер заблокировал новое окно. Разреши всплывающие окна для Штаба.');
+        };
+
         // Кнопка «Голоса» в панели: если voice.js ещё не загрузился —
         // не молчим, а честно сообщаем. Как только voice.js выполнится,
         // он переопределит openVoiceLab на настоящую лабораторию.
