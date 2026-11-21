@@ -201,7 +201,7 @@
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.SUPERVISOR_VERSION = '1.1-stage2';
+    window.SUPERVISOR_VERSION = '1.2-stage2';
 
     supStartWatch();
 })();
