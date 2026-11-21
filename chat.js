@@ -1680,6 +1680,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                 renderMessage(`🧩 *[Система: этап ${stage.cur}/${stage.total} закрыт. Авто-пинок — прошу продолжить этап ${stage.cur + 1}.]*`, 'director', 'Оркестратор');
                 const nextStageText = `продолжи этап ${stage.cur + 1} из ${stage.total}`;
                 renderMessage(nextStageText, 'boss'); addMessageToHistory(nextStageText, 'boss');
+                // НАДЗИРАТЕЛЬ: идёт следующий этап большой задачи — агент жив, передавать нельзя.
+                if (typeof supResume === 'function') supResume('arch');
                 setTimeout(() => sendMessage(nextStageText, true), 900);
             }
             // Ответ пришёл, но оборван на середине ИЛИ сервер упёрся в лимит шагов — просим продолжить.
