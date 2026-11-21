@@ -169,18 +169,20 @@
         if (!st) return;
         if (st.status !== 'waiting') return;
 
-        // Агент реально работает (запрос в полёте) — молчанием это не считается.
-        if (typeof isGenerating !== 'undefined' && isGenerating) {
-            supHeartbeat(st.owner);
+        // Отсчёт ведём от момента, когда задача ушла агенту (startedAt).
+        // Пульс lastSeen его НЕ сбрасывает: 300 с — жёсткий лимит кнопки отправки.
+        const waited = Date.now() - (st.startedAt || Date.now());
+
+        // Пока лимит не вышел — агент вправе работать, даже если запрос в полёте.
+        if (waited < SUP_SILENCE_MS) {
+            if (typeof isGenerating !== 'undefined' && isGenerating) supHeartbeat(st.owner);
             return;
         }
 
-        const waited = Date.now() - (st.lastSeen || st.startedAt || Date.now());
-        if (waited < SUP_SILENCE_MS) return;
-
+        // 300 с истекли — задача уходит следующему, даже если запрос ещё висит.
         st.status = 'stalled';
         supSave(st);
-        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит ' + Math.round(waited / 1000) + ' с. Передаю задачу дальше.]*');
+        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит ' + Math.round(waited / 1000) + ' с (лимит 300 с). Передаю задачу дальше.]*');
         supHandoff();                          // ЭТАП 2: передача второму агенту, затем бесплатной модели
     }
 
