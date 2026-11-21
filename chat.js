@@ -1405,7 +1405,10 @@ async function sendMessage(overrideText = null, isKick = false) {
                 setTimeout(() => sendMessage(nextStageText, true), 900);
             }
             // Ответ пришёл, но оборван на середине ИЛИ сервер упёрся в лимит шагов — просим продолжить.
-            else if (!isKick && !kickGuardActive() && (looksTruncated(aiText) || isTooManySteps(aiText)) && stallKicks < STALL_MAX_KICKS) {
+            // ПИНОК РАБОТАЕТ И НА САМОМ ПИНКЕ: раньше здесь стояло «!isKick», из-за чего
+            // ответ на «продолжи» снова упирался в лимит шагов и задача молча умирала.
+            // Теперь «продолжи» пинается повторно, пока не исчерпан лимит STALL_MAX_KICKS.
+            else if (!kickGuardActive() && (looksTruncated(aiText) || isTooManySteps(aiText)) && stallKicks < STALL_MAX_KICKS) {
                 stallKicks++;
                 markKickSent();
                 const kickWhy = isTooManySteps(aiText) ? 'упёрся в лимит шагов' : 'ответ оборван на середине';
