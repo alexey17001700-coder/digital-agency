@@ -28,6 +28,8 @@
   var history = [];
   var busy = false;
   var gateway = '';
+  var gwFails = false;      // шлюз уже не ответил — не долбим его каждую секунду
+  var gwFailTime = 0;
   var els = {};
   var auto = false;        // авто-продолжение этапов («пинок»)
   var autoTimer = null;
