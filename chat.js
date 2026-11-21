@@ -84,6 +84,106 @@ let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
 let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
+/* --- КОМУ УХОДИТ СООБЩЕНИЕ: АРХИТЕКТОР ИЛИ ПОМОЩНИК ---
+   Переключатель над полем ввода. 'arch' — обычный путь (Архитектор Штаба),
+   'assistant' — запрос уходит в ИИ-шлюз nexus_ws/ai.ts (:8002), ответ
+   печатается в ЭТОТ ЖЕ чат. Выбор запоминается на устройстве. */
+let chatTarget = localStorage.getItem('shtabChatTarget') || 'arch';
+function setChatTarget(t) {
+    chatTarget = (t === 'assistant') ? 'assistant' : 'arch';
+    try { localStorage.setItem('shtabChatTarget', chatTarget); } catch (e) {}
+    document.querySelectorAll('#chatTargetSwitch .target-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.target === chatTarget);
+    });
+    if (chatInputEl) chatInputEl.placeholder = (chatTarget === 'assistant') ? 'Написать Помощнику...' : 'Написать задачу...';
+}
+
+/* --- МОСТ К ИИ-ШЛЮЗУ ИЗ ОСНОВНОГО ЧАТА ---
+   Своя мини-копия поиска шлюза (ai.js — отдельная IIFE, наружу не отдаёт).
+   История Помощника — та же, что в панели (assistant_history_v1),
+   поэтому диалог не расходится: написал в чате — видно и в панели. */
+const ASSIST_LS_HISTORY = 'assistant_history_v1';
+const ASSIST_LS_GATEWAY = 'assistant_gateway_v1';
+const ASSIST_LS_SYSTEM = 'assistant_system_v1';
+let assistGateway = '';
+function assistCandidates() {
+    const out = [];
+    let saved = null;
+    try { saved = localStorage.getItem(ASSIST_LS_GATEWAY); } catch (e) {}
+    if (saved) out.push(String(saved).replace(/\/+$/, ''));
+    const host = window.location.hostname || 'localhost';
+    const http = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    out.push(http + '//' + host + ':8002');
+    out.push('https://' + host + ':8443');
+    out.push('http://localhost:8002');
+    const seen = {}, uniq = [];
+    out.forEach(u => { if (u && !seen[u]) { seen[u] = 1; uniq.push(u); } });
+    return uniq;
+}
+async function assistFetch(url, opts, ms) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms || 12000);
+    try { return await fetch(url, Object.assign({}, opts || {}, { signal: ctrl.signal })); }
+    finally { clearTimeout(t); }
+}
+async function assistFindGateway() {
+    if (assistGateway) return assistGateway;
+    const list = assistCandidates();
+    for (let i = 0; i < list.length; i++) {
+        try {
+            const r = await assistFetch(list[i] + '/ai/health', { method: 'GET' }, 3000);
+            if (r.ok) { assistGateway = list[i]; return assistGateway; }
+        } catch (e) { /* пробуем следующий адрес */ }
+    }
+    return null;
+}
+function assistHistory() {
+    try { const raw = localStorage.getItem(ASSIST_LS_HISTORY); const h = raw ? JSON.parse(raw) : []; return Array.isArray(h) ? h : []; }
+    catch (e) { return []; }
+}
+function assistSaveHistory(h) {
+    try { if (h.length > 40) h = h.slice(-40); localStorage.setItem(ASSIST_LS_HISTORY, JSON.stringify(h)); } catch (e) {}
+}
+async function sendToAssistant(text) {
+    const gw = await assistFindGateway();
+    if (!gw) {
+        const errText = '⚠️ Шлюз ИИ :8002 не отвечает — отправлять некуда.\n\nНа сервере (Termux):\n`cd ~/nexus_ws && deno run --allow-net --allow-env --allow-read ai.ts`\n\nПроверка: `curl http://localhost:8002/ai/health`';
+        renderMessage(errText, 'director', 'Помощник');
+        addMessageToHistory(errText, 'director', 'Помощник');
+        return;
+    }
+    const hist = assistHistory();
+    hist.push({ role: 'user', content: text });
+    assistSaveHistory(hist);
+    let sys = '';
+    try { sys = localStorage.getItem(ASSIST_LS_SYSTEM) || ''; } catch (e) {}
+    const payload = {
+        messages: (sys ? [{ role: 'system', content: sys }] : []).concat(hist.slice(-40)),
+        temperature: 0.6
+    };
+    try {
+        const r = await assistFetch(gw + '/ai', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }, 95000);
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        let meta = '🤖 ' + (j.provider || '?') + ' · ' + (j.model || '?') + ' · ' + (j.ms || 0) + ' мс';
+        if (j.actions && j.actions.length) meta += ' · 🔧 ' + j.actions.length;
+        const answer = j.text || '(пустой ответ)';
+        hist.push({ role: 'assistant', content: answer, meta: meta });
+        assistSaveHistory(hist);
+        renderMessage(answer, 'director', 'Помощник');
+        addMessageToHistory(answer, 'director', 'Помощник');
+        renderMessage('*' + meta + '*', 'director', 'Помощник');
+    } catch (e) {
+        const msg = (e && e.name === 'AbortError') ? 'таймаут 95 сек' : ((e && e.message) || 'сбой');
+        const errText = '⚠️ Ошибка Помощника: ' + msg;
+        renderMessage(errText, 'director', 'Помощник');
+        addMessageToHistory(errText, 'director', 'Помощник');
+    }
+}
+
 /* --- СПИСОК МОДЕЛЕЙ ИИ ---
    Бесплатные маршруты идут через тот же шлюз: при нулевом балансе они
    доступны без оплаты и без карты, формат запроса — обычный OpenAI.
