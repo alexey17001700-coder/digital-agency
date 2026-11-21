@@ -405,6 +405,7 @@
   window.openAssistant = open;
   window.closeAssistant = close;
   window.assistantSend = send;
+  window.assistantAuto = setAuto;
 
   loadHistory();
   // app.html грузит скрипты уже внутри DOMContentLoaded, поэтому слушатель
