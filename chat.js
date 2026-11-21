@@ -1513,7 +1513,7 @@ async function checkVersionUpdate() {
         const inp = document.getElementById('chatInput');
         if (inp && inp.value && inp.value.trim()) return;   // Босс печатает — не мешаю
         markVersionUpdateSent(key);
-        renderMessage(`📦 *[Система: накоплено ${edits}/${limit} правок — пора обновлять. Пишу «обновляй» от имени Босса.]*`, 'director', 'Оркестратор');
+        renderMessage(`📦 *[Система: ${d.name || 'Калькулятор окон (Алмаз)'} — накоплено ${edits}/${limit} правок. Пора поднимать версию. Пишу «обновляй» от имени Босса.]*`, 'director', 'Оркестратор');
         renderMessage('обновляй', 'boss'); addMessageToHistory('обновляй', 'boss');
         setTimeout(() => sendMessage('обновляй', true), 900);
     } catch (e) {}
