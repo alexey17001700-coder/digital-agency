@@ -1678,7 +1678,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                 renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
             }
             lastSendSuccess = true;
-            // НАДЗИРАТЕЛЬ: Архитектор ответил — задача закрыта.
+            // НАДЗИРАТЕЛЬ: Архитектор ответил — задача закрыта, агент жив.
+            if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
             if (typeof supAnswered === 'function') supAnswered('arch');
             playSound('receive'); stallKicks = 0; stopStallWatchdog(); stopButtonWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
