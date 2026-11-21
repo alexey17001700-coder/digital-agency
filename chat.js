@@ -186,6 +186,54 @@ async function sendToAssistant(text) {
     }
 }
 
+/* --- БЕСПЛАТНАЯ МОДЕЛЬ — ПОСЛЕДНИЙ РУБЕЖ НАДЗИРАТЕЛЯ ---
+   Когда и Архитектор, и Помощник не ответили, надзиратель зовёт сюда.
+   Сначала пробуем шлюз ИИ (:8002) с пометкой free, затем — основной
+   сервер Штаба с бесплатным маршрутом (0 ₽, без карты). */
+async function sendToFreeModel(text) {
+    const freeList = (typeof freeModels === 'function') ? freeModels() : [];
+    const freeId = freeList.length ? freeList[0].id : '';
+    const freeLabel = freeList.length ? freeList[0].label : 'free';
+    const gw = await assistFindGateway();
+    if (gw) {
+        try {
+            const r = await assistFetch(gw + '/ai', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: [{ role: 'user', content: text }], temperature: 0.6, free: true, model: freeId })
+            }, 95000);
+            const j = await r.json().catch(() => ({}));
+            if (r.ok && j.ok && j.text) {
+                const meta = '🆓 ' + (j.provider || freeLabel) + ' · ' + (j.model || freeId || '?') + ' · ' + (j.ms || 0) + ' мс';
+                renderMessage(j.text, 'director', 'Бесплатная модель');
+                addMessageToHistory(j.text, 'director', 'Бесплатная модель');
+                renderMessage('*' + meta + '*', 'director', 'Бесплатная модель');
+                return true;
+            }
+        } catch (e) { /* шлюз молчит — идём на основной сервер */ }
+    }
+    try {
+        const r = await assistFetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ role: 'user', content: text }], temperature: 0.6, model: freeId, isBoss: true })
+        }, 95000);
+        const d = await r.json().catch(() => ({}));
+        const answer = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '') : '';
+        if (answer) {
+            renderMessage(answer, 'director', 'Бесплатная модель');
+            addMessageToHistory(answer, 'director', 'Бесплатная модель');
+            renderMessage('🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + freeLabel + ' — 0 ₽]*', 'director', 'Бесплатная модель');
+            return true;
+        }
+        throw new Error((d && d.error) || 'пустой ответ');
+    } catch (e) {
+        const msg = (e && e.name === 'AbortError') ? 'таймаут 95 сек' : ((e && e.message) || 'сбой');
+        const errText = '⚠️ Бесплатная модель не ответила: ' + msg;
+        renderMessage(errText, 'director', 'Бесплатная модель');
+        addMessageToHistory(errText, 'director', 'Бесплатная модель');
+        return false;
+    }
+}
+
 /* --- СПИСОК МОДЕЛЕЙ ИИ ---
    Бесплатные маршруты идут через тот же шлюз: при нулевом балансе они
    доступны без оплаты и без карты, формат запроса — обычный OpenAI.
