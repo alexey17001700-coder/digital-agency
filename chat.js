@@ -314,7 +314,7 @@ function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off
 function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
     const cur = getModelInfo(selectedAIModel);
-    if (!on && cur && !cur.free) {
+    if (!on && cur && !cur.free && cur.id !== 'gigachat') {
         const f = freeModels();
         if (f.length) { selectedAIModel = f[0].id; localStorage.setItem('shtabAIModel', selectedAIModel); }
     }
