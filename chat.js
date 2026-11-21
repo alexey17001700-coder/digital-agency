@@ -1120,9 +1120,9 @@ function startButtonWatchdog() {
         // Счётчик на кнопке оборвался (запрос умер), а ответа нет — пинок сразу.
         const btnText = sendBtn ? String(sendBtn.innerText || '') : '';
         const btnAlive = /\d/.test(btnText) || (sendBtn && sendBtn.classList.contains('stop-active'));
-        if (!btnAlive && !isGenerating && !lastSendSuccess) { fireAutoKick('счётчик на кнопке оборвался, ответа нет'); return; }
-        // Прошло 303 с — пинок от имени Босса.
-        if (Date.now() - buttonWatchStart >= BUTTON_TIMEOUT_MS) { fireAutoKick('на кнопке прошло 303 с, ответа нет'); return; }
+        if (!btnAlive && !isGenerating && !lastSendSuccess) { handoffOrKick('счётчик на кнопке оборвался, ответа нет'); return; }
+        // Прошло 303 с — задача уходит следующему агенту.
+        if (Date.now() - buttonWatchStart >= BUTTON_TIMEOUT_MS) { handoffOrKick('на кнопке прошло 303 с, ответа нет'); return; }
     }, 1000);
 }
 function stopButtonWatchdog() { if (buttonWatchdog) { clearInterval(buttonWatchdog); buttonWatchdog = null; } }
