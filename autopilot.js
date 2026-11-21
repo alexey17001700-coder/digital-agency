@@ -327,6 +327,44 @@
         fireTimeoutKick();
     }
 
+    /* ============================================================
+       АВТООБНОВЛЕНИЕ ПО СЧЁТЧИКУ ПРАВОК
+       version.json: edits — накоплено правок, limit — порог (5).
+       Как только edits >= limit — отправляем Боссу «обновляй».
+       Повтор по одной и той же версии не шлём (ключ в localStorage).
+       ============================================================ */
+    function updateAlreadySent(v) {
+        try { return JSON.parse(localStorage.getItem(LS_UPDATE_DONE) || '[]').indexOf(v) !== -1; }
+        catch (e) { return false; }
+    }
+    function markUpdateSent(v) {
+        let list = [];
+        try { list = JSON.parse(localStorage.getItem(LS_UPDATE_DONE) || '[]'); } catch (e) {}
+        if (list.indexOf(v) === -1) list.push(v);
+        while (list.length > 20) list.shift();
+        localStorage.setItem(LS_UPDATE_DONE, JSON.stringify(list));
+    }
+    function checkVersionUpdate() {
+        if ((Date.now() - lastVersionCheck) < VERSION_POLL_MS) return;
+        lastVersionCheck = Date.now();
+        fetch(VERSION_URL + '?t=' + Date.now())
+            .then(function (r) { return r.json(); })
+            .then(function (v) {
+                const edits = Number(v.edits) || 0;
+                const limit = Number(v.limit) || 5;
+                if (edits < limit) return;                       // порог не достигнут
+                const key = String(v.version || '') + '|' + edits;
+                if (updateAlreadySent(key)) return;              // уже отправляли
+                if (typeof isGenerating !== 'undefined' && isGenerating) return; // ждём
+                const input = document.getElementById('chatInput');
+                if (input && input.value && input.value.trim()) return; // Босс печатает
+                markUpdateSent(key);
+                log('Накоплено ' + edits + '/' + limit + ' правок → отправляю «' + UPDATE_TEXT + '»');
+                sendText(UPDATE_TEXT);
+            })
+            .catch(function () {});
+    }
+
     function tick() {
         if (busy) return;
 
