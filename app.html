@@ -9,6 +9,27 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
     <link rel="stylesheet" id="main-css">
+    <style>
+    /* ПЕРЕКЛЮЧАТЕЛЬ «КОМУ УХОДИТ СООБЩЕНИЕ» — над полем ввода основного чата.
+       Босс выбирает: Архитектор (обычный путь) или Помощник (ИИ-шлюз :8002).
+       Ответ в обоих случаях печатается в ЭТОТ ЖЕ чат. */
+    .chat-target { display: flex; gap: 6px; padding: 6px 10px 0 10px; flex-shrink: 0; }
+    .chat-target .target-btn {
+        flex: 1 1 0; padding: 7px 10px; font-size: 12px; font-weight: 700;
+        font-family: inherit; cursor: pointer; border-radius: 9px;
+        background: #141414; color: #888; border: 1px solid #333;
+        transition: .18s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .chat-target .target-btn:hover { border-color: #555; color: #bbb; }
+    .chat-target .target-btn.active[data-target="arch"] {
+        background: rgba(0,229,255,.14); color: #00e5ff; border-color: #00e5ff;
+        box-shadow: 0 0 8px rgba(0,229,255,.25);
+    }
+    .chat-target .target-btn.active[data-target="assistant"] {
+        background: rgba(126,224,138,.14); color: #7ee08a; border-color: #7ee08a;
+        box-shadow: 0 0 8px rgba(126,224,138,.25);
+    }
+    </style>
     <script>
         const timestamp = new Date().getTime();
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
