@@ -249,10 +249,9 @@
         <div id="office-container" style="display: none; width: 100%; height: 100%; flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;"></div>
 
         <div class="attach-preview" id="attachPreview"></div>
-        <!-- КОМУ УХОДИТ СООБЩЕНИЕ: Архитектор или Помощник. Ответ — в этот же чат. -->
-        <div class="chat-target" id="chatTargetSwitch">
-            <button type="button" class="target-btn active" data-target="arch" onclick="setChatTarget('arch')" title="Сообщение уйдёт Архитектору Штаба">🏛 Архитектор</button>
-            <button type="button" class="target-btn" data-target="assistant" onclick="setChatTarget('assistant')" title="Сообщение уйдёт Помощнику (ИИ-шлюз :8002)">🤖 Помощник</button>
+        <!-- КНОПКА ОБНОВИТЬ — всегда на виду, вне шестерёнки -->
+        <div style="display:flex; justify-content:flex-end; padding:4px 10px 0 10px; flex-shrink:0;">
+            <button class="mode-btn" id="btnRefreshShtab" onclick="refreshShtab()" style="font-size:12px; padding:6px 12px;">🔄 Обновить</button>
         </div>
         <div class="input-area">
             <textarea id="chatInput" placeholder="Написать задачу..." rows="1"></textarea>
