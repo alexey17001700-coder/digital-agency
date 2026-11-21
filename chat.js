@@ -1706,6 +1706,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 renderMessage(`⚡ *[Система: ${kickWhy}. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — пишу «${kickText}» от имени Босса.]*`, 'director', 'Оркестратор');
                 renderMessage(kickText, 'boss'); addMessageToHistory(kickText, 'boss');
                 setTimeout(() => sendMessage(kickText, true), 900);
+                }
             }
 
             const stallRegex = /подождите|занимает время|сейчас произведу|сейчас поищу|пожалуйста, подождите|терпения|анализирую|скоро закончу|дай мне секунду|гляну текущий код|сейчас выдам/i;
