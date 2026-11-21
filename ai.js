@@ -303,6 +303,7 @@
       else localStorage.removeItem(LS_GATEWAY);
     } catch (e) {}
     gateway = '';
+    gwFails = false;
     setStatus('адрес шлюза обновлён, проверяю…');
     findGateway();
   }
