@@ -1539,6 +1539,9 @@ async function sendMessage(overrideText = null, isKick = false) {
         // идём основным путём, только запрос уходит на свой ПК через шлюз.
         const isOllama = isOllamaModel(selectedAIModel);
         if (isOllama) hasAnyKeys = true;
+        // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
+        // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
+        if (selectedAIModel === 'gigachat') hasAnyKeys = true;
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
