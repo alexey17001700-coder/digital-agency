@@ -224,6 +224,38 @@
     }, 1500);
   }
 
+  /* Жёсткий предел ожидания: поиск шлюза не должен подвешивать отправку. */
+  function withDeadline(promise, ms) {
+    return Promise.race([
+      Promise.resolve(promise).catch(function () { return null; }),
+      new Promise(function (res) { setTimeout(function () { res(null); }, ms); })
+    ]);
+  }
+
+  /* Диагностика: по очереди стучимся во все адреса и печатаем результат
+     прямо в ленту. Нужна, когда «кнопка не отправляет» — видно, где обрыв. */
+  async function diag() {
+    setPanel(true);
+    build();
+    var lines = ['🔍 Диагностика шлюза', 'страница: ' + window.location.href];
+    var list = candidates();
+    for (var i = 0; i < list.length; i++) {
+      var u = list[i];
+      var t0 = Date.now();
+      try {
+        var r = await fetchTimeout(u + '/ai/health', { method: 'GET' }, 4000);
+        var txt = await r.text();
+        lines.push('✅ ' + u + ' → HTTP ' + r.status + ' (' + (Date.now() - t0) + ' мс)\n' + txt.slice(0, 400));
+      } catch (e) {
+        lines.push('❌ ' + u + ' → ' + ((e && e.message) || 'сбой') + ' (' + (Date.now() - t0) + ' мс)');
+      }
+    }
+    lines.push('Подсказка: если все ❌ — шлюз ai.ts на сервере не запущен.');
+    history.push({ role: 'assistant', content: lines.join('\n\n'), meta: 'диагностика' });
+    saveHistory();
+    render();
+  }
+
   /* ---------- отправка ---------- */
 
   async function send() {
