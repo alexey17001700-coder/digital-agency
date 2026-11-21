@@ -1094,7 +1094,7 @@ function startHardWatchdog() {
         if (answered) { stopHardWatchdog(); return; }
         if (Date.now() - hardStartTime >= HARD_TIMEOUT_MS) {
             stopHardWatchdog();
-            fireAutoKick('прошло 300 с, ответа нет');
+            handoffOrKick('прошло 300 с, ответа нет');
         }
     }, 3000);
 }
