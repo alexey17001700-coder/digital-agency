@@ -91,6 +91,8 @@ deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch 
 
 ```
 ZVENO_KEY=<ZVENO_KEY>
+GIGACHAT_KEY=<GIGACHAT_KEY>
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
 GITHUB_TOKEN=<GITHUB_TOKEN>
 VAPID_PUBLIC=<VAPID_PUBLIC>
 VAPID_PRIVATE=<VAPID_PRIVATE>
