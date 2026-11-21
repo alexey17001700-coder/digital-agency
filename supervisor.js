@@ -66,7 +66,59 @@
     function ownerLabel(o) { return OWNER_LABEL[o] || ('👤 ' + o); }
 
     /* Задача взята в работу. owner: 'arch' | 'assistant' | 'free' | имя агента */
+    /* ---------- ЖИВОЙ АГЕНТ: ПРИЗНАКИ ЖИЗНИ ----------
+       Передача задачи — только когда агент МЁРТВ. Пока он работает,
+       надзиратель молчит и ждёт. Признаки жизни:
+       1) идёт запрос (isGenerating) или печатается ответ (typingTimer);
+       2) крутятся этапы большой задачи ([ЭТАП N/M], N < M);
+       3) запущены фоновые задачи ([TASK:...]) или «раздели задачу»;
+       4) в ленте было движение за последние SUP_ACTIVITY_MS;
+       5) chat.js явно позвал supAlive() (этап, Совет, фон, ответ).
+       Любой из них — задача живая, передача запрещена. */
+    function supAlive(ms) {
+        supAliveUntil = Math.max(supAliveUntil, Date.now() + (ms || SUP_ALIVE_MS));
+    }
+    function supNoteActivity() { supLastActivity = Date.now(); supAlive(); }
+    /* Свежая жизнь: только что был ответ/печать или идут этапы.
+       Именно это отличает РАБОТУ от обрыва, когда счётчик на кнопке замер. */
+    function supRecentlyAlive() {
+        const now = Date.now();
+        if (supLastActivity && (now - supLastActivity) < SUP_ACTIVITY_MS) return true;
+        if (supStageInfo && supStageInfo.cur < supStageInfo.total) return true;
+        try { if (typeof typingTimer !== 'undefined' && typingTimer) return true; } catch (e) {}
+        return false;
+    }
+    function supIsAlive() {
+        if (supRecentlyAlive()) return true;
+        if (Date.now() < supAliveUntil) return true;
+        try { if (typeof isGenerating !== 'undefined' && isGenerating) return true; } catch (e) {}
+        return false;
+    }
+    function supDirectorCount() {
+        try {
+            const c = document.getElementById('chatContainer');
+            return c ? c.querySelectorAll('.msg-director').length : 0;
+        } catch (e) { return 0; }
+    }
+
+    /* ---------- БОЛЬШАЯ ЗАДАЧА: ЭТАПЫ ----------
+       Модель разбила задачу на этапы ([ЭТАП N/M]). Это НЕ молчание:
+       задача живая, пока этапы идут. Надзиратель запоминает разбивку
+       и не передаёт задачу другому. */
+    function supStage(stage) {
+        if (!stage || !stage.total) { supStageInfo = null; return; }
+        supStageInfo = { cur: Number(stage.cur) || 1, total: Number(stage.total) || 1 };
+        supAlive(SUP_ALIVE_MS);
+        const st = supLoad();
+        if (st) { st.big = supStageInfo.total > 1; st.stage = supStageInfo.cur + '/' + supStageInfo.total; supSave(st); }
+        supLog('🧩 *[Надзиратель: задача разбита на этапы ' + supStageInfo.cur + '/' + supStageInfo.total + ' — агент жив, передача не нужна.]*');
+    }
+
+    /* Задача взята в работу. owner: 'arch' | 'assistant' */
     function supStart(text, owner) {
+        supStageInfo = null; supDistributed = false;   // новая задача — этапы и распределение с нуля
+        supLastActivity = 0;                           // прошлая жизнь не считается
+        supAlive(SUP_ALIVE_MS);                        // агент только взял задачу — он жив
         const prev = supLoad();
         const history = (prev && Array.isArray(prev.history)) ? prev.history : [];
         const now = Date.now();
