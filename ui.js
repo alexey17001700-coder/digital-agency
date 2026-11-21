@@ -376,3 +376,96 @@ function toggleKeyVisibility(inputId, btn) {
         btn.innerText = '👁';
     }
 }
+
+/* --- СЧЁТЧИК ПРАВОК (version.json) ---
+   Показывает версию приложения и сколько правок накоплено до обновления.
+   Версия поднимается каждые 5 правок (правило 11 SERVER_DIAGNOSTICS.md).
+   Тап по плашке — панель с деталями и кнопкой перечитать. */
+let __versionData = null;
+
+async function loadVersionCounter() {
+    const el = document.getElementById('version-text');
+    if (!el) return;
+    try {
+        const r = await fetch('version.json?v=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        __versionData = d;
+        const limit = d.limit || 5;
+        const edits = d.edits || 0;
+        el.innerText = 'v' + d.version + ' · ' + edits + '/' + limit;
+        const box = document.getElementById('status-version');
+        if (box) {
+            box.style.borderColor = edits >= limit ? '#ff0055' : '#ffd700';
+            box.title = (d.name || d.app) + ' — правок ' + edits + ' из ' + limit +
+                (edits >= limit ? ' · ПОРА ОБНОВЛЯТЬ' : ' · можно работать');
+        }
+    } catch (e) {
+        el.innerText = 'v--';
+        console.warn('version.json не прочитан:', e);
+    }
+}
+
+function openVersionPanel() {
+    const d = __versionData;
+    if (document.getElementById('versionPanel')) return;
+    const ov = document.createElement('div');
+    ov.id = 'versionPanel';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:340px;background:#101418;border:1px solid #2a333d;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6);';
+
+    const title = document.createElement('div');
+    title.textContent = '📦 ВЕРСИЯ И ПРАВКИ';
+    title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;';
+    box.appendChild(title);
+
+    const line = (label, value, color) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #1d242c;font-size:13px;';
+        const l = document.createElement('span');
+        l.textContent = label; l.style.color = '#8b98a5';
+        const v = document.createElement('span');
+        v.textContent = value; v.style.cssText = 'font-weight:700;color:' + (color || '#e6edf3') + ';';
+        row.appendChild(l); row.appendChild(v);
+        box.appendChild(row);
+    };
+
+    if (!d) {
+        const e = document.createElement('div');
+        e.textContent = 'Данные не загружены. Нажми «Перечитать».';
+        e.style.cssText = 'font-size:13px;color:#ff8888;padding:8px 0;';
+        box.appendChild(e);
+    } else {
+        const limit = d.limit || 5;
+        const edits = d.edits || 0;
+        const left = Math.max(0, limit - edits);
+        line('Приложение', d.name || d.app);
+        line('Версия', d.version, '#ffd700');
+        line('Сборка', String(d.build || '--'));
+        line('Правок накоплено', edits + ' / ' + limit, edits >= limit ? '#ff0055' : '#7ee08a');
+        line('До обновления', edits >= limit ? 'ПОРА ОБНОВЛЯТЬ' : ('ещё ' + left + ' правк' + (left === 1 ? 'а' : 'и')), edits >= limit ? '#ff0055' : '#00e5ff');
+        if (d.note) {
+            const n = document.createElement('div');
+            n.textContent = d.note;
+            n.style.cssText = 'font-size:11px;color:#8b98a5;margin-top:10px;line-height:1.4;';
+            box.appendChild(n);
+        }
+    }
+
+    const reload = document.createElement('button');
+    reload.textContent = '🔄 ПЕРЕЧИТАТЬ';
+    reload.style.cssText = 'width:100%;padding:10px;margin-top:14px;border:1px solid #ffd700;border-radius:8px;background:rgba(255,215,0,.10);color:#ffd700;font-size:13px;font-weight:700;cursor:pointer;';
+    reload.onclick = async () => { await loadVersionCounter(); ov.remove(); openVersionPanel(); };
+    box.appendChild(reload);
+
+    const close = document.createElement('button');
+    close.textContent = 'ЗАКРЫТЬ';
+    close.style.cssText = 'width:100%;padding:9px;margin-top:8px;border:1px solid #2a333d;border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;';
+    close.onclick = () => ov.remove();
+    box.appendChild(close);
+
+    ov.appendChild(box);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+}
