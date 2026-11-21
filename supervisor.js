@@ -12,6 +12,11 @@
    ЭТАП 2: передача задачи второму агенту + бесплатная модель.
    ЭТАП 3: индикатор в ленте + стоп-кран.
 
+   ЦЕПОЧКА ЗАМЕНЫ: Архитектор → Помощник → Бесплатная модель → стоп.
+   Если агент молчит или сорвался, задача уходит следующему по цепочке.
+   Число передач ограничено SUP_MAX_HANDOFFS — иначе два ИИ зациклятся
+   и будут бесконечно пинать друг друга.
+
    Файл самостоятельный: ни от чего не зависит, всё внешнее —
    через typeof-проверки. Если chat.js не загрузился, надзиратель
    просто молчит и ничего не ломает.
@@ -26,7 +31,7 @@
     const SUP_TEXT_LIMIT = 2000;     // столько текста задачи храним в журнале
 
     const OWNER_LABEL = { arch: '🏛 Архитектор', assistant: '🤖 Помощник', free: '🆓 Бесплатная модель' };
-    const OWNER_NEXT = { arch: 'assistant', assistant: 'arch' };
+    const OWNER_NEXT = { arch: 'assistant', assistant: 'free' };   // цепочка замены
 
     let supTimer = null;
 
@@ -75,15 +80,18 @@
         setTimeout(supClear, 1500);            // журнал чистим, чтобы не копить мусор
     }
 
-    /* Агент сорвался (ошибка, пустой ответ, обрыв). */
+    /* Агент сорвался (ошибка, пустой ответ, обрыв).
+       Не просто помечаем сбой — сразу пробуем передать задачу дальше. */
     function supFailed(owner, reason) {
         const st = supLoad();
         if (!st) return;
+        if (st.status === 'answered') return;
         st.status = 'failed';
         st.lastSeen = Date.now();
         st.reason = String(reason || 'сбой').slice(0, 300);
         supSave(st);
         supLog('⚠️ *[Надзиратель: ' + ownerLabel(owner || st.owner) + ' сорвался — ' + st.reason + '.]*');
+        supHandoff();                          // пробуем следующего по цепочке
     }
 
     /* Пульс: агент ещё жив и работает (длинный запрос). */
@@ -94,6 +102,56 @@
         st.lastSeen = Date.now();
         if (st.status === 'stalled') st.status = 'waiting';
         supSave(st);
+    }
+
+    /* ---------- ПЕРЕДАЧА ЗАДАЧИ ---------- */
+
+    /* Кому передаём дальше: Архитектор → Помощник → Бесплатная модель.
+       Передачи ограничены — иначе два ИИ зациклятся. */
+    function supHandoff() {
+        const st = supLoad();
+        if (!st) return;
+        if (st.status === 'answered') return;
+        if ((st.handoffs || 0) >= SUP_MAX_HANDOFFS) { supStopKran(st); return; }
+        const prev = st.owner;
+        const next = OWNER_NEXT[prev];
+        if (!next) { supStopKran(st); return; }
+        st.owner = next;
+        st.handoffs = (st.handoffs || 0) + 1;
+        st.status = 'waiting';
+        st.startedAt = Date.now();
+        st.lastSeen = Date.now();
+        st.reason = '';
+        supSave(st);
+        supLog('🔄 *[Надзиратель: ' + ownerLabel(prev) + ' не справился. Передаю задачу ' + ownerLabel(next) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ').]*');
+        supDispatch(st.text, next);
+    }
+
+    /* Стоп-кран: передачи исчерпаны — дальше только Босс. */
+    function supStopKran(st) {
+        st.status = 'failed';
+        st.lastSeen = Date.now();
+        supSave(st);
+        supLog('🛑 *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит, передачи исчерпаны (' + SUP_MAX_HANDOFFS + '/' + SUP_MAX_HANDOFFS + '). Нужен Босс.]*');
+    }
+
+    /* Отправляем задачу новому владельцу и следим за результатом. */
+    async function supDispatch(text, owner) {
+        try {
+            if (owner === 'assistant' && typeof window.sendToAssistant === 'function') {
+                const ok = await window.sendToAssistant(text);
+                if (ok) supAnswered('assistant'); else supFailed('assistant', 'Помощник не ответил');
+            } else if (owner === 'free' && typeof window.sendToFreeModel === 'function') {
+                const ok = await window.sendToFreeModel(text);
+                if (ok) supAnswered('free'); else supFailed('free', 'Бесплатная модель не ответила');
+            } else if (owner === 'arch' && typeof window.sendMessage === 'function') {
+                window.sendMessage(text, true);   // Архитектор сам закроет журнал (supAnswered/supFailed)
+            } else {
+                supFailed(owner, 'нет канала для передачи');
+            }
+        } catch (e) {
+            supFailed(owner, (e && e.message) || 'сбой передачи');
+        }
     }
 
     /* ---------- ВЫВОД В ЛЕНТУ ---------- */
@@ -122,9 +180,8 @@
 
         st.status = 'stalled';
         supSave(st);
-        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит ' + Math.round(waited / 1000) + ' с. Готовлю передачу задачи.]*');
-        // ЭТАП 2: здесь надзиратель передаст задачу второму агенту,
-        // а если молчат оба — отдаст её бесплатной модели.
+        supLog('⏳ *[Надзиратель: ' + ownerLabel(st.owner) + ' молчит ' + Math.round(waited / 1000) + ' с. Передаю задачу дальше.]*');
+        supHandoff();                          // ЭТАП 2: передача второму агенту, затем бесплатной модели
     }
 
     function supStartWatch() {
@@ -138,10 +195,11 @@
     window.supAnswered = supAnswered;
     window.supFailed = supFailed;
     window.supHeartbeat = supHeartbeat;
+    window.supHandoff = supHandoff;
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.SUPERVISOR_VERSION = '1.0-stage1';
+    window.SUPERVISOR_VERSION = '1.1-stage2';
 
     supStartWatch();
 })();
