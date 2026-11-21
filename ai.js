@@ -95,6 +95,7 @@
 
   async function findGateway() {
     if (gateway) return gateway;
+    if (gwFails && (Date.now() - gwFailTime) < 20000) return null;
     var list = candidates();
     for (var i = 0; i < list.length; i++) {
       try {
