@@ -384,7 +384,7 @@
     window.supTick = supTick;
     window.supTimerBroken = supBreak;   // chat.js: счётчик на кнопке оборвался → задача уходит дальше
     window.supIndicator = supIndicator;
-    window.SUPERVISOR_VERSION = '1.3-stage3';
+    window.SUPERVISOR_VERSION = '1.4-stage3';
 
     supStartWatch();
 })();
