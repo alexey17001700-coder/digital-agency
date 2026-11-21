@@ -1306,6 +1306,25 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearAttachPreview();
     }
 
+    /* --- ПЕРЕКЛЮЧАТЕЛЬ «КОМУ»: выбран Помощник — запрос уходит в ИИ-шлюз,
+       ответ печатается в ЭТОТ ЖЕ чат. Архитектор не вызывается, деньги не тратятся. --- */
+    if (!overrideText && !isKick && chatTarget === 'assistant') {
+        let assistText = text;
+        if (attachedFile && attachedFile.content) {
+            assistText = '[ФАЙЛ: ' + attachedFile.name + ']\n```\n' + attachedFile.content + '\n```\n\n' + assistText;
+        }
+        isGenerating = true; lastSendSuccess = false;
+        sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = '12px';
+        startSendTimer();
+        try { await sendToAssistant(assistText); }
+        finally {
+            isGenerating = false; stopSendTimer();
+            attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
+            sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = '➤'; sendBtn.style.fontSize = '';
+        }
+        return;
+    }
+
     isGenerating = true; lastSendSuccess = false; const mySeq = ++sendSeq;
     // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
     // Авто-пинки и системные дозапросы сторож не перезапускают.
