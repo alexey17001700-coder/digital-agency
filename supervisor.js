@@ -78,6 +78,8 @@
 
     /* Задача взята в работу. owner: 'arch' | 'assistant' */
     function supStart(text, owner) {
+        supLastTimerText = ''; supLastTimerChange = Date.now();   // отсчёт застывания счётчика — с нуля
+        supStartCount = supAgentNodes().length;                   // старые ответы в ленте не пересматриваем
         const prev = supLoad();
         const history = (prev && Array.isArray(prev.history)) ? prev.history : [];
         supSave({
