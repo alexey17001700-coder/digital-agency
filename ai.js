@@ -346,10 +346,13 @@
   window.assistantSend = send;
 
   loadHistory();
-  document.addEventListener('DOMContentLoaded', function () {
-    // Тихо проверяем шлюз в фоне, чтобы при открытии модалки статус был готов.
-    findGateway();
-  });
+  // app.html грузит скрипты уже внутри DOMContentLoaded, поэтому слушатель
+  // на это событие мог бы не сработать — проверяем readyState.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { findGateway(); });
+  } else {
+    setTimeout(function () { findGateway(); }, 300);
+  }
 
   console.log('[ai.js] Помощник готов. Шлюз ищется автоматически, ключи — на сервере.');
 })();
