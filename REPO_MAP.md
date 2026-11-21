@@ -26,6 +26,7 @@
 - `backup.html`
 - `char1.png` `char2.png` `char3.png` `char4.png` — персонажи
 - `chat.js` — чат
+- `CHAT_ARCHITECTURE.md` — **память: как устроен наш чат и разделённый экран**
 - `cooler.png` — кулер
 - `index.html` — точка входа
 - `local_ai.js` — локальный ИИ
