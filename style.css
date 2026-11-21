@@ -26,7 +26,16 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
 /* --- СТАТУС-БАР --- */
-.status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
+.status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 1; flex-wrap: wrap; justify-content: flex-end; row-gap: 3px; max-width: 62%; }
+/* Плашка версии и счётчика правок должна быть видна всегда — даже когда
+   статус-бар не влезает в узкий экран телефона. */
+#status-version { border-color: #ffd700; color: #ffd700; flex-shrink: 0; }
+#status-version .text { font-weight: 700; }
+@media (max-width: 480px) {
+    .status-bar { max-width: 58%; font-size: 8px; }
+    .status-item { padding: 2px 5px; }
+    #status-version { order: -1; }
+}
 .status-item { display: flex; align-items: center; gap: 3px; background: #1e1e1e; padding: 3px 6px; border-radius: 10px; border: 1px solid #333; transition: all 0.3s; }
 .status-item .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
 .status-item.online .dot { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
