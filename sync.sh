@@ -89,5 +89,25 @@ while true; do
   rm -f "$GW_TMP"
   curl -fsSL --retry 2 -o "$DIR/gateway/ai_memory.md" "$GW_MEM_URL" 2>/dev/null || true
 
+  # --- СЕРВЕР ЧАТА: nexus_ws/main.ts → ./chat/main.ts ---
+  # push_subs.json НЕ трогаем — это подписки на уведомления, они живут на сервере.
+  mkdir -p "$DIR/chat"
+  CH_TMP="$DIR/.tmp_chat_$$.ts"
+  if curl -fsSL --retry 3 --retry-delay 2 -o "$CH_TMP" "$CHAT_URL"; then
+    CH_SIZE=$(wc -c < "$CH_TMP" 2>/dev/null || echo 0)
+    if [ "$CH_SIZE" -gt 3000 ] && grep -q "Deno.serve" "$CH_TMP"; then
+      if ! cmp -s "$CH_TMP" "$DIR/chat/main.ts"; then
+        mv "$CH_TMP" "$DIR/chat/main.ts"
+        echo "$(date): chat/main.ts обновлён ($CH_SIZE bytes)"
+      fi
+    else
+      echo "$(date): chat/main.ts битый — не трогаю ($CH_SIZE bytes)"
+    fi
+  fi
+  rm -f "$CH_TMP"
+
+  # сторож серверов — всегда исполняемый
+  [ -f "$DIR/watchdog.sh" ] && chmod +x "$DIR/watchdog.sh" 2>/dev/null
+
   sleep 10
 done
