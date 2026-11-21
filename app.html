@@ -76,6 +76,7 @@
 
             // Плашка версии и счётчика правок (version.json).
             if (typeof loadVersionCounter === 'function') loadVersionCounter();
+            if (typeof startVersionAutoRefresh === 'function') startVersionAutoRefresh();
 
             // СТРАХОВКА: если 3D-модуль не выполнился — пробуем загрузить его ещё раз,
             // и только потом сообщаем о проблеме (без этого кнопка «Офис» молча
