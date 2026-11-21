@@ -891,6 +891,115 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
 }
 
 // =========================================
+// GIGACHAT (СБЕР) — ПОМОЩНИК
+// Ключ: GIGACHAT_KEY (Авторизационные данные), scope: GIGACHAT_SCOPE
+// Логи: tail -f /root/zveno.log
+// =========================================
+const GIGACHAT_KEY = Deno.env.get("GIGACHAT_KEY") || "";
+const GIGACHAT_SCOPE = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
+const GIGACHAT_OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
+const GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions";
+const GIGACHAT_MODELS = ["GigaChat-2-Max", "GigaChat-2-Pro", "GigaChat-2", "GigaChat-Pro", "GigaChat"];
+
+// Сертификат Минцифры отсутствует в системном хранилище — Deno ругается на TLS.
+// Создаём клиент, который игнорирует проверку ТОЛЬКО для доменов Сбера.
+let gigachatClient: any = null;
+function getGigaChatClient(): any {
+    if (gigachatClient) return gigachatClient;
+    try {
+        gigachatClient = Deno.createHttpClient({
+            unsafelyIgnoreCertificateErrors: ["ngw.devices.sberbank.ru", "gigachat.devices.sberbank.ru"],
+        });
+        return gigachatClient;
+    } catch (e: any) {
+        zlog(`[GIGACHAT] не удалось создать TLS-клиент: ${e?.message || e}`);
+        return undefined;
+    }
+}
+
+let gcToken = "";
+let gcTokenExp = 0;
+
+async function gigachatToken(): Promise<string> {
+    if (!GIGACHAT_KEY) throw new Error("GIGACHAT_KEY не задан в /root/.env");
+    const now = Date.now();
+    if (gcToken && now < gcTokenExp - 60000) return gcToken;
+
+    const res = await fetch(GIGACHAT_OAUTH_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "Authorization": `Basic ${GIGACHAT_KEY}`,
+            "RqUID": crypto.randomUUID(),
+        },
+        body: `scope=${encodeURIComponent(GIGACHAT_SCOPE)}`,
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(30000),
+    } as any);
+
+    const data = await res.json();
+    if (!res.ok || !data.access_token) {
+        throw new Error(`GigaChat OAuth ${res.status}: ${data?.message || data?.error || "нет токена"}`);
+    }
+    gcToken = data.access_token;
+    gcTokenExp = Number(data.expires_at) || (now + 25 * 60 * 1000);
+    zlog(`[GIGACHAT] получен access_token, scope=${GIGACHAT_SCOPE}`);
+    return gcToken;
+}
+
+async function callGigaChat(messages: any[], requestedModel: string = ""): Promise<string> {
+    const token = await gigachatToken();
+
+    // GigaChat не понимает OpenAI-формат tools — оставляем только текст
+    const clean = messages
+        .filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant")
+        .map((m: any) => ({
+            role: m.role,
+            content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        }));
+
+    const want = String(requestedModel || "").replace(/^gigachat[:\/]?/i, "").trim();
+    const chain = want ? [want, ...GIGACHAT_MODELS] : GIGACHAT_MODELS;
+
+    let lastErr = "GigaChat не ответил";
+    for (const model of chain) {
+        try {
+            const res = await fetch(GIGACHAT_API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
+                client: getGigaChatClient(),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT),
+            } as any);
+
+            const data = await res.json();
+            if (!res.ok) {
+                lastErr = `${model}: ${data?.message || res.status}`;
+                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+                continue;
+            }
+            const text = data?.choices?.[0]?.message?.content;
+            if (!text) {
+                lastErr = `${model}: пустой ответ`;
+                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+                continue;
+            }
+            zlog(`[GIGACHAT] ответила модель: ${model}`);
+            return text;
+        } catch (e: any) {
+            lastErr = `${model}: ${e?.message || e}`;
+            zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+        }
+    }
+    throw new Error(lastErr);
+}
+
+// =========================================
 // ОЗВУЧКА (EDGE-TTS, БЕСПЛАТНО)
 // =========================================
 const TTS_CACHE = new Map<string, Uint8Array>();
