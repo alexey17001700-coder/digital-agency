@@ -71,6 +71,15 @@
     const TIMEOUT_KICK_COOLDOWN_MS = 120000; // не чаще одного пинка в 2 минуты
     const TIMEOUT_KICK_MAX = 3;              // не больше 3 пинков подряд без ответа
 
+    // --- АВТООБНОВЛЕНИЕ: накопилось 5 правок → сами шлём Боссу «обновляй» ---
+    // Следим за version.json (edits/limit). Как только edits >= limit —
+    // автопилот сам отправляет в чат сообщение «обновляй» от имени Босса.
+    const VERSION_URL = 'version.json';
+    const VERSION_POLL_MS = 60000;           // проверяем раз в минуту
+    const UPDATE_TEXT = 'обновляй';
+    const LS_UPDATE_DONE = 'shtabUpdateDone'; // версии, по которым уже отправляли
+    let lastVersionCheck = 0;
+
     let timer = null;
     let busy = false;       // уже отправляем — второй раз не дёргаем
     let waiting = 0;        // сколько циклов ждём, пока Архитектор договорит
