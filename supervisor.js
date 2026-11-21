@@ -723,7 +723,7 @@
     window.supNoteActivity = supNoteActivity;// chat.js: в ленте движение — агент работает
     window.supStage = supStage;              // chat.js: задача разбита на этапы [ЭТАП N/M]
     window.supIsAlive = supIsAlive;
-    window.SUPERVISOR_VERSION = '1.5-stage3';
+    window.SUPERVISOR_VERSION = '1.6-unified';
 
     supStartWatch();
 })();
