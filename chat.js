@@ -889,6 +889,8 @@ function fireAutoKick(reason) {
     renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
     renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
     stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+    // НАДЗИРАТЕЛЬ: авто-пинок — это НЕ молчание. Агент жив, задача остаётся у него.
+    if (typeof supResume === 'function') supResume('arch');
     setTimeout(() => sendMessage('продолжи', true), 900);   // sendMessage сам перезапустит сторожа, пока пинков меньше лимита
     return true;
 }
