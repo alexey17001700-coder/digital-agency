@@ -188,6 +188,8 @@ function applyFreeModelButton() {
         btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'выбрать' : 'нет');
         btn.style.background = '#333'; btn.style.color = '#aaa';
     }
+    // Выбрали бесплатную — кнопка 🟣 GigaChat гаснет сама (состояние не врёт).
+    if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
 }
 
 function toggleFreeModel() {
