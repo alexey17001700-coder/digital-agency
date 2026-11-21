@@ -106,23 +106,6 @@ function setMode(mode) {
     saveAll();
 }
 
-async function clearAllContent() {
-    renderMessage("🧹 Очищаю контент...", 'director', 'Оркестратор');
-    try {
-        const response = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isClearContent: true }) });
-        const data = await response.json();
-        if (data.success) renderMessage("✅ Контент очищен!", 'director', 'Оркестратор');
-    } catch (e) { renderMessage("❌ Ошибка очистки", 'director', 'Оркестратор'); }
-}
-
-async function clearContentFromButton() {
-    if (confirm("⚠️ Очистить Контент?")) {
-        document.getElementById('contentModal').classList.remove('active');
-        await clearAllContent();
-        setTimeout(() => { location.reload(); }, 2000);
-    }
-}
-
 /* --- КНОПКА 🧠 ПЛАТНЫЕ ---
    Листает ТОЛЬКО платные модели. Бесплатные не трогает — у них своя кнопка.
    Долгое нажатие — панель выбора моделей (там же переключатель платных). */
