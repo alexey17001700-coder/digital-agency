@@ -151,4 +151,41 @@ grep "\[MODEL\]" /root/zveno.log | tail -n 20
 
 ---
 
+## 10. GIGACHAT (СБЕР) — ПОМОЩНИК
+
+Второй ИИ-помощник рядом с ZVENO. Работает через Сбер, ключ — физлицо (`PERS`).
+
+**Переменные в `/root/.env`:**
+```
+GIGACHAT_KEY=<Авторизационные данные из кабинета developers.sber.ru>
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
+```
+`GIGACHAT_KEY` — это **одна длинная строка** (base64 от `ClientID:ClientSecret`), не ID и не Secret по отдельности. `==` в конце — часть ключа, не удалять.
+
+**Как работает (в `main.ts`):**
+- `gigachatToken()` — меняет ключ на `access_token` (живёт 30 мин, обновляется автоматически).
+- `callGigaChat()` — сам запрос. Перебирает модели: `GigaChat-2-Max` → `-Pro` → `-2` → `GigaChat-Pro` → `GigaChat`.
+- **Сертификат Минцифры:** в системе его нет, поэтому создаётся TLS-клиент `Deno.createHttpClient({ unsafelyIgnoreCertificateErrors: [...] })` — проверка игнорируется **только** для доменов Сбера. Дополнительных флагов запуска НЕ требуется.
+
+**Два режима вызова:**
+1. **Явно** — клиент присылает `model: "gigachat"` (или `gigachat:GigaChat-2-Pro`) → запрос идёт напрямую в Сбер.
+2. **Резерв** — если ВСЕ маршруты ZVENO упали, Штаб автоматически переключается на GigaChat (последний рубеж).
+
+**Ограничение:** GigaChat не понимает OpenAI-формат `tools` — инструменты (файлы, GitHub, погода) ему недоступны. Это чисто текстовый помощник.
+
+**Проверить, что помощник жив:**
+```bash
+curl -s -X POST http://127.0.0.1:8000 -H "Content-Type: application/json" \
+  -d '{"gigachatTest":true}' | head -c 300
+```
+`{"success":true,"answer":"..."}` — работает. `{"success":false,"error":"GigaChat OAuth 401..."}` — ключ мёртвый или кончился лимит.
+
+**Логи GigaChat** — в общем `/root/zveno.log`:
+```bash
+grep "GIGACHAT" /root/zveno.log | tail -n 20
+```
+Метки: `[GIGACHAT]` — успех, `[GIGACHAT-FALLBACK]` — переключение модели.
+
+---
+
 === КОНЕЦ ИНСТРУКЦИИ ===
