@@ -1706,15 +1706,6 @@ async function sendMessage(overrideText = null, isKick = false) {
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
             if (usedModel) renderMessage(modelBadgeText(usedModel), 'director', 'Оркестратор');
 
-            // Модель ответила монологом (или реплики одного и того же агента), а в Совете
-            // 2+ агентов — включаем короткий диалог между ними, чтобы Совет реально общался.
-            // Считаем именно РАЗНЫХ говорящих: если реплики повторяет один агент — это не диалог.
-            const distinctSpeakers = new Set(replies.map(r => r.agent)).size;
-            if (!isKick && typeof isAgentDialogueEnabled !== 'undefined' && isAgentDialogueEnabled
-                && selectedAgents.length > 1 && distinctSpeakers < 2) {
-                await runAgentRoundtable(text);
-            }
-
             // Метка [ЭТАП N/M] — этап закрыт, просим продолжить следующий.
             const stage = parseStageMarker(aiText);
             // НАДЗИРАТЕЛЬ: задача разбита на этапы — это НЕ молчание, агент жив.
