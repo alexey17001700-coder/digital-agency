@@ -1,5 +1,5 @@
 /* ============================================================
-   НАДЗИРАТЕЛЬ — supervisor.js  v1.4-stage3
+   НАДЗИРАТЕЛЬ — supervisor.js  v1.5-stage3
    ------------------------------------------------------------
    Следит за диалогом Босса в Штабе и не даёт задаче умереть молча.
 
@@ -11,7 +11,8 @@
      • на кнопке «Отправить» тикает счётчик;
      • isGenerating == true и прошло меньше 300 с;
      • идёт авто-пинок «продолжи», следующий этап [ЭТАП N/M];
-     • большая задача разбита на части — каждая часть у своего агента.
+     • большая задача разбита на части — каждая часть у своего агента;
+     • печатается ответ (typingTimer) или в ленте было движение.
 
    СМЕРТЬ (задача/часть уходит следующему по цепочке):
      • счётчик на кнопке ЗАСТЫЛ и не менялся 15 с;
@@ -36,8 +37,10 @@
     const SUP_FREEZE_MS = 15000;    // счётчик не менялся 15 с — считаем застывшим
     const SUP_TICK_MS = 3000;       // проверка каждые 3 с
     const SUP_MAX_HANDOFFS = 2;     // не больше 2 передач на одну задачу (стоп-кран)
-    const SUP_NUDGE_MAX = 2;        // столько раз просим разбить задачу на этапы, потом передаём
     const SUP_TEXT_LIMIT = 2000;    // столько текста задачи храним в журнале
+    const SUP_ALIVE_MS = 120000;    // признак жизни держится 120 с: агент работает — передача запрещена
+    const SUP_ACTIVITY_MS = 45000;  // движение в ленте за это время = агент жив
+    const SUP_DISTRIBUTE_MAX = 3;   // не больше 3 агентов на одну большую задачу
 
     const OWNER_LABEL = {
         arch: '🏛 Архитектор',
@@ -48,6 +51,10 @@
 
     let supTimer = null;
     let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
+    let supAliveUntil = 0;          // до этого времени задача считается ЖИВОЙ — передача запрещена
+    let supLastActivity = 0;        // когда в ленте последний раз было движение (печать/ответ)
+    let supStageInfo = null;        // { cur, total } — задача разбита на этапы, это НЕ молчание
+    let supDistributed = false;     // большую задачу уже раскидали по агентам — второй раз не раскидываем
 
     /* ---------- ЖУРНАЛ ---------- */
 
@@ -66,7 +73,6 @@
     }
     function ownerLabel(o) { return OWNER_LABEL[o] || ('👤 ' + o); }
 
-    /* Задача взята в работу. owner: 'arch' | 'assistant' | 'free' | имя агента */
     /* ---------- ЖИВОЙ АГЕНТ: ПРИЗНАКИ ЖИЗНИ ----------
        Передача задачи — только когда агент МЁРТВ. Пока он работает,
        надзиратель молчит и ждёт. Признаки жизни:
@@ -81,7 +87,8 @@
     }
     function supNoteActivity() { supLastActivity = Date.now(); supAlive(); }
     /* Свежая жизнь: только что был ответ/печать или идут этапы.
-       Именно это отличает РАБОТУ от обрыва, когда счётчик на кнопке замер. */
+       Именно это отличает РАБОТУ от обрыва, когда счётчик на кнопке замер.
+       isGenerating здесь НЕ учитываем: зависший запрос — это не жизнь. */
     function supRecentlyAlive() {
         const now = Date.now();
         if (supLastActivity && (now - supLastActivity) < SUP_ACTIVITY_MS) return true;
@@ -112,10 +119,10 @@
         supAlive(SUP_ALIVE_MS);
         const st = supLoad();
         if (st) { st.big = supStageInfo.total > 1; st.stage = supStageInfo.cur + '/' + supStageInfo.total; supSave(st); }
-        supLog('🧩 *[Надзиратель: задача разбита на этапы ' + supStageInfo.cur + '/' + supStageInfo.total + ' — агент жив, передача не нужна.]*');
+        supLog('🧩 Задача разбита на этапы ' + supStageInfo.cur + '/' + supStageInfo.total + ' — агент жив, передача не нужна');
     }
 
-    /* Задача взята в работу. owner: 'arch' | 'assistant' */
+    /* Задача взята в работу. owner: 'arch' | 'assistant' | 'free' | имя агента */
     function supStart(text, owner) {
         supStageInfo = null; supDistributed = false;   // новая задача — этапы и распределение с нуля
         supLastActivity = 0;                           // прошлая жизнь не считается
@@ -153,6 +160,7 @@
         st.lastTimerChange = now;
         st.reason = '';
         supSave(st);
+        supAlive(SUP_ALIVE_MS);   // агент продолжает работу — он жив
     }
 
     /* Пульс: агент ещё жив и работает (пинок, этап, длинный запрос). */
@@ -168,6 +176,7 @@
     function supAnswered(owner) {
         const st = supLoad();
         if (!st) return;
+        supNoteActivity();   // ответ пришёл — агент жив, задача не брошена
 
         if (st.parts && st.parts.length) {
             const p = st.parts[st.partIndex];
@@ -244,6 +253,14 @@
         }
 
         if ((st.handoffs || 0) >= SUP_MAX_HANDOFFS) { supStopKran(st); return; }
+
+        /* БОЛЬШАЯ ЗАДАЧА: не передаём её целиком одному — режем на части
+           и раздаём свободным агентам, чтобы работа шла параллельно. */
+        if (st.big && !supDistributed && supStageInfo && supStageInfo.total > 1) {
+            supDistributed = true;
+            if (supSplit(st.text)) return;
+        }
+
         const prev = st.owner;
         const next = OWNER_NEXT[prev];
         if (!next) { supStopKran(st); return; }
@@ -387,6 +404,7 @@
             partIndex: 0,
             history: []
         });
+        supDistributed = true;
         const who = parts.map(function (p) { return ownerLabel(p.owner); }).join(' · ');
         supLog('🧩 Задача на ' + parts.length + ' частей: ' + who);
         supDispatchPart(parts[0]);
@@ -434,6 +452,18 @@
         if (generating && silent < SUP_LIMIT_MS) return;
         if (!generating && silent < SUP_FREEZE_MS) return;
 
+        // 2б) ЖИВОЙ АГЕНТ — НЕ ПЕРЕДАЁМ. Печатается ответ, крутятся этапы
+        //     большой задачи, работает Совет или фон — это работа, а не молчание.
+        //     Срок продлеваем и ждём дальше.
+        if (supRecentlyAlive()) {
+            st.lastSeen = now;
+            st.startedAt = now;
+            st.lastTimerText = '';
+            st.lastTimerChange = now;
+            supSave(st);
+            return;
+        }
+
         // 3) Причина передачи.
         let why = '';
         if (silent >= SUP_LIMIT_MS) why = 'лимит 300 с истёк';
@@ -447,6 +477,31 @@
         supSave(st);
         supLog('⏳ ' + ownerLabel(st.owner) + ' — ' + why);
         supHandoff();
+    }
+
+    /* ---------- ОБРЫВ (зов из chat.js) ----------
+       chat.js зовёт это, когда счётчик на кнопке замер/пропал или вышло 300 с.
+       ЖИВОЙ АГЕНТ НЕ ПЕРЕДАЁТСЯ: если идёт печать, крутятся этапы или фон —
+       это работа, а не обрыв. Возвращает true, если надзиратель взял на себя. */
+    function supBreak(reason) {
+        const st = supLoad();
+        if (!st || st.status !== 'waiting') return false;
+        const now = Date.now();
+        if (supRecentlyAlive()) {
+            st.lastSeen = now;
+            st.startedAt = now;
+            st.lastTimerText = '';
+            st.lastTimerChange = now;
+            supSave(st);
+            return true;                        // агент жив — передачи не будет
+        }
+        st.status = 'failed';
+        st.reason = String(reason || 'обрыв').slice(0, 300);
+        st.lastSeen = now;
+        supSave(st);
+        supLog('⏳ ' + ownerLabel(st.owner) + ' — ' + st.reason);
+        supHandoff();
+        return true;
     }
 
     function supStartWatch() {
@@ -467,7 +522,12 @@
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.SUPERVISOR_VERSION = '1.4-stage3';
+    window.supTimerBroken = supBreak;        // chat.js: счётчик оборвался / 300 с → задача уходит дальше
+    window.supAlive = supAlive;              // chat.js: агент жив (этап, Совет, фон, ответ)
+    window.supNoteActivity = supNoteActivity;// chat.js: в ленте движение — агент работает
+    window.supStage = supStage;              // chat.js: задача разбита на этапы [ЭТАП N/M]
+    window.supIsAlive = supIsAlive;
+    window.SUPERVISOR_VERSION = '1.5-stage3';
 
     supStartWatch();
 })();
