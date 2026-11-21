@@ -55,33 +55,25 @@ else
 fi
 
 # ============================================
-#  ИИ-ШЛЮЗ ПОМОЩНИКА (ai.ts, порт 8002)
+#  СТОРОЖ СЕРВЕРОВ (watchdog.sh)
 # ============================================
-#  Без него Помощник молчит: сообщение уходит, ответа нет.
-#  Поднимаем в фоне и следим — упал, значит поднимаем снова.
-AI_TS=""
-for p in "$PWD/gateway/ai.ts" "$PWD/../nexus_ws/ai.ts" "$HOME/nexus_ws/ai.ts"; do
-  if [ -f "$p" ]; then AI_TS="$p"; break; fi
-done
-
-start_gateway() {
-  if [ -z "$AI_TS" ]; then
-    echo "⚠  ai.ts не найден — Помощник будет молчать (ждём sync.sh)"
-    return
-  fi
-  # ключи моделей: .env рядом со шлюзом
-  if [ -f "$(dirname "$AI_TS")/.env" ]; then
-    set -a; . "$(dirname "$AI_TS")/.env"; set +a
-  fi
-  echo "🤖 ИИ-шлюз: $AI_TS (порт ${AI_PORT:-8002})"
-  while true; do
-    deno run --allow-net --allow-env --allow-read "$AI_TS"
-    echo "$(date): ИИ-шлюз упал — перезапуск через 5 с"
-    sleep 5
-  done
-}
-
-start_gateway &
+#  Держит живыми ДВЕ службы:
+#    :8001  chat/main.ts   — сервер чата (WebSocket)
+#    :8002  gateway/ai.ts  — ИИ-шлюз Помощника
+#
+#  Почему отдельный сторож: сервер чата раньше никто не поднимал —
+#  упал и лежал. Теперь сторож видит и «процесс умер», и «процесс жив,
+#  но не отвечает» (3 провала подряд = завис), и «файл обновился».
+#
+#  Штаб (main.ts, :8000) сторож НЕ трогает — им управляет этот скрипт.
+if [ -f "$PWD/watchdog.sh" ]; then
+  chmod +x "$PWD/watchdog.sh" 2>/dev/null
+  bash "$PWD/watchdog.sh" >/dev/null 2>&1 &
+  echo "🐕 Сторож серверов запущен (чат :8001, ИИ-шлюз :8002)"
+  echo "   Логи: watchdog.log · chat.log · ai.log"
+else
+  echo "⚠  watchdog.sh не найден — чат и шлюз придётся поднимать вручную"
+fi
 
 echo "🏢 Штаб запускается на порту 8000 (озвучка включена)..."
 exec deno run --allow-net --allow-env --allow-read --allow-run --allow-write --watch main.ts
