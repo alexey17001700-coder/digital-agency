@@ -511,6 +511,53 @@
         return true;
     }
 
+    /* ---------- ДЕЛЁЖ ПО ОНЛАЙНУ ----------
+       Опрашиваем модели и, если на связи минимум две, режем задачу между ними:
+       каждая часть уходит СВОЕЙ модели (provider), файлы не пересекаются. */
+    async function supSplitByOnline(text) {
+        const p = await supPollOnline();
+        supLog(supOnlineReport());
+        if (supDistributed) return false;
+        const online = (p.list || []).slice(0, SUP_DISTRIBUTE_MAX);
+        if (online.length >= 2) {
+            supLog('🧩 Делю между онлайн-моделями: ' + online.join(' · '));
+            return supSplit(text, online);
+        }
+        if (online.length === 1) supLog('🧩 Онлайн одна модель (' + online[0] + ') — веду задачу целиком');
+        return false;
+    }
+
+    /* Отправить часть задачи конкретной модели через шлюз (provider).
+       Каждая модель получает только свой кусок — друг другу не мешают. */
+    async function supAskProvider(provider, text) {
+        const bases = supGatewayBase ? [supGatewayBase] : supGatewayCandidates();
+        for (let i = 0; i < bases.length; i++) {
+            const base = bases[i];
+            const ctl = new AbortController();
+            const to = setTimeout(function () { ctl.abort(); }, 95000);
+            try {
+                const r = await fetch(base + '/ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: provider,
+                        messages: [{ role: 'user', content: String(text || '') }]
+                    }),
+                    signal: ctl.signal
+                });
+                const d = await r.json();
+                if (!d || !d.ok || !d.text) throw new Error((d && d.error) || 'пустой ответ');
+                supGatewayBase = base;
+                supNoteActivity();
+                supLog('🤖 ' + provider + ' (' + (d.model || '') + '):\n' + String(d.text).slice(0, 4000));
+                return true;
+            } catch (e) {
+                /* следующий адрес или провайдер не ответил */
+            } finally { clearTimeout(to); }
+        }
+        return false;
+    }
+
     /* ---------- ВЫВОД В ЛЕНТУ ---------- */
 
     function supLog(text) {
