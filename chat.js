@@ -1397,11 +1397,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                 renderMessage(nextStageText, 'boss'); addMessageToHistory(nextStageText, 'boss');
                 setTimeout(() => sendMessage(nextStageText, true), 900);
             }
-            // Ответ пришёл, но оборван на середине — просим продолжить.
-            else if (!isKick && !kickGuardActive() && looksTruncated(aiText) && stallKicks < STALL_MAX_KICKS) {
+            // Ответ пришёл, но оборван на середине ИЛИ сервер упёрся в лимит шагов — просим продолжить.
+            else if (!isKick && !kickGuardActive() && (looksTruncated(aiText) || isTooManySteps(aiText)) && stallKicks < STALL_MAX_KICKS) {
                 stallKicks++;
                 markKickSent();
-                renderMessage(`⚡ *[Система: ответ оборван на середине. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
+                const kickWhy = isTooManySteps(aiText) ? 'упёрся в лимит шагов' : 'ответ оборван на середине';
+                renderMessage(`⚡ *[Система: ${kickWhy}. Авто-пинок ${stallKicks}/${STALL_MAX_KICKS} — прошу продолжить.]*`, 'director', 'Оркестратор');
                 renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
                 setTimeout(() => sendMessage('продолжи', true), 900);
             }
