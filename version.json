@@ -1,9 +1,9 @@
 {
   "app": "window_calc",
   "name": "Окна (Flutter)",
-  "version": "3.4.54+117",
-  "build": 117,
-  "edits": 4,
+  "version": "3.4.55+118",
+  "build": 118,
+  "edits": 1,
   "limit": 5,
-  "note": "Версия поднимается каждые 5 правок (правило 11 SERVER_DIAGNOSTICS.md). На 5-й правке — bump pubspec.yaml + CHANGELOG, счётчик в 0/5."
+  "note": "Версия поднимается каждые 5 правок (правило 11 SERVER_DIAGNOSTICS.md)"
 }
