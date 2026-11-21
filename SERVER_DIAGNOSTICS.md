@@ -188,4 +188,58 @@ grep "GIGACHAT" /root/zveno.log | tail -n 20
 
 ---
 
+## 11. ДИАГНОСТИКА КНОПКИ GIGACHAT (проверка маршрута)
+
+**Задача:** убедиться, что при включённой кнопке 🟣 GigaChat запрос реально уходит в Сбер,
+а не в ZVENO (иначе ZVENO ест деньги, а кажется, что отвечает Сбер).
+
+**Цепочка фронтенда (всё с GitHub Pages):**
+`index.html` (оболочка, кэшируется) → iframe `app.html?v=timestamp` (всегда свежий) → `chat.js` + `ui.js`.
+
+**Ключевые точки в коде:**
+| Файл | Что отвечает за режим |
+|---|---|
+| `app.html` | кнопка `id="btnGigaChat"` → `onclick="toggleGigaChat()"` |
+| `chat.js` | `toggleGigaChat()` ставит `modelToUse='gigachat'` последним перекрытием; бейдж `modelBadgeText('gigachat')` |
+| `ui.js` | кнопка гаснет при выборе другой модели |
+| `main.ts` | `/^gigachat/i.test(reqModel)` → `callGigaChat()`; автоперебора нет |
+
+**ГЛАВНЫЙ ТЕСТ — по логу, а не по стилю ответа.** Обнулить лог, послать запрос, прочитать:
+
+```bash
+: > /root/zveno.log
+curl -s -X POST http://localhost:8000/ -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Куку"}],"model":"gigachat"}' >/dev/null
+sleep 2; cat /root/zveno.log
+```
+
+**Как читать лог:**
+
+| Строка в логе | Кто ответил | Деньги |
+|---|---|---|
+| `[GIGACHAT] ответила модель: GigaChat-2-Max` | 🟣 Сбер | Сбер-ключ |
+| `[MODEL] ответила: …` | 🔵 ZVENO | **ZVENO ест** |
+| `[FALLBACK]` / `[FINAL]` | 🔵 ZVENO (перебор) | **ZVENO ест** |
+| `[GIGACHAT] ZVENO упал…` | 🟣 Сбер как резерв | автоперебор жив |
+
+**Правило:** при кнопке **ВКЛ** в логе не должно быть ни одной строки `[MODEL]` или `[FALLBACK]` —
+только `[GIGACHAT]`. Появилась `[MODEL]` — запрос ушёл в ZVENO, кнопка не сработала.
+
+**Живой монитор (держать в Termux и писать в Штаб):**
+```bash
+tail -f /root/zveno.log
+```
+
+**Важно про пути:** фронтенда (`app.html`, `chat.js`) на сервере НЕТ — он грузится с GitHub Pages.
+`sync.sh` тянет ТОЛЬКО `/root/main.ts` (проверяет наличие `Deno.serve` и размер > 1000 байт).
+Поэтому «кнопка не работает» на телефоне = либо старый `main.ts` на сервере, либо кэш оболочки `index.html`.
+
+**Быстрая проверка, что на сервере свежий код:**
+```bash
+grep -c 'gigachat/i.test' /root/main.ts   # должно быть ≥ 1
+grep -c GIGACHAT_KEY /root/.env           # должно быть 1
+```
+
+---
+
 === КОНЕЦ ИНСТРУКЦИИ ===
