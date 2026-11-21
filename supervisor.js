@@ -318,10 +318,38 @@
 
     /* ---------- РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ ---------- */
 
-    /* Кто реально на связи. Базовые каналы есть всегда; агенты — если Штаб их отдал. */
+    /* ---------- ОПРОС АГЕНТОВ: КТО ОНЛАЙН ----------
+       Надзиратель спрашивает у Штаба, кто из агентов на связи. Источники:
+       1) карточки агентов в DOM (.agent-card) — их рисует agents.js;
+       2) реестр, если Штаб его отдал (window.AGENTS_LIST / agents / AGENT_REGISTRY).
+       Занят (working) — не ошибка, но часть задачи ему не даём.
+       Ошибка (error) — агент offline, из распределения выкидываем. */
+    function supAgentCards() {
+        const out = [];
+        try {
+            const cards = document.querySelectorAll('.agent-card');
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const name = String(card.id || '').replace('agent-', '');
+                if (!name) continue;
+                const stText = card.querySelector('.agent-status-text');
+                out.push({
+                    name: name,
+                    busy: card.classList.contains('working'),
+                    error: card.classList.contains('error'),
+                    status: stText ? String(stText.innerText || '') : ''
+                });
+            }
+        } catch (e) { /* нет DOM — работаем базовыми каналами */ }
+        return out;
+    }
     function supOnlineAgents() {
         const list = ['arch', 'assistant', 'free'];
         try {
+            supAgentCards().forEach(function (a) {
+                if (a.error) return;                       // агент в ошибке — не онлайн
+                if (list.indexOf(a.name) === -1) list.push(a.name);
+            });
             const candidates = [];
             if (Array.isArray(window.AGENTS_LIST)) candidates.push.apply(candidates, window.AGENTS_LIST);
             if (Array.isArray(window.agents)) candidates.push.apply(candidates, window.agents);
@@ -334,6 +362,21 @@
             });
         } catch (e) { /* нет реестра — работаем базовыми */ }
         return list;
+    }
+    /* Свободные агенты — онлайн и не занят. Именно им даём части задачи. */
+    function supFreeAgents() {
+        const free = [];
+        supAgentCards().forEach(function (a) {
+            if (a.error || a.busy) return;
+            free.push(a.name);
+        });
+        return free;
+    }
+    /* Только живые агенты Штаба (без базовых каналов arch/assistant/free). */
+    function supRealAgents() {
+        return supOnlineAgents().filter(function (n) {
+            return n !== 'arch' && n !== 'assistant' && n !== 'free';
+        });
     }
 
     /* Режем задачу на части: по файлам → по пунктам → по абзацам. */
