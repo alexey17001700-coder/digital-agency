@@ -1946,6 +1946,7 @@ function init() {
     if (typeof bindAIModelButton === 'function') bindAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
     if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
+    if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
     // Переключатель «кому уходит сообщение» — восстанавливаем выбор Босса.
     if (typeof setChatTarget === 'function') setChatTarget(chatTarget);
 }
