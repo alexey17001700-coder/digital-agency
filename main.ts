@@ -730,20 +730,20 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
             const data = await res.json();
             if (!res.ok) {
                 lastVisionError = `${visionModel}: ${data?.error?.message || res.status}`;
-                console.log(`[VISION-FALLBACK] ${lastVisionError}`);
+                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
                 continue;
             }
             const text = data.choices?.[0]?.message?.content;
             if (!text) {
                 lastVisionError = `${visionModel}: пустой ответ`;
-                console.log(`[VISION-FALLBACK] ${lastVisionError}`);
+                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
                 continue;
             }
-            console.log(`[VISION] ответила модель: ${visionModel}`);
+            zlog(`[VISION] ответила модель: ${visionModel}`);
             return text;
         } catch (e: any) {
             lastVisionError = `${visionModel}: ${e?.message || e}`;
-            console.log(`[VISION-FALLBACK] ${lastVisionError}`);
+            zlog(`[VISION-FALLBACK] ${lastVisionError}`);
             continue;
         }
     }
@@ -810,13 +810,13 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             data = await res.json();
             if (!res.ok) {
                 lastError = `${activeModel}: ${data?.error?.message || res.status}`;
-                console.log(`[FALLBACK] ${lastError}`);
+                zlog(`[FALLBACK] ${lastError}`);
                 modelFailed = true;
                 break;
             }
         } catch (e: any) {
             lastError = `${activeModel}: ${e?.message || e}`;
-            console.log(`[FALLBACK] ${lastError}`);
+            zlog(`[FALLBACK] ${lastError}`);
             modelFailed = true;
             break;
         }
@@ -824,7 +824,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         const msg = data?.choices?.[0]?.message;
         if (!msg) {
             lastError = `${activeModel}: пустой ответ`;
-            console.log(`[FALLBACK] ${lastError}`);
+            zlog(`[FALLBACK] ${lastError}`);
             modelFailed = true;
             break;
         }
@@ -834,7 +834,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             for (const tc of msg.tool_calls) {
                 const fnName = tc.function.name;
                 const fnArgs = JSON.parse(tc.function.arguments || "{}");
-                console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
+                zlog(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
                 const result = await executeTool(fnName, fnArgs);
 
                 let toolResult = result;
@@ -856,7 +856,7 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         }
 
         const answer = msg.content || "Пустой ответ";
-        console.log(`[MODEL] ответила: ${activeModel}`);
+        zlog(`[MODEL] ответила: ${activeModel}`);
         return weatherCard ? weatherCard + "\n\n" + answer : answer;
     }
 
@@ -878,10 +878,10 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             const fdata = await fres.json();
             const ftext = fdata?.choices?.[0]?.message?.content;
             if (fres.ok && ftext) {
-                console.log(`[MODEL] финальный ответ без инструментов: ${activeModel}`);
+                zlog(`[MODEL] финальный ответ без инструментов: ${activeModel}`);
                 return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
             }
-        } catch (e: any) { console.log(`[FINAL] ${e?.message || e}`); }
+        } catch (e: any) { zlog(`[FINAL] ${e?.message || e}`); }
         return "⚠️ Слишком много шагов. Задача прервана.";
     }
     // Модель не ответила — переходим к следующей в цепочке
@@ -1054,7 +1054,7 @@ Deno.serve(async (request) => {
             let aiText = "";
 
             const reqModel = typeof body.model === "string" ? body.model.trim() : "";
-            console.log(`[REQ] model="${reqModel || "(не указана → бесплатная dots)"}" image=${!!body.image}`);
+            zlog(`[REQ] model="${reqModel || "(не указана → бесплатная dots)"}" image=${!!body.image}`);
 
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
