@@ -42,6 +42,8 @@
     const SUP_ACTIVITY_MS = 45000;  // движение в ленте за это время = агент жив
     const SUP_DISTRIBUTE_MAX = 3;   // не больше 3 агентов на одну большую задачу
     const SUP_NUDGE_MAX = 2;        // столько раз просим разбить задачу на этапы, потом передаём
+    const SUP_PING_TTL_MS = 30000;  // опрос «кто онлайн» кэшируем 30 с — модели не долбим
+    const SUP_PING_TIMEOUT = 20000; // сколько ждём /ai/ping
 
     const OWNER_LABEL = {
         arch: '🏛 Архитектор',
