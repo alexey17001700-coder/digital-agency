@@ -24,6 +24,7 @@
 | `/root/status.sh` | Проверка работоспособности портов |
 | `/root/sync.sh` | Курьер: скачивает обновления из GitHub каждые 3 секунды |
 | `/root/Caddyfile` | Конфиг Caddy |
+| `/root/zveno.log` | Логи ZVENO: какая модель ответила, вызовы инструментов, fallback. **Отдельно от `shtab.log`** |
 | `/root/nexus_ws/main.ts` | Код сервера Чата (порт 8001) |
 | `/usr/local/bin/caddy` | Бинарник Caddy (запускается просто как `caddy`) |
 
