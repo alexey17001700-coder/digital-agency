@@ -13,6 +13,7 @@
 | 🏢 **Штаб** | `~/digital-agency` | **8000** | `main.ts` |
 | 💬 **Чат (сервер)** | `~/nexus_ws` | **8001** | `main.ts` |
 | 🌐 **Caddy (SSL)** | `~` | **8443** | `Caddyfile` |
+| 🤖 **Шлюз ИИ (Помощник)** | `~/nexus_ws` → `~/digital-agency/gateway` | **8002** | `ai.ts` |
 | 🔄 **Синхронизация** | 3-я вкладка | — | `sync.sh` (каждые 10 сек) |
 
 **Устройство:** Vivo Y17 → Termux → `proot-distro login ubuntu`
