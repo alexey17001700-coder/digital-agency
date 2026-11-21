@@ -418,38 +418,28 @@
     }
     function supOnlineAgents() {
         const list = ['arch', 'assistant', 'free'];
-        try {
-            supAgentCards().forEach(function (a) {
-                if (a.error) return;                       // агент в ошибке — не онлайн
-                if (list.indexOf(a.name) === -1) list.push(a.name);
-            });
-            const candidates = [];
-            if (Array.isArray(window.AGENTS_LIST)) candidates.push.apply(candidates, window.AGENTS_LIST);
-            if (Array.isArray(window.agents)) candidates.push.apply(candidates, window.agents);
-            if (window.AGENT_REGISTRY && Array.isArray(window.AGENT_REGISTRY.list)) candidates.push.apply(candidates, window.AGENT_REGISTRY.list);
-            candidates.forEach(function (a) {
-                if (!a) return;
-                const name = (typeof a === 'string') ? a : (a.id || a.name);
-                const online = (typeof a === 'object') ? (a.online !== false) : true;
-                if (name && online && list.indexOf(name) === -1) list.push(name);
-            });
-        } catch (e) { /* нет реестра — работаем базовыми */ }
+        supOnlineCache.list.forEach(function (n) { if (list.indexOf(n) === -1) list.push(n); });
         return list;
     }
-    /* Свободные агенты — онлайн и не занят. Именно им даём части задачи. */
+    /* Свободные = реально онлайн модели, не занятые локальной карточкой.
+       Именно им раздаём части большой задачи. */
     function supFreeAgents() {
-        const free = [];
-        supAgentCards().forEach(function (a) {
-            if (a.error || a.busy) return;
-            free.push(a.name);
-        });
-        return free;
+        const busy = {};
+        supAgentCards().forEach(function (a) { if (a.busy || a.error) busy[a.name] = 1; });
+        return supOnlineCache.list.filter(function (n) { return !busy[n]; });
     }
-    /* Только живые агенты Штаба (без базовых каналов arch/assistant/free). */
+    /* Агенты, которые реально отвечают (модели шлюза). Без базовых каналов. */
     function supRealAgents() {
-        return supOnlineAgents().filter(function (n) {
-            return n !== 'arch' && n !== 'assistant' && n !== 'free';
-        });
+        return supOnlineCache.list.slice();
+    }
+    /* Итог опроса для ленты: сколько моделей на связи. */
+    function supOnlineReport() {
+        const on = supOnlineCache.list;
+        const off = (supOnlineCache.models || []).filter(function (p) { return !p.online; });
+        let s = '🔎 Онлайн моделей: ' + on.length;
+        if (on.length) s += ' — ' + on.join(', ');
+        if (off.length) s += ' | молчат: ' + off.map(function (p) { return p.name; }).join(', ');
+        return s;
     }
 
     /* Режем задачу на части: по файлам → по пунктам → по абзацам. */
