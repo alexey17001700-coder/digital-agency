@@ -856,6 +856,46 @@ async function runBackgroundTask(agentName, taskDescription) {
     }, 15000);
 }
 
+/* --- ОДИН АГЕНТ ДЕЛАЕТ СВОЮ ЧАСТЬ ЗАДАЧИ ---
+   Надзиратель, когда задача большая, делит её между агентами и зовёт
+   эту функцию на каждую часть. Агент отвечает сам, своим запросом,
+   и его ответ печатается в чат от его имени. */
+async function askAgent(agentName, partText) {
+    if (typeof takeTurnCall === 'function' && !takeTurnCall()) return false;   // бюджет запросов исчерпан
+    const directive = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[agentName]) || '';
+    const sys = `Ты — ${agentName}, рабочий агент Штаба. ${directive}
+Босс дал большую задачу — её разделили между агентами. Тебе досталась ОДНА часть.
+Сделай ТОЛЬКО свою часть: коротко, по делу, с конкретным результатом.
+Запрещено: приветствия, пересказ всей задачи, вопросы к Боссу, пустые фразы.`;
+    const model = (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(selectedAIModel) : selectedAIModel;
+    let keys = {};
+    try { keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 90000);
+    try {
+        if (typeof updateAgentStatus === 'function') updateAgentStatus(agentName, 'working');
+        if (typeof window.office3dWork === 'function') window.office3dWork(agentName);
+        const res = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ role: 'system', content: sys }, { role: 'user', content: partText }], temperature: 0.6, model: model, userKeys: keys, freeKey: keys.freeKey || '', isBoss: true }),
+            signal: ctrl.signal
+        });
+        const data = await res.json();
+        const txt = (data && data.choices && data.choices[0]) ? String(data.choices[0].message.content || '').trim() : '';
+        if (!txt) return false;
+        renderMessage(txt, 'director', agentName);
+        addMessageToHistory(`[${agentName} — своя часть задачи]: ${txt}`, 'director', agentName);
+        if (typeof window.office3dReport === 'function') window.office3dReport(agentName, txt);
+        return true;
+    } catch (e) {
+        return false;
+    } finally {
+        clearTimeout(tid);
+        if (typeof updateAgentStatus === 'function') updateAgentStatus(agentName, 'free');
+    }
+}
+window.askAgent = askAgent;
+
 /* --- СТОРОЖ ТИШИНЫ ---
    Проверяет чат каждые 3 секунды, а не только по таймеру:
    1) ответа в чате нет вообще и прошло больше STALL_TIMEOUT_MS → пинок;
