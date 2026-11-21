@@ -987,6 +987,37 @@ function handleImageSelect(event) {
     event.target.value = '';
 }
 
+/* --- 👁 ГЛАЗА АРХИТЕКТОРА: ФОТО → ТЕКСТ ---
+   Архитектор не видит картинок. Поэтому фото Босса сначала уходит
+   в зрение (сервер при наличии поля image отвечает описанием),
+   возвращается ПОДРОБНОЕ техническое описание — и уже ОНО
+   подмешивается в контекст как текст. Так Архитектор «видит» чертёж.
+   Плюс: главный запрос уходит БЕЗ картинки — иначе сервер снова
+   уводит всё в зрение и отвечает описанием вместо решения задачи. */
+const VISION_PROMPT = 'Опиши это изображение максимально подробно и технически. Что за изделие или чертёж; сколько секций/створок; какая где открывается (глухая, поворотная, поворотно-откидная, откидная); где ручки и петли; какие размеры, цифры и надписи видны; как расположены элементы и линии. Только факты, списком, без вступлений и без вопросов.';
+async function describeAttachedImage(base64) {
+    if (!base64) return null;
+    if (!takeTurnCall()) return null;   // бюджет запросов на вопрос исчерпан — зрение не тратим
+    try {
+        let vKeys = {};
+        try { vKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+        const res = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: VISION_PROMPT }],
+                temperature: 0.2,
+                model: (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(selectedAIModel) : selectedAIModel,
+                userKeys: vKeys, freeKey: vKeys.freeKey || '',
+                image: base64, isBoss: true
+            }),
+            signal: currentAbortController ? currentAbortController.signal : undefined
+        });
+        const data = await res.json();
+        const txt = (data && data.choices && data.choices[0]) ? String(data.choices[0].message.content || '').trim() : '';
+        return txt || null;
+    } catch (e) { return null; }
+}
+
 /* --- ОТПРАВКА ФАЙЛОВ АРХИТЕКТОРУ ---
    Босс прикладывает файл к задаче. Текстовые (код, конфиги, логи, json)
    читаются и уходят в контекст модели. Бинарные — только имя и размер. */
