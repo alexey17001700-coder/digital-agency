@@ -567,6 +567,11 @@
         else if (t.alive) why = 'счётчик застыл на ' + t.text;
         else return;
 
+        /* 300 с истекли, а агент ЖИВОЙ (запрос идёт, счётчик тикает) —
+           это не смерть, а большая задача. Не передаём её другому:
+           делим между онлайн-агентами или просим разбить на этапы. */
+        if (generating && t.alive && silent >= SUP_LIMIT_MS) { supSplitOrHandoff(st); return; }
+
         st.status = 'failed';
         st.reason = why;
         st.lastSeen = now;
