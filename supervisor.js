@@ -117,6 +117,7 @@
         const st = supLoad();
         if (!st) return;
         if (st.status === 'answered') return;
+        if (owner && st.owner && owner !== st.owner) return;   // сбой от чужого агента — не наша задача
         st.status = 'failed';
         st.lastSeen = Date.now();
         st.reason = String(reason || 'сбой').slice(0, 300);
