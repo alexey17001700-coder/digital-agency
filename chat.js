@@ -150,7 +150,7 @@ async function sendToAssistant(text) {
         const errText = '⚠️ Шлюз ИИ :8002 не отвечает — отправлять некуда.\n\nНа сервере (Termux):\n`cd ~/nexus_ws && deno run --allow-net --allow-env --allow-read ai.ts`\n\nПроверка: `curl http://localhost:8002/ai/health`';
         renderMessage(errText, 'director', 'Помощник');
         addMessageToHistory(errText, 'director', 'Помощник');
-        return;
+        return false;   // шлюза нет — задача не выполнена
     }
     const hist = assistHistory();
     hist.push({ role: 'user', content: text });
