@@ -26,6 +26,9 @@
   var busy = false;
   var gateway = '';
   var els = {};
+  var auto = false;        // авто-продолжение этапов («пинок»)
+  var autoTimer = null;
+  var autoSteps = 0;
 
   /* ---------- хранилище ---------- */
 
