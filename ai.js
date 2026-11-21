@@ -328,6 +328,10 @@
       return b;
     }
 
+    var autoBtn = toolBtn('▶ Авто', 'Авто-продолжение этапов', function () { setAuto(!auto); }, '#7ee08a');
+    els.autoBtn = autoBtn;
+    tools.appendChild(autoBtn);
+
     tools.appendChild(toolBtn('⚙️', 'Адрес шлюза', openSettings));
     tools.appendChild(toolBtn('🧠', 'Характер Помощника', editSystem, '#ffd700'));
     tools.appendChild(toolBtn('🗑️', 'Очистить историю', clearAll, '#ff8888'));
