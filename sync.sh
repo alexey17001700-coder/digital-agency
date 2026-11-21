@@ -67,5 +67,23 @@ while true; do
   fi
 
   rm -f "$TMP"
+
+  # --- ИИ-шлюз: ai.ts + память. Обновляем отдельно, main.ts не трогаем. ---
+  mkdir -p "$DIR/gateway"
+  GW_TMP="$DIR/.tmp_ai_$$.ts"
+  if curl -fsSL --retry 3 --retry-delay 2 -o "$GW_TMP" "$GW_URL"; then
+    GW_SIZE=$(wc -c < "$GW_TMP" 2>/dev/null || echo 0)
+    if [ "$GW_SIZE" -gt 2000 ] && grep -q "Deno.serve" "$GW_TMP"; then
+      if ! cmp -s "$GW_TMP" "$DIR/gateway/ai.ts"; then
+        mv "$GW_TMP" "$DIR/gateway/ai.ts"
+        echo "$(date): ai.ts обновлён ($GW_SIZE bytes)"
+      fi
+    else
+      echo "$(date): ai.ts битый — не трогаю ($GW_SIZE bytes)"
+    fi
+  fi
+  rm -f "$GW_TMP"
+  curl -fsSL --retry 2 -o "$DIR/gateway/ai_memory.md" "$GW_MEM_URL" 2>/dev/null || true
+
   sleep 10
 done
