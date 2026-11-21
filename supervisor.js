@@ -475,6 +475,46 @@
         } catch (e) { /* лента недоступна — молчим */ }
     }
 
+    /* ---------- БОЛЬШАЯ ЛИ ЗАДАЧА ----------
+       Признаки: длинный текст, несколько файлов, несколько пунктов списка
+       или прямая просьба «раздели/распредели задачу». */
+    function supIsBigTask(text) {
+        const s = String(text || '');
+        if (s.length >= 400) return true;
+        if (/раздели\s+задач|распредели\s+задач|по\s+агентам|параллельно/i.test(s)) return true;
+        const files = s.match(/\[(?:FILE|READ):\s*[^\]]+\]/gi);
+        if (files && files.length >= 2) return true;
+        const bullets = s.split('\n').filter(function (l) { return /^\s*(?:[-•*]|\d+[.)])\s+/.test(l); });
+        if (bullets.length >= 2) return true;
+        return false;
+    }
+
+    /* ---------- 300 С ИСТЕКЛО, НО АГЕНТ ЖИВ ----------
+       Это не смерть, а большая задача. Не передаём её другому:
+       опрашиваем агентов и раскидываем задачу между ними. Если онлайн
+       мало — просим разбить задачу на этапы и отчитаться по каждому. */
+    function supSplitOrHandoff(st) {
+        const free = supFreeAgents();
+        const online = supRealAgents();
+        const pool = free.length >= 2 ? free : online;
+        if (pool.length >= 2) {
+            supLog('🔎 Опрос агентов: онлайн ' + online.length + ', свободны ' + free.length + ' — делю большую задачу');
+            supSplit(st.text, pool);
+            return;
+        }
+        st.startedAt = Date.now();
+        st.lastSeen = Date.now();
+        st.nudges = (st.nudges || 0) + 1;
+        supSave(st);
+        if (st.nudges > SUP_NUDGE_MAX) {
+            supLog('⏳ Агентов онлайн нет — передаю задачу дальше');
+            supHandoff();
+            return;
+        }
+        supLog('🧩 Агент жив, задача большая — прошу разбить её на этапы (не передаю)');
+        try { if (typeof window.sendMessage === 'function') window.sendMessage('раздели задачу на этапы и отчитайся по каждому', true); } catch (e) {}
+    }
+
     /* ---------- ДЕТЕКТ МОЛЧАНИЯ ---------- */
 
     function timerState(st, now) {
