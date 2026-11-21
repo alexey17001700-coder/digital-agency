@@ -108,6 +108,10 @@ const ASSIST_LS_SYSTEM = 'assistant_system_v1';
 let assistGateway = '';
 function assistCandidates() {
     const out = [];
+    /* 1) ТОТ ЖЕ АДРЕС, ЧТО И ЧАТ (Caddy :8443, путь /ai) — основной путь.
+       Шлюз ИИ поднят на сервере рядом со Штабом, Caddy проксирует /ai → :8002.
+       Так Помощник доступен и с телефона, и снаружи — без поиска портов. */
+    out.push(PROXY);
     let saved = null;
     try { saved = localStorage.getItem(ASSIST_LS_GATEWAY); } catch (e) {}
     if (saved) out.push(String(saved).replace(/\/+$/, ''));
