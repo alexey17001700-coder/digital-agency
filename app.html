@@ -104,6 +104,11 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
+            // РЕЖИМ «ЧАТ ОТДЕЛЬНО»: app.html?chatonly=1 — прячем агентов и панели,
+            // чат занимает весь экран. Открывается кнопкой 🪟 Чат отдельно.
+            if (/[?&]chatonly=1/.test(window.location.search)) {
+                document.body.classList.add('chat-only-mode');
+            }
             const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'supervisor.js', 'office.js', 'office3d.js', 'ui.js', 'zveno_balance.js', 'ai.js'];
             const failed = [];
 
