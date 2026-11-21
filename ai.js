@@ -296,11 +296,6 @@
     }
 
     setBusy(true);
-    history.push({ role: 'user', content: text });
-    els.input.value = '';
-    saveHistory();
-    render();
-
     try {
       var payload = {
         messages: [{ role: 'system', content: systemPrompt() }].concat(history.slice(-MAX_MSGS)),
