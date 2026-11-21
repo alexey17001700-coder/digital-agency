@@ -1684,6 +1684,13 @@ async function sendMessage(overrideText = null, isKick = false) {
             // ответ на «продолжи» снова упирался в лимит шагов и задача молча умирала.
             // Теперь «продолжи» пинается повторно, пока не исчерпан лимит STALL_MAX_KICKS.
             else if (!kickGuardActive() && (looksTruncated(aiText) || isTooManySteps(aiText)) && stallKicks < STALL_MAX_KICKS) {
+                /* --- ЛИМИТ ШАГОВ СЕРВЕРА = ЗАДАЧА НЕ СДЕЛАНА ---
+                   Пинать тем же лимитом бесполезно: модель снова упрётся.
+                   Отдаём задачу надзирателю — он передаст её следующему
+                   агенту (Помощник → бесплатная модель). */
+                if (isTooManySteps(aiText) && typeof supFailed === 'function') {
+                    supFailed('arch', 'упёрся в лимит шагов');
+                } else {
                 stallKicks++;
                 markKickSent();
                 /* --- РАЗНЫЙ ПИНОК ДЛЯ РАЗНЫХ ОБРЫВОВ ---
