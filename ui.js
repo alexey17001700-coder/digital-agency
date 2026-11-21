@@ -406,6 +406,17 @@ async function loadVersionCounter() {
     }
 }
 
+/* Автообновление счётчика: раз в 60 секунд и при возврате в приложение.
+   Так плашка всегда показывает актуальное «сколько правок до обновления». */
+let __versionTimer = null;
+function startVersionAutoRefresh() {
+    if (__versionTimer) return;
+    __versionTimer = setInterval(() => { loadVersionCounter(); }, 60000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) loadVersionCounter();
+    });
+}
+
 function openVersionPanel() {
     const d = __versionData;
     if (document.getElementById('versionPanel')) return;
