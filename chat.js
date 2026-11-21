@@ -1134,6 +1134,7 @@ function handleSendClick() {
         stopHardWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopButtonWatchdog();
         clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
         stopSendTimer();           // гасим секундомер на кнопке
+        if (typeof supClear === 'function') supClear();   // Босс остановил сам — передавать некому
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
     }
