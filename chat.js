@@ -692,6 +692,8 @@ function renderMessage(text, sender, agentName = 'Оркестратор', file 
 }
 
 function typeMessage(fullText, sender, agentName, onComplete) {
+    // НАДЗИРАТЕЛЬ: агент печатает ответ — он жив, передавать задачу некому.
+    if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
     if (sender === 'director') {
