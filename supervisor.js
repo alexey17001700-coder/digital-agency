@@ -144,6 +144,19 @@
             history: history
         });
         supLog('📋 Задачу взял ' + ownerLabel(owner));
+
+        /* БОЛЬШАЯ ЗАДАЧА + НЕСКОЛЬКО АГЕНТОВ ОНЛАЙН → делим сразу.
+           Надзиратель опрашивает агентов, считает, кто на связи, и раскидывает
+           задачу между ними. Это НЕ передача: счётчик handoffs не растёт. */
+        if (supIsBigTask(text)) {
+            const free = supFreeAgents();
+            const online = supRealAgents();
+            const pool = free.length >= 2 ? free : online;
+            if (pool.length >= 2) {
+                supLog('🔎 Опрос агентов: онлайн ' + online.length + ', свободны ' + free.length + ' — делю задачу');
+                supSplit(text, pool);
+            }
+        }
     }
 
     /* Задача продолжается: авто-пинок, следующий этап, повтор после сбоя.
