@@ -1616,6 +1616,11 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
                 const selModelInfo = getModelInfo(selectedAIModel);
                 if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
+                // ЖЁСТКАЯ ГАРАНТИЯ №2: кнопка 🟣 GigaChat включена — на сервер уходит
+                // ИМЕННО "gigachat". Тот же секрет-ключ Босса (deepseekKey = "zveno"/"boss")
+                // подменял выбор на платную Zveno — из-за этого кнопка GigaChat «не работала»:
+                // отвечал Zveno, а не Сбер. Теперь выбор GigaChat не подменяется ничем.
+                if (selectedAIModel === 'gigachat') modelToUse = 'gigachat';
                 // Ollama: на ПК уходит ИМЯ локальной модели (например qwen2.5-coder:7b),
                 // а в бейдже остаётся 'ollama' — чтобы Босс видел верную подпись.
                 if (isOllama) modelToUse = ollamaModel();
