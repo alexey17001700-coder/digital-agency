@@ -231,8 +231,21 @@
     var text = (els.input && els.input.value || '').trim();
     if (!text) return;
 
+    setStatus('ищу шлюз…');
     var gw = await findGateway();
-    if (!gw) return;
+    if (!gw) {
+      history.push({
+        role: 'assistant',
+        content: '⚠️ Шлюз ИИ :8002 не отвечает — отправлять некуда.\n\n' +
+          'На сервере (Termux) запусти:\n' +
+          'cd ~/nexus_ws && deno run --allow-net --allow-env --allow-read ai.ts\n\n' +
+          'Проверка: curl http://localhost:8002/ai/health',
+        meta: 'нет связи со шлюзом'
+      });
+      saveHistory();
+      render();
+      return;
+    }
 
     setBusy(true);
     history.push({ role: 'user', content: text });
