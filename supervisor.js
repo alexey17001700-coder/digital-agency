@@ -25,7 +25,7 @@
     'use strict';
 
     const SUP_KEY = 'shtabSupervisor';
-    const SUP_SILENCE_MS = 90000;    // 90 с без ответа — агент считается молчащим
+    const SUP_SILENCE_MS = 300000;   // 300 с — лимит кнопки отправки. Раньше этого срока агент может работать, это не молчание
     const SUP_TICK_MS = 5000;        // проверка каждые 5 с
     const SUP_MAX_HANDOFFS = 2;      // не больше 2 передач на одну задачу (стоп-кран)
     const SUP_TEXT_LIMIT = 2000;     // столько текста задачи храним в журнале
