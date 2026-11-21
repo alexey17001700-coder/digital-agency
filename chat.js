@@ -136,7 +136,12 @@ async function assistFindGateway() {
     for (let i = 0; i < list.length; i++) {
         try {
             const r = await assistFetch(list[i] + '/ai/health', { method: 'GET' }, 3000);
-            if (r.ok) { assistGateway = list[i]; return assistGateway; }
+            if (!r.ok) continue;
+            /* Проверяем, что ответил ИМЕННО шлюз ИИ, а не Caddy/файловый сервер:
+               иначе HTML-заглушка «200 OK» принимается за живой шлюз, и запрос
+               к /ai молча падает. Принимаем только настоящий JSON шлюза. */
+            const j = await r.json().catch(() => null);
+            if (j && (j.ok || Array.isArray(j.providers))) { assistGateway = list[i]; return assistGateway; }
         } catch (e) { /* пробуем следующий адрес */ }
     }
     return null;
