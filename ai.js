@@ -110,6 +110,8 @@
         }
       } catch (e) { /* пробуем следующий адрес */ }
     }
+    gwFails = true;
+    gwFailTime = Date.now();
     setStatus('шлюз не найден (:8002)', true);
     return null;
   }
