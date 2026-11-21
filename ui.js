@@ -149,6 +149,8 @@ function applyAIModelButton() {
         btn.style.background = '#333'; btn.style.color = '#aaa';
     }
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    // Выбрали другую модель — кнопка 🟣 GigaChat гаснет сама (состояние не врёт).
+    if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
 }
 
 function toggleAIModel() {
