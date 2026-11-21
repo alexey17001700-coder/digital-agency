@@ -12,6 +12,12 @@
 REPO="alexey17001700-coder/digital-agency"
 URL="https://raw.githubusercontent.com/${REPO}/main/main.ts"
 
+# --- ИИ-шлюз Помощника (nexus_ws/ai.ts) — качаем в ./gateway ---
+# Без него Помощник молчит: сообщение уходит, отвечать некому.
+GW_REPO="alexey17001700-coder/nexus_ws"
+GW_URL="https://raw.githubusercontent.com/${GW_REPO}/main/ai.ts"
+GW_MEM_URL="https://raw.githubusercontent.com/${GW_REPO}/main/ai_memory.md"
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET="$DIR/main.ts"
 BACKUP="$DIR/main.ts.bak"
