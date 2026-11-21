@@ -343,64 +343,84 @@
     </div>
 
     <script>
-    // Пошаговая инструкция по аварийному восстановлению (VIVO -> Termux).
-    // Источник: SERVER_DIAGNOSTICS.md, раздел 2.1.
+    // Пошаговая инструкция по аварийному восстановлению (VIVO -> Termux -> Ubuntu).
+    // Источник: SERVER_DIAGNOSTICS.md, разделы 2.1 и 12 (полная карта сервера).
+    // ВАЖНО: фронтенда на сервере НЕТ. Страница Штаба грузится с GitHub Pages,
+    // сервер отдаёт только API. Поэтому на сервере лежит ТОЛЬКО main.ts.
     const RECOVERY_STEPS = [
         {
-            title: 'Шаг 0. Подготовка',
-            note: 'Открой Termux, зайди в Ubuntu и создай 4 вкладки (свайп слева → NEW SESSION). Переименуй их долгим нажатием на название.',
-            cmds: ['proot-distro login ubuntu']
+            title: 'Шаг 0. Карта сервера — что где лежит',
+            note: 'Штаб = API на :8000 (страница грузится с GitHub Pages, на сервере фронтенда нет). Чат = :8001. Caddy = :8443, домен shtab-boss.duckdns.org. Всё живёт в /root.',
+            cmds: [
+                'proot-distro login ubuntu',
+                'ls -la /root/',
+                'cat /root/Caddyfile'
+            ]
+        },
+        {
+            title: 'Шаг 1. Диагностика — что именно упало',
+            note: 'Сначала смотрим, кто жив, и только потом поднимаем. Логи: shtab.log (Штаб), chat.log (Чат), caddy.log (SSL), sync.log (курьер), zveno.log (модели и GigaChat).',
+            cmds: [
+                'bash /root/status.sh',
+                'ps aux | grep -E "deno|caddy" | grep -v grep',
+                'tail -n 20 /root/shtab.log /root/chat.log /root/caddy.log /root/sync.log'
+            ]
         },
         {
             title: 'Вкладка 1: ШТАБ (порт 8000)',
-            note: 'Имена переменных именно GITHUB_OWNER и GITHUB_REPO. С REPO_OWNER / REPO_NAME сервер не увидит файлы (401).',
+            note: 'Имена переменных именно GITHUB_OWNER и GITHUB_REPO. Секреты лежат в /root/.env — подхватываем их одной строкой. Проверка ключа GigaChat: grep -c GIGACHAT_KEY /root/.env',
             cmds: [
-                'cd ~',
-                'export ZVENO_API_KEY="[ключ]"',
-                'export GITHUB_TOKEN="[токен]"',
-                'export GITHUB_OWNER="alexey17001700-coder"',
-                'export GITHUB_REPO="digital-agency"',
+                'cd /root',
+                'set -a; . /root/.env; set +a',
                 'deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch main.ts'
             ]
         },
         {
             title: 'Вкладка 2: CADDY (SSL / порт 8443)',
-            note: '⚠️ Caddy может исчезнуть при сбое. Если файла caddy-linux-arm64 нет — сначала скачай его (первая команда), потом запускай.',
+            note: 'Caddyfile: https_port 8443, /ws* и /stats* → 8001, /tts* и остальное → 8000. Сертификаты в /root/ssl/. Сначала проверь, есть ли бинарник в системе — качать заново только если нет.',
             cmds: [
-                'cd ~',
+                'which caddy || ls -l /root/caddy*',
                 '# если бинарника нет — скачать заново:',
-                'curl -L -o caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x caddy-linux-arm64',
-                './caddy-linux-arm64 run --config Caddyfile'
+                'curl -L -o /root/caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x /root/caddy-linux-arm64',
+                'caddy run --config /root/Caddyfile'
             ]
         },
         {
             title: 'Вкладка 3: SYNC (Курьер)',
-            note: 'Зависнет и будет молчать — это нормально, он следит за обновлениями.',
-            cmds: ['cd ~', 'bash sync.sh']
+            note: 'Тянет ТОЛЬКО main.ts с GitHub каждые 3 секунды и кладёт в /root/main.ts (старый — в main.ts.bak). Зависнет и будет молчать — это нормально.',
+            cmds: ['cd /root', 'bash sync.sh']
         },
         {
             title: 'Вкладка 4: ЧАТ (порт 8001)',
-            note: '',
+            note: 'Сервер чата лежит в /root/nexus_ws. Секреты push-уведомлений — в /root/.nexus_ws_env.',
             cmds: [
-                'cd ~/nexus_ws',
-                'export VAPID_PRIVATE="[ключ]"',
-                'export VAPID_SUBJECT="mailto:admin@example.com"',
-                'export VAPID_PUBLIC="[ключ]"',
+                'cd /root/nexus_ws',
+                'set -a; . /root/.nexus_ws_env; set +a',
                 'deno run --allow-net --allow-env --allow-read --allow-run main.ts'
             ]
         },
         {
             title: 'Проверка после подъёма',
-            note: 'Ожидаемые коды: Штаб 405 (отвечает только на POST — это норма), Чат 200, Caddy 200.',
+            note: 'Штаб на GET отвечает 405 — это НОРМА (он принимает только POST). Боевой тест — POST-запрос ниже. Ответ с текстом = сервер жив.',
             cmds: [
-                'curl -s  -o /dev/null -w "Shtab: %{http_code}\\n" http://localhost:8000/',
-                'curl -s  -o /dev/null -w "Chat:  %{http_code}\\n" http://localhost:8001/',
-                'curl -sk -o /dev/null -w "Caddy: %{http_code}\\n" https://localhost:8443/'
+                'curl -s -o /dev/null -w "Shtab: %{http_code}\\n" http://localhost:8000/',
+                'curl -s -o /dev/null -w "Chat:  %{http_code}\\n" http://localhost:8001/',
+                'curl -sk -o /dev/null -w "Caddy: %{http_code}\\n" https://localhost:8443/',
+                'curl -s -X POST http://localhost:8000/ -H "Content-Type: application/json" -d \'{"messages":[{"role":"user","content":"Куку"}],"model":""}\' | head -c 300'
+            ]
+        },
+        {
+            title: 'Проверка GigaChat (Сбер)',
+            note: 'Отдельная ручка. Если вернул answer — ключ и TLS в порядке. Если «GIGACHAT_KEY не задан» — ключа нет в /root/.env. Сертификаты Сбера: /root/root_ca.pem, /root/sber_ca.pem.',
+            cmds: [
+                'curl -s -X POST http://localhost:8000/ -H "Content-Type: application/json" -d \'{"gigachatTest":true}\' | head -c 300',
+                'grep -c GIGACHAT_KEY /root/.env',
+                'tail -n 20 /root/zveno.log'
             ]
         },
         {
             title: '⚡ Быстрый подъём одной командой',
-            note: 'Если не хочется открывать 4 вкладки — поднять всё разом. Секреты (ZVENO_API_KEY, GITHUB_TOKEN, VAPID_*) задать в окружении ДО запуска. Логи: /root/shtab.log, /root/chat.log, /root/caddy.log, /root/sync.log.',
+            note: 'Если не хочется открывать 4 вкладки — поднять всё разом. Секреты (ZVENO_API_KEY, GITHUB_TOKEN, GIGACHAT_KEY, VAPID_*) задать в окружении ДО запуска. Логи: /root/shtab.log, /root/chat.log, /root/caddy.log, /root/sync.log.',
             cmds: ['bash /root/start_all.sh']
         }
     ];
