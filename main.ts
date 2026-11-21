@@ -1179,14 +1179,12 @@ Deno.serve(async (request) => {
                 // Босс явно выбрал GigaChat — идём напрямую в Сбер
                 aiText = await callGigaChat(body.messages, reqModel);
             } else {
-                try {
-                    aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
-                } catch (zvenoErr: any) {
-                    // Все маршруты ZVENO упали — последний рубеж: GigaChat
-                    if (!GIGACHAT_KEY) throw zvenoErr;
-                    zlog(`[GIGACHAT] ZVENO упал (${zvenoErr?.message || zvenoErr}) — переключаюсь на Сбер`);
-                    aiText = await callGigaChat(body.messages, "");
-                }
+                // АВТОПЕРЕБОР НА GIGACHAT ОТКЛЮЧЁН (приказ Босса).
+                // GigaChat — ОТДЕЛЬНОЕ подключение: работает ТОЛЬКО когда Босс
+                // сам включил кнопку 🟣 GigaChat (тогда model="gigachat" и идёт
+                // ветка выше). Если ZVENO упал — ошибка уходит наверх, Сбер
+                // молча задачу НЕ подхватывает. Никакого скрытого резерва.
+                aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });
