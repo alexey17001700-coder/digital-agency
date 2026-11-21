@@ -1750,4 +1750,6 @@ function init() {
     if (typeof bindAIModelButton === 'function') bindAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
     if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
+    // Переключатель «кому уходит сообщение» — восстанавливаем выбор Босса.
+    if (typeof setChatTarget === 'function') setChatTarget(chatTarget);
 }
