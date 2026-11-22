@@ -35,6 +35,14 @@
         // Теперь ui.js сравнивает эту сборку с серверной и, если кадр устарел,
         // перезагружает его в обход кэша.
         window.SHTAB_APP_BUILD = 66;
+        // Сообщаем оболочке (index.html) свою сборку — по ней она понимает,
+        // что на экране, и решает, пора ли тихо подменить кадр.
+        try { window.parent.postMessage({ type: 'shtab-frame-build', build: window.SHTAB_APP_BUILD }, '*'); } catch (e) {}
+        // Оболочка сказала «подмена прошла» — больше не просим перезагрузку.
+        window.addEventListener('message', function (e) {
+            const d = e.data || {};
+            if (d.type === 'shtab-swap-ok') window.__shtabSwapDone = true;
+        });
         const timestamp = new Date().getTime();
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
 
