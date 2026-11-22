@@ -243,28 +243,8 @@ window.syncModeButtons = syncModeButtons;
 syncModeButtons();
 setInterval(syncModeButtons, 700);
 
-function bindAIModelButton() {
-    const btn = document.getElementById('btnAIModel');
-    if (!btn || btn.dataset.aiBound === '1') return;
-    btn.dataset.aiBound = '1';
-    let pressTimer = null, longPressed = false;
-    const start = () => {
-        longPressed = false;
-        pressTimer = setTimeout(() => { longPressed = true; openAIModelPanel(); }, 600);
-    };
-    const cancel = () => { clearTimeout(pressTimer); };
-    btn.addEventListener('touchstart', start, { passive: true });
-    btn.addEventListener('touchend', cancel);
-    btn.addEventListener('touchcancel', cancel);
-    btn.addEventListener('mousedown', start);
-    btn.addEventListener('mouseup', cancel);
-    btn.addEventListener('mouseleave', cancel);
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (longPressed) { longPressed = false; return; }
-        toggleAIModel();
-    });
-}
+/* --- ПРИВЯЗКИ КНОПКИ 🧠 ПЛАТНЫЕ БОЛЬШЕ НЕТ ---
+   Кнопка убрана вместе со списком платных моделей. */
 /* =========================================
    🅰️ МЕНЮ АРХИТЕКТОРА (ZVENO) — ОТДЕЛЬНЫЙ КАНАЛ
    Тап по кнопке 🅰️ открывает это меню. Здесь две вещи:
