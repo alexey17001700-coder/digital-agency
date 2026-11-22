@@ -148,7 +148,7 @@ const AI_MODELS_DEFAULT = [
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
    перезаписывается новым (иначе у Босса остался бы старый набор моделей). */
-const AI_MODELS_VERSION = '2026-02-14-free7-ollama';   // добавлена локальная модель Ollama (ПК)
+const AI_MODELS_VERSION = '2026-02-15-free6-ollama';   // dots-studio деактивирована платформой — убрана из списка
 try {
     const ver = localStorage.getItem('shtabAIModelsVer');
     const sm = localStorage.getItem('shtabAIModels');
