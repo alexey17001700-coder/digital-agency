@@ -1713,7 +1713,13 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
                 // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
                 const selModelInfo = getModelInfo(selectedAIModel);
-                if (selModelInfo && selModelInfo.free && selectedAgents.length > 0) modelToUse = selectedAIModel;
+                /* --- КАРТОЧКА ГЛАВНЕЕ КНОПКИ МОДЕЛИ ---
+                   Босс: выбрана карточка GigaChat (или другая со своим маршрутом),
+                   а бесплатная модель с кнопки молча перебивала её — отвечал не Сбер.
+                   Теперь кнопка модели работает ТОЛЬКО когда у карточки нет своего
+                   маршрута в AGENT_ROUTES. */
+                const cardHasRoute = (selectedAgents.length === 1 && !!agentRoute(selectedAgents[0])) || selectedAgents.includes('GigaChat');
+                if (selModelInfo && selModelInfo.free && selectedAgents.length > 0 && !cardHasRoute) modelToUse = selectedAIModel;
                 // --- НИКТО НЕ ВЫБРАН → СТОП ---
                 // Босс: пустая панель — работать некому. Запрос сюда уже не доходит:
                 // в начале sendMessage стоит стоп-кран «Выберите Агента».
