@@ -179,12 +179,24 @@ function toggleFreeModel() {
         if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатных моделей в списке нет.]*', 'director', 'Оркестратор');
         return;
     }
-    let idx = f.findIndex(m => m.id === selectedAIModel);
-    if (idx < 0) idx = -1;
-    selectedAIModel = f[(idx + 1) % f.length].id;
-    localStorage.setItem('shtabAIModel', selectedAIModel);
+    // Выбранная бесплатная модель включена → тап её ВЫКЛЮЧАЕТ (выбор снимается).
+    const cur = f.find(m => m.id === selectedAIModel);
+    if (cur) {
+        try { localStorage.setItem('shtabLastFreeModel', cur.id); } catch (e) {}
+        selectedAIModel = '';
+        try { localStorage.removeItem('shtabAIModel'); } catch (e) {}
+        applyAIModelButton();
+        if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + cur.label + ' ВЫКЛЮЧЕНА. Тап по 🆓 — включить снова.]*', 'director', 'Оркестратор');
+        return;
+    }
+    // Ничего не выбрано → тап ВКЛЮЧАЕТ последнюю выбранную бесплатную модель.
+    let last = '';
+    try { last = localStorage.getItem('shtabLastFreeModel') || ''; } catch (e) {}
+    const back = f.find(m => m.id === last) || f[0];
+    selectedAIModel = back.id;
+    try { localStorage.setItem('shtabAIModel', back.id); } catch (e) {}
     applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
+    if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + back.label + ' ВКЛЮЧЕНА.]*', 'director', 'Оркестратор');
 }
 
 function bindFreeModelButton() {
