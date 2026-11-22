@@ -621,9 +621,15 @@ function openModelSettingsPanel(id, onBack) {
                приходило «missing or invalid authorization». Отсюда «ошибка»
                на живом ключе Босса. */
             const uk = {}; if (v) uk[id === 'zveno' ? 'architectKey' : id] = v;
+            /* 🟣 GIGACHAT проверяем СВОЕЙ ручкой (gigachatTest): она берёт ключ
+               из поля и отдаёт {success, answer} — без инструментов и без чата.
+               Раньше ключ Сбера шёл через общий чат-путь и проверялся не тем. */
+            const isGiga = (id === 'gigachat');
             const r = await fetch(PROXY, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: [{ role: 'user', content: 'ку' }], temperature: 0.2, model: id, userKeys: uk, isBoss: true }),
+                body: JSON.stringify(isGiga
+                    ? { gigachatTest: true, userKeys: uk }
+                    : { messages: [{ role: 'user', content: 'ку' }], temperature: 0.2, model: id, userKeys: uk, isBoss: true }),
                 signal: ctrl.signal
             });
             clearTimeout(tid);
