@@ -381,6 +381,7 @@ function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_
     currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
     chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
     selectedAgents = []; document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
+    if (typeof updateTandemCards === 'function') updateTandemCards();
     if (typeof resetAllStatuses === 'function') resetAllStatuses();
     const msgs = allChats[id].messages;
     for (let i = 1; i < msgs.length; i++) { 
