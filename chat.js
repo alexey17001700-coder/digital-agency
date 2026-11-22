@@ -951,13 +951,14 @@ async function runTandemTurn(topic, isKick) {
 
     if (!log.length) return false;   // ни один голос не ответил — пусть сработает надзиратель/пинок
 
-    // --- ИТОГ: Архитектор собирает общий результат ---
-    renderMessage('🧩 *[Тандем: диалог закончен — Архитектор собирает общий результат.]*', 'director', 'Оркестратор');
-    const finalSys = `Ты — Архитектор Штаба. ${AGENT_DIRECTIVES['Архитектор']}
-Ты вместе с GigaChat обсудил задачу Босса. Ниже — ваш диалог.
+    // --- ИТОГ: второй голос собирает общий результат ---
+    renderMessage('🧩 *[Тандем: диалог закончен — ' + B + ' собирает общий результат.]*', 'director', 'Оркестратор');
+    const dirBF = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[B]) || '';
+    const finalSys = `Ты — ${B}, агент Штаба. ${dirBF}
+Ты вместе с ${A} обсудил задачу Босса. Ниже — ваш диалог.
 Дай Боссу ОБЩИЙ ИТОГ: что решили, что делаем, конкретные шаги или код.
 Без пересказа диалога, без приветствий, без вопросов.`;
-    const finalUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ С GIGACHAT:\n${asLog()}\n\nИтоговый ответ Боссу:`;
+    const finalUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ С ${A}:\n${asLog()}\n\nИтоговый ответ Боссу:`;
     const finalText = await tandemAsk(B, finalSys, finalUser, 180000);
 
     if (!finalText) {
