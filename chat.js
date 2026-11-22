@@ -937,7 +937,8 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(fullText, agentName); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
     }
-    const wcParsed = extractWeatherCards(fullText);
+    const dtParsed = extractDuetThoughts(fullText);
+    const wcParsed = extractWeatherCards(dtParsed.cleanText);
     const weatherCards = wcParsed.cards;
     if (weatherCards.length) div.classList.add('has-weather');
     const contentDiv = document.createElement('div'); div.appendChild(contentDiv); chatContainer.appendChild(div);
