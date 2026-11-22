@@ -40,11 +40,12 @@ function handleAgentClick(name) {
         card.classList.remove('has-idea');
         if (!selectedAgents.includes(name)) selectedAgents.push(name);
         card.classList.add('selected');
+        if (typeof updateTandemCards === 'function') updateTandemCards();
         sendMessage(`[Система: Агент ${name} вступает в диалог]`);
         return;
     }
     if (selectedAgents.includes(name)) { showAgentInfo(name); } 
-    else { selectedAgents.push(name); card.classList.add('selected'); }
+    else { selectedAgents.push(name); card.classList.add('selected'); if (typeof updateTandemCards === 'function') updateTandemCards(); }
 }
 
 function unselectAgentFromModal() {
