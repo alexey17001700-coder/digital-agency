@@ -1894,7 +1894,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
         } else {
             // НАДЗИРАТЕЛЬ: Архитектор сорвался — помечаем сбой в журнале.
-            if (typeof supFailed === 'function') supFailed('arch', lastError || 'сбой');
+            if (typeof supFailed === 'function') supFailed(activeAgent, lastError || 'сбой');
             renderMessage(`❌ **Ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
