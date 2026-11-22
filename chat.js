@@ -1443,6 +1443,23 @@ async function sendMessage(overrideText = null, isKick = false) {
     const timeoutId = setTimeout(() => myCtrl.abort(), 330000); clearTimeout(watchdogTimer);
 
     try {
+        // 🤝 ТАНДЕМ: выбраны GigaChat И Архитектор — сначала их диалог между собой,
+        // потом общий итог. Обычный путь (Совет/один агент) в этом режиме не работает.
+        if (typeof isTandemMode === 'function' && isTandemMode()) {
+            const tandemOk = await runTandemTurn(text, isKick);
+            if (tandemOk) {
+                lastSendSuccess = true;
+                if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
+                if (typeof supAnswered === 'function') supAnswered('arch');
+                playSound('receive'); stallKicks = 0;
+                stopStallWatchdog(); stopButtonWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+                const elAiT = document.getElementById('status-ai'); if (elAiT) elAiT.className = 'status-item online';
+                return;
+            }
+            // Тандем не дал ни одной реплики (сбой сети/лимит) — отдаём задачу надзирателю.
+            if (typeof supFailed === 'function') supFailed('arch', 'тандем не ответил');
+            return;
+        }
         let success = false; let aiText = ""; let lastError = ""; let usedModel = "";
         
         let userKeys = {};
