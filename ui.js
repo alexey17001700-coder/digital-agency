@@ -118,7 +118,7 @@ function applyAIModelButton() {
         btn.innerText = '🧠 Платные: ВЫКЛ';
         btn.style.background = '#333'; btn.style.color = '#777';
     } else {
-        btn.innerText = '🧠 Платные: выбрать';
+        btn.innerText = '🧠 Платные: ВЫКЛ';
         btn.style.background = '#333'; btn.style.color = '#aaa';
     }
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
