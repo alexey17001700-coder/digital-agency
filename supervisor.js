@@ -39,9 +39,9 @@
     'use strict';
 
     const SUP_KEY = 'shtabSupervisor';
-    const SUP_LIMIT_MS = 300000;      // 300 с — лимит кнопки отправки (одиночный ответ)
-    const SUP_DUET_LIMIT_MS = 600000; // ⚡ Дуэт: сервер гонит ДВА запроса подряд (Zveno → GigaChat) — ждём вдвое дольше
-    const SUP_FREEZE_MS = 15000;    // счётчик не менялся 15 с — считаем застывшим
+    const SUP_LIMIT_MS = 330000;      // 330 с — реальный предел кнопки «Отправить» (chat.js: TIMER_MAX_MS)
+    const SUP_DUET_LIMIT_MS = 630000; // ⚡ Дуэт: сервер гонит ДВА запроса подряд (Zveno → GigaChat) — ждём вдвое дольше (chat.js: DUET_TIMEOUT_MS)
+    const SUP_FREEZE_MS = 5000;     // счётчик не менялся 5 с — считаем застывшим (chat.js: TIMER_FREEZE_MS)
     const SUP_TICK_MS = 3000;       // проверка каждые 3 с
     const SUP_MAX_HANDOFFS = 2;     // не больше 2 передач на одну задачу (стоп-кран)
     const SUP_TEXT_LIMIT = 2000;    // столько текста задачи храним в журнале
