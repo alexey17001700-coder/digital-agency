@@ -935,18 +935,24 @@ function getGigaChatClient(): any {
 
 let gcToken = "";
 let gcTokenExp = 0;
+let gcTokenKey = "";
 
-async function gigachatToken(): Promise<string> {
-    if (!GIGACHAT_KEY) throw new Error("GIGACHAT_KEY не задан в /root/.env");
+async function gigachatToken(userKey: string = ""): Promise<string> {
+    /* 🟣 КЛЮЧ ИЗ ПОЛЯ ⚙️ ГЛАВНЕЕ СЕРВЕРНОГО.
+       Был баг: userKeys.gigachat сервер НЕ читал вообще — вписанный Боссом
+       ключ Сбера был мёртвым грузом, всегда шёл GIGACHAT_KEY из /root/.env.
+       Теперь порядок: ключ из поля → серверный GIGACHAT_KEY. */
+    const key = String(userKey || "").trim() || GIGACHAT_KEY;
+    if (!key) throw new Error("Ключ GigaChat не вписан (⚙️ GigaChat → «Сохранить ключ»), и GIGACHAT_KEY не задан в /root/.env");
     const now = Date.now();
-    if (gcToken && now < gcTokenExp - 60000) return gcToken;
+    if (gcToken && gcTokenKey === key && now < gcTokenExp - 60000) return gcToken;
 
     const res = await fetch(GIGACHAT_OAUTH_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
-            "Authorization": `Basic ${GIGACHAT_KEY}`,
+            "Authorization": `Basic ${key}`,
             "RqUID": crypto.randomUUID(),
         },
         body: `scope=${encodeURIComponent(GIGACHAT_SCOPE)}`,
