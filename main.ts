@@ -1367,6 +1367,9 @@ Deno.serve(async (request) => {
             if (body.image) {
                 // 👁 Фото — зрение канала Zveno.
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
+            } else if (isDuetReq) {
+                // ⚡ ДУЭТ: Zveno (черновик) → GigaChat (критик и финал). Максимум 2 шага.
+                aiText = await callDuet(body.messages, userKeys, gcKey);
             } else if (/^gigachat/i.test(reqModel)) {
                 // 🟣 GigaChat (Сбер) — ключ с сервера, инструменты ВКЛЮЧЕНЫ.
                 aiText = await callGigaChatTools(body.messages, reqModel, gcKey);
