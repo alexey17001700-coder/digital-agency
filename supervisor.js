@@ -674,7 +674,9 @@
     window.supNoteActivity = supNoteActivity;// chat.js: в ленте движение — агент работает
     window.supStage = supStage;              // chat.js: задача разбита на этапы [ЭТАП N/M]
     window.supIsAlive = supIsAlive;
-    window.SUPERVISOR_VERSION = '1.7-duet';
+    window.supDuetOn = supDuetOn;            // chat.js: включён ли ⚡ Дуэт — надзиратель ждёт вдвое дольше
+    window.supLimitMs = supLimitMs;          // chat.js: текущий предел ожидания под режим
+    window.SUPERVISOR_VERSION = '1.8-duet';
 
     supStartWatch();
 })();
