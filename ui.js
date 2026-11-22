@@ -166,7 +166,7 @@ function applyFreeModelButton() {
         btn.style.background = cur.color || '#333';
         btn.style.color = cur.text || '#fff';
     } else {
-        btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'выбрать' : 'нет');
+        btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'ВЫКЛ' : 'нет');
         btn.style.background = '#333'; btn.style.color = '#aaa';
     }
     // Выбрали бесплатную — кнопка 🟣 GigaChat гаснет сама (состояние не врёт).
