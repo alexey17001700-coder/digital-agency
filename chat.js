@@ -1619,6 +1619,13 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
                 // ЖЁСТКАЯ ГАРАНТИЯ: кнопка 🟣 GigaChat включена — на сервер уходит ИМЕННО "gigachat".
                 if (selectedAIModel === 'gigachat') modelToUse = 'gigachat';
+                /* ⚡ РЕЖИМ «ДУЭТ» — САМЫЙ ПОСЛЕДНИЙ ВЫБОР, ВЫШЕ ВСЕХ ГАРАНТИЙ.
+                   На сервер уходит model="duet": он сам гоняет цепочку
+                   Zveno (черновик) → GigaChat (критик и финал), максимум 2 шага.
+                   Промпт при этом БОЕВОЙ (SYSTEM_PROMPT) — черновик пишет Zveno,
+                   а нейтральный промпт для шага GigaChat сервер собирает сам. */
+                const duetTurn = (typeof duetEnabled === 'function') && duetEnabled();
+                if (duetTurn) modelToUse = 'duet';
                 // 🟣 GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: наш боевой промпт
                 // («сисадмин», «управляешь кодом», «Архитектор») её триггерит. Для неё — нейтральный текст.
                 // 🅰️ Zveno и остальные — боевой SYSTEM_PROMPT без изменений.
