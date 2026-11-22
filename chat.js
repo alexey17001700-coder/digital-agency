@@ -1614,6 +1614,17 @@ async function sendMessage(overrideText = null, isKick = false) {
         // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
         // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
         if (selectedAIModel === 'gigachat') hasAnyKeys = true;
+        /* --- КАРТОЧКА GIGACHAT РАБОТАЕТ БЕЗ КЛЮЧЕЙ НА ЛЮБОМ УСТРОЙСТВЕ ---
+           Босс: на другом телефоне выбрал карточку GigaChat, а Штаб ответил
+           «API-ключи не нужны / не найдены». Причина — гейт hasAnyKeys смотрел
+           ТОЛЬКО на кнопку модели (shtabAIModel в localStorage), а на новом
+           устройстве там по умолчанию 'yandex' → ключей нет → запрос не уходил,
+           хотя маршрут карточки (gigachat) вообще ключа не требует.
+           Теперь карточка со своим маршрутом тоже открывает гейт: ключ не нужен —
+           значит ключи не запрашиваем. */
+        const cardRouteModel = (Array.isArray(selectedAgents) && selectedAgents.includes('GigaChat')) ? 'gigachat'
+            : ((Array.isArray(selectedAgents) && selectedAgents.length === 1 && agentRoute(selectedAgents[0])) ? agentRoute(selectedAgents[0]).model : null);
+        if (cardRouteModel && modelKeyField(cardRouteModel) === null) hasAnyKeys = true;
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
