@@ -514,25 +514,14 @@
        опрашиваем агентов и раскидываем задачу между ними. Если онлайн
        мало — просим разбить задачу на этапы и отчитаться по каждому. */
     function supSplitOrHandoff(st) {
-        const free = supFreeAgents();
-        const online = supRealAgents();
-        const pool = free.length >= 2 ? free : online;
-        if (pool.length >= 2) {
-            supLog('🔎 Опрос агентов: онлайн ' + online.length + ', свободны ' + free.length + ' — делю большую задачу');
-            supSplit(st.text, pool);
-            return;
-        }
-        st.startedAt = Date.now();
+        /* ❗ ДЕЛЕЖА, ПЕРЕБОРА И ПЕРЕДАЧИ НЕТ (приказ Босса).
+           Задача не дробится между моделями и не уходит другой модели:
+           отвечает только та, что выбрал Босс. Долго — значит долго. */
+        st.status = 'failed';
+        st.reason = 'перебора моделей нет — задача остановлена';
         st.lastSeen = Date.now();
-        st.nudges = (st.nudges || 0) + 1;
         supSave(st);
-        if (st.nudges > SUP_NUDGE_MAX) {
-            supLog('⏳ Агентов онлайн нет — передаю задачу дальше');
-            supHandoff();
-            return;
-        }
-        supLog('🧩 Агент жив, задача большая — прошу разбить её на этапы (не передаю)');
-        try { if (typeof window.sendMessage === 'function') window.sendMessage('раздели задачу на этапы и отчитайся по каждому', true); } catch (e) {}
+        supLog('🛑 Перебора моделей нет — задача остановлена. Жду Босса.');
     }
 
     /* ---------- ДЕТЕКТ МОЛЧАНИЯ ---------- */
