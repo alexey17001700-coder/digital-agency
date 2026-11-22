@@ -1057,6 +1057,7 @@ function startStallWatchdog() {
     stallStartCount = countDirectorMsgs();
     stallLastLen = -1; stallLastChange = Date.now();
     const startedAt = Date.now();
+    const stallLimit = turnLimitMs();   // ⚡ в дуэте ждём вдвое дольше
     stallInterval = setInterval(() => {
         const now = Date.now();
         const newMsgs = countDirectorMsgs() - stallStartCount;
