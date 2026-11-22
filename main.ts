@@ -891,7 +891,7 @@ async function callGigaChat(messages: any[], requestedModel: string = "", userKe
         }));
 
     /* ❗ ПЕРЕБОРА НЕТ: отвечает ОДНА модель GigaChat. Упала — честная ошибка. */
-    const model = GIGACHAT_MODELS[0];
+    const model = GIGACHAT_MODEL;
     const res = await fetch(GIGACHAT_API_URL, {
         method: "POST",
         headers: {
@@ -924,7 +924,7 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
        Был баг: "gigachat" не проходил проверку /gigachat-?2/ → инструменты
        молча отключались, и модель рисовала команды ТЕКСТОМ в чат. */
     /* ❗ ОДНА модель, БЕЗ ПЕРЕБОРА: канал 🟣 = GigaChat-2-Max (умеет инструменты). */
-    const model = GIGACHAT_MODELS[0];
+    const model = GIGACHAT_MODEL;
 
     // Копируем историю, чтобы не мутировать оригинал
     const history: any[] = JSON.parse(JSON.stringify(messages));
