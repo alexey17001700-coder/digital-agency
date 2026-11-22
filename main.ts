@@ -922,14 +922,8 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
     /* КАНАЛ 🟣 (model="gigachat" без версии) = САМАЯ СИЛЬНАЯ версия GigaChat-2.
        Был баг: "gigachat" не проходил проверку /gigachat-?2/ → инструменты
        молча отключались, и модель рисовала команды ТЕКСТОМ в чат. */
-    const asked = String(requestedModel || "").trim();
-    const model = (!asked || /^gigachat[:\/]?$/i.test(asked)) ? GIGACHAT_MODELS[0] : asked;
-
-    // Проверка на поддержку tools (только GigaChat-2 и выше)
-    if (!/gigachat-?2/i.test(model)) {
-        zlog(`[GIGACHAT] ${model} не поддерживает tools — откат на текст`);
-        return await callGigaChat(messages, model, userKey);
-    }
+    /* ❗ ОДНА модель, БЕЗ ПЕРЕБОРА: канал 🟣 = GigaChat-2-Max (умеет инструменты). */
+    const model = GIGACHAT_MODELS[0];
 
     // Копируем историю, чтобы не мутировать оригинал
     const history: any[] = JSON.parse(JSON.stringify(messages));
