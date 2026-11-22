@@ -160,6 +160,56 @@ try {
 } catch (e) {}
 function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
 
+/* =========================================
+   --- РЕЕСТР МАРШРУТОВ: КАРТОЧКА → МОДЕЛЬ → КЛЮЧ ---
+   Босс: у каждого агента своя модель и свой ключ. Выбрал карточку —
+   уходит ЕЁ модель и ЕЁ ключ. Ключ не введён — модель не работает,
+   в чат летит предупреждение, запрос НЕ уходит. Никаких подмен на
+   серверный ключ и никаких автопереключений.
+   Ключи (localStorage shtabUserKeys):
+     yandexKey + yandexFolder — только Yandex (Критик)
+     deepseekKey              — только DeepSeek (Хакер)
+     freeKey (ZV route)       — Zveno (Архитектор) + все бесплатные + фото
+     —                        — GigaChat (серверный GIGACHAT_KEY, работает всегда)
+   ========================================= */
+const AGENT_ROUTES = {
+    'GigaChat':   { model: 'gigachat', key: 'gigachat' },
+    'Хакер':      { model: 'deepseek', key: 'deepseekKey' },
+    'Критик':     { model: 'yandex',   key: 'yandexKey' },
+    'Архитектор': { model: 'zveno',    key: 'freeKey' }
+};
+function agentRoute(name) { return AGENT_ROUTES[name] || null; }
+
+/* Какое поле ключа нужно модели. null — ключ не нужен (GigaChat/сервер, Ollama/ПК). */
+function modelKeyField(modelId) {
+    if (modelId === 'gigachat') return null;   // ключ Сбера лежит на сервере
+    if (modelId === 'ollama') return null;     // локальная модель на ПК, без ключей
+    if (modelId === 'deepseek') return 'deepseekKey';
+    if (modelId === 'yandex') return 'yandexKey';
+    if (modelId === 'zveno') return 'freeKey';
+    const info = getModelInfo(modelId);
+    if (info && info.free) return 'freeKey';   // все бесплатные — через ZV route
+    return 'freeKey';
+}
+/* Есть ли ключ под выбранную модель. */
+function modelKeyOk(modelId) {
+    const field = modelKeyField(modelId);
+    if (!field) return true;
+    let keys = {};
+    try { keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+    const v = keys[field];
+    if (field === 'yandexKey') return !!(v && v.trim() && keys.yandexFolder && keys.yandexFolder.trim());
+    return !!(v && v.trim());
+}
+/* Понятное имя ключа для предупреждения. */
+function modelKeyLabel(modelId) {
+    const field = modelKeyField(modelId);
+    if (field === 'yandexKey') return 'Yandex Key + Folder';
+    if (field === 'deepseekKey') return 'DeepSeek Key';
+    if (field === 'freeKey') return 'Zveno Key (ZV route)';
+    return '';
+}
+
 /* --- ЛОКАЛЬНАЯ МОДЕЛЬ OLLAMA (ПК) ---
    Адрес задаётся путём через шлюз: Caddy проксирует /ollama/* на ПК:11434,
    поэтому IP в коде не нужен — Штаб стучится в свой же домен по HTTPS.
