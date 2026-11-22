@@ -764,10 +764,9 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     // Embed-модели в FREE_TEXT_MODELS не входят специально.
     const modelChain: string[] = [];
     const reqModel = String(requestedModel || "").trim();
-    // Модель от клиента не пришла — по умолчанию БЕСПЛАТНАЯ (dots), а не платная.
-    // Раньше здесь стоял ZVENO_MODEL (платный deepseek) — при пустом body.model
-    // запрос молча уходил на платный маршрут и кушал баланс.
-    const effectiveModel = reqModel || FREE_TEXT_MODELS[0];
+    // Модель от клиента не пришла ИЛИ пришла старая бесплатная (…:free) —
+    // уходим на канал Архитектора. Бесплатных маршрутов в Штабе нет.
+    const effectiveModel = (reqModel && !reqModel.endsWith(":free")) ? reqModel : ZVENO_MODEL;
 
     /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ (model="zveno").
        Работает ТОЛЬКО своей моделью ZVENO_MODEL и ТОЛЬКО своим ключом
