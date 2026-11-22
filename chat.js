@@ -1529,8 +1529,8 @@ async function sendMessage(overrideText = null, isKick = false) {
     startSendTimer();                      // один счётчик на всё приложение, без наложения
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
-    // НИКТО НЕ ВЫБРАН → работает Архитектор (я). Босс: пустая панель = Оркестратор-Архитектор.
-    const activeAgent = (typeof isTandemMode === 'function' && isTandemMode()) ? tandemLead() : (selectedAgents.length === 1 ? selectedAgents[0] : 'Архитектор');
+    // Карточка выбрана → работает она. Никто не выбран → сюда не доходим (стоп-кран выше).
+    const activeAgent = (typeof isTandemMode === 'function' && isTandemMode()) ? tandemLead() : (selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор');
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
