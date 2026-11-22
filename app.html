@@ -449,6 +449,15 @@
        ========================================= */
     const UPDATE_SEEN_KEY = 'shtabSeenVersion';
 
+    // Безопасный доступ к localStorage: в приватном режиме или при запрете
+    // хранилища обращение бросает исключение — Штаб падать из-за этого не должен.
+    function seenVersionGet() {
+        try { return localStorage.getItem(UPDATE_SEEN_KEY); } catch (e) { return null; }
+    }
+    function seenVersionSet(v) {
+        try { localStorage.setItem(UPDATE_SEEN_KEY, v); } catch (e) { /* хранилище недоступно — окно просто покажется снова */ }
+    }
+
     function closeUpdateNotice() {
         const m = document.getElementById('updateModal');
         if (m) m.classList.remove('active');
