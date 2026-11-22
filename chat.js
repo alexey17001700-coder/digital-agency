@@ -1857,7 +1857,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 const nextStageText = `продолжи этап ${stage.cur + 1} из ${stage.total}`;
                 renderMessage(nextStageText, 'boss'); addMessageToHistory(nextStageText, 'boss');
                 // НАДЗИРАТЕЛЬ: идёт следующий этап большой задачи — агент жив, передавать нельзя.
-                if (typeof supResume === 'function') supResume('arch');
+                if (typeof supResume === 'function') supResume(currentOwnerAgent);
                 setTimeout(() => sendMessage(nextStageText, true), 900);
             }
             // Ответ пришёл, но оборван на середине ИЛИ сервер упёрся в лимит шагов — просим продолжить.
