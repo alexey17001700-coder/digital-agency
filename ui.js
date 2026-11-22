@@ -412,7 +412,7 @@ async function loadVersionCounter() {
     const el = document.getElementById('version-text');
     if (!el) return;
     try {
-        const r = await fetch('version.json?v=' + Date.now(), { cache: 'no-store' });
+        const r = await fetch('shtab_version.json?v=' + Date.now(), { cache: 'no-store' });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         __versionData = d;
