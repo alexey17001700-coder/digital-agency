@@ -274,13 +274,7 @@ function openAIModelPanel() {
 
     const paid = (typeof paidModels === 'function') ? paidModels() : [];
     if (on) {
-        paid.forEach(m => {
-            const row = document.createElement('button');
-            row.textContent = (m.id === selectedAIModel ? '✅ ' : '') + m.label;
-            row.style.cssText = rowStyle(m.id === selectedAIModel);
-            row.onclick = () => pick(m);
-            box.appendChild(row);
-        });
+        paid.forEach(m => box.appendChild(modelRow(m)));
     } else {
         hint('Платные отключены — скрыты и не выбираются. Запросы идут только на бесплатные.');
     }
