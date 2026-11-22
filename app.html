@@ -87,6 +87,51 @@
             document.body.appendChild(box);
         }
 
+        // === САМООБНОВЛЕНИЕ КАДРА ШТАБА (app.html) ===
+        // Босс: «Штаб не подтягивается» + «хочу обновление без видимых перезагрузок».
+        // Сначала просим оболочку (index.html) подменить кадр бесшовно — она грузит
+        // новый app.html скрыто и убирает старый только когда тот готов. Если
+        // оболочка старая и не отвечает — кадр тихо перезагружает сам себя:
+        // заставка живёт в оболочке, поэтому её мигания не будет.
+        window.SHTAB_APP_BUILD = 66;
+        (function () {
+            const MY_BUILD = 66;
+            let asked = false;
+            let handled = false;
+
+            function tellParent(type, build) {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: type, build: build }, '*');
+                    }
+                } catch (e) {}
+            }
+            // Оболочка говорит «я тебя подменила» — сами себя не перезагружаем.
+            window.addEventListener('message', function (e) {
+                if (e.data && e.data.type === 'shtab-swap-ok') handled = true;
+            });
+            tellParent('shtab-frame-build', MY_BUILD);
+
+            async function checkAppBuild() {
+                try {
+                    const r = await fetch('shtab_version.json?v=' + Date.now(), { cache: 'no-store' });
+                    if (!r.ok) return;
+                    const j = await r.json();
+                    const srv = parseInt(j.build, 10);
+                    if (!srv || srv <= MY_BUILD || asked) return;
+                    asked = true;
+                    tellParent('shtab-need-swap', srv);   // бесшовный путь
+                    setTimeout(function () {              // оболочка старая — тихо сами
+                        if (handled) return;
+                        location.replace('app.html?v=' + Date.now());
+                    }, 1500);
+                } catch (e) { /* нет shtab_version.json — молча живём дальше */ }
+            }
+            checkAppBuild();
+            setInterval(checkAppBuild, 25000);
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) checkAppBuild(); });
+        })();
+
         window.addEventListener('DOMContentLoaded', async () => {
             // РЕЖИМ «ЧАТ ОТДЕЛЬНО»: app.html?chatonly=1 — прячем агентов и панели,
             // чат занимает весь экран. Открывается кнопкой 🪟 Чат отдельно.
