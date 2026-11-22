@@ -1485,20 +1485,8 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
                 // ПЕРЕБОРА МОДЕЛЕЙ НЕТ: на сервер уходит ровно та модель, что выбрана Боссом.
                 if (typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
-                // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
-                // Раньше секрет-ключ (deepseekKey = "zveno"/"boss") молча подменял выбор на
-                // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
-                // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
-                const selModelInfo = getModelInfo(selectedAIModel);
-                if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
-                // ЖЁСТКАЯ ГАРАНТИЯ №2: кнопка 🟣 GigaChat включена — на сервер уходит
-                // ИМЕННО "gigachat". Тот же секрет-ключ Босса (deepseekKey = "zveno"/"boss")
-                // подменял выбор на платную Zveno — из-за этого кнопка GigaChat «не работала»:
-                // отвечал Zveno, а не Сбер. Теперь выбор GigaChat не подменяется ничем.
+                // ЖЁСТКАЯ ГАРАНТИЯ: кнопка 🟣 GigaChat включена — на сервер уходит ИМЕННО "gigachat".
                 if (selectedAIModel === 'gigachat') modelToUse = 'gigachat';
-                // Ollama: на ПК уходит ИМЯ локальной модели (например qwen2.5-coder:7b),
-                // а в бейдже остаётся 'ollama' — чтобы Босс видел верную подпись.
-                if (isOllama) modelToUse = ollamaModel();
                 // 🅰️ Архитектор выключен кнопкой — запрос не отправляем вообще.
                 // Никакой подмены на другую модель: честный отказ Боссу.
                 if (modelToUse === 'zveno' && !architectEnabled()) {
