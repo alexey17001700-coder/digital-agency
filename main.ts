@@ -1335,6 +1335,9 @@ Deno.serve(async (request) => {
         return json({ success: false, error: "Неизвестный запрос" }, 400);
     } catch (e: any) {
         const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
-        return json({ success: false, error: msg, choices: [{ message: { content: `❌ **Ошибка:** ${msg}` } }] }, 500);
+        /* ❗ НА ОШИБКЕ choices НЕ КЛАДЁМ (был баг): клиент видел текст в choices
+           и принимал ошибку за нормальный ответ — отсюда «✅ Ключ живой.
+           Ответ: ❌ Ошибка: missing or invalid authorization» на мёртвом ключе. */
+        return json({ success: false, error: msg }, 500);
     }
 });
