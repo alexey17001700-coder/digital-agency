@@ -1,9 +1,9 @@
 {
   "app": "digital-agency",
   "name": "Штаб: Броня",
-  "version": "64",
-  "build": 64,
-  "edits": 2,
+  "version": "65",
+  "build": 65,
+  "edits": 3,
   "limit": 5,
   "log": [
     {
