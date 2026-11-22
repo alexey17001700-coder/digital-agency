@@ -427,7 +427,7 @@ async function loadVersionCounter() {
         }
     } catch (e) {
         el.innerText = 'v--';
-        console.warn('version.json не прочитан:', e);
+        console.warn('shtab_version.json не прочитан:', e);
     }
 }
 
