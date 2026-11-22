@@ -1264,19 +1264,25 @@ async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<
         addLine("giga", r);
     } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 4 (GigaChat) упал: ${lastErr}`); }
 
-    // ШАГ 5 — 🟣 GigaChat: проверка на ошибки.
+    // ШАГ 5 — 🅰️ Zveno: сводка — что берём в работу.
+    try {
+        const r = await zShort(DUET_SUMMARY_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ:\n${talk()}`, DUET_BRIEF_TOKENS);
+        addLine("zveno", r);
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 5 (сводка Zveno) упал: ${lastErr}`); }
+
+    // ШАГ 6 — 🟣 GigaChat: проверка на ошибки.
     try {
         const r = await gShort(DUET_ERRORS_PROMPT, `ВОПРОС БОССА:\n${question}\n\nПЛАН И ОБСУЖДЕНИЕ:\n${talk()}`, DUET_CHECK_TOKENS);
         addLine("giga", r);
-    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 5 (проверка GigaChat) упал: ${lastErr}`); }
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 6 (проверка GigaChat) упал: ${lastErr}`); }
 
-    // ШАГ 6 — 🅰️ Zveno: проверка замечаний.
+    // ШАГ 7 — 🅰️ Zveno: проверка замечаний.
     try {
         const r = await zShort(DUET_VERIFY_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ И ПРОВЕРКА:\n${talk()}`, DUET_CHECK_TOKENS);
         addLine("zveno", r);
-    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 6 (проверка Zveno) упал: ${lastErr}`); }
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 7 (проверка Zveno) упал: ${lastErr}`); }
 
-    // ШАГ 7 — 🅰️ Zveno: ФИНАЛ. Инструменты ВКЛЮЧЕНЫ, полный ответ.
+    // ШАГ 8 — 🅰️ Zveno: ФИНАЛ. Инструменты ВКЛЮЧЕНЫ, полный ответ.
     let finalText = "";
     try {
         const fm = JSON.parse(JSON.stringify(messages));
