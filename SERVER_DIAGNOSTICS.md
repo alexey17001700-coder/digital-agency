@@ -174,7 +174,7 @@ GIGACHAT_SCOPE=GIGACHAT_API_PERS
 
 **Ограничение:** GigaChat не понимает OpenAI-формат `tools` — инструменты (файлы, GitHub, погода) ему недоступны. Это чисто текстовая модель.
 
-**Проверить, что помощник жив:**
+**Проверить, что модель жива:**
 ```bash
 curl -s -X POST http://127.0.0.1:8000 -H "Content-Type: application/json" \
   -d '{"gigachatTest":true}' | head -c 300
