@@ -55,16 +55,16 @@
         if (/оркестр|директор|босс|шеф|главн|руковод|chief|boss|lead/.test(n)) {
             return '<path d="M22 4 L25 -2 L32 3 L39 -2 L42 4 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.8" stroke-linejoin="round"/>';
         }
-        // Хакер / Безопасность — капюшон.
-        if (/хакер|взлом|безопас|охран|страж|guard|security|hack/.test(n)) {
+        // Хакер / Red Team — капюшон.
+        if (/хакер|взлом|hack|red.?team/.test(n)) {
             return '<path d="M20 20 Q20 3 32 3 Q44 3 44 20 Q38 11 32 11 Q26 11 20 20 Z" fill="#1b2028"/>';
         }
-        // Тестировщик / Исполнитель — каска.
-        if (/тест|qa|исполн|инженер|engineer|devops|сборк/.test(n)) {
+        // Охранник / Тестировщик / Исполнитель / DevOps — каска.
+        if (/охран|страж|guard|security|blue.?team|тест|qa|исполн|инженер|engineer|devops|сборк/.test(n)) {
             return '<path d="M20 13 Q20 3 32 3 Q44 3 44 13 Z" fill="#ffd700"/><rect x="18" y="12" width="28" height="2.6" rx="1.3" fill="#c9a400"/>';
         }
-        // Аналитик / Критик / Юрист / Техпис — очки.
-        if (/аналит|критик|юрист|техпис|ревизор|audit|analyst|critic|law/.test(n)) {
+        // Аналитик / Критик / Юрист / Техпис / Исследователь — очки.
+        if (/аналит|критик|юрист|техпис|ревизор|исслед|audit|analyst|critic|law|research/.test(n)) {
             return '<g fill="none" stroke="#0d1117" stroke-width="1.4"><rect x="25" y="15" width="6" height="5" rx="2"/><rect x="33" y="15" width="6" height="5" rx="2"/><path d="M31 17.5 h2"/></g>';
         }
         // Переводчик / Приёмная / Диспетчер — гарнитура.
