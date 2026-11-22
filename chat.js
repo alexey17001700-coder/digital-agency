@@ -755,6 +755,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор', file 
     const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(wcParsed.cleanText);
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+    stripDuplicateWeatherWidget(contentDiv, wcParsed.cards.length > 0);
     if (cleanText || dangerBadges) div.appendChild(contentDiv);
     wcParsed.cards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
     chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
