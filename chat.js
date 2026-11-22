@@ -1561,17 +1561,19 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // Ollama: на ПК уходит ИМЯ локальной модели (например qwen2.5-coder:7b),
                 // а в бейдже остаётся 'ollama' — чтобы Босс видел верную подпись.
                 if (isOllama) modelToUse = ollamaModel();
-                // 🅰️ Архитектор выключен кнопкой — на ZVENO запрос не уходит НИКОГДА,
-                // даже если модель пришла из секрет-ключа или старой памяти.
+                // 🅰️ Архитектор выключен кнопкой — запрос не отправляем вообще.
+                // Никакой подмены на другую модель: честный отказ Боссу.
                 if (modelToUse === 'zveno' && !architectEnabled()) {
-                    const fz = freeModels();
-                    modelToUse = fz.length ? fz[0].id : 'gigachat';
+                    renderMessage('🅰️ *[Архитектор выключен кнопкой — запрос не отправлен. Включи 🅰️ или выбери другую модель.]*', 'director', 'Оркестратор');
+                    lastError = 'Архитектор выключен кнопкой';
+                    return;
                 }
-                // 🔑 ЖЁСТКАЯ ГАРАНТИЯ: модель выключена своей кнопкой — на сервер
-                // запрос к ней не уходит НИКОГДА, даже если пришла из старой памяти.
+                // 🔑 Модель выключена своей кнопкой — тот же честный отказ, без подмены.
                 if (typeof modelEnabled === 'function' && modelToUse !== 'zveno' && !modelEnabled(modelToUse)) {
-                    const fm = freeModels().filter(m => modelEnabled(m.id));
-                    modelToUse = fm.length ? fm[0].id : 'gigachat';
+                    const _off = getModelInfo(modelToUse);
+                    renderMessage('🔒 *[Модель «' + ((_off && _off.label) || modelToUse) + '» выключена кнопкой — запрос не отправлен.]*', 'director', 'Оркестратор');
+                    lastError = 'Модель выключена кнопкой';
+                    return;
                 }
                 usedModel = isOllama ? 'ollama' : modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
