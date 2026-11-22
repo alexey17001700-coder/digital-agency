@@ -758,7 +758,9 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     const freeKey = (userKeys && userKeys.freeKey) || "";
     /* 🅰️ СВОЙ КЛЮЧ АРХИТЕКТОРА — отдельно от общих (freeKey) и от серверного.
        Приходит только с кнопки 🅰️ в userKeys.architectKey. */
-    const archKey = String((userKeys && userKeys.architectKey) || "").trim();
+    /* Ключ Архитектора приходит как userKeys.architectKey. Алиас userKeys.zveno
+       принимаем как страховку (старый ui.js в кэше телефона / прямой вызов). */
+    const archKey = String((userKeys && (userKeys.architectKey || userKeys.zveno)) || "").trim();
 
     // ❗ ПЕРЕБОРА НЕТ: в цепочке РОВНО ОДНА модель — та, что выбрал Босс.
     // Бесплатных маршрутов в Штабе больше нет (список FREE_TEXT_MODELS пуст).
