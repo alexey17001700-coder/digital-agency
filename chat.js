@@ -936,10 +936,11 @@ async function runTandemTurn(topic, isKick) {
     for (let r = 1; r <= TANDEM_ROUNDS; r++) {
         // --- Голос A ---
         const dirA = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[A]) || '';
-        const aSys = `Ты — ${A}, агент Штаба. ${dirA}
+        const aSys = SYSTEM_PROMPT + `\n\n=== РЕЖИМ ТАНДЕМ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\nТы — ${A}, агент Штаба. ${dirA}
 Ты работаешь В ТАНДЕМЕ с ${B}. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
 Скажи коротко (2–4 предложения): что предлагаешь по задаче Босса, что важно учесть, где риск.
-Обращайся к ${B} по имени. Без приветствий, без пересказа задачи, без вопросов к Боссу.`;
+Обращайся к ${B} по имени. Без приветствий, без пересказа задачи, без вопросов к Боссу.
+Правила Штаба выше ГЛАВНЕЕ роли: инструменты, формат ответа и запреты действуют.`;
         const aUser = `ЗАДАЧА БОССА: ${topic}\n\n` + (log.length ? `ЧТО УЖЕ СКАЗАНО В ДИАЛОГЕ:\n${asLog()}\n\n` : '(диалог только начинается — ты первый)\n\n') + 'Твоя реплика:';
         const aText = await tandemAsk(A, aSys, aUser);
         if (!aText) break;
@@ -948,7 +949,7 @@ async function runTandemTurn(topic, isKick) {
 
         // --- Голос B ---
         const dirB = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[B]) || '';
-        const bSys = `Ты — ${B}, агент Штаба. ${dirB}
+        const bSys = SYSTEM_PROMPT + `\n\n=== РЕЖИМ ТАНДЕМ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\nТы — ${B}, агент Штаба. ${dirB}
 Ты работаешь В ТАНДЕМЕ с ${A}. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
 Ответь ${A} коротко (2–4 предложения): согласен или нет, что добавляешь, что решаем.
 Обращайся к ${A} по имени. Без приветствий и без вопросов к Боссу.`;
