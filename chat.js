@@ -853,12 +853,11 @@ function updateTandemCards() {
 }
 window.updateTandemCards = updateTandemCards;
 
-/* Модель для голоса Архитектора в тандеме: основная выбранная, но НЕ gigachat
-   (иначе оба голоса звучали бы из одного мозга Сбера и диалог был бы пустым). */
-function tandemArchModel() {
-    let m = selectedAIModel;
-    if (m === 'gigachat') m = localStorage.getItem('shtabAIModelBeforeGiga') || 'yandex';
-    return (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(m) : m;
+/* Модель голоса тандема: у каждой карточки СВОЙ мозг из реестра маршрутов.
+   GigaChat → Сбер, Хакер → DeepSeek, Критик → Yandex, Архитектор → Zveno. */
+function tandemVoiceModel(agentName) {
+    const r = agentRoute(agentName);
+    return r ? r.model : selectedAIModel;
 }
 
 /* Один запрос от имени одного голоса тандема. Свой таймаут + связь с общей
