@@ -971,8 +971,8 @@ async function gigachatToken(userKey: string = ""): Promise<string> {
     return gcToken;
 }
 
-async function callGigaChat(messages: any[], requestedModel: string = ""): Promise<string> {
-    const token = await gigachatToken();
+async function callGigaChat(messages: any[], requestedModel: string = "", userKey: string = ""): Promise<string> {
+    const token = await gigachatToken(userKey);
 
     // GigaChat не понимает OpenAI-формат tools — оставляем только текст
     const clean = messages
