@@ -88,36 +88,9 @@ let selectedAIModel = localStorage.getItem('shtabAIModel') || 'gigachat';
    Помощник и его ИИ-шлюз (:8002) убраны из Штаба. Переключателя «кому»
    больше нет — любое сообщение Босса уходит Архитектору Штаба. */
 
-/* --- БЕСПЛАТНАЯ МОДЕЛЬ — ПОСЛЕДНИЙ РУБЕЖ НАДЗИРАТЕЛЯ ---
-   Когда Архитектор не ответил, надзиратель зовёт сюда: запрос уходит
-   на основной сервер Штаба с бесплатным маршрутом (0 ₽, без карты).
-   Отдельного ИИ-шлюза :8002 больше нет — только PROXY. */
-async function sendToFreeModel(text) {
-    const freeId = (typeof firstFreeId === 'function') ? firstFreeId() : '';
-    const freeInfo = (typeof getModelInfo === 'function') ? getModelInfo(freeId) : null;
-    const freeLabel = (freeInfo && freeInfo.label) ? freeInfo.label : 'free';
-    try {
-        const r = await fetch(PROXY, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: [{ role: 'user', content: text }], temperature: 0.6, model: freeId, isBoss: true })
-        }, 95000);
-        const d = await r.json().catch(() => ({}));
-        const answer = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '') : '';
-        if (answer) {
-            renderMessage(answer, 'director', 'Резерв (GigaChat)');
-            addMessageToHistory(answer, 'director', 'Резерв (GigaChat)');
-            renderMessage('🟣 *[Резервный канал: ' + freeLabel + ']*', 'director', 'Резерв (GigaChat)');
-            return true;
-        }
-        throw new Error((d && d.error) || 'пустой ответ');
-    } catch (e) {
-        const msg = (e && e.name === 'AbortError') ? 'таймаут 95 сек' : ((e && e.message) || 'сбой');
-        const errText = '⚠️ Резервный канал не ответил: ' + msg;
-        renderMessage(errText, 'director', 'Резерв (GigaChat)');
-        addMessageToHistory(errText, 'director', 'Резерв (GigaChat)');
-        return false;
-    }
-}
+/* --- РЕЗЕРВНОГО КАНАЛА БОЛЬШЕ НЕТ (приказ Босса) ---
+   В Штабе строго два канала: 🅰️ Zveno и 🟣 GigaChat.
+   Никаких «последних рубежей» и автопереключений: упала модель — ошибка идёт в чат. */
 
 /* --- СПИСОК МОДЕЛЕЙ ИИ ---
    Бесплатные маршруты идут через тот же шлюз: при нулевом балансе они
