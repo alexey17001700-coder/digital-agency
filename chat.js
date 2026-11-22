@@ -1629,7 +1629,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // 🟣 GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: наш боевой промпт
                 // («сисадмин», «управляешь кодом», «Архитектор») её триггерит. Для неё — нейтральный текст.
                 // 🅰️ Zveno и остальные — боевой SYSTEM_PROMPT без изменений.
-                const isGigaChatTurn = String(modelToUse).indexOf('gigachat') !== -1;
+                const isGigaChatTurn = !duetTurn && String(modelToUse).indexOf('gigachat') !== -1;
                 /* --- ЖЁСТКАЯ ИЗОЛЯЦИЯ ПРОМПТОВ ПО МОДЕЛИ ---
                    GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: ей уходит
                    ТОЛЬКО нейтральный короткий промпт. Ни память о Боссе, ни инструкции
