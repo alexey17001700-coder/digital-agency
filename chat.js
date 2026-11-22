@@ -176,6 +176,7 @@ function isOllamaModel(id) { return id === 'ollama'; }
 function modelBadgeText(id) {
     const info = AI_MODELS.find(m => m.id === id);
     if (!info) return '❔ *[Модель: ' + id + ']*';
+    if (id === 'zveno') return '🅰️ *[Ответил АРХИТЕКТОР (ZVENO) — отдельный канал, свой ключ]*';
     if (info.free) return '🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + info.label + ' — 0 ₽]*';
     if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — по ключу GIGACHAT_KEY]*';
     return '💳 *[Ответила платная модель: ' + info.label + ']*';
