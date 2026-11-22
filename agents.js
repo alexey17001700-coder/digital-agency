@@ -143,13 +143,8 @@ function renderAgentsGrid() {
         card.style.borderColor = color;
         card.style.position = 'relative';
         card.onclick = () => handleAgentClick(name);
-        // 🟣 GIGACHAT — ПРЯМО В ПЛАШКЕ АГЕНТА (внизу экрана).
-        // Кнопка модели живёт внутри карточки агента GigaChat: тап — включить/
-        // выключить GigaChat, не заходя в верхнюю панель. Клик по кнопке НЕ
-        // выбирает агента в диалог (stopPropagation).
-        const isGiga = (name === 'GigaChat');
-        if (isGiga) { card.classList.add('giga-card'); _injectGigaCardCss(); }
-
+        // Отдельной плашки «🟣 GigaChat: ВКЛ/ВЫКЛ» в карточке БОЛЬШЕ НЕТ.
+        // Босс: выбрал карточку GigaChat (зелёная подсветка) — GigaChat и работает.
         card.innerHTML = `
             <div class="idea-bulb">💡</div>
             <div class="agent-info">
@@ -158,14 +153,6 @@ function renderAgentsGrid() {
             </div>
             <div class="status-dot"></div>
         `;
-        if (isGiga) {
-            const badge = document.createElement('button');
-            badge.type = 'button';
-            badge.className = 'giga-card-badge';
-            badge.id = 'gigaCardBadge';
-            badge.onclick = (e) => { e.stopPropagation(); if (typeof toggleGigaChat === 'function') toggleGigaChat(); };
-            card.appendChild(badge);
-        }
         grid.appendChild(card);
     });
     }
