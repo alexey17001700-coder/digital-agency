@@ -973,7 +973,17 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
         .filter((m: any) => ["system", "user", "assistant", "function"].includes(m.role))
         .map((m: any) => {
             if (m.role === "function") {
-                return { role: "function", name: m.name, content: String(m.content) };
+                /* ❗ Сбер требует СТРОГО валидный JSON в content результата функции.
+                   Была ошибка 422 "invalid function result json string", когда мы
+                   отправляли обычную строку. Оборачиваем в { result: ... }. */
+                const raw = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
+                let isObj = false;
+                try {
+                    const parsed = JSON.parse(raw);
+                    isObj = parsed !== null && typeof parsed === "object";
+                } catch { isObj = false; }
+                const payload = isObj ? raw : JSON.stringify({ result: raw });
+                return { role: "function", name: m.name, content: payload };
             }
             const c = m.content;
             const out: any = {
