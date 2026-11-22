@@ -1069,8 +1069,8 @@ function startStallWatchdog() {
         }
         // 2) Ответа в чате нет вообще — прошёл лимит кнопки (300 с). Задача уходит
         //    СЛЕДУЮЩЕМУ агенту, а не повторному пинку того же.
-        if (newMsgs === 0 && (now - startedAt) >= STALL_TIMEOUT_MS) {
-            handoffOrKick(`тишина ${Math.round(STALL_TIMEOUT_MS / 1000)} с`); return;
+        if (newMsgs === 0 && (now - startedAt) >= stallLimit) {
+            handoffOrKick(`тишина ${Math.round(stallLimit / 1000)} с`); return;
         }
         // 3) Запрос завершился, а ответа в чате так и нет — обрыв. Передаём сразу,
         //    не дожидаясь 300 с: так «оборвавшийся секундомер» больше не молчит.
