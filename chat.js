@@ -1629,7 +1629,16 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let maxAttempts = 3; 
                 let currentAttempt = 0;
 
-                while (currentAttempt < maxAttempts) {
+                // --- ПРОВЕРКА КЛЮЧА ПОД ВЫБРАННУЮ МОДЕЛЬ ---
+                // Ключ не введён — модель не работает. Запрос НЕ уходит,
+                // никаких подмен на серверный ключ и автопереключений.
+                const keyOk = isBossSecret || modelKeyOk(modelToUse);
+                if (!keyOk) {
+                    lastError = 'Модель ' + getModelInfo(usedModel).label + ': ключ не введён (' + modelKeyLabel(modelToUse) + '). Открой 🔑 API Ключи.';
+                    renderMessage('⚠️ **' + lastError + '**', 'director', 'Оркестратор');
+                }
+
+                while (keyOk && currentAttempt < maxAttempts) {
                     currentAttempt++;
                     if (!takeTurnCall()) { lastError = 'Лимит запросов на один вопрос исчерпан (экономия баланса).'; break; }
                     currentMessages = trimHistory(currentMessages);
