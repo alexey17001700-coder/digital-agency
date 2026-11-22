@@ -478,6 +478,8 @@
        Опрашиваем модели и, если на связи минимум две, режем задачу между ними:
        каждая часть уходит СВОЕЙ модели (provider), файлы не пересекаются. */
     async function supSplitByOnline(text) {
+        /* ❗ ДЕЛЕЖА ПО ОНЛАЙНУ НЕТ (приказ Босса). */
+        return false;
         const p = await supPollOnline();
         supLog(supOnlineReport());
         if (supDistributed) return false;
