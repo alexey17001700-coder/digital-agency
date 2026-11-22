@@ -539,45 +539,19 @@ function refreshShtab() {
     catch (e) { location.reload(); }
 }
 
+/* --- ОКНО «🔑 API КЛЮЧИ» — ТЕПЕРЬ ТОЛЬКО СПРАВКА ---
+   Общих полей (Yandex / DeepSeek / бесплатные) больше нет: у каждого канала
+   свой ключ в своей панели (🅰️ Zveno и 🟣 GigaChat → ⚙️). */
 function openApiSettings() {
-    const keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {};
-    document.getElementById('userYandexKey').value = keys.yandexKey || '';
-    document.getElementById('userYandexFolder').value = keys.yandexFolder || '';
-    document.getElementById('userDeepseekKey').value = keys.deepseekKey || '';
-    const fk = document.getElementById('userFreeKey'); if (fk) fk.value = keys.freeKey || '';
-    document.getElementById('apiModal').classList.add('active');
-}
-
-function saveApiSettings() {
-    const keys = {
-        yandexKey: document.getElementById('userYandexKey').value.trim(),
-        yandexFolder: document.getElementById('userYandexFolder').value.trim(),
-        deepseekKey: document.getElementById('userDeepseekKey').value.trim(),
-        freeKey: (document.getElementById('userFreeKey') ? document.getElementById('userFreeKey').value.trim() : '')
-    };
-    localStorage.setItem('shtabUserKeys', JSON.stringify(keys));
-    alert("Ключи сохранены! Теперь Штаб использует их.");
-    document.getElementById('apiModal').classList.remove('active');
+    const m = document.getElementById('apiModal');
+    if (m) m.classList.add('active');
 }
 function clearApiSettings() {
-    if (confirm("Удалить все сохраненные ключи с этого телефона?")) {
+    if (confirm("Удалить все сохранённые ключи с этого телефона?")) {
         localStorage.removeItem('shtabUserKeys');
-        document.getElementById('userYandexKey').value = '';
-        document.getElementById('userYandexFolder').value = '';
-        document.getElementById('userDeepseekKey').value = '';
-        const fk = document.getElementById('userFreeKey'); if (fk) fk.value = '';
-        alert("Ключи успешно удалены из памяти.");
-        document.getElementById('apiModal').classList.remove('active');
-    }
-}
-function toggleKeyVisibility(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (input.type === 'password') {
-        input.type = 'text';
-        btn.innerText = '🙈';
-    } else {
-        input.type = 'password';
-        btn.innerText = '👁';
+        alert("Ключи удалены из памяти.");
+        const m = document.getElementById('apiModal');
+        if (m) m.classList.remove('active');
     }
 }
 
