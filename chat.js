@@ -1817,7 +1817,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             lastSendSuccess = true;
             // НАДЗИРАТЕЛЬ: Архитектор ответил — задача закрыта, агент жив.
             if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
-            if (typeof supAnswered === 'function') supAnswered('arch');
+            if (typeof supAnswered === 'function') supAnswered(activeAgent);
             playSound('receive'); stallKicks = 0; stopStallWatchdog(); stopButtonWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
