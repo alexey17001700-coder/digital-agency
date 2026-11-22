@@ -520,6 +520,17 @@ function openVersionPanel() {
     reload.onclick = async () => { await loadVersionCounter(); ov.remove(); openVersionPanel(); };
     box.appendChild(reload);
 
+    /* Кнопка «Что обновилось» — открывает модалку обновления вручную,
+       даже если её уже видели (force=true). */
+    const whatsNew = document.createElement('button');
+    whatsNew.textContent = '🎉 ЧТО ОБНОВИЛОСЬ';
+    whatsNew.style.cssText = 'width:100%;padding:10px;margin-top:8px;border:1px solid #00e5ff;border-radius:8px;background:rgba(0,229,255,.10);color:#00e5ff;font-size:13px;font-weight:700;cursor:pointer;';
+    whatsNew.onclick = () => {
+        ov.remove();
+        if (typeof window.checkUpdateNotice === 'function') window.checkUpdateNotice(true);
+    };
+    box.appendChild(whatsNew);
+
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';
     close.style.cssText = 'width:100%;padding:9px;margin-top:8px;border:1px solid #2a333d;border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;';
