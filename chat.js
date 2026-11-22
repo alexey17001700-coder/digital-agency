@@ -767,6 +767,132 @@ async function askAgent(agentName, partText) {
 }
 window.askAgent = askAgent;
 
+/* =========================================
+   --- 🤝 ТАНДЕМ: GigaChat + Архитектор ---
+   Босс выбирает ОБОИХ агентов (GigaChat и Архитектора) — они больше не
+   читают монологи по очереди, а СНАЧАЛА ОБЩАЮТСЯ МЕЖДУ СОБОЙ: короткий
+   диалог в 2 раунда (каждый голос — своим запросом, своим «мозгом»),
+   а потом Архитектор выдаёт Боссу ОБЩИЙ итог.
+   GigaChat говорит через модель Сбера (gigachat), Архитектор — через
+   основную выбранную модель. Это два разных мозга, поэтому диалог живой,
+   а не «один актёр за двоих».
+   Выключить можно кнопкой «🤝 Тандем» (localStorage shtabTandem = off).
+   ========================================= */
+const TANDEM_ROUNDS = 2;              // сколько раз они обменяются репликами (2 раунда = 4 реплики)
+const TANDEM_ASK_TIMEOUT = 90000;     // таймаут одного голоса, мс
+
+function isTandemMode() {
+    if (localStorage.getItem('shtabTandem') === 'off') return false;
+    return selectedAgents.includes('GigaChat') && selectedAgents.includes('Архитектор');
+}
+window.isTandemMode = isTandemMode;
+
+/* Модель для голоса Архитектора в тандеме: основная выбранная, но НЕ gigachat
+   (иначе оба голоса звучали бы из одного мозга Сбера и диалог был бы пустым). */
+function tandemArchModel() {
+    let m = selectedAIModel;
+    if (m === 'gigachat') m = localStorage.getItem('shtabAIModelBeforeGiga') || 'yandex';
+    return (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(m) : m;
+}
+
+/* Один запрос от имени одного голоса тандема. Свой таймаут + связь с общей
+   кнопкой «Стоп»: Босс остановил — оба голоса замолкают сразу. */
+async function tandemAsk(speaker, sys, user, timeoutMs) {
+    if (typeof takeTurnCall === 'function' && !takeTurnCall()) return null;   // бюджет запросов на вопрос исчерпан
+    const model = (speaker === 'GigaChat') ? 'gigachat' : tandemArchModel();
+    let keys = {};
+    try { keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+    const ctrl = new AbortController();
+    const outer = currentAbortController;
+    const onAbort = () => { try { ctrl.abort(); } catch (e) {} };
+    if (outer && outer.signal) outer.signal.addEventListener('abort', onAbort);
+    const tid = setTimeout(() => ctrl.abort(), timeoutMs || TANDEM_ASK_TIMEOUT);
+    try {
+        const res = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], temperature: 0.7, model: model, userKeys: keys, freeKey: keys.freeKey || '', isBoss: true }),
+            signal: ctrl.signal
+        });
+        const data = await res.json();
+        const txt = (data && data.choices && data.choices[0]) ? String(data.choices[0].message.content || '').trim() : '';
+        return txt || null;
+    } catch (e) { return null; }
+    finally {
+        clearTimeout(tid);
+        if (outer && outer.signal) outer.signal.removeEventListener('abort', onAbort);
+    }
+}
+
+/* Реплика голоса тандема в чат: карточка агента «печатает», текст печатается,
+   реплика уходит в историю (чтобы следующий раунд её видел). */
+async function tandemSpeak(agentName, txt, plainHistory) {
+    focusAgentCard(agentName);
+    if (typeof setAgentStatus === 'function') setAgentStatus(agentName, 'typing');
+    if (typeof updateAgentStatus === 'function') updateAgentStatus(agentName, 'busy');
+    if (typeof window.office3dWork === 'function') window.office3dWork(agentName);
+    await new Promise(res => { typeMessage(txt, 'director', agentName, res); });
+    if (typeof setAgentStatus === 'function') setAgentStatus(agentName, 'idle');
+    if (typeof updateAgentStatus === 'function') updateAgentStatus(agentName, 'free');
+    if (typeof window.office3dReport === 'function') window.office3dReport(agentName, txt);
+    addMessageToHistory(plainHistory ? txt : `[${agentName} — тандем]: ${txt}`, 'director', agentName);
+    await new Promise(r => setTimeout(r, 500));
+}
+
+/* --- ГЛАВНЫЙ ЦИКЛ ТАНДЕМА ---
+   1) Диалог: GigaChat → Архитектор, TANDEM_ROUNDS раундов (каждый — свой запрос).
+   2) Итог: Архитектор собирает общий результат и отдаёт Боссу. */
+async function runTandemTurn(topic, isKick) {
+    const A = 'GigaChat', B = 'Архитектор';
+    const log = [];
+    const asLog = () => log.map(x => x.who + ': ' + x.text).join('\n');
+    renderMessage('🤝 *[Тандем: GigaChat и Архитектор сначала обсуждают задачу между собой, потом дают общий результат.]*', 'director', 'Оркестратор');
+
+    for (let r = 1; r <= TANDEM_ROUNDS; r++) {
+        // --- GigaChat ---
+        const gigaSys = `Ты — GigaChat, агент Штаба. ${AGENT_DIRECTIVES['GigaChat']}
+Ты работаешь В ТАНДЕМЕ с Архитектором Штаба. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
+Скажи коротко (2–4 предложения): что предлагаешь по задаче Босса, что важно учесть, где риск.
+Обращайся к Архитектору по имени. Без приветствий, без пересказа задачи, без вопросов к Боссу.`;
+        const gigaUser = `ЗАДАЧА БОССА: ${topic}\n\n` + (log.length ? `ЧТО УЖЕ СКАЗАНО В ДИАЛОГЕ:\n${asLog()}\n\n` : '(диалог только начинается — ты первый)\n\n') + 'Твоя реплика:';
+        const gigaText = await tandemAsk(A, gigaSys, gigaUser);
+        if (!gigaText) break;
+        log.push({ who: A, text: gigaText });
+        await tandemSpeak(A, gigaText);
+
+        // --- Архитектор ---
+        const archSys = `Ты — Архитектор Штаба. ${AGENT_DIRECTIVES['Архитектор']}
+Ты работаешь В ТАНДЕМЕ с GigaChat. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
+Ответь GigaChat коротко (2–4 предложения): согласен или нет, что добавляешь, что решаем.
+Обращайся к GigaChat по имени. Без приветствий и без вопросов к Боссу.`;
+        const archUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ:\n${asLog()}\n\nТвоя реплика (ответ GigaChat):`;
+        const archText = await tandemAsk(B, archSys, archUser);
+        if (!archText) break;
+        log.push({ who: B, text: archText });
+        await tandemSpeak(B, archText);
+    }
+
+    if (!log.length) return false;   // ни один голос не ответил — пусть сработает надзиратель/пинок
+
+    // --- ИТОГ: Архитектор собирает общий результат ---
+    renderMessage('🧩 *[Тандем: диалог закончен — Архитектор собирает общий результат.]*', 'director', 'Оркестратор');
+    const finalSys = `Ты — Архитектор Штаба. ${AGENT_DIRECTIVES['Архитектор']}
+Ты вместе с GigaChat обсудил задачу Босса. Ниже — ваш диалог.
+Дай Боссу ОБЩИЙ ИТОГ: что решили, что делаем, конкретные шаги или код.
+Без пересказа диалога, без приветствий, без вопросов.`;
+    const finalUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ С GIGACHAT:\n${asLog()}\n\nИтоговый ответ Боссу:`;
+    const finalText = await tandemAsk(B, finalSys, finalUser, 180000);
+
+    if (!finalText) {
+        renderMessage('❌ **Тандем: итоговый ответ не пришёл.**', 'director', 'Оркестратор');
+        return false;
+    }
+    await tandemSpeak(B, finalText, true);
+    renderMessage(modelBadgeText('gigachat'), 'director', 'Оркестратор');
+    renderMessage(modelBadgeText(tandemArchModel()), 'director', 'Оркестратор');
+    return true;
+}
+window.runTandemTurn = runTandemTurn;
+
 /* --- СТОРОЖ ТИШИНЫ ---
    Проверяет чат каждые 3 секунды, а не только по таймеру:
    1) ответа в чате нет вообще и прошло больше STALL_TIMEOUT_MS → пинок;
