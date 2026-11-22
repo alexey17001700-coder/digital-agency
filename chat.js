@@ -1566,6 +1566,8 @@ function handleSendClick() {
         clearTimeout(typingTimer); // МГНОВЕННАЯ ОСТАНОВКА ПЕЧАТИ
         stopSendTimer();           // гасим секундомер на кнопке
         if (typeof supClear === 'function') supClear();   // Босс остановил сам — передавать некому
+        // ⚡ ДУЭТ: если ждём слово Босса — будим ожидание, иначе оно зависнет навсегда.
+        if (typeof duetDecisionResolver === 'function') { const _dr = duetDecisionResolver; duetDecisionResolver = null; _dr({ go: false, extra: '' }); }
         sendBtn.className = 'send-btn'; 
         sendBtn.innerText = '➤'; 
     }
