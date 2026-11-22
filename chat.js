@@ -895,11 +895,11 @@ function renderDuetThoughts(div, thoughts) {
    Бюджет: шаги 1–7 короткие (лимит токенов на сервере), полный ответ — один. */
 const DUET_STEP_META = {
     1: { who: 'zveno', name: '🅰️ Zveno', title: 'черновик' },
-    2: { who: 'giga',  name: '🟣 GigaChat', title: 'ремарка' },
+    2: { who: 'giga',  name: '🟣 GigaChat', title: 'супер-дизайн' },
     3: { who: 'zveno', name: '🅰️ Zveno', title: 'уточнённый план' },
-    4: { who: 'giga',  name: '🟣 GigaChat', title: 'вторая ремарка' },
+    4: { who: 'giga',  name: '🟣 GigaChat', title: 'мега-кодер 3D' },
     5: { who: 'zveno', name: '🅰️ Zveno', title: 'сводка' },
-    6: { who: 'giga',  name: '🟣 GigaChat', title: 'проверка на ошибки' },
+    6: { who: 'giga',  name: '🟣 GigaChat', title: 'тест на ошибки' },
     7: { who: 'zveno', name: '🅰️ Zveno', title: 'проверка замечаний' }
 };
 /* Ждём слово Босса в дуэте. Кнопка ⏹ (стоп) должна это ожидание разбудить,
