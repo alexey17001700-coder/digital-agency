@@ -187,10 +187,13 @@ function freeModels() { return AI_MODELS.filter(m => m && m.free); }
    (и в других местах) дефолтом бралась freeModels()[0] — то есть мёртвая
    dots. Отсюда ошибка «model has been deactivated» после выключения 🅰️.
    Теперь дефолт — первая ВКЛЮЧЁННАЯ и живая бесплатная модель. */
-const DEAD_MODEL_IDS = ['dots-studio/dots-3-note-preview:free'];
+const DEAD_MODEL_IDS = [];   // мёртвых моделей в списке больше нет — бесплатные убраны полностью
 function firstFreeId() {
-    const list = freeModels().filter(m => m.id !== 'ollama' && DEAD_MODEL_IDS.indexOf(m.id) === -1 && modelEnabled(m.id));
-    return list.length ? list[0].id : 'nvidia/nemotron-3.5-lightning:free';
+    /* Бесплатных моделей в Штабе БОЛЬШЕ НЕТ (приказ Босса).
+       Остались два канала: 🅰️ Архитектор (zveno) и 🟣 GigaChat.
+       Все прежние места, где скрипт «уходил на бесплатную», теперь
+       ведут на GigaChat — единственный канал, кроме Архитектора. */
+    return 'gigachat';
 }
 /* Платные — БЕЗ Архитектора: 🅰️ Zveno живёт отдельным каналом (свой ключ,
    своя кнопка) и в общий список платных моделей не попадает. */
