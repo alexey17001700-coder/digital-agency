@@ -198,15 +198,7 @@ function modeBtnIsOn(btn) {
     if (!btn) return false;
     if (btn.classList.contains('active')) return true;   // 💬 Диалог, 🗣️ Озвучка, 🟣 GigaChat
     try {
-        if (btn.id === 'btnAIModel') {                   // 🧠 Платные — горит, если выбрана платная модель
-            if (typeof paidModels !== 'function' || typeof selectedAIModel === 'undefined') return false;
-            return !!paidModels().find(m => m && m.id === selectedAIModel);
-        }
-        if (btn.id === 'btnFreeModel') {                 // 🆓 Бесплатные — горит, если выбрана бесплатная
-            if (typeof freeModels !== 'function' || typeof selectedAIModel === 'undefined') return false;
-            return !!freeModels().find(m => m && m.id === selectedAIModel);
-        }
-        if (btn.id === 'btnArchitect') {                 // 🅰️ Архитектор — горит, если канал включён
+        if (btn.id === 'btnArchitect') {                 // 🅰️ Zveno — горит, если канал включён
             if (typeof architectEnabled !== 'function') return false;
             return !!architectEnabled();
         }
