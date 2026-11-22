@@ -1518,8 +1518,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 const emptyWhy = saidEmpty ? 'модель написала «пустой ответ»' : 'пустой ответ от модели';
                 if (!isKick) {
                     // НАДЗИРАТЕЛЬ: пустой ответ = задача не сделана. Передаём её
-                    // следующему агенту (Помощник → бесплатная модель), а не
-                    // пинаем того же самого ещё раз.
+                    // бесплатной модели Штаба, а не пинаем того же самого ещё раз.
                     if (typeof supFailed === 'function') { supFailed('arch', emptyWhy); return; }
                     fireAutoKick(emptyWhy); return;
                 }
