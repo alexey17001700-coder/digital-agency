@@ -1699,7 +1699,13 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // GigaChat → Сбер, Хакер → DeepSeek, Критик → Yandex, Архитектор → Zveno.
                 if (selectedAgents.length === 1 && agentRoute(selectedAgents[0])) modelToUse = agentRoute(selectedAgents[0]).model;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                if (isBossSecret) modelToUse = 'zveno';
+                /* --- КАРТОЧКА ГЛАВНЕЕ СЕКРЕТ-КЛЮЧА ---
+                   Босс: выбрал карточку GigaChat, а отвечал Zveno («из Вены»).
+                   Причина — секрет-ключ (deepseekKey = "zveno"/"boss") стоял
+                   ПОСЛЕ карточки и молча подменял модель на платную Zveno.
+                   Теперь секрет-ключ включает Zveno ТОЛЬКО когда карточка
+                   не выбрана: выбрана карточка — работает ЕЁ модель. */
+                if (isBossSecret && selectedAgents.length === 0) modelToUse = 'zveno';
                 // АВТОПОДМЕНЫ НЕТ: платная модель не подменяется бесплатной молча.
                 // Нет ключа под модель — предупреждение и стоп (проверка ниже).
                 // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
