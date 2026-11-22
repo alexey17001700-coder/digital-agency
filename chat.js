@@ -816,10 +816,29 @@ function tandemPair() {
     return [a, b];
 }
 function isTandemMode() { return !!tandemPair(); }
-function tandemLead() { const p = tandemPair(); return p ? p[1] : 'Оркестратор'; }
+/* --- КТО ГЛАВНЫЙ В ТАНДЕМЕ ---
+   Босс: в тандеме Архитектор (я) — ГЛАВНЫЙ, второй голос — правая рука.
+   Поэтому лидером всегда идёт Архитектор/Оркестратор, если он в паре;
+   иначе — первый выбранный. Порядок выбора карточек на это не влияет. */
+const TANDEM_LEADS = ['Архитектор', 'Оркестратор'];
+function tandemLead() {
+    const p = tandemPair();
+    if (!p) return 'Оркестратор';
+    const lead = p.find(n => TANDEM_LEADS.indexOf(n) !== -1);
+    return lead || p[0];
+}
+/* [правая рука, главный] — в этом порядке идёт диалог и итог. */
+function tandemOrder() {
+    const p = tandemPair();
+    if (!p) return null;
+    const lead = tandemLead();
+    const hand = p.find(n => n !== lead) || lead;
+    return [hand, lead];
+}
 window.isTandemMode = isTandemMode;
 window.tandemPair = tandemPair;
 window.tandemLead = tandemLead;
+window.tandemOrder = tandemOrder;
 
 /* --- КНОПКА «🤝 ТАНДЕМ» И ПОДСВЕТКА КАРТОЧЕК ---
    Босс видит режим тандема явно: кнопка в панели горит, а карточки
