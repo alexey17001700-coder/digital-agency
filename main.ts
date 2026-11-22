@@ -1587,6 +1587,28 @@ Deno.serve(async (request) => {
             // ПОИСК
         if (body.searchQuery) return json({ success: true, results: await searchInternet(String(body.searchQuery)) });
 
+        /* ⚡ ДУЭТ — ЖИВОЙ ДИАЛОГ ПО ШАГАМ (приказ Босса).
+           Клиент зовёт шаги по одному (duetStep = 1..8) и рисует каждую
+           реплику в чате сразу, как она пришла. После шага 7 — пауза:
+           Босс может добавить своё, и только потом идёт финал (шаг 8). */
+        if (body.duetStep) {
+            const step = Number(body.duetStep) || 0;
+            if (step < 1 || step > 8) return json({ success: false, error: "Неверный шаг дуэта" }, 400);
+            const dKeys = body.userKeys || {};
+            const dGcKey = String((dKeys && (dKeys.gigachat || dKeys.gigachatKey)) || "").trim();
+            const dMsgs = Array.isArray(body.messages) ? body.messages : [];
+            if (step === 8 && !dMsgs.length) return json({ success: false, error: "Для финального шага нужна история чата" }, 400);
+            zlog(`[DUET] шаг ${step} (живой диалог)`);
+            const dOut = await duetStepOnce(
+                step,
+                String(body.duetQuestion || "").slice(0, 4000),
+                String(body.duetTalk || "").slice(0, 12000),
+                String(body.duetExtra || "").slice(0, 2000),
+                dMsgs, dKeys, dGcKey
+            );
+            return json({ choices: [{ message: { content: dOut } }] });
+        }
+
         // ГЛАВНАЯ РУЧКА: ИИ
         if (body.messages) {
             const userKeys = body.userKeys || {};
