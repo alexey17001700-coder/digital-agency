@@ -103,10 +103,11 @@
         // тот принадлежит Калькулятору окон (window_calc) и с Штабом не перемешивается.
         // Метка сборки оболочки — по ней свежий app.html (кадр) понимает,
         // что оболочка залипла в кэше, и лечит её.
-        window.SHTAB_SHELL_BUILD = 60;
+        window.SHTAB_SHELL_BUILD = 65;
         (function () {
-            const SHELL_BUILD = 60;
+            const SHELL_BUILD = 65;
             const GUARD_KEY = 'shtabShellReloadBuild';
+            const GUARD_MAX = 3; // не больше 3 попыток подряд — защита от петли
             async function checkShellBuild() {
                 try {
                     const r = await fetch('shtab_version.json?t=' + Date.now(), { cache: 'no-store' });
@@ -117,12 +118,16 @@
                         try { sessionStorage.removeItem(GUARD_KEY); } catch (e) {}
                         return;
                     }
-                    let already = null;
-                    try { already = sessionStorage.getItem(GUARD_KEY); } catch (e) {}
-                    if (already === String(serverBuild)) return; // уже пробовали — не зацикливаемся
-                    try { sessionStorage.setItem(GUARD_KEY, String(serverBuild)); } catch (e) {}
+                    // Босс: «новая версия не подтягивается». Причина была здесь:
+                    // метка ставилась ОДИН раз, и если браузер отдавал ту же
+                    // закэшированную оболочку, Штаб залипал на старой версии
+                    // НАВСЕГДА. Теперь до 3 попыток подряд — обычно хватает одной.
+                    let tries = 0;
+                    try { tries = parseInt(sessionStorage.getItem(GUARD_KEY) || '0', 10) || 0; } catch (e) {}
+                    if (tries >= GUARD_MAX) return;
+                    try { sessionStorage.setItem(GUARD_KEY, String(tries + 1)); } catch (e) {}
                     location.replace(location.pathname + '?v=' + Date.now());
-                } catch (e) { /* нет version.json — молча живём дальше */ }
+                } catch (e) { /* нет shtab_version.json — молча живём дальше */ }
             }
             checkShellBuild();
         })();
