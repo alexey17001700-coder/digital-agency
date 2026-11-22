@@ -346,6 +346,85 @@ function toggleGigaChat() {
 window.toggleGigaChat = toggleGigaChat;
 window.applyGigaChatButton = applyGigaChatButton;
 
+/* =========================================
+   ⚡ РЕЖИМ «ДУЭТ» (МУЛЬТИАГЕНТНЫЙ)
+   Босс включает «Дуэт» — над задачей работают ОБЕ модели сразу:
+   🅰️ Zveno пишет черновик, 🟣 GigaChat проверяет его и выдаёт финал.
+   Кнопки 🅰️ и 🟣 при этом ведут себя как ЧЕКБОКСЫ: каждая включает
+   свой канал независимо. Дуэт = оба канала включены.
+   Состояние хранится на устройстве (shtabDuetOn), в код ключи не пишутся.
+   Саму цепочку гоняет СЕРВЕР (main.ts) — клиент лишь отправляет model="duet".
+   ========================================= */
+function duetEnabled() { try { return localStorage.getItem('shtabDuetOn') === 'on'; } catch (e) { return false; } }
+function _injectDuetCss() {
+    if (document.getElementById('duetCss')) return;
+    const st = document.createElement('style'); st.id = 'duetCss';
+    st.textContent = `
+    #btnDuet.active { animation: duetPulse 1.6s ease-in-out infinite; }
+    @keyframes duetPulse { 0%,100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 12px rgba(255,215,0,.75); } }
+    `;
+    document.head.appendChild(st);
+}
+/* Кнопка «⚡ Дуэт» ставится в панель режимов рядом с 🟣 GigaChat.
+   HTML не трогаем — кнопка создаётся здесь и живёт как остальные mode-btn. */
+function ensureDuetButton() {
+    if (document.getElementById('btnDuet')) return;
+    const anchor = document.getElementById('btnGigaChat');
+    if (!anchor || !anchor.parentNode) return;
+    _injectDuetCss();
+    const b = document.createElement('button');
+    b.id = 'btnDuet';
+    b.className = 'mode-btn';
+    b.type = 'button';
+    b.onclick = () => toggleDuet();
+    anchor.parentNode.insertBefore(b, anchor.nextSibling);
+    updateDuetButtonVisual();
+}
+/* ТОЛЬКО внешний вид — без вызова соседних apply-функций (без рекурсии). */
+function updateDuetButtonVisual() {
+    const b = document.getElementById('btnDuet');
+    if (!b) return;
+    if (duetEnabled()) {
+        b.classList.add('active', 'mode-on');
+        b.innerText = '⚡ Дуэт: ВКЛ';
+        b.style.borderColor = '#ffd700';
+        b.style.color = '#ffd700';
+        b.style.background = 'rgba(255,215,0,.16)';
+    } else {
+        b.classList.remove('active', 'mode-on');
+        b.innerText = '⚡ Дуэт';
+        b.style.borderColor = '#ffd700';
+        b.style.color = '#ffd700';
+        b.style.background = '';
+    }
+}
+/* Перерисовка всех трёх кнопок каналов — через *Visual-функции, без рекурсии. */
+function applyDuetButton() {
+    updateDuetButtonVisual();
+    if (typeof updateArchitectButtonVisual === 'function') { try { updateArchitectButtonVisual(); } catch (e) {} }
+    if (typeof updateGigaChatButtonVisual === 'function') { try { updateGigaChatButtonVisual(); } catch (e) {} }
+}
+function setDuet(on) {
+    try { localStorage.setItem('shtabDuetOn', on ? 'on' : 'off'); } catch (e) {}
+    if (on) {
+        // Дуэт = оба канала в работе. Выключенные — включаем автоматически.
+        if (typeof architectEnabled === 'function' && !architectEnabled()) setArchitectEnabled(true);
+        if (typeof modelEnabled === 'function' && !modelEnabled('gigachat')) setModelEnabled('gigachat', true);
+    }
+    applyDuetButton();
+    if (typeof renderMessage === 'function') {
+        renderMessage(on
+            ? '⚡ *[РЕЖИМ «ДУЭТ» ВКЛЮЧЁН: 🅰️ Zveno пишет черновик → 🟣 GigaChat проверяет и выдаёт финальный ответ Штаба. Максимум 2 шага.]*'
+            : '⚡ *[Режим «Дуэт» выключен — отвечает одна модель.]*', 'director', 'Оркестратор');
+    }
+}
+function toggleDuet() { setDuet(!duetEnabled()); }
+window.duetEnabled = duetEnabled;
+window.toggleDuet = toggleDuet;
+window.setDuet = setDuet;
+window.applyDuetButton = applyDuetButton;
+window.ensureDuetButton = ensureDuetButton;
+
 /* --- БЮДЖЕТ ЗАПРОСОВ НА ОДИН ВОПРОС БОССА ---
    Каждый запрос к модели = деньги. Раньше цепочки (этапы, авто-пинки,
    Совет, фоновые задачи) могли накрутить десятки запросов на ОДНО
