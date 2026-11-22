@@ -756,6 +756,9 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
 async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false, requestedModel: string = ""): Promise<string> {
     const envKey = Deno.env.get("ZVENO_API_KEY");
     const freeKey = (userKeys && userKeys.freeKey) || "";
+    /* 🅰️ СВОЙ КЛЮЧ АРХИТЕКТОРА — отдельно от общих (freeKey) и от серверного.
+       Приходит только с кнопки 🅰️ в userKeys.architectKey. */
+    const archKey = String((userKeys && userKeys.architectKey) || "").trim();
 
     // ЦЕПОЧКА FALLBACK: первая — выбранная пользователем, дальше — все бесплатные по списку.
     // Embed-модели в FREE_TEXT_MODELS не входят специально.
