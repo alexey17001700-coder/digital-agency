@@ -1516,8 +1516,11 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearAttachPreview();
     }
 
-    // НАДЗИРАТЕЛЬ: задачу ведёт Архитектор — пишем в журнал.
-    if (!overrideText && !isKick && typeof supStart === 'function') supStart(text, 'arch');
+    // Карточка выбрана → работает она. Никто не выбран → сюда не доходим (стоп-кран выше).
+    const activeAgent = (typeof isTandemMode === 'function' && isTandemMode()) ? tandemLead() : (selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор');
+    currentOwnerAgent = activeAgent;
+    // НАДЗИРАТЕЛЬ: задачу ведёт ТОТ агент, чья карточка выбрана (а не всегда Архитектор).
+    if (!overrideText && !isKick && typeof supStart === 'function') supStart(text, activeAgent);
     isGenerating = true; lastSendSuccess = false; const mySeq = ++sendSeq;
     // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
     // Авто-пинки и системные дозапросы сторож не перезапускают.
