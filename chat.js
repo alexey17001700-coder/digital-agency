@@ -787,6 +787,61 @@ function isTandemMode() {
 }
 window.isTandemMode = isTandemMode;
 
+/* --- КНОПКА «🤝 ТАНДЕМ» И ПОДСВЕТКА КАРТОЧЕК ---
+   Босс видит режим тандема явно: кнопка в панели горит, а карточки
+   GigaChat и Архитектора подсвечиваются фиолетовым «🤝».
+   Тап по кнопке — включить/выключить тандем (localStorage shtabTandem). */
+function tandemEnabled() { return localStorage.getItem('shtabTandem') !== 'off'; }
+function syncTandemBtn() {
+    const b = document.getElementById('btnTandem');
+    if (b) {
+        const on = tandemEnabled();
+        b.classList.toggle('active', on);
+        b.innerText = on ? '🤝 Тандем: ВКЛ' : '🤝 Тандем: ВЫКЛ';
+        b.style.borderColor = '#7B61FF';
+        b.style.color = on ? '#b9a8ff' : '#7B61FF';
+        b.style.background = on ? 'rgba(123,97,255,.16)' : '';
+    }
+    if (typeof syncModeButtons === 'function') { try { syncModeButtons(); } catch (e) {} }
+    updateTandemCards();
+}
+function toggleTandem() {
+    const on = !tandemEnabled();
+    localStorage.setItem('shtabTandem', on ? 'on' : 'off');
+    syncTandemBtn();
+    if (typeof renderMessage === 'function') {
+        renderMessage(on
+            ? '🤝 *[Тандем включён: выбери GigaChat И Архитектора — они сначала обсудят задачу между собой, потом дадут общий результат.]*'
+            : '🤝 *[Тандем выключен: агенты снова отвечают как обычно.]*', 'director', 'Оркестратор');
+    }
+}
+window.tandemEnabled = tandemEnabled;
+window.syncTandemBtn = syncTandemBtn;
+window.toggleTandem = toggleTandem;
+
+/* Подсветка карточек в режиме тандема: горит только когда выбраны ОБА агента. */
+function _injectTandemCss() {
+    if (document.getElementById('tandemCss')) return;
+    const st = document.createElement('style'); st.id = 'tandemCss';
+    st.textContent = `
+    .agent-card.tandem-active { box-shadow: 0 0 0 2px #7B61FF, 0 0 14px rgba(123,97,255,.65); }
+    .agent-card.tandem-active::after {
+        content: '🤝'; position: absolute; top: 4px; right: 6px;
+        font-size: 13px; z-index: 5;
+    }
+    `;
+    document.head.appendChild(st);
+}
+function updateTandemCards() {
+    _injectTandemCss();
+    const on = (typeof isTandemMode === 'function') ? isTandemMode() : false;
+    ['GigaChat', 'Архитектор'].forEach(n => {
+        const c = document.getElementById('agent-' + n);
+        if (c) c.classList.toggle('tandem-active', on);
+    });
+}
+window.updateTandemCards = updateTandemCards;
+
 /* Модель для голоса Архитектора в тандеме: основная выбранная, но НЕ gigachat
    (иначе оба голоса звучали бы из одного мозга Сбера и диалог был бы пустым). */
 function tandemArchModel() {
