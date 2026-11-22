@@ -334,60 +334,14 @@
     let supOnlineBusy = false;
     let supGatewayBase = '';
 
-    /* Адреса шлюза. Первым — тот же домен: Caddy проксирует /ai → :8002,
-       иначе на HTTPS-странице браузер блокирует http-запрос (mixed content). */
-    function supGatewayCandidates() {
-        const out = [];
-        /* 1) ТОТ ЖЕ АДРЕС, ЧТО И ЧАТ (Caddy :8443, путь /ai) — основной путь.
-           Шлюз ИИ живёт рядом со Штабом, Caddy проксирует /ai → :8002.
-           Так Надзиратель видит шлюз и с телефона, и снаружи. */
-        try { if (typeof PROXY !== 'undefined' && PROXY) out.push(String(PROXY).replace(/\/+$/, '')); } catch (e) {}
-        try {
-            const saved = localStorage.getItem('shtabAiUrl');
-            if (saved) out.push(String(saved).replace(/\/+$/, ''));
-        } catch (e) {}
-        try {
-            out.push(location.origin.replace(/\/+$/, ''));
-            if (location.hostname) out.push(location.protocol + '//' + location.hostname + ':8002');
-        } catch (e) {}
-        out.push('http://localhost:8002');
-        out.push('http://127.0.0.1:8002');
-        return out.filter(function (v, i, a) { return v && a.indexOf(v) === i; });
-    }
-
-    async function supFetchJson(base, path, ms) {
-        const ctl = new AbortController();
-        const to = setTimeout(function () { ctl.abort(); }, ms || SUP_PING_TIMEOUT);
-        try {
-            const r = await fetch(base + path, { method: 'GET', signal: ctl.signal });
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return await r.json();
-        } finally { clearTimeout(to); }
-    }
-
-    /* Опрос моделей: кто онлайн. force=true — мимо кэша. */
-    async function supPollOnline(force) {
-        const now = Date.now();
-        if (!force && supOnlineCache.at && (now - supOnlineCache.at) < SUP_PING_TTL_MS) return supOnlineCache;
-        if (supOnlineBusy) return supOnlineCache;
-        supOnlineBusy = true;
-        try {
-            const bases = supGatewayBase ? [supGatewayBase] : supGatewayCandidates();
-            for (let i = 0; i < bases.length; i++) {
-                try {
-                    const d = await supFetchJson(bases[i], '/ai/ping' + (force ? '?force=1' : ''), SUP_PING_TIMEOUT);
-                    if (!d || !Array.isArray(d.providers)) continue;
-                    supGatewayBase = bases[i];
-                    supOnlineCache = {
-                        at: Date.now(),
-                        list: d.providers.filter(function (p) { return p.online; }).map(function (p) { return p.name; }),
-                        models: d.providers
-                    };
-                    return supOnlineCache;
-                } catch (e) { /* следующий адрес */ }
-            }
-            return supOnlineCache;
-        } finally { supOnlineBusy = false; }
+    /* --- ИИ-ШЛЮЗ :8002 УБРАН ИЗ ШТАБА ---
+       Помощник и его шлюз (nexus_ws/ai.ts, порт 8002) больше не существуют.
+       Опрос «кто онлайн» и распределение задачи по моделям шлюза не нужны:
+       задача всегда идёт Архитектору, при сбое — бесплатной модели Штаба.
+       Функция оставлена заглушкой, чтобы не ломать вызовы. */
+    async function supPollOnline() {
+        supOnlineCache = { at: Date.now(), list: [], models: [] };
+        return supOnlineCache;
     }
 
     /* Карточки агентов — только «занят / в ошибке», не источник онлайна. */
