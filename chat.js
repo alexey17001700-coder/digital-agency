@@ -128,8 +128,10 @@ async function sendToFreeModel(text) {
    не показываются в панели и не выбираются. */
 const AI_MODELS_DEFAULT = [
     { id: 'yandex',   label: 'Yandex',    color: '#333',    text: '#aaa' },
-    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
-    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
+    /* agentOnly: модель НЕ показывается в кнопках 🧠/🆓. Она живёт ТОЛЬКО
+       под своей карточкой: DeepSeek → Хакер, GigaChat → GigaChat. */
+    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff', agentOnly: true },
+    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff', agentOnly: true },
     { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000' },
     /* --- БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход, без карты) --- */
     { id: 'dots-studio/dots-3-note-preview:free', label: 'Dots3-Note', color: '#ffd700', text: '#000', free: true },
