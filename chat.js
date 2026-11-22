@@ -1025,10 +1025,15 @@ async function runDuetLive(question, messages, userKeys, signal) {
 
     if (!talk.length) return { error: 'Дуэт: ни одна модель не ответила (' + failed + ' сбоев)' };
 
+    /* ПАУЗА: ждём слово Босса. Сторожа и секундомер молчат — это НЕ «агент завис». */
+    stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); stopSendTimer();
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '⏸'; sendBtn.style.fontSize = ''; }
+
     const decision = await new Promise((resolve) => {
+        duetDecisionResolver = resolve;
         const box = buildDuetDecision(
-            (extra) => resolve({ go: true, extra: extra }),
-            () => resolve({ go: false, extra: '' })
+            (extra) => { duetDecisionResolver = null; resolve({ go: true, extra: extra }); },
+            () => { duetDecisionResolver = null; resolve({ go: false, extra: '' }); }
         );
         live.div.appendChild(box);
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -1038,6 +1043,10 @@ async function runDuetLive(question, messages, userKeys, signal) {
         renderMessage('⚡ *[Дуэт: Босс отменил работу — Zveno не запускался.]*', 'director', 'Оркестратор');
         return { error: 'Дуэт остановлен Боссом' };
     }
+
+    // Босс дал слово — снова включаем секундомер и идём на финальный шаг.
+    if (sendBtn) { sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = '12px'; }
+    startSendTimer();
 
     const pendingFinal = addDuetLiveLine(live.box, 'zveno', '🅰️ Zveno — делает работу…', true);
     let finalText = '';
