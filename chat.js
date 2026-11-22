@@ -1417,7 +1417,10 @@ async function sendMessage(overrideText = null, isKick = false) {
     // startButtonWatchdog() больше НЕ запускается: он писал в ту же кнопку своим отсчётом
     // и накладывался на основной счётчик — отсюда прыжки цифр и зашкал за 500 с.
     // Тишину ловит сторож тишины, заморозку счётчика — timer-freeze, жёсткий предел — hard.
-    if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
+    // 🤝 ТАНДЕМ: сторожа тишины/обрыва НЕ запускаем — диалог идёт долго и состоит
+    // из коротких реплик, сторож принял бы их за «оборванный ответ» и оборвал диалог.
+    if (typeof isTandemMode === 'function' && isTandemMode()) { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
+    else if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
     sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
     const startTime = sendStartTime = Date.now();
