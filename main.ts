@@ -1205,26 +1205,16 @@ Deno.serve(async (request) => {
             const reqModel = typeof body.model === "string" ? body.model.trim() : "";
             zlog(`[REQ] model="${reqModel || "(не указана → Архитектор)"}" image=${!!body.image}`);
 
+            /* ❗ ДВА КАНАЛА, ЛИНЕЙНО, БЕЗ ПЕРЕБОРА (приказ Босса).
+               Инструменты (Tools) включены в ОБОИХ каналах. */
             if (body.image) {
+                // 👁 Фото — зрение канала Zveno.
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
             } else if (/^gigachat/i.test(reqModel)) {
-                // Босс явно выбрал GigaChat — идём напрямую в Сбер.
-                // GigaChat-2 умеет инструменты → идём через callGigaChatTools
-                // (внутри сам откатится на текст, если модель старая или API ругнётся).
-                /* Канал 🟣 «gigachat» без версии = GigaChat-2-Max → инструменты ВКЛЮЧЕНЫ.
-                   Раньше голый "gigachat" уходил в текстовый режим без tools,
-                   и модель писала вызовы инструментов ТЕКСТОМ в чат. */
-                if (body.useTools || /gigachat-?2/i.test(reqModel) || /^gigachat[:\/]?$/i.test(reqModel)) {
-                    aiText = await callGigaChatTools(body.messages, reqModel, gcKey);
-                } else {
-                    aiText = await callGigaChat(body.messages, reqModel, gcKey);
-                }
+                // 🟣 GigaChat (Сбер) — ключ с сервера, инструменты ВКЛЮЧЕНЫ.
+                aiText = await callGigaChatTools(body.messages, reqModel, gcKey);
             } else {
-                // АВТОПЕРЕБОР НА GIGACHAT ОТКЛЮЧЁН (приказ Босса).
-                // GigaChat — ОТДЕЛЬНОЕ подключение: работает ТОЛЬКО когда Босс
-                // сам включил кнопку 🟣 GigaChat (тогда model="gigachat" и идёт
-                // ветка выше). Если ZVENO упал — ошибка уходит наверх, Сбер
-                // молча задачу НЕ подхватывает. Никакого скрытого резерва.
+                // 🅰️ Zveno — ключ ZVENO_API_KEY с сервера, инструменты ВКЛЮЧЕНЫ.
                 aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
             }
 
