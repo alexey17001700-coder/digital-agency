@@ -486,6 +486,11 @@ function checkAppBuild(d) {
     try { tries = parseInt(sessionStorage.getItem(APP_BUILD_GUARD_KEY) || '0', 10) || 0; } catch (e) {}
     if (tries >= 2) return;
     try { sessionStorage.setItem(APP_BUILD_GUARD_KEY, String(tries + 1)); } catch (e) {}
+    // Штаб живёт в кадре (iframe) внутри оболочки index.html. Просим оболочку
+    // подменить кадр ТИХО — без видимой перезагрузки и без мигания заставки.
+    if (window.parent && window.parent !== window) {
+        try { window.parent.postMessage({ type: 'shtab-need-swap', build: server }, '*'); return; } catch (e) {}
+    }
     setTimeout(() => {
         try { location.replace(location.pathname + '?v=' + Date.now()); }
         catch (e) { location.reload(); }
