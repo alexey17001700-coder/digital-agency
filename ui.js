@@ -487,9 +487,14 @@ function openArchitectPanel() {
             });
             clearTimeout(tid);
             const d = await r.json().catch(() => ({}));
-            const txt = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '').trim() : '';
-            if (txt) { setMsg('✅ Ключ живой. Ответ: ' + txt.slice(0, 80), '#7ee08a'); }
-            else { setMsg('❌ Не ответил: ' + ((d && d.error) || ('HTTP ' + r.status)), '#ff8888'); }
+            /* Честная проверка: ошибка сервера — это ❌, а не «ответ». */
+            const errText = (d && d.error) ? String(d.error) : (!r.ok ? ('HTTP ' + r.status) : '');
+            if (errText) { setMsg('❌ Ключ не прошёл: ' + errText.replace(/^❌\s*\*\*Ошибка:\*\*\s*/, '').slice(0, 120), '#ff8888'); }
+            else {
+                const txt = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '').trim() : '';
+                if (txt && txt.indexOf('❌') !== 0) { setMsg('✅ Ключ живой. Ответ: ' + txt.slice(0, 80), '#7ee08a'); }
+                else { setMsg('❌ Не ответил: пустой ответ', '#ff8888'); }
+            }
         } catch (e) {
             setMsg('❌ ' + ((e && e.name === 'AbortError') ? 'таймаут 30 с' : ((e && e.message) || 'сбой сети')), '#ff8888');
         }
