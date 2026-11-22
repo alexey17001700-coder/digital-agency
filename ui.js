@@ -105,6 +105,9 @@ function applyAIModelButton() {
     }
     const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
     const paid = (typeof paidModels === 'function') ? paidModels() : [];
+    /* Платных моделей в Штабе больше нет — кнопка 🧠 не нужна, прячем. */
+    if (!paid.length) { btn.style.display = 'none'; return; }
+    btn.style.display = '';
     const cur = paid.find(m => m.id === selectedAIModel);
     if (cur) {
         btn.innerText = '🧠 Платные: ' + cur.label;
