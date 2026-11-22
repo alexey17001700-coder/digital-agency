@@ -843,10 +843,12 @@ function _injectTandemCss() {
 }
 function updateTandemCards() {
     _injectTandemCss();
-    const on = (typeof isTandemMode === 'function') ? isTandemMode() : false;
-    ['GigaChat', 'Архитектор'].forEach(n => {
+    const pair = (typeof tandemPair === 'function') ? tandemPair() : null;
+    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('tandem-active'));
+    if (!pair) return;
+    pair.forEach(n => {
         const c = document.getElementById('agent-' + n);
-        if (c) c.classList.toggle('tandem-active', on);
+        if (c) c.classList.add('tandem-active');
     });
 }
 window.updateTandemCards = updateTandemCards;
