@@ -6,11 +6,11 @@
    дизайн, который клиент видит первым.
 
    Что делает модуль:
-   • window.agentFigureSVG(name, color) — возвращает строку с SVG-фигурой
-     человека: голова, торс, руки, ноги, причёска, аксессуар по роли.
+   • window.agentFigureSVG(name, color) — строка с SVG-фигурой человека:
+     голова, торс, руки, ноги, причёска и аксессуар по роли.
    • Фигура ДЫШИТ (торс), МОРГАЕТ (глаза), ПОВОРАЧИВАЕТ ГОЛОВУ, шевелит
      руками и слегка покачивается — всё на CSS-анимациях, без JS-цикла.
-   • Цвет одежды = AGENT_COLORS[name], поэтому карточка и фигура в одном стиле.
+   • Цвет одежды = AGENT_COLORS[name], поэтому фигура и рамка карточки в одном стиле.
    • У каждого агента свой ритм (animation-delay от хеша имени) — фигуры
      не мигают синхронно, «толпа» выглядит живой.
    • Ничего не грузит из сети: чистый inline SVG + инжект CSS. Вес ~0.
@@ -46,49 +46,66 @@
         return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
-    /* Аксессуар по роли. Ключевые слова — по-русски и по-английски,
-       чтобы модуль не зависел от точного списка имён агентов. */
+    /* Аксессуар по роли. Возвращает ДВЕ части:
+       head — то, что рисуется поверх головы (внутри анимированной группы головы);
+       body — то, что рисуется на торсе (иначе галстук уезжал бы вместе с головой).
+       Ключевые слова русские и английские — модуль не зависит от точного
+       списка имён агентов. */
     function accessory(name, accent, hair) {
         const n = String(name || '').toLowerCase();
+        const out = { head: '', body: '' };
 
         // Руководитель / Оркестратор — корона.
         if (/оркестр|директор|босс|шеф|главн|руковод|chief|boss|lead/.test(n)) {
-            return '<path d="M22 4 L25 -2 L32 3 L39 -2 L42 4 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.8" stroke-linejoin="round"/>';
+            out.head = '<path d="M22 4 L25 -2 L32 3 L39 -2 L42 4 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.8" stroke-linejoin="round"/>';
+            return out;
         }
         // Хакер / Red Team — капюшон.
         if (/хакер|взлом|hack|red.?team/.test(n)) {
-            return '<path d="M20 20 Q20 3 32 3 Q44 3 44 20 Q38 11 32 11 Q26 11 20 20 Z" fill="#1b2028"/>';
+            out.head = '<path d="M20 20 Q20 3 32 3 Q44 3 44 20 Q38 11 32 11 Q26 11 20 20 Z" fill="#1b2028"/>';
+            return out;
         }
         // Охранник / Тестировщик / Исполнитель / DevOps — каска.
         if (/охран|страж|guard|security|blue.?team|тест|qa|исполн|инженер|engineer|devops|сборк/.test(n)) {
-            return '<path d="M20 13 Q20 3 32 3 Q44 3 44 13 Z" fill="#ffd700"/><rect x="18" y="12" width="28" height="2.6" rx="1.3" fill="#c9a400"/>';
+            out.head = '<path d="M20 13 Q20 3 32 3 Q44 3 44 13 Z" fill="#ffd700"/><rect x="18" y="12" width="28" height="2.6" rx="1.3" fill="#c9a400"/>';
+            return out;
         }
         // Аналитик / Критик / Юрист / Техпис / Исследователь — очки.
         if (/аналит|критик|юрист|техпис|ревизор|исслед|audit|analyst|critic|law|research/.test(n)) {
-            return '<g fill="none" stroke="#0d1117" stroke-width="1.4"><rect x="25" y="15" width="6" height="5" rx="2"/><rect x="33" y="15" width="6" height="5" rx="2"/><path d="M31 17.5 h2"/></g>';
+            out.head = '<g fill="none" stroke="#0d1117" stroke-width="1.4"><rect x="25" y="15" width="6" height="5" rx="2"/><rect x="33" y="15" width="6" height="5" rx="2"/><path d="M31 17.5 h2"/></g>';
+            return out;
         }
         // Переводчик / Приёмная / Диспетчер — гарнитура.
-        if (/перевод|приемн|приёмн|диспетч|оператор|support|перевод|voice/.test(n)) {
-            return '<path d="M20 16 Q20 4 32 4 Q44 4 44 16" fill="none" stroke="' + accent + '" stroke-width="2"/><rect x="16.5" y="14" width="4" height="7" rx="2" fill="' + accent + '"/><rect x="43.5" y="14" width="4" height="7" rx="2" fill="' + accent + '"/><path d="M18.5 21 Q22 26 26 25" fill="none" stroke="' + accent + '" stroke-width="1.6"/>';
+        if (/перевод|приемн|приёмн|диспетч|оператор|support|voice/.test(n)) {
+            out.head = '<path d="M20 16 Q20 4 32 4 Q44 4 44 16" fill="none" stroke="' + accent + '" stroke-width="2"/>' +
+                '<rect x="16.5" y="14" width="4" height="7" rx="2" fill="' + accent + '"/>' +
+                '<rect x="43.5" y="14" width="4" height="7" rx="2" fill="' + accent + '"/>' +
+                '<path d="M18.5 21 Q22 26 26 25" fill="none" stroke="' + accent + '" stroke-width="1.6"/>';
+            return out;
         }
         // Маркетолог / Планировщик — кепка.
         if (/маркет|план|продаж|реклам|sale|marketing|promo/.test(n)) {
-            return '<path d="M20 12 Q22 3 32 3 Q42 3 44 12 Z" fill="' + accent + '"/><rect x="17" y="11" width="22" height="2.8" rx="1.4" fill="' + accent + '"/>';
+            out.head = '<path d="M20 12 Q22 3 32 3 Q42 3 44 12 Z" fill="' + accent + '"/><rect x="17" y="11" width="22" height="2.8" rx="1.4" fill="' + accent + '"/>';
+            return out;
         }
         // Методолог / Архитектор — борода.
         if (/метод|архит|наставн|mentor|architect/.test(n)) {
-            return '<path d="M23 19 Q32 31 41 19 Q39 28 32 29 Q25 28 23 19 Z" fill="' + hair + '"/>';
+            out.head = '<path d="M23 19 Q32 31 41 19 Q39 28 32 29 Q25 28 23 19 Z" fill="' + hair + '"/>';
+            return out;
         }
         // Дизайнер / Креатив — длинные волосы.
         if (/дизайн|креатив|арт|design|creative|ui|ux/.test(n)) {
-            return '<path d="M20 15 Q20 3 32 3 Q44 3 44 15 L44 27 Q42 20 40 17 Q36 11 32 11 Q28 11 24 17 Q22 20 20 27 Z" fill="' + hair + '"/>';
+            out.head = '<path d="M20 15 Q20 3 32 3 Q44 3 44 15 L44 27 Q42 20 40 17 Q36 11 32 11 Q28 11 24 17 Q22 20 20 27 Z" fill="' + hair + '"/>';
+            return out;
         }
         // GigaChat / ИИ / Робот — антенна.
         if (/giga|гига|ии|ai|робот|bot|нейро/.test(n)) {
-            return '<path d="M32 4 L32 -2" stroke="' + accent + '" stroke-width="1.6"/><circle cx="32" cy="-3" r="2.2" fill="' + accent + '"/>';
+            out.head = '<path d="M32 4 L32 -2" stroke="' + accent + '" stroke-width="1.6"/><circle cx="32" cy="-3" r="2.2" fill="' + accent + '"/>';
+            return out;
         }
-        // Остальные — галстук цвета агента.
-        return '<path d="M32 33 L35 36 L32 45 L29 36 Z" fill="' + accent + '"/>';
+        // Остальные — галстук цвета агента на торсе.
+        out.body = '<path d="M32 33 L35 36 L32 45 L29 36 Z" fill="' + accent + '"/>';
+        return out;
     }
 
     /* Главная функция: SVG-фигура агента. */
@@ -108,7 +125,7 @@
                 '<rect x="33" y="62" width="6" height="22" rx="3" fill="#1a2029"/>' +
                 '<rect x="22" y="82" width="10" height="5" rx="2.5" fill="#0d1117"/>' +
                 '<rect x="32" y="82" width="10" height="5" rx="2.5" fill="#0d1117"/>' +
-                // руки (рисуем ДО торса, чтобы плечи были под пиджаком)
+                // руки (рисуем ДО торса, чтобы плечи уходили под пиджак)
                 '<g class="fig-arm-l" style="animation-delay:-' + delay + 's">' +
                     '<rect x="16" y="38" width="6" height="22" rx="3" fill="' + dark + '"/>' +
                     '<circle cx="19" cy="62" r="3.2" fill="' + skin + '"/>' +
@@ -120,6 +137,7 @@
                 // торс
                 '<path d="M22 42 Q22 34 30 32 L34 32 Q42 34 42 42 L42 62 Q42 66 38 66 L26 66 Q22 66 22 62 Z" fill="' + accent + '" stroke="' + dark + '" stroke-width="1"/>' +
                 '<path d="M28 32 L32 40 L36 32" fill="none" stroke="' + dark + '" stroke-width="2" stroke-linejoin="round"/>' +
+                acc.body +
                 // шея
                 '<rect x="29" y="25" width="6" height="9" rx="2" fill="' + skin + '"/>' +
                 // голова
@@ -131,7 +149,7 @@
                         '<ellipse cx="36" cy="17.5" rx="1.7" ry="2.1" fill="#0d1117"/>' +
                     '</g>' +
                     '<path d="M29 22.5 Q32 24.5 35 22.5" fill="none" stroke="#0d1117" stroke-width="1.3" stroke-linecap="round"/>' +
-                    acc +
+                    acc.head +
                 '</g>' +
             '</g>' +
         '</svg>';
