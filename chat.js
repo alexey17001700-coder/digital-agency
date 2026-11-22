@@ -1237,6 +1237,7 @@ function startHardWatchdog() {
     stopHardWatchdog();
     hardStartTime = Date.now();
     hardStartCount = chatContainer ? chatContainer.children.length : 0;
+    const hardLimit = turnLimitMs();   // ⚡ в дуэте ждём вдвое дольше
     hardWatchdog = setInterval(() => {
         if (!isGenerating) { stopHardWatchdog(); return; }
         const answered = chatContainer && chatContainer.children.length > hardStartCount;
