@@ -29,20 +29,6 @@
     .mode-switch .gear-btn.active { background: #00e5ff; color: #000; }
     </style>
     <script>
-        // СБОРКА САМОГО app.html (кадра Штаба). Нужна, чтобы плашка версии
-        // наверху не врала: она читает shtab_version.json с сервера и раньше
-        // показывала НОВУЮ версию, хотя в кадре крутился СТАРЫЙ app.html из кэша.
-        // Теперь ui.js сравнивает эту сборку с серверной и, если кадр устарел,
-        // перезагружает его в обход кэша.
-        window.SHTAB_APP_BUILD = 66;
-        // Сообщаем оболочке (index.html) свою сборку — по ней она понимает,
-        // что на экране, и решает, пора ли тихо подменить кадр.
-        try { window.parent.postMessage({ type: 'shtab-frame-build', build: window.SHTAB_APP_BUILD }, '*'); } catch (e) {}
-        // Оболочка сказала «подмена прошла» — больше не просим перезагрузку.
-        window.addEventListener('message', function (e) {
-            const d = e.data || {};
-            if (d.type === 'shtab-swap-ok') window.__shtabSwapDone = true;
-        });
         const timestamp = new Date().getTime();
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
 
@@ -95,58 +81,13 @@
             document.body.appendChild(box);
         }
 
-        // === САМООБНОВЛЕНИЕ КАДРА ШТАБА (app.html) ===
-        // Босс: «Штаб не подтягивается» + «хочу обновление без видимых перезагрузок».
-        // Сначала просим оболочку (index.html) подменить кадр бесшовно — она грузит
-        // новый app.html скрыто и убирает старый только когда тот готов. Если
-        // оболочка старая и не отвечает — кадр тихо перезагружает сам себя:
-        // заставка живёт в оболочке, поэтому её мигания не будет.
-        window.SHTAB_APP_BUILD = 66;
-        (function () {
-            const MY_BUILD = 66;
-            let asked = false;
-            let handled = false;
-
-            function tellParent(type, build) {
-                try {
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: type, build: build }, '*');
-                    }
-                } catch (e) {}
-            }
-            // Оболочка говорит «я тебя подменила» — сами себя не перезагружаем.
-            window.addEventListener('message', function (e) {
-                if (e.data && e.data.type === 'shtab-swap-ok') handled = true;
-            });
-            tellParent('shtab-frame-build', MY_BUILD);
-
-            async function checkAppBuild() {
-                try {
-                    const r = await fetch('shtab_version.json?v=' + Date.now(), { cache: 'no-store' });
-                    if (!r.ok) return;
-                    const j = await r.json();
-                    const srv = parseInt(j.build, 10);
-                    if (!srv || srv <= MY_BUILD || asked) return;
-                    asked = true;
-                    tellParent('shtab-need-swap', srv);   // бесшовный путь
-                    setTimeout(function () {              // оболочка старая — тихо сами
-                        if (handled) return;
-                        location.replace('app.html?v=' + Date.now());
-                    }, 1500);
-                } catch (e) { /* нет shtab_version.json — молча живём дальше */ }
-            }
-            checkAppBuild();
-            setInterval(checkAppBuild, 25000);
-            document.addEventListener('visibilitychange', function () { if (!document.hidden) checkAppBuild(); });
-        })();
-
         window.addEventListener('DOMContentLoaded', async () => {
             // РЕЖИМ «ЧАТ ОТДЕЛЬНО»: app.html?chatonly=1 — прячем агентов и панели,
             // чат занимает весь экран. Открывается кнопкой 🪟 Чат отдельно.
             if (/[?&]chatonly=1/.test(window.location.search)) {
                 document.body.classList.add('chat-only-mode');
             }
-            const scripts = ['figures.js', 'agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'supervisor.js', 'office.js', 'office3d.js', 'office3d_life.js', 'ui.js', 'zveno_balance.js', 'tutorial.js'];
+            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'supervisor.js', 'office.js', 'office3d.js', 'ui.js', 'zveno_balance.js'];
             const failed = [];
 
             // Грузим параллельно: один упавший файл не тормозит и не ломает остальные.
@@ -168,15 +109,6 @@
             // Плашка версии и счётчика правок ШТАБА (shtab_version.json).
             if (typeof loadVersionCounter === 'function') loadVersionCounter();
             if (typeof startVersionAutoRefresh === 'function') startVersionAutoRefresh();
-
-            // Модалка «что обновилось» — один раз после обновления версии Штаба.
-            if (typeof checkUpdateNotice === 'function') checkUpdateNotice();
-
-            // «ВИДЕОИНСТРУКЦИЯ» ПО ШТАБУ: показывается один раз после полной
-            // загрузки окна (tutorial.js). Повторно — кнопка 🎬 Инструкция.
-            if (typeof window.startShtabTutorial === 'function') {
-                setTimeout(() => window.startShtabTutorial(), 1200);
-            }
 
             // СТРАХОВКА: если 3D-модуль не выполнился — пробуем загрузить его ещё раз,
             // и только потом сообщаем о проблеме (без этого кнопка «Офис» молча
@@ -243,12 +175,12 @@
                     <button onclick="toggleKeyVisibility('userDeepseekKey', this)" style="position: absolute; right: 10px; top: 8px; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa;">👁</button>
                 </div>
 
-                <label style="font-size: 12px; color: #7ee08a;">🔵 Zveno Key (ZV route):</label>
+                <label style="font-size: 12px; color: #7ee08a;">🆓 Ключ бесплатных моделей (ZV route):</label>
                 <div style="position: relative; margin-bottom: 6px;">
                     <input type="password" id="userFreeKey" class="modal-textarea" style="height: 40px; margin-bottom: 0; padding-right: 40px;" placeholder="единый ключ ZV route">
                     <button onclick="toggleKeyVisibility('userFreeKey', this)" style="position: absolute; right: 10px; top: 8px; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa;">👁</button>
                 </div>
-                <p style="font-size: 11px; color: #7ee08a; margin: 0 0 15px 0; line-height: 1.4;">Один ключ-роутер на несколько моделей: платная Zveno (📐 Архитектор), бесплатные (Dots3-Note, Nemotron, Flint) и просмотр фото. Роутер сам переключает модель. Пусто → всё это не работает.</p>
+                <p style="font-size: 11px; color: #7ee08a; margin: 0 0 15px 0; line-height: 1.4;">Один ключ на все бесплатные маршруты (Dots3-Note, Nemotron, Flint). Баланс 0 ₽ — карта не нужна.</p>
 
                 <button onclick="saveApiSettings()" style="width: 100%; padding: 12px; background: #00e5ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💾 Сохранить ключи</button>
                 <button onclick="clearApiSettings()" style="width: 100%; padding: 12px; margin-top: 10px; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🗑️ Удалить ключи с этого устройства</button>
@@ -304,9 +236,9 @@
             <button class="mode-btn" id="btnOffice" onclick="openOffice()">🏢 Офис</button>
             <button class="mode-btn" id="btnAIModel" title="Платные модели. Тап — следующая. Долгое нажатие — список моделей.">🧠 Платные</button>
             <button class="mode-btn" id="btnFreeModel" title="Бесплатные модели. Тап — следующая. Долгое нажатие — список моделей.">🆓 Бесплатные</button>
+            <button class="mode-btn" id="btnGigaChat" onclick="toggleGigaChat()" title="GigaChat (Сбер). Тап — включить/выключить отдельно от остальных моделей." style="border-color:#7B61FF; color:#7B61FF;">🟣 GigaChat</button>
             <button class="mode-btn" onclick="openApiSettings()">🔑 API Ключи</button>
             <button class="mode-btn" id="btnRecovery" onclick="openRecoveryGuide()" title="Пошаговая инструкция по восстановлению сервера" style="border-color:#00e5ff; color:#00e5ff;">🚑 Ремонт сервера</button>
-            <button class="mode-btn" id="btnTutorial" onclick="startShtabTutorial(true)" title="Видеоинструкция по Штабу">🎬 Инструкция</button>
             </div>
         </div>
 
@@ -346,17 +278,6 @@
                 <button class="modal-close" onclick="document.getElementById('recoveryModal').classList.remove('active')">✖</button>
             </div>
             <div class="modal-body" id="recoveryBody"></div>
-        </div>
-    </div>
-
-    <!-- Модалка: ЧТО ОБНОВИЛОСЬ В ШТАБЕ (показывается при загрузке после обновления) -->
-    <div class="modal-overlay" id="updateModal" onclick="if(event.target===this) closeUpdateNotice()">
-        <div class="modal-content" style="max-width: 92%; max-height: 85vh; overflow-y: auto; border-color: #00e5ff;">
-            <div class="modal-header">
-                <h2 style="color: #00e5ff;">🎉 Штаб обновлён</h2>
-                <button class="modal-close" onclick="closeUpdateNotice()">✖</button>
-            </div>
-            <div class="modal-body" id="updateBody"></div>
         </div>
     </div>
 
@@ -503,101 +424,6 @@
         try { document.execCommand('copy'); done(); }
         catch (e) { alert('Не удалось скопировать — выдели текст вручную.'); }
         document.body.removeChild(ta);
-    }
-
-    /* =========================================
-       --- МОДАЛКА «ЧТО ОБНОВИЛОСЬ» ПРИ ЗАГРУЗКЕ ---
-       Босс: при загрузке Штаба должно вылезать окно с описанием обновления.
-       Источник — shtab_version.json (version + log). Показываем ОДИН РАЗ на
-       версию: сравниваем version с сохранённой в localStorage. Записи нет
-       (первый запуск на устройстве) — тоже показываем и запоминаем.
-       Повторно открыть можно из панели версии (кнопка «🎉 ЧТО ОБНОВИЛОСЬ»).
-       ========================================= */
-    const UPDATE_SEEN_KEY = 'shtabSeenVersion';
-
-    // Безопасный доступ к localStorage: в приватном режиме или при запрете
-    // хранилища обращение бросает исключение — Штаб падать из-за этого не должен.
-    function seenVersionGet() {
-        try { return localStorage.getItem(UPDATE_SEEN_KEY); } catch (e) { return null; }
-    }
-    function seenVersionSet(v) {
-        try { localStorage.setItem(UPDATE_SEEN_KEY, v); } catch (e) { /* хранилище недоступно — окно просто покажется снова */ }
-    }
-
-    // Версия, которая сейчас показана в модалке. Нужна, чтобы в момент
-    // ЗАКРЫТИЯ окна записать метку «это обновление Босс уже видел».
-    let lastShownVersion = null;
-
-    function closeUpdateNotice() {
-        const m = document.getElementById('updateModal');
-        if (m) m.classList.remove('active');
-        // Босс: закрыл окно — снова не показывать. Метку ставим именно при
-        // закрытии (крестик, клик по фону, кнопка «Понятно») — так окно
-        // гарантированно не вылезет повторно даже если хранилище сбоило.
-        if (lastShownVersion) seenVersionSet(lastShownVersion);
-    }
-    window.closeUpdateNotice = closeUpdateNotice;
-
-    async function checkUpdateNotice(force) {
-        try {
-            const r = await fetch('shtab_version.json?v=' + Date.now(), { cache: 'no-store' });
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            const d = await r.json();
-            const ver = String(d.version || '');
-            if (!ver) return;
-            const seen = seenVersionGet();
-            if (!force && seen === ver) return;   // это обновление уже видели — не мешаем
-            buildUpdateNotice(d, force ? null : seen);
-            // Метку «видел» здесь НЕ ставим: она пишется только в момент
-            // закрытия окна (closeUpdateNotice). Босс: закрыл — больше не вылезает.
-        } catch (e) {
-            console.warn('Модалка обновления: shtab_version.json не прочитан', e);
-        }
-    }
-    window.checkUpdateNotice = checkUpdateNotice;
-
-    function buildUpdateNotice(d, seen) {
-        const body = document.getElementById('updateBody');
-        const modal = document.getElementById('updateModal');
-        if (!body || !modal) return;
-        lastShownVersion = String(d.version || '');
-        body.innerHTML = '';
-
-        const head = document.createElement('div');
-        head.textContent = seen
-            ? 'Версия ' + d.version + ' — что нового:'
-            : 'Версия ' + d.version + '. Обновление установлено.';
-        head.style.cssText = 'font-size:13px;color:#c9d6e2;margin-bottom:10px;line-height:1.4;';
-        body.appendChild(head);
-
-        const log = Array.isArray(d.log) ? d.log.slice().reverse() : [];
-        if (log.length) {
-            log.forEach(it => {
-                const row = document.createElement('div');
-                row.style.cssText = 'display:flex;gap:8px;padding:9px;margin-bottom:8px;background:#121212;border:1px solid #222;border-radius:8px;font-size:12px;line-height:1.4;';
-                const n = document.createElement('span');
-                n.textContent = '#' + (it.n || '?');
-                n.style.cssText = 'color:#00e5ff;font-weight:700;flex:0 0 auto;';
-                const t = document.createElement('span');
-                t.textContent = it.text || '';
-                t.style.color = '#c9d6e2';
-                row.appendChild(n); row.appendChild(t);
-                body.appendChild(row);
-            });
-        } else {
-            const e = document.createElement('div');
-            e.textContent = 'Описание изменений не заполнено.';
-            e.style.cssText = 'font-size:12px;color:#8b98a5;';
-            body.appendChild(e);
-        }
-
-        const btn = document.createElement('button');
-        btn.textContent = '✅ Понятно, работаем';
-        btn.style.cssText = 'width:100%;padding:12px;margin-top:6px;background:#00e5ff;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:14px;cursor:pointer;';
-        btn.onclick = closeUpdateNotice;
-        body.appendChild(btn);
-
-        modal.classList.add('active');
     }
     </script>
 </body>

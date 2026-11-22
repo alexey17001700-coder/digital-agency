@@ -40,12 +40,11 @@ function handleAgentClick(name) {
         card.classList.remove('has-idea');
         if (!selectedAgents.includes(name)) selectedAgents.push(name);
         card.classList.add('selected');
-        if (typeof updateTandemCards === 'function') updateTandemCards();
         sendMessage(`[Система: Агент ${name} вступает в диалог]`);
         return;
     }
     if (selectedAgents.includes(name)) { showAgentInfo(name); } 
-    else { selectedAgents.push(name); card.classList.add('selected'); if (typeof updateTandemCards === 'function') updateTandemCards(); }
+    else { selectedAgents.push(name); card.classList.add('selected'); }
 }
 
 function unselectAgentFromModal() {
@@ -53,7 +52,6 @@ function unselectAgentFromModal() {
     selectedAgents = selectedAgents.filter(a => a !== name);
     const card = document.getElementById('agent-' + name);
     if (card) card.classList.remove('selected');
-    if (typeof updateTandemCards === 'function') updateTandemCards();
     if (typeof setAgentStatus === 'function') setAgentStatus(name, 'idle');
     document.getElementById('agentModal').classList.remove('active');
 }
@@ -95,10 +93,8 @@ function setMode(mode) {
 }
 
 /* --- КНОПКА 🧠 ПЛАТНЫЕ ---
-   Босс: ПЕРЕБОРА МОДЕЛЕЙ НА КНОПКЕ БОЛЬШЕ НЕТ. Тап — только ВКЛ/ВЫКЛ той
-   модели, что уже выбрана. Выбор модели — долгое нажатие (панель 🧠).
-   Выбрана платная → тап выключает её (выбор снимается, Штаб молчит).
-   Ничего не выбрано → тап включает последнюю выбранную платную модель. */
+   Листает ТОЛЬКО платные модели. Бесплатные не трогает — у них своя кнопка.
+   Долгое нажатие — панель выбора моделей (там же переключатель платных). */
 function applyAIModelButton() {
     const btn = document.getElementById('btnAIModel');
     if (!btn) return;
@@ -118,7 +114,7 @@ function applyAIModelButton() {
         btn.innerText = '🧠 Платные: ВЫКЛ';
         btn.style.background = '#333'; btn.style.color = '#777';
     } else {
-        btn.innerText = '🧠 Платные: ВЫКЛ';
+        btn.innerText = '🧠 Платные: выбрать';
         btn.style.background = '#333'; btn.style.color = '#aaa';
     }
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
@@ -127,35 +123,27 @@ function applyAIModelButton() {
 }
 
 function toggleAIModel() {
+    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
     const list = (typeof paidModels === 'function') ? paidModels() : [];
+    if (!on) {
+        if (typeof renderMessage === 'function') renderMessage('🔒 *[Система: платные модели отключены. Долгое нажатие на 🧠 — включить.]*', 'director', 'Оркестратор');
+        return;
+    }
     if (!list.length) {
         if (typeof renderMessage === 'function') renderMessage('💳 *[Система: платных моделей в списке нет.]*', 'director', 'Оркестратор');
         return;
     }
-    // Выбранная платная модель включена → тап её ВЫКЛЮЧАЕТ (выбор снимается).
-    const cur = list.find(m => m.id === selectedAIModel);
-    if (cur) {
-        try { localStorage.setItem('shtabLastPaidModel', cur.id); } catch (e) {}
-        selectedAIModel = '';
-        try { localStorage.removeItem('shtabAIModel'); } catch (e) {}
-        applyAIModelButton();
-        if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + cur.label + ' ВЫКЛЮЧЕНА. Тап по 🧠 — включить снова.]*', 'director', 'Оркестратор');
-        return;
-    }
-    // Ничего не выбрано → тап ВКЛЮЧАЕТ последнюю выбранную платную модель.
-    let last = '';
-    try { last = localStorage.getItem('shtabLastPaidModel') || ''; } catch (e) {}
-    const back = list.find(m => m.id === last) || list[0];
-    if (typeof paidEnabled === 'function' && !paidEnabled() && typeof setPaidEnabled === 'function') setPaidEnabled(true);
-    selectedAIModel = back.id;
-    try { localStorage.setItem('shtabAIModel', back.id); } catch (e) {}
+    let idx = list.findIndex(m => m.id === selectedAIModel);
+    if (idx < 0) idx = -1;
+    selectedAIModel = list[(idx + 1) % list.length].id;
+    localStorage.setItem('shtabAIModel', selectedAIModel);
     applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + back.label + ' ВКЛЮЧЕНА.]*', 'director', 'Оркестратор');
+    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
 }
 
 /* --- КНОПКА 🆓 БЕСПЛАТНЫЕ ---
-   Босс: перебора моделей на кнопке НЕТ. Тап — только ВКЛ/ВЫКЛ уже выбранной
-   бесплатной модели. Выбор модели — долгое нажатие (та же панель 🧠). */
+   Листает ТОЛЬКО бесплатные модели (free: true). Платные не трогает.
+   Долгое нажатие — та же панель выбора моделей. */
 function applyFreeModelButton() {
     const btn = document.getElementById('btnFreeModel');
     if (!btn) return;
@@ -166,7 +154,7 @@ function applyFreeModelButton() {
         btn.style.background = cur.color || '#333';
         btn.style.color = cur.text || '#fff';
     } else {
-        btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'ВЫКЛ' : 'нет');
+        btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'выбрать' : 'нет');
         btn.style.background = '#333'; btn.style.color = '#aaa';
     }
     // Выбрали бесплатную — кнопка 🟣 GigaChat гаснет сама (состояние не врёт).
@@ -179,24 +167,12 @@ function toggleFreeModel() {
         if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатных моделей в списке нет.]*', 'director', 'Оркестратор');
         return;
     }
-    // Выбранная бесплатная модель включена → тап её ВЫКЛЮЧАЕТ (выбор снимается).
-    const cur = f.find(m => m.id === selectedAIModel);
-    if (cur) {
-        try { localStorage.setItem('shtabLastFreeModel', cur.id); } catch (e) {}
-        selectedAIModel = '';
-        try { localStorage.removeItem('shtabAIModel'); } catch (e) {}
-        applyAIModelButton();
-        if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + cur.label + ' ВЫКЛЮЧЕНА. Тап по 🆓 — включить снова.]*', 'director', 'Оркестратор');
-        return;
-    }
-    // Ничего не выбрано → тап ВКЛЮЧАЕТ последнюю выбранную бесплатную модель.
-    let last = '';
-    try { last = localStorage.getItem('shtabLastFreeModel') || ''; } catch (e) {}
-    const back = f.find(m => m.id === last) || f[0];
-    selectedAIModel = back.id;
-    try { localStorage.setItem('shtabAIModel', back.id); } catch (e) {}
+    let idx = f.findIndex(m => m.id === selectedAIModel);
+    if (idx < 0) idx = -1;
+    selectedAIModel = f[(idx + 1) % f.length].id;
+    localStorage.setItem('shtabAIModel', selectedAIModel);
     applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + back.label + ' ВКЛЮЧЕНА.]*', 'director', 'Оркестратор');
+    if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
 }
 
 function bindFreeModelButton() {
@@ -231,19 +207,10 @@ function openAIModelPanel() {
     title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;';
     box.appendChild(title);
 
-    /* Подсказка: кнопки 🧠/🆓 больше НЕ листают модели — тап только вкл/выкл. */
-    const tip = document.createElement('div');
-    tip.textContent = 'Выбор модели — здесь. Тап по кнопке 🧠 или 🆓 в панели только ВКЛЮЧАЕТ и ВЫКЛЮЧАЕТ уже выбранную модель.';
-    tip.style.cssText = 'font-size:11px;color:#8b98a5;line-height:1.4;margin-bottom:10px;';
-    box.appendChild(tip);
-
     const rowStyle = (active) => 'display:block;width:100%;text-align:left;padding:11px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid ' + (active ? '#00e5ff' : '#2a333d') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'transparent') + ';color:#e6edf3;';
     const pick = (m) => {
         selectedAIModel = m.id;
         localStorage.setItem('shtabAIModel', selectedAIModel);
-        /* Запоминаем последнюю выбранную модель каждого типа: тап по кнопке
-           теперь только ВКЛЮЧАЕТ/ВЫКЛЮЧАЕТ её, а не листает список. */
-        try { localStorage.setItem(m.free ? 'shtabLastFreeModel' : 'shtabLastPaidModel', m.id); } catch (e) {}
         // Ollama (ПК): спрашиваем имя локальной модели — её грузит ПК.
         if (m.id === 'ollama') {
             const cur = localStorage.getItem('shtabOllamaModel') || 'qwen2.5-coder:7b';
@@ -299,20 +266,6 @@ function openAIModelPanel() {
     } else {
         hint('Платные отключены — скрыты и не выбираются. Запросы идут только на бесплатные.');
     }
-
-    /* --- СНЯТЬ ВЫБОР МОДЕЛИ ---
-       Босс: дефолта нет — значит должна быть и обратная кнопка. Убрал выбор,
-       и Штаб снова молчит, пока Босс не выберет модель явно. */
-    const reset = document.createElement('button');
-    reset.textContent = '🚫 УБРАТЬ ВЫБОР МОДЕЛИ';
-    reset.style.cssText = 'width:100%;padding:9px;margin-top:8px;border:1px solid #ff0055;border-radius:8px;background:transparent;color:#ff6688;font-size:13px;cursor:pointer;';
-    reset.onclick = () => {
-        selectedAIModel = '';
-        localStorage.removeItem('shtabAIModel');
-        applyAIModelButton();
-        ov.remove();
-    };
-    box.appendChild(reset);
 
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';
@@ -457,46 +410,6 @@ function toggleKeyVisibility(inputId, btn) {
    Тап по плашке — панель с деталями и кнопкой перечитать. */
 let __versionData = null;
 
-/* --- ПРОВЕРКА: ТОТ ЛИ app.html КРУТИТСЯ В КАДРЕ ---
-   Босс: «я не обновился, а версия наверху сменилась». Причина: плашка читает
-   shtab_version.json с сервера и показывает НОВУЮ версию, а в кадре при этом
-   может крутиться СТАРЫЙ app.html из кэша браузера. Теперь кадр несёт свою
-   сборку (window.SHTAB_APP_BUILD) и сверяется с серверной:
-   - сборки совпали → всё честно, ничего не делаем;
-   - сервер новее → плашка честно пишет «старая сборка» и кадр перезагружается
-     в обход кэша (не больше 2 попыток подряд — защита от петли).
-   Так версия наверху и реально загруженный код больше не расходятся. */
-const APP_BUILD_GUARD_KEY = 'shtabAppBuildReload';
-
-function checkAppBuild(d) {
-    const loaded = parseInt(window.SHTAB_APP_BUILD, 10);
-    const server = parseInt(d && d.build, 10);
-    if (!loaded || !server || loaded === server) {
-        try { sessionStorage.removeItem(APP_BUILD_GUARD_KEY); } catch (e) {}
-        return;
-    }
-    const el = document.getElementById('version-text');
-    const box = document.getElementById('status-version');
-    if (el) el.innerText = 'v' + d.version + ' · ⚠️ старая сборка';
-    if (box) {
-        box.style.borderColor = '#ff0055';
-        box.title = 'В кадре старая сборка ' + loaded + ', на сервере ' + server + ' — перезагружаю в обход кэша';
-    }
-    let tries = 0;
-    try { tries = parseInt(sessionStorage.getItem(APP_BUILD_GUARD_KEY) || '0', 10) || 0; } catch (e) {}
-    if (tries >= 2) return;
-    try { sessionStorage.setItem(APP_BUILD_GUARD_KEY, String(tries + 1)); } catch (e) {}
-    // Штаб живёт в кадре (iframe) внутри оболочки index.html. Просим оболочку
-    // подменить кадр ТИХО — без видимой перезагрузки и без мигания заставки.
-    if (window.parent && window.parent !== window) {
-        try { window.parent.postMessage({ type: 'shtab-need-swap', build: server }, '*'); return; } catch (e) {}
-    }
-    setTimeout(() => {
-        try { location.replace(location.pathname + '?v=' + Date.now()); }
-        catch (e) { location.reload(); }
-    }, 600);
-}
-
 async function loadVersionCounter() {
     const el = document.getElementById('version-text');
     if (!el) return;
@@ -508,7 +421,6 @@ async function loadVersionCounter() {
         const limit = d.limit || 5;
         const edits = d.edits || 0;
         el.innerText = 'v' + d.version + ' · ' + edits + '/' + limit;
-        checkAppBuild(d);
         const box = document.getElementById('status-version');
         if (box) {
             box.style.borderColor = edits >= limit ? '#ff0055' : '#ffd700';
@@ -605,17 +517,6 @@ function openVersionPanel() {
     reload.style.cssText = 'width:100%;padding:10px;margin-top:14px;border:1px solid #ffd700;border-radius:8px;background:rgba(255,215,0,.10);color:#ffd700;font-size:13px;font-weight:700;cursor:pointer;';
     reload.onclick = async () => { await loadVersionCounter(); ov.remove(); openVersionPanel(); };
     box.appendChild(reload);
-
-    /* Кнопка «Что обновилось» — открывает модалку обновления вручную,
-       даже если её уже видели (force=true). */
-    const whatsNew = document.createElement('button');
-    whatsNew.textContent = '🎉 ЧТО ОБНОВИЛОСЬ';
-    whatsNew.style.cssText = 'width:100%;padding:10px;margin-top:8px;border:1px solid #00e5ff;border-radius:8px;background:rgba(0,229,255,.10);color:#00e5ff;font-size:13px;font-weight:700;cursor:pointer;';
-    whatsNew.onclick = () => {
-        ov.remove();
-        if (typeof window.checkUpdateNotice === 'function') window.checkUpdateNotice(true);
-    };
-    box.appendChild(whatsNew);
 
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';

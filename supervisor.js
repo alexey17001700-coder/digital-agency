@@ -1,5 +1,5 @@
 /* ============================================================
-   НАДЗИРАТЕЛЬ — supervisor.js  v1.7-tandem
+   НАДЗИРАТЕЛЬ — supervisor.js  v1.6-unified
    ------------------------------------------------------------
    Следит за диалогом Босса в Штабе и не даёт задаче умереть молча.
 
@@ -22,10 +22,6 @@
 
    ЦЕПОЧКА ЗАМЕНЫ: Архитектор → Бесплатная модель → стоп.
    Передач не больше SUP_MAX_HANDOFFS — иначе два ИИ зациклятся.
-
-   ТАНДЕМ (2+ карточки): в журнале пишется пара, а не один агент.
-   Ответ ЛЮБОГО участника пары закрывает задачу — второй голос не считается
-   «чужим», иначе Надзиратель ложно решал бы, что агент молчит.
 
    РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ:
      supSplit(text) — опрашивает агентов (кто онлайн), режет задачу
@@ -53,10 +49,7 @@
         arch: '🏛 Архитектор',
         free: '🆓 Бесплатная модель'
     };
-    /* Цепочка замены: Архитектор → Бесплатная модель.
-       Любая другая карточка (Оркестратор, Хакер, Критик…) при сбое тоже
-       уходит бесплатной модели — см. supHandoff. */
-    const OWNER_NEXT = { arch: 'free' };
+    const OWNER_NEXT = { arch: 'free' };   // цепочка замены: Архитектор → Бесплатная модель
 
     let supTimer = null;
     let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
@@ -80,28 +73,7 @@
     function supClear() {
         try { localStorage.removeItem(SUP_KEY); } catch (e) {}
     }
-
-    /* Тандем включён? В Штабе тандем = выбраны 2+ карточки. */
-    function supIsTandem() {
-        try {
-            return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2);
-        } catch (e) { return false; }
-    }
-
-    /* Подпись владельца задачи. Босс разговаривает с ЛЮБОЙ карточкой
-       (Оркестратор, Хакер, Критик…), поэтому имя карточки показываем
-       с её иконкой, а не подменяем на «Архитектор».
-       В тандеме пишем пару целиком. */
-    function ownerLabel(o) {
-        if (supIsTandem()) {
-            let pair = '';
-            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
-            if (pair) return '🤝 Тандем: ' + pair;
-        }
-        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
-        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
-        return '👤 ' + o;
-    }
+    function ownerLabel(o) { return OWNER_LABEL[o] || ('👤 ' + o); }
 
     /* ---------- ЖИВОЙ АГЕНТ: ПРИЗНАКИ ЖИЗНИ ----------
        Передача задачи — только когда агент МЁРТВ. Пока он работает,
@@ -204,8 +176,7 @@
     function supHeartbeat(owner) {
         const st = supLoad();
         if (!st) return;
-        /* В тандеме второй голос — свой, его пульс тоже считается. */
-        if (owner && !(st.parts && st.parts.length) && st.owner && owner !== st.owner && !supIsTandem()) return;
+        if (owner && !(st.parts && st.parts.length) && st.owner && owner !== st.owner) return;
         st.lastSeen = Date.now();
         supSave(st);
     }
@@ -238,8 +209,7 @@
             return;
         }
 
-        /* Тандем: ответил второй голос пары — это тот же владелец, задачу закрываем. */
-        if (owner && st.owner && owner !== st.owner && !supIsTandem()) return;
+        if (owner && st.owner && owner !== st.owner) return;   // ответил не тот, кто ведёт — не закрываем
         st.status = 'answered';
         st.lastSeen = Date.now();
         supSave(st);
@@ -301,9 +271,7 @@
         }
 
         const prev = st.owner;
-        /* Карточка Босса (Оркестратор, Хакер, Критик…) в цепочке замены не
-           прописана — её задача уходит бесплатной модели Штаба, а не в стоп-кран. */
-        const next = OWNER_NEXT[prev] || 'free';
+        const next = OWNER_NEXT[prev];
         if (!next) { supStopKran(st); return; }
         const now = Date.now();
         st.owner = next;
@@ -674,8 +642,7 @@
     window.supNoteActivity = supNoteActivity;// chat.js: в ленте движение — агент работает
     window.supStage = supStage;              // chat.js: задача разбита на этапы [ЭТАП N/M]
     window.supIsAlive = supIsAlive;
-    window.supIsTandem = supIsTandem;        // тандем = 2+ карточки
-    window.SUPERVISOR_VERSION = '1.7-tandem';
+    window.SUPERVISOR_VERSION = '1.6-unified';
 
     supStartWatch();
 })();

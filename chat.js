@@ -35,12 +35,6 @@ let stallStartCount = 0;           // сколько ответов было в 
 let stallLastLen = -1;             // длина последнего ответа (детект «застыл»)
 let stallLastChange = 0;           // когда последний ответ менялся
 let sendSeq = 0;
-/* --- КТО ВЕДЁТ ТЕКУЩУЮ ЗАДАЧУ ---
-   Босс: Надзиратель писал «задачу взял Архитектор», хотя выбрана ДРУГАЯ
-   карточка. Причина — в журнал уходила жёсткая строка 'arch'. Теперь здесь
-   лежит имя выбранной карточки, и Надзиратель (в т.ч. авто-пинки) видит
-   ровно того агента, с кем Босс разговаривает. */
-let currentOwnerAgent = 'Оркестратор';
 let lastSendSuccess = false;   // пришёл ли ответ — от этого зависит, гасить ли сторож тишины
 /* --- ОДИН СЧЁТЧИК НА КНОПКЕ (без наложения) ---
    Раньше каждый вызов sendMessage (в т.ч. авто-пинок и «продолжи этап»)
@@ -88,12 +82,7 @@ let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
-/* --- ДЕФОЛТНОЙ МОДЕЛИ БОЛЬШЕ НЕТ ---
-   Босс: при загрузке не должно быть ничего выбрано по умолчанию. Пока Босс
-   сам не выбрал модель (🧠 Платные / 🆓 Бесплатные) или карточку со своим
-   маршрутом (GigaChat/Хакер/Критик/Архитектор/Оркестратор) — Штаб молчит:
-   запрос никуда не уходит, в чат летит «Выберите модель» (стоп-кран ниже). */
-let selectedAIModel = localStorage.getItem('shtabAIModel') || '';
+let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
 
 /* --- ОДИН ЧАТ: ВСЕГДА АРХИТЕКТОР ---
    Помощник и его ИИ-шлюз (:8002) убраны из Штаба. Переключателя «кому»
@@ -139,10 +128,8 @@ async function sendToFreeModel(text) {
    не показываются в панели и не выбираются. */
 const AI_MODELS_DEFAULT = [
     { id: 'yandex',   label: 'Yandex',    color: '#333',    text: '#aaa' },
-    /* agentOnly: модель НЕ показывается в кнопках 🧠/🆓. Она живёт ТОЛЬКО
-       под своей карточкой: DeepSeek → Хакер, GigaChat → GigaChat. */
-    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff', agentOnly: true },
-    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff', agentOnly: true },
+    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
+    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
     { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000' },
     /* --- БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход, без карты) --- */
     { id: 'dots-studio/dots-3-note-preview:free', label: 'Dots3-Note', color: '#ffd700', text: '#000', free: true },
@@ -159,7 +146,7 @@ const AI_MODELS_DEFAULT = [
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
    перезаписывается новым (иначе у Босса остался бы старый набор моделей). */
-const AI_MODELS_VERSION = '2026-02-15-agent-routes';   // DeepSeek и GigaChat убраны из кнопок — только под карточками
+const AI_MODELS_VERSION = '2026-02-14-free7-ollama';   // добавлена локальная модель Ollama (ПК)
 try {
     const ver = localStorage.getItem('shtabAIModelsVer');
     const sm = localStorage.getItem('shtabAIModels');
@@ -172,60 +159,6 @@ try {
     }
 } catch (e) {}
 function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
-
-/* =========================================
-   --- РЕЕСТР МАРШРУТОВ: КАРТОЧКА → МОДЕЛЬ → КЛЮЧ ---
-   Босс: у каждого агента своя модель и свой ключ. Выбрал карточку —
-   уходит ЕЁ модель и ЕЁ ключ. Ключ не введён — модель не работает,
-   в чат летит предупреждение, запрос НЕ уходит. Никаких подмен на
-   серверный ключ и никаких автопереключений.
-   Ключи (localStorage shtabUserKeys):
-     yandexKey + yandexFolder — только Yandex (Критик)
-     deepseekKey              — только DeepSeek (Хакер)
-     freeKey (ZV route)       — Zveno (Архитектор) + все бесплатные + фото
-     —                        — GigaChat (серверный GIGACHAT_KEY, работает всегда)
-   ========================================= */
-const AGENT_ROUTES = {
-    'GigaChat':   { model: 'gigachat', key: 'gigachat' },
-    'Хакер':      { model: 'deepseek', key: 'deepseekKey' },
-    'Критик':     { model: 'yandex',   key: 'yandexKey' },
-    'Архитектор': { model: 'zveno',    key: 'freeKey' },
-    /* Оркестратор — это я, Архитектор Штаба: тот же мозг Zveno и тот же
-       ключ-роутер ZV route (freeKey). Выбрал карточку Оркестратора —
-       уходит Zveno. Ключа нет — предупреждение и стоп. */
-    'Оркестратор': { model: 'zveno',   key: 'freeKey' }
-};
-function agentRoute(name) { return AGENT_ROUTES[name] || null; }
-
-/* Какое поле ключа нужно модели. null — ключ не нужен (GigaChat/сервер, Ollama/ПК). */
-function modelKeyField(modelId) {
-    if (modelId === 'gigachat') return null;   // ключ Сбера лежит на сервере
-    if (modelId === 'ollama') return null;     // локальная модель на ПК, без ключей
-    if (modelId === 'deepseek') return 'deepseekKey';
-    if (modelId === 'yandex') return 'yandexKey';
-    if (modelId === 'zveno') return 'freeKey';
-    const info = getModelInfo(modelId);
-    if (info && info.free) return 'freeKey';   // все бесплатные — через ZV route
-    return 'freeKey';
-}
-/* Есть ли ключ под выбранную модель. */
-function modelKeyOk(modelId) {
-    const field = modelKeyField(modelId);
-    if (!field) return true;
-    let keys = {};
-    try { keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
-    const v = keys[field];
-    if (field === 'yandexKey') return !!(v && v.trim() && keys.yandexFolder && keys.yandexFolder.trim());
-    return !!(v && v.trim());
-}
-/* Понятное имя ключа для предупреждения. */
-function modelKeyLabel(modelId) {
-    const field = modelKeyField(modelId);
-    if (field === 'yandexKey') return 'Yandex Key + Folder';
-    if (field === 'deepseekKey') return 'DeepSeek Key';
-    if (field === 'freeKey') return 'Zveno Key (ZV route)';
-    return '';
-}
 
 /* --- ЛОКАЛЬНАЯ МОДЕЛЬ OLLAMA (ПК) ---
    Адрес задаётся путём через шлюз: Caddy проксирует /ollama/* на ПК:11434,
@@ -253,41 +186,76 @@ function modelBadgeText(id) {
    resolveAllowedModel() — страховка: платная модель при отключённых платных
    не уйдёт на сервер, запрос уедет на бесплатный маршрут. */
 function freeModels() { return AI_MODELS.filter(m => m && m.free); }
-/* Платные модели для КНОПОК. Модели с agentOnly (DeepSeek, GigaChat)
-   в кнопках не листаются — они выбираются только карточкой агента. */
-function paidModels() { return AI_MODELS.filter(m => m && !m.free && !m.agentOnly); }
+function paidModels() { return AI_MODELS.filter(m => m && !m.free); }
 function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
 function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
-    /* --- БЕЗ ПОДМЕН: выключил платные — выбор просто снимается ---
-       Босс: дефолтов и автоподмен нет. Раньше платная модель молча
-       заменялась первой бесплатной. Теперь выбор сбрасывается в пусто,
-       и Штаб ждёт явного выбора Босса. */
     const cur = getModelInfo(selectedAIModel);
-    if (!on && selectedAIModel && cur && !cur.free && cur.id !== 'gigachat') {
-        selectedAIModel = '';
-        localStorage.removeItem('shtabAIModel');
+    if (!on && cur && !cur.free && cur.id !== 'gigachat') {
+        const f = freeModels();
+        if (f.length) { selectedAIModel = f[0].id; localStorage.setItem('shtabAIModel', selectedAIModel); }
     }
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
 }
 function allowedModels() { return freeModels().concat(paidEnabled() ? paidModels() : []); }
-/* --- АВТОПОДМЕНЫ БОЛЬШЕ НЕТ ---
-   Раньше при выключенных платных эта функция МОЛЧА подменяла платную модель
-   на бесплатную. Босс: подмен не должно быть вообще. Выбрал модель — уходит
-   ИМЕННО она; нет ключа — предупреждение и стоп (проверка modelKeyOk).
-   Функция оставлена как «пропуск без изменений»: её зовут фоновые задачи
-   и askAgent, чтобы ничего не упало. */
-function resolveAllowedModel(id) { return id; }
+function resolveAllowedModel(id) {
+    const info = getModelInfo(id);
+    if (info && info.free) return id;
+    /* GigaChat идёт по ключу Сбера (GIGACHAT_KEY на сервере), а не по платному
+       маршруту ZVENO. Поэтому выключенные «платные» его не подменяют: иначе
+       отдельная кнопка 🟣 GigaChat молча уезжала на бесплатную модель. */
+    if (id === 'gigachat') return id;
+    if (paidEnabled()) return id;
+    const f = freeModels();
+    return f.length ? f[0].id : id;
+}
 
-/* --- КНОПКА «🟣 GIGACHAT» УБРАНА ---
-   Босс: отдельная кнопка не нужна. Выбрал карточку GigaChat (зелёная
-   подсветка) — GigaChat и работает (см. sendMessage: selectedAgents
-   содержит 'GigaChat' → модель 'gigachat'). Снял выбор — выключился.
-   Функции оставлены заглушками: их зовут ui.js и init() через typeof. */
+/* --- ОТДЕЛЬНАЯ КНОПКА «🟣 GIGACHAT» ---
+   Босс включает GigaChat (Сбер) одним тапом, не заходя в список моделей.
+   Тап — включить, повторный тап — вернуть ту модель, что была до этого.
+   Выбор запоминается на устройстве (shtabAIModel). */
 function isGigaChatActive() { return selectedAIModel === 'gigachat'; }
-function updateGigaChatButtonVisual() { /* кнопки больше нет — ничего не рисуем */ }
-function applyGigaChatButton() { /* кнопки больше нет — ничего не применяем */ }
+/* ТОЛЬКО внешний вид кнопки — без вызова соседних apply-функций.
+   Так её можно звать из applyAIModelButton / applyFreeModelButton
+   без бесконечной рекурсии (те зовут её, она — их). */
+function updateGigaChatButtonVisual() {
+    const b = document.getElementById('btnGigaChat');
+    if (!b) return;
+    if (isGigaChatActive()) {
+        b.classList.add('active');
+        b.innerText = '🟣 GigaChat: ВКЛ';
+        b.style.borderColor = '#7B61FF';
+        b.style.color = '#b9a8ff';
+        b.style.background = 'rgba(123,97,255,.16)';
+    } else {
+        b.classList.remove('active');
+        b.innerText = '🟣 GigaChat';
+        b.style.borderColor = '#7B61FF';
+        b.style.color = '#7B61FF';
+        b.style.background = '';
+    }
+}
+function applyGigaChatButton() {
+    updateGigaChatButtonVisual();
+    // Кнопки «Платные» / «Бесплатные» перерисовываем, чтобы не показывали чужой выбор.
+    if (typeof applyAIModelButton === 'function') { try { applyAIModelButton(); } catch (e) {} }
+    if (typeof applyFreeModelButton === 'function') { try { applyFreeModelButton(); } catch (e) {} }
+}
+function toggleGigaChat() {
+    if (isGigaChatActive()) {
+        const prev = localStorage.getItem('shtabAIModelBeforeGiga') || 'yandex';
+        selectedAIModel = getModelInfo(prev) ? prev : 'yandex';
+        renderMessage('🟣 *[GigaChat выключен — вернул прежнюю модель]*', 'director', 'Оркестратор');
+    } else {
+        localStorage.setItem('shtabAIModelBeforeGiga', selectedAIModel);
+        selectedAIModel = 'gigachat';
+        renderMessage('🟣 *[GigaChat включён — следующие ответы идут через Сбер (GIGACHAT_KEY)]*', 'director', 'Оркестратор');
+    }
+    try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    applyGigaChatButton();
+}
+window.toggleGigaChat = toggleGigaChat;
 window.applyGigaChatButton = applyGigaChatButton;
 
 /* --- БЮДЖЕТ ЗАПРОСОВ НА ОДИН ВОПРОС БОССА ---
@@ -403,7 +371,6 @@ function createNewChat(force = false) {
     currentChatId = id; saveAll(); chatContainer.innerHTML = ''; chatTitleEl.innerText = "Новый чат";
     allChats[id].messages.push({ role: 'assistant', content: WELCOME_TEXT, agentName: 'Оркестратор' }); saveAll();
     selectedAgents = []; document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
-    if (typeof updateTandemCards === 'function') updateTandemCards();
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); renderChatList(); toggleSidebar(); loadChat(id);
 }
 
@@ -411,7 +378,6 @@ function loadChat(id) { currentChatImage = localStorage.getItem('shtabChatImage_
     currentChatId = id; localStorage.setItem('shtabCurrentChatId', id);
     chatTitleEl.innerText = allChats[id].title; chatContainer.innerHTML = '';
     selectedAgents = []; document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected', 'has-idea'));
-    if (typeof updateTandemCards === 'function') updateTandemCards();
     if (typeof resetAllStatuses === 'function') resetAllStatuses();
     const msgs = allChats[id].messages;
     for (let i = 1; i < msgs.length; i++) { 
@@ -722,7 +688,7 @@ function parseAgentReplies(text) {
         }
     }
     if (currentAgent) { const agentText = text.substring(lastIndex).trim(); if (agentText) replies.push({ agent: currentAgent, text: agentText }); }
-    if (replies.length === 0 && text.trim()) replies.push({ agent: selectedAgents.length === 1 ? selectedAgents[0] : 'Архитектор', text: text.trim() });
+    if (replies.length === 0 && text.trim()) replies.push({ agent: selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор', text: text.trim() });
     return replies;
 }
 
@@ -799,223 +765,6 @@ async function askAgent(agentName, partText) {
 }
 window.askAgent = askAgent;
 
-/* =========================================
-   --- 🤝 ТАНДЕМ: GigaChat + Архитектор ---
-   Босс выбирает ОБОИХ агентов (GigaChat и Архитектора) — они больше не
-   читают монологи по очереди, а СНАЧАЛА ОБЩАЮТСЯ МЕЖДУ СОБОЙ: короткий
-   диалог в 2 раунда (каждый голос — своим запросом, своим «мозгом»),
-   а потом Архитектор выдаёт Боссу ОБЩИЙ итог.
-   GigaChat говорит через модель Сбера (gigachat), Архитектор — через
-   основную выбранную модель. Это два разных мозга, поэтому диалог живой,
-   а не «один актёр за двоих».
-   Выключить можно кнопкой «🤝 Тандем» (localStorage shtabTandem = off).
-   ========================================= */
-const TANDEM_ROUNDS = 2;              // сколько раз они обменяются репликами (2 раунда = 4 реплики)
-const TANDEM_ASK_TIMEOUT = 90000;     // таймаут одного голоса, мс
-
-/* --- ТАНДЕМ: ЛЮБАЯ ПАРА КАРТОЧЕК ---
-   Босс: тандем больше не привязан к «GigaChat + Архитектор». Выбрал РОВНО ДВЕ
-   карточки со своим маршрутом — они обсуждают задачу между собой и дают итог.
-   Кнопки 🤝 нет: режим включается самим выбором двух карточек.
-   Каждый голос говорит СВОИМ мозгом (модель из AGENT_ROUTES) и своим ключом. */
-function tandemPair() {
-    if (!Array.isArray(selectedAgents) || selectedAgents.length !== 2) return null;
-    const a = selectedAgents[0], b = selectedAgents[1];
-    if (!agentRoute(a) || !agentRoute(b)) return null;
-    return [a, b];
-}
-function isTandemMode() { return !!tandemPair(); }
-/* --- КТО ГЛАВНЫЙ В ТАНДЕМЕ ---
-   Босс: в тандеме Архитектор (я) — ГЛАВНЫЙ, второй голос — правая рука.
-   Поэтому лидером всегда идёт Архитектор/Оркестратор, если он в паре;
-   иначе — первый выбранный. Порядок выбора карточек на это не влияет. */
-const TANDEM_LEADS = ['Архитектор', 'Оркестратор'];
-function tandemLead() {
-    const p = tandemPair();
-    if (!p) return 'Оркестратор';
-    const lead = p.find(n => TANDEM_LEADS.indexOf(n) !== -1);
-    return lead || p[0];
-}
-/* [правая рука, главный] — в этом порядке идёт диалог и итог. */
-function tandemOrder() {
-    const p = tandemPair();
-    if (!p) return null;
-    const lead = tandemLead();
-    const hand = p.find(n => n !== lead) || lead;
-    return [hand, lead];
-}
-window.isTandemMode = isTandemMode;
-window.tandemPair = tandemPair;
-window.tandemLead = tandemLead;
-window.tandemOrder = tandemOrder;
-
-/* --- КНОПКА «🤝 ТАНДЕМ» И ПОДСВЕТКА КАРТОЧЕК ---
-   Босс видит режим тандема явно: кнопка в панели горит, а карточки
-   GigaChat и Архитектора подсвечиваются фиолетовым «🤝».
-   Тап по кнопке — включить/выключить тандем (localStorage shtabTandem). */
-/* --- КНОПКА «🤝 ТАНДЕМ» УБРАНА ---
-   Босс: отдельная кнопка не нужна — тандем включается выбором двух карточек.
-   Функции оставлены заглушками: их зовут init() и ui.js через typeof. */
-function tandemEnabled() { return !!tandemPair(); }
-function syncTandemBtn() {
-    if (typeof syncModeButtons === 'function') { try { syncModeButtons(); } catch (e) {} }
-    updateTandemCards();
-}
-function toggleTandem() { /* кнопки больше нет: тандем = две выбранные карточки */ }
-window.tandemEnabled = tandemEnabled;
-window.syncTandemBtn = syncTandemBtn;
-window.toggleTandem = toggleTandem;
-
-/* Подсветка карточек в режиме тандема: горит только когда выбраны ОБА агента. */
-function _injectTandemCss() {
-    if (document.getElementById('tandemCss')) return;
-    const st = document.createElement('style'); st.id = 'tandemCss';
-    st.textContent = `
-    .agent-card.tandem-active { box-shadow: 0 0 0 2px #7B61FF, 0 0 14px rgba(123,97,255,.65); }
-    .agent-card.tandem-active::after {
-        content: '🤝'; position: absolute; top: 4px; right: 6px;
-        font-size: 13px; z-index: 5;
-    }
-    `;
-    document.head.appendChild(st);
-}
-function updateTandemCards() {
-    _injectTandemCss();
-    const pair = (typeof tandemPair === 'function') ? tandemPair() : null;
-    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('tandem-active'));
-    if (!pair) return;
-    pair.forEach(n => {
-        const c = document.getElementById('agent-' + n);
-        if (c) c.classList.add('tandem-active');
-    });
-}
-window.updateTandemCards = updateTandemCards;
-
-/* Модель голоса тандема: у каждой карточки СВОЙ мозг из реестра маршрутов.
-   GigaChat → Сбер, Хакер → DeepSeek, Критик → Yandex, Архитектор → Zveno. */
-function tandemVoiceModel(agentName) {
-    const r = agentRoute(agentName);
-    return r ? r.model : selectedAIModel;
-}
-
-/* Один запрос от имени одного голоса тандема. Свой таймаут + связь с общей
-   кнопкой «Стоп»: Босс остановил — оба голоса замолкают сразу. */
-async function tandemAsk(speaker, sys, user, timeoutMs) {
-    if (typeof takeTurnCall === 'function' && !takeTurnCall()) return null;   // бюджет запросов на вопрос исчерпан
-    const model = tandemVoiceModel(speaker);
-    let keys = {};
-    try { keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
-    const ctrl = new AbortController();
-    const outer = currentAbortController;
-    const onAbort = () => { try { ctrl.abort(); } catch (e) {} };
-    if (outer && outer.signal) outer.signal.addEventListener('abort', onAbort);
-    const tid = setTimeout(() => ctrl.abort(), timeoutMs || TANDEM_ASK_TIMEOUT);
-    try {
-        const res = await fetch(PROXY, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], temperature: 0.7, model: model, userKeys: keys, freeKey: keys.freeKey || '', isBoss: true }),
-            signal: ctrl.signal
-        });
-        const data = await res.json();
-        const txt = (data && data.choices && data.choices[0]) ? String(data.choices[0].message.content || '').trim() : '';
-        return txt || null;
-    } catch (e) { return null; }
-    finally {
-        clearTimeout(tid);
-        if (outer && outer.signal) outer.signal.removeEventListener('abort', onAbort);
-    }
-}
-
-/* Реплика голоса тандема в чат: карточка агента «печатает», текст печатается,
-   реплика уходит в историю (чтобы следующий раунд её видел). */
-async function tandemSpeak(agentName, txt, plainHistory) {
-    focusAgentCard(agentName);
-    if (typeof setAgentStatus === 'function') setAgentStatus(agentName, 'typing');
-    if (typeof updateAgentStatus === 'function') updateAgentStatus(agentName, 'busy');
-    if (typeof window.office3dWork === 'function') window.office3dWork(agentName);
-    await new Promise(res => { typeMessage(txt, 'director', agentName, res); });
-    if (typeof setAgentStatus === 'function') setAgentStatus(agentName, 'idle');
-    if (typeof updateAgentStatus === 'function') updateAgentStatus(agentName, 'free');
-    if (typeof window.office3dReport === 'function') window.office3dReport(agentName, txt);
-    addMessageToHistory(plainHistory ? txt : `[${agentName} — тандем]: ${txt}`, 'director', agentName);
-    await new Promise(r => setTimeout(r, 500));
-}
-
-/* --- ГЛАВНЫЙ ЦИКЛ ТАНДЕМА ---
-   1) Диалог: GigaChat → Архитектор, TANDEM_ROUNDS раундов (каждый — свой запрос).
-   2) Итог: Архитектор собирает общий результат и отдаёт Боссу. */
-async function runTandemTurn(topic, isKick) {
-    const order = tandemOrder();
-    if (!order) return false;
-    const A = order[0], B = order[1];   // A — правая рука, B — ГЛАВНЫЙ (Архитектор)
-    const mA = tandemVoiceModel(A), mB = tandemVoiceModel(B);
-    // Ключ каждого голоса проверяем ДО запроса: нет ключа — этот голос не работает.
-    const bad = [];
-    if (!modelKeyOk(mA)) bad.push(A + ' → нет ключа ' + modelKeyLabel(mA));
-    if (!modelKeyOk(mB)) bad.push(B + ' → нет ключа ' + modelKeyLabel(mB));
-    if (bad.length) {
-        renderMessage('⚠️ **Тандем не запущен:**\n' + bad.map(x => '• ' + x).join('\n') + '\n\nОткрой 🔑 API Ключи.', 'director', 'Оркестратор');
-        return false;
-    }
-    const log = [];
-    const asLog = () => log.map(x => x.who + ': ' + x.text).join('\n');
-    renderMessage('🤝 *[Тандем: ' + A + ' и ' + B + ' сначала обсуждают задачу между собой, потом ' + B + ' даёт общий результат.]*', 'director', 'Оркестратор');
-
-    for (let r = 1; r <= TANDEM_ROUNDS; r++) {
-        // --- Голос A ---
-        const dirA = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[A]) || '';
-        const aSys = SYSTEM_PROMPT + `\n\n=== РЕЖИМ ТАНДЕМ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\nТы — ${A}, агент Штаба. ${dirA}
-Ты работаешь В ТАНДЕМЕ с ${B}. ${B} — ГЛАВНЫЙ в паре, ты его ПРАВАЯ РУКА.
-Твоя задача: дать главному конкретику, факты, риски и предложения — коротко и по делу.
-Идёт раунд ${r} из ${TANDEM_ROUNDS}.
-Скажи коротко (2–4 предложения): что предлагаешь по задаче Босса, что важно учесть, где риск.
-Обращайся к ${B} по имени. Без приветствий, без пересказа задачи, без вопросов к Боссу.
-Правила Штаба выше ГЛАВНЕЕ роли: инструменты, формат ответа и запреты действуют.`;
-        const aUser = `ЗАДАЧА БОССА: ${topic}\n\n` + (log.length ? `ЧТО УЖЕ СКАЗАНО В ДИАЛОГЕ:\n${asLog()}\n\n` : '(диалог только начинается — ты первый)\n\n') + 'Твоя реплика:';
-        const aText = await tandemAsk(A, aSys, aUser);
-        if (!aText) break;
-        log.push({ who: A, text: aText });
-        await tandemSpeak(A, aText);
-
-        // --- Голос B ---
-        const dirB = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[B]) || '';
-        const bSys = SYSTEM_PROMPT + `\n\n=== РЕЖИМ ТАНДЕМ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\nТы — ${B}, агент Штаба. ${dirB}
-Ты ГЛАВНЫЙ в тандеме, ${A} — твоя ПРАВАЯ РУКА. Ты ведёшь задачу и отвечаешь за результат.
-Ты работаешь В ТАНДЕМЕ с ${A}. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
-Ответь ${A} коротко (2–4 предложения): согласен или нет, что добавляешь, что решаем.
-Обращайся к ${A} по имени. Без приветствий и без вопросов к Боссу.`;
-        const bUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ:\n${asLog()}\n\nТвоя реплика (ответ ${A}):`;
-        const bText = await tandemAsk(B, bSys, bUser);
-        if (!bText) break;
-        log.push({ who: B, text: bText });
-        await tandemSpeak(B, bText);
-    }
-
-    if (!log.length) return false;   // ни один голос не ответил — пусть сработает надзиратель/пинок
-
-    // --- ИТОГ: второй голос собирает общий результат ---
-    renderMessage('🧩 *[Тандем: диалог закончен — ' + B + ' собирает общий результат.]*', 'director', 'Оркестратор');
-    const dirBF = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[B]) || '';
-    const finalSys = SYSTEM_PROMPT + `\n\n=== РЕЖИМ ТАНДЕМ: ИТОГ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\nТы — ${B}, агент Штаба. ${dirBF}
-Ты ГЛАВНЫЙ в тандеме, ${A} — твоя правая рука. Итог даёшь ты, от своего имени.
-Ты вместе с ${A} обсудил задачу Босса. Ниже — ваш диалог.
-Дай Боссу ОБЩИЙ ИТОГ: что решили, что делаем, конкретные шаги или код.
-Работай инструментами Штаба сам: задача про код/файл/ссылку — делай её и отчитывайся «что сделал, где, ссылка».
-Без пересказа диалога, без приветствий, без вопросов.`;
-    const finalUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ С ${A}:\n${asLog()}\n\nИтоговый ответ Боссу:`;
-    const finalText = await tandemAsk(B, finalSys, finalUser, 180000);
-
-    if (!finalText) {
-        renderMessage('❌ **Тандем: итоговый ответ не пришёл.**', 'director', 'Оркестратор');
-        return false;
-    }
-    await tandemSpeak(B, finalText, true);
-    renderMessage(modelBadgeText(mA), 'director', 'Оркестратор');
-    renderMessage(modelBadgeText(mB), 'director', 'Оркестратор');
-    return true;
-}
-window.runTandemTurn = runTandemTurn;
-
 /* --- СТОРОЖ ТИШИНЫ ---
    Проверяет чат каждые 3 секунды, а не только по таймеру:
    1) ответа в чате нет вообще и прошло больше STALL_TIMEOUT_MS → пинок;
@@ -1049,9 +798,8 @@ function fireAutoKick(reason) {
     renderMessage(`⚡ *[Система: ${reason} — авто-пинок ${stallKicks}/${STALL_MAX_KICKS}. Пишу «продолжи» от имени Босса.]*`, 'director', 'Оркестратор');
     renderMessage('продолжи', 'boss'); addMessageToHistory('продолжи', 'boss');
     stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
-    // НАДЗИРАТЕЛЬ: авто-пинок — это НЕ молчание. Агент жив, задача остаётся у него
-    // (у того, чья карточка выбрана, а не всегда у Архитектора).
-    if (typeof supResume === 'function') supResume(currentOwnerAgent);
+    // НАДЗИРАТЕЛЬ: авто-пинок — это НЕ молчание. Агент жив, задача остаётся у него.
+    if (typeof supResume === 'function') supResume('arch');
     setTimeout(() => sendMessage('продолжи', true), 900);   // sendMessage сам перезапустит сторожа, пока пинков меньше лимита
     return true;
 }
@@ -1343,19 +1091,9 @@ function handleImageSelect(event) {
    Плюс: главный запрос уходит БЕЗ картинки — иначе сервер снова
    уводит всё в зрение и отвечает описанием вместо решения задачи. */
 const VISION_PROMPT = 'Опиши это изображение максимально подробно и технически. Что за изделие или чертёж; сколько секций/створок; какая где открывается (глухая, поворотная, поворотно-откидная, откидная); где ручки и петли; какие размеры, цифры и надписи видны; как расположены элементы и линии. Только факты, списком, без вступлений и без вопросов.';
-/* --- ФОТО ИДЁТ ЧЕРЕЗ ZV-КЛЮЧ (ЗРЕНИЕ) ---
-   Босс: просмотр фото работает на том же ключе-роутере Zveno (ZV route),
-   что и Архитектор с бесплатными моделями. Ключ не введён — зрение не
-   работает, в чат летит предупреждение, запрос НЕ уходит. Никакой подмены
-   на серверный ключ. Модель зрения — 'zveno' (роутер сам ведёт в vision). */
 async function describeAttachedImage(base64) {
     if (!base64) return null;
     if (!takeTurnCall()) return null;   // бюджет запросов на вопрос исчерпан — зрение не тратим
-    // Ключ ZV route обязателен: нет ключа — фото не разбираем.
-    if (!modelKeyOk('zveno')) {
-        renderMessage('⚠️ **Фото не разобрано: ключ ' + modelKeyLabel('zveno') + ' не введён.** Открой 🔑 API Ключи.', 'director', 'Оркестратор');
-        return null;
-    }
     try {
         let vKeys = {};
         try { vKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
@@ -1364,7 +1102,7 @@ async function describeAttachedImage(base64) {
             body: JSON.stringify({
                 messages: [{ role: 'user', content: VISION_PROMPT }],
                 temperature: 0.2,
-                model: 'zveno',   // зрение — через ZV route (ключ freeKey)
+                model: (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(selectedAIModel) : selectedAIModel,
                 userKeys: vKeys, freeKey: vKeys.freeKey || '',
                 image: base64, isBoss: true
             }),
@@ -1528,25 +1266,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         stopSendTimer();   // старый секундомер гасим сразу, не ждём нового старта
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
-    /* --- НИКТО НЕ ВЫБРАН → НИКТО НЕ РАБОТАЕТ ---
-       Босс: пустая панель — это НЕ «просто кнопка» и НЕ Архитектор по умолчанию.
-       Ни одна карточка не выбрана — Надзиратель задачу НЕ берёт (supStart не зовётся),
-       запрос никуда не уходит, в чат летит «Выберите Агента», текст остаётся в поле.
-       Правило только для сообщения Босса: авто-пинки и «продолжи этап» не блокируем. */
-    if (!overrideText && !isKick && (!Array.isArray(selectedAgents) || selectedAgents.length === 0)) {
-        renderMessage('⚠️ **Выберите Агента.** Ни одна карточка не выбрана — работать некому.\n\nТапни карточку в панели: 👑 Оркестратор, 📐 Архитектор, 🕵️ Хакер, 🧐 Критик, 🤖 GigaChat.', 'director', 'Оркестратор');
-        return;
-    }
-    /* --- НИ МОДЕЛЬ, НИ КАРТОЧКА СО СВОИМ МАРШРУТОМ → НИЧЕГО НЕ РАБОТАЕТ ---
-       Босс: дефолтной модели больше нет. Выбрана карточка без своего маршрута
-       (например Дизайнер) и модель не выбрана — запрос никуда не уходит.
-       Работает только явный выбор Босса: модель на 🧠/🆓 ИЛИ карточка со
-       своим маршрутом (у неё своя модель и свой ключ). */
-    const cardRouteReady = Array.isArray(selectedAgents) && selectedAgents.length > 0 && selectedAgents.every(a => !!agentRoute(a));
-    if (!overrideText && !isKick && !selectedAIModel && !cardRouteReady) {
-        renderMessage('⚠️ **Выберите модель.** Ни модель, ни карточка со своим маршрутом не выбраны — работать нечем.\n\nТапни 🧠 Платные или 🆓 Бесплатные (долгое нажатие — список моделей), либо карточку: 👑 Оркестратор, 📐 Архитектор, 🕵️ Хакер, 🧐 Критик, 🤖 GigaChat.', 'director', 'Оркестратор');
-        return;
-    }
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
@@ -1561,11 +1280,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearAttachPreview();
     }
 
-    // Карточка выбрана → работает она. Никто не выбран → сюда не доходим (стоп-кран выше).
-    const activeAgent = (typeof isTandemMode === 'function' && isTandemMode()) ? tandemLead() : (selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор');
-    currentOwnerAgent = activeAgent;
-    // НАДЗИРАТЕЛЬ: задачу ведёт ТОТ агент, чья карточка выбрана (а не всегда Архитектор).
-    if (!overrideText && !isKick && typeof supStart === 'function') supStart(text, activeAgent);
+    // НАДЗИРАТЕЛЬ: задачу ведёт Архитектор — пишем в журнал.
+    if (!overrideText && !isKick && typeof supStart === 'function') supStart(text, 'arch');
     isGenerating = true; lastSendSuccess = false; const mySeq = ++sendSeq;
     // Сторож тишины стартует ТОЛЬКО когда Босс сам нажал «Отправить».
     // Авто-пинки и системные дозапросы сторож не перезапускают.
@@ -1573,17 +1289,14 @@ async function sendMessage(overrideText = null, isKick = false) {
     // startButtonWatchdog() больше НЕ запускается: он писал в ту же кнопку своим отсчётом
     // и накладывался на основной счётчик — отсюда прыжки цифр и зашкал за 500 с.
     // Тишину ловит сторож тишины, заморозку счётчика — timer-freeze, жёсткий предел — hard.
-    // 🤝 ТАНДЕМ: сторожа тишины/обрыва НЕ запускаем — диалог идёт долго и состоит
-    // из коротких реплик, сторож принял бы их за «оборванный ответ» и оборвал диалог.
-    if (typeof isTandemMode === 'function' && isTandemMode()) { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
-    else if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
+    if (!overrideText && !isKick) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else if (isKick && stallKicks < STALL_MAX_KICKS) { startStallWatchdog(); startTimerFreezeWatchdog(); startHardWatchdog(); } else { stopButtonWatchdog(); stopStallWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog(); }
     sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = "12px";
     const timeBadge = document.getElementById('final-time-badge'); if (timeBadge) timeBadge.classList.remove('show'); 
     const startTime = sendStartTime = Date.now();
     startSendTimer();                      // один счётчик на всё приложение, без наложения
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
-    // activeAgent посчитан выше и уже отдан Надзирателю — здесь только подсветка карточки.
+    const activeAgent = selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор';
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
@@ -1599,23 +1312,6 @@ async function sendMessage(overrideText = null, isKick = false) {
     const timeoutId = setTimeout(() => myCtrl.abort(), 330000); clearTimeout(watchdogTimer);
 
     try {
-        // 🤝 ТАНДЕМ: выбраны GigaChat И Архитектор — сначала их диалог между собой,
-        // потом общий итог. Обычный путь (Совет/один агент) в этом режиме не работает.
-        if (typeof isTandemMode === 'function' && isTandemMode()) {
-            const tandemOk = await runTandemTurn(text, isKick);
-            if (tandemOk) {
-                lastSendSuccess = true;
-                if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
-                if (typeof supAnswered === 'function') supAnswered(activeAgent);
-                playSound('receive'); stallKicks = 0;
-                stopStallWatchdog(); stopButtonWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
-                const elAiT = document.getElementById('status-ai'); if (elAiT) elAiT.className = 'status-item online';
-                return;
-            }
-            // Тандем не дал ни одной реплики (сбой сети/лимит) — отдаём задачу надзирателю.
-            if (typeof supFailed === 'function') supFailed(activeAgent, 'тандем не ответил');
-            return;
-        }
         let success = false; let aiText = ""; let lastError = ""; let usedModel = "";
         
         let userKeys = {};
@@ -1633,17 +1329,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
         // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
         if (selectedAIModel === 'gigachat') hasAnyKeys = true;
-        /* --- КАРТОЧКА GIGACHAT РАБОТАЕТ БЕЗ КЛЮЧЕЙ НА ЛЮБОМ УСТРОЙСТВЕ ---
-           Босс: на другом телефоне выбрал карточку GigaChat, а Штаб ответил
-           «API-ключи не нужны / не найдены». Причина — гейт hasAnyKeys смотрел
-           ТОЛЬКО на кнопку модели (shtabAIModel в localStorage), а на новом
-           устройстве там по умолчанию 'yandex' → ключей нет → запрос не уходил,
-           хотя маршрут карточки (gigachat) вообще ключа не требует.
-           Теперь карточка со своим маршрутом тоже открывает гейт: ключ не нужен —
-           значит ключи не запрашиваем. */
-        const cardRouteModel = (Array.isArray(selectedAgents) && selectedAgents.includes('GigaChat')) ? 'gigachat'
-            : ((Array.isArray(selectedAgents) && selectedAgents.length === 1 && agentRoute(selectedAgents[0])) ? agentRoute(selectedAgents[0]).model : null);
-        if (cardRouteModel && modelKeyField(cardRouteModel) === null) hasAnyKeys = true;
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
@@ -1686,74 +1371,30 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
                 if (selectedAgents.length > 0) {
-                    /* --- КАРТОЧКА НЕ ПОДМЕНЯЕТ ПРОМПТ ШТАБА ---
-                       Босс: при выборе карточки включался ДРУГОЙ промпт — роль
-                       агента вставала ПЕРЕД промптом Штаба и перебивала его
-                       (Оркестратор начинал «разбивать на шаги и назначать
-                       исполнителей» вместо работы Архитектора).
-                       Теперь промпт Штаба (SYSTEM_PROMPT) — ГЛАВНЫЙ и идёт первым,
-                       а роль карточки — только ДОПОЛНЕНИЕ к нему, не замена. */
-                    let agentPrompt = `[РОЛЬ]: ${selectedAgents.join(', ')}.\n`;
+                    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
                     if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
-                    /* --- ОДНА КАРТОЧКА = ПОЛНЫЙ КОНТРОЛЬ ШТАБА ---
-                       Босс: выбрал ОДНОГО агента (например GigaChat) — он должен
-                       получать ВЕСЬ промпт Штаба и ЗАМЕНЯТЬ Архитектора, а не быть
-                       «только тоном». Теперь выбранный агент получает полный набор:
-                       тот же SYSTEM_PROMPT (он уже выше), те же инструменты, тот же
-                       формат ответа и те же запреты. Карточка добавляет только тон. */
-                    else agentPrompt += `Ты — ${selectedAgents[0]}. Ты ЗАМЕНЯЕШЬ Архитектора Штаба и получаешь ПОЛНЫЙ контроль Штаба — ровно как он.
-У тебя ТЕ ЖЕ инструменты: read_file, replace_in_file (главный), write_file, search_web, get_weather, search_image, create_github_repo, list_github_repos, list_repo_files, delete_file, enable_github_pages.
-У тебя ТОТ ЖЕ формат ответа: «что сделал, где, ссылка». Те же запреты: без «сейчас сделаю», «приступаю», «подожди», без пересказа кода и промпта.
-Задача про код, файл, репозиторий или ссылку — делай её САМ инструментами и отчитывайся. Не советуй и не пересказывай — РАБОТАЙ.
-Твоя карточка задаёт ТОЛЬКО тон и зону ответственности. Правила Штаба выше и главнее её.\n`;
+                    else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
                     selectedAgents.forEach(agentName => {
                         let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-                        agentPrompt += `[ДОПОЛНЕНИЕ К РОЛИ ${agentName}]: ${directive}\n`;
-                        if (customPrompts[agentName]) {
-                            /* --- ПРОМПТ КАРТОЧКИ НЕ ПЕРЕБИВАЕТ ПРОМПТ ШТАБА ---
-                               Босс: у карточки (в т.ч. Оркестратор) вписан свой промпт,
-                               и он перебивал промпт Штаба. Теперь он режется до 400
-                               символов и идёт ТОЛЬКО как тон/характер. */
-                            const cp = String(customPrompts[agentName] || '').slice(0, 400);
-                            agentPrompt += `[ТОН/ХАРАКТЕР ${agentName} — НЕ ЗАМЕНА правил Штаба]: ${cp}\n`;
-                        }
+                        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                        if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
                     });
-                    finalPrompt = finalPrompt + "\n\n=== РОЛЬ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\n" + agentPrompt + "ЖЁСТКО: правила выше (Архитектор Штаба) ГЛАВНЕЕ любой роли и любого характера карточки. Промпт карточки задаёт только тон и зону ответственности — он НЕ отменяет инструменты, формат ответа и запреты Штаба. Противоречие — выполняй Штаб.\n";
+                    finalPrompt = agentPrompt + "\n" + finalPrompt;
                 }
                 
                 if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
                 let modelToUse = selectedAIModel;
-                // --- КАРТОЧКА → МОДЕЛЬ (реестр маршрутов) ---
-                // Выбрана ОДНА карточка со своим маршрутом — уходит ЕЁ модель:
-                // GigaChat → Сбер, Хакер → DeepSeek, Критик → Yandex, Архитектор → Zveno.
-                if (selectedAgents.length === 1 && agentRoute(selectedAgents[0])) modelToUse = agentRoute(selectedAgents[0]).model;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                /* --- КАРТОЧКА ГЛАВНЕЕ СЕКРЕТ-КЛЮЧА ---
-                   Босс: выбрал карточку GigaChat, а отвечал Zveno («из Вены»).
-                   Причина — секрет-ключ (deepseekKey = "zveno"/"boss") стоял
-                   ПОСЛЕ карточки и молча подменял модель на платную Zveno.
-                   Теперь секрет-ключ включает Zveno ТОЛЬКО когда карточка
-                   не выбрана: выбрана карточка — работает ЕЁ модель. */
-                if (isBossSecret && selectedAgents.length === 0) modelToUse = 'zveno';
-                // АВТОПОДМЕНЫ НЕТ: платная модель не подменяется бесплатной молча.
-                // Нет ключа под модель — предупреждение и стоп (проверка ниже).
+                if (isBossSecret) modelToUse = 'zveno';
+                // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
+                if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
                 // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
                 // Раньше секрет-ключ (deepseekKey = "zveno"/"boss") молча подменял выбор на
                 // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
                 // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
                 const selModelInfo = getModelInfo(selectedAIModel);
-                /* --- КАРТОЧКА ГЛАВНЕЕ КНОПКИ МОДЕЛИ ---
-                   Босс: выбрана карточка GigaChat (или другая со своим маршрутом),
-                   а бесплатная модель с кнопки молча перебивала её — отвечал не Сбер.
-                   Теперь кнопка модели работает ТОЛЬКО когда у карточки нет своего
-                   маршрута в AGENT_ROUTES. */
-                const cardHasRoute = (selectedAgents.length === 1 && !!agentRoute(selectedAgents[0])) || selectedAgents.includes('GigaChat');
-                if (selModelInfo && selModelInfo.free && selectedAgents.length > 0 && !cardHasRoute) modelToUse = selectedAIModel;
-                // --- НИКТО НЕ ВЫБРАН → СТОП ---
-                // Босс: пустая панель — работать некому. Запрос сюда уже не доходит:
-                // в начале sendMessage стоит стоп-кран «Выберите Агента».
-                // Подмены на Zveno БОЛЬШЕ НЕТ — иначе задача молча уходила Архитектору.
+                if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
                 // ЖЁСТКАЯ ГАРАНТИЯ №2: кнопка 🟣 GigaChat включена — на сервер уходит
                 // ИМЕННО "gigachat". Тот же секрет-ключ Босса (deepseekKey = "zveno"/"boss")
                 // подменял выбор на платную Zveno — из-за этого кнопка GigaChat «не работала»:
@@ -1768,23 +1409,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 let maxAttempts = 3; 
                 let currentAttempt = 0;
 
-                // --- ПРОВЕРКА КЛЮЧА ПОД ВЫБРАННУЮ МОДЕЛЬ ---
-                // Ключ не введён — модель не работает. Запрос НЕ уходит,
-                // никаких подмен на серверный ключ и автопереключений.
-                /* --- МОДЕЛЬ НЕ ВЫБРАНА → СТОП (дефолта больше нет) ---
-                   Карточка без своего маршрута + пустой выбор модели: запрос
-                   с пустой моделью на сервер НЕ уходит. */
-                if (!modelToUse) {
-                    lastError = 'Модель не выбрана. Тапни 🧠 Платные или 🆓 Бесплатные (долгое нажатие — список моделей).';
-                    renderMessage('⚠️ **' + lastError + '**', 'director', 'Оркестратор');
-                }
-                const keyOk = isBossSecret || (!!modelToUse && modelKeyOk(modelToUse));
-                if (modelToUse && !keyOk) {
-                    lastError = 'Модель ' + getModelInfo(usedModel).label + ': ключ не введён (' + modelKeyLabel(modelToUse) + '). Открой 🔑 API Ключи.';
-                    renderMessage('⚠️ **' + lastError + '**', 'director', 'Оркестратор');
-                }
-
-                while (keyOk && currentAttempt < maxAttempts) {
+                while (currentAttempt < maxAttempts) {
                     currentAttempt++;
                     if (!takeTurnCall()) { lastError = 'Лимит запросов на один вопрос исчерпан (экономия баланса).'; break; }
                     currentMessages = trimHistory(currentMessages);
@@ -1894,7 +1519,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (!isKick) {
                     // НАДЗИРАТЕЛЬ: пустой ответ = задача не сделана. Передаём её
                     // бесплатной модели Штаба, а не пинаем того же самого ещё раз.
-                    if (typeof supFailed === 'function') { supFailed(activeAgent, emptyWhy); return; }
+                    if (typeof supFailed === 'function') { supFailed('arch', emptyWhy); return; }
                     fireAutoKick(emptyWhy); return;
                 }
                 renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
@@ -1902,7 +1527,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             lastSendSuccess = true;
             // НАДЗИРАТЕЛЬ: Архитектор ответил — задача закрыта, агент жив.
             if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
-            if (typeof supAnswered === 'function') supAnswered(activeAgent);
+            if (typeof supAnswered === 'function') supAnswered('arch');
             playSound('receive'); stallKicks = 0; stopStallWatchdog(); stopButtonWatchdog();
             try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
             const fileMatch = aiText.match(/\[FILE:\s*([^\]]+)\]/);
@@ -1924,7 +1549,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             aiText = aiText.replace(taskRegex, '').trim();
             tasksToRun.forEach(t => { if (typeof updateAgentStatus === 'function') updateAgentStatus(t.agent, 'working'); runBackgroundTask(t.agent, t.task); });
             
-            addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Архитектор'));
+            addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
             if (usedModel) renderMessage(modelBadgeText(usedModel), 'director', 'Оркестратор');
@@ -1941,7 +1566,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 const nextStageText = `продолжи этап ${stage.cur + 1} из ${stage.total}`;
                 renderMessage(nextStageText, 'boss'); addMessageToHistory(nextStageText, 'boss');
                 // НАДЗИРАТЕЛЬ: идёт следующий этап большой задачи — агент жив, передавать нельзя.
-                if (typeof supResume === 'function') supResume(currentOwnerAgent);
+                if (typeof supResume === 'function') supResume('arch');
                 setTimeout(() => sendMessage(nextStageText, true), 900);
             }
             // Ответ пришёл, но оборван на середине ИЛИ сервер упёрся в лимит шагов — просим продолжить.
@@ -1954,7 +1579,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                    Отдаём задачу надзирателю — он передаст её
                    бесплатной модели Штаба. */
                 if (isTooManySteps(aiText) && typeof supFailed === 'function') {
-                    supFailed(activeAgent, 'упёрся в лимит шагов');
+                    supFailed('arch', 'упёрся в лимит шагов');
                 } else {
                 stallKicks++;
                 markKickSent();
@@ -1979,7 +1604,7 @@ async function sendMessage(overrideText = null, isKick = false) {
 
         } else {
             // НАДЗИРАТЕЛЬ: Архитектор сорвался — помечаем сбой в журнале.
-            if (typeof supFailed === 'function') supFailed(activeAgent, lastError || 'сбой');
+            if (typeof supFailed === 'function') supFailed('arch', lastError || 'сбой');
             renderMessage(`❌ **Ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
@@ -2105,25 +1730,4 @@ function init() {
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
     if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
-    if (typeof syncTandemBtn === 'function') syncTandemBtn();   // кнопка 🤝 Тандем показывает сохранённое состояние
 }
-
-/* --- ДУБЛЬ tandemArchModel УБРАН ---
-   Здесь лежала ВТОРАЯ (перекрывающая) версия tandemArchModel — из-за неё
-   модель голоса тандема считалась двумя разными способами, и было непонятно,
-   кто реально отвечает. Теперь модель голоса одна на всё: tandemVoiceModel()
-   по реестру маршрутов AGENT_ROUTES. */
-
-/* --- ТАНДЕМ С ЛЮБОЙ ПАРОЙ (кнопка 🤝 убрана) ---
-   Босс: отдельный переключатель тандема не нужен. Тандем включается САМ,
-   когда в панели выбраны ДВЕ И БОЛЕЕ карточки. Жёсткой пары
-   «GigaChat + Архитектор» больше нет — работает любая пара.
-   Модель и ключ у каждого участника свои, по реестру AGENT_ROUTES.
-   Эта версия перекрывает прежнюю (объявлена ниже в файле — значит главная). */
-function isTandemMode() {
-    return Array.isArray(selectedAgents) && selectedAgents.length >= 2;
-}
-/* Кнопки 🤝 Тандем больше нет — состояние видно по зелёной подсветке карточек. */
-function syncTandemBtn() { /* кнопки нет — ничего не рисуем */ }
-/* Старый флаг shtabTandem больше не выключает тандем: он всегда разрешён. */
-try { localStorage.setItem('shtabTandem', 'on'); } catch (e) {}
