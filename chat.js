@@ -1411,6 +1411,12 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+        /* 🅰️ СВОЙ КЛЮЧ АРХИТЕКТОРА — отдельно от общих.
+           Уходит на сервер в userKeys.architectKey и только при выбранном ZVENO. */
+        if (typeof architectKey === 'function') {
+            const _ak = architectKey();
+            if (_ak && String(selectedAIModel || '') === 'zveno') userKeys.architectKey = _ak;
+        }
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
         let isBossSecret = false;
