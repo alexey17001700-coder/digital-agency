@@ -1831,4 +1831,11 @@ function init() {
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
     if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
+    if (typeof applyArchitectButton === 'function') applyArchitectButton(); // 🅰️ Архитектор: своя кнопка, своё состояние
+    // Страховка: выбрана ZVENO, а Архитектор выключен — уходим на разрешённую модель.
+    if (typeof architectEnabled === 'function' && !architectEnabled() && selectedAIModel === 'zveno') {
+        const _f = freeModels();
+        selectedAIModel = _f.length ? _f[0].id : 'gigachat';
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    }
 }
