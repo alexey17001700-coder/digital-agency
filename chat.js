@@ -1561,7 +1561,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             if (tandemOk) {
                 lastSendSuccess = true;
                 if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
-                if (typeof supAnswered === 'function') supAnswered('arch');
+                if (typeof supAnswered === 'function') supAnswered(activeAgent);
                 playSound('receive'); stallKicks = 0;
                 stopStallWatchdog(); stopButtonWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
                 const elAiT = document.getElementById('status-ai'); if (elAiT) elAiT.className = 'status-item online';
