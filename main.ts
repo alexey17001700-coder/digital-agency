@@ -1186,7 +1186,17 @@ function lastUserText(messages: any[]): string {
 }
 
 async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<string> {
-x
+    /* ⚡ ДУЭТ (приказ Босса): полная цепочка обсуждения, всё КОРОТКО.
+       ШАГ 1 🅰️ Zveno    — краткий черновик
+       ШАГ 2 🟣 GigaChat — ремарка
+       ШАГ 3 🅰️ Zveno    — уточнённый план (учёл ремарку)
+       ШАГ 4 🟣 GigaChat — вторая ремарка
+       ШАГ 5 🅰️ Zveno    — сводка: что берём в работу
+       ШАГ 6 🟣 GigaChat — проверка на ошибки
+       ШАГ 7 🅰️ Zveno    — проверка замечаний
+       ШАГ 8 🅰️ Zveno    — ФИНАЛ: делает работу, инструменты ВКЛЮЧЕНЫ
+       Шаги 1–7 идут БЕЗ инструментов и с жёстким лимитом токенов — бюджет цел.
+       Предел DUET_MAX_STEPS = 8: цикл конечный, ответ в него не возвращается. */
     const question = lastUserText(messages);
     const lines: { who: string, text: string }[] = [];
     let lastErr = "";
