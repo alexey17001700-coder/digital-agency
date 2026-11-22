@@ -10,13 +10,14 @@ const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 // БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход)
 // ВАЖНО: embed-модели сюда НЕ ВКЛЮЧАТЬ — они не умеют чат и дадут ошибку.
 // =========================================
-const FREE_TEXT_MODELS = [
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "recursive/flint-v1.0:free",
-];
+/* ❗ БЕСПЛАТНЫХ МОДЕЛЕЙ В ШТАБЕ БОЛЬШЕ НЕТ (приказ Босса).
+   Остались ДВА канала: 🅰️ Архитектор (ZVENO_MODEL, свой ключ) и 🟣 GigaChat.
+   Список бесплатных текстовых моделей ПУСТ намеренно — перебирать нечего. */
+const FREE_TEXT_MODELS: string[] = [];
 
+/* 👁 ЗРЕНИЕ АРХИТЕКТОРА — ОДНА модель, Босс её не выбирает.
+   Это «глаза» канала Архитектора: фото → описание → в контекст.
+   В списке моделей Штаба её нет и в переборе она не участвует. */
 const FREE_VISION_MODELS = [
     "nvidia/nemotron-3.5-super-vl:free",
 ];
