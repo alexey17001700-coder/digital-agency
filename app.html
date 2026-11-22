@@ -29,6 +29,12 @@
     .mode-switch .gear-btn.active { background: #00e5ff; color: #000; }
     </style>
     <script>
+        // СБОРКА САМОГО app.html (кадра Штаба). Нужна, чтобы плашка версии
+        // наверху не врала: она читает shtab_version.json с сервера и раньше
+        // показывала НОВУЮ версию, хотя в кадре крутился СТАРЫЙ app.html из кэша.
+        // Теперь ui.js сравнивает эту сборку с серверной и, если кадр устарел,
+        // перезагружает его в обход кэша.
+        window.SHTAB_APP_BUILD = 66;
         const timestamp = new Date().getTime();
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
 
