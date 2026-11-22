@@ -1955,6 +1955,28 @@ async function sendMessage(overrideText = null, isKick = false) {
                     lastError = 'Дуэт: один из каналов выключен';
                     return;
                 }
+                /* ⚡ ДУЭТ — ЖИВОЙ ДИАЛОГ (приказ Босса): шаги идут ПО ОДНОМУ,
+                   каждая реплика сразу в чат, после шага 7 — РЕШЕНИЕ и слово Босса.
+                   Полный ответ с инструментами делает Zveno на шаге 8. */
+                if (modelToUse === 'duet') {
+                    const dRes = await runDuetLive(text, trimHistory(messagesToSend), userKeys, myCtrl.signal);
+                    if (dRes && dRes.final) {
+                        lastSendSuccess = true; stallKicks = 0;
+                        try { localStorage.removeItem('shtabStallKicks'); localStorage.removeItem(kickGuardKey()); } catch (e) {}
+                        if (typeof window.supNoteActivity === 'function') window.supNoteActivity();
+                        if (typeof supAnswered === 'function') supAnswered('arch');
+                        playSound('receive');
+                        if (elAi) elAi.className = 'status-item online';
+                    } else {
+                        lastError = (dRes && dRes.error) || 'Дуэт остановлен';
+                        if (typeof supFailed === 'function') supFailed('arch', lastError);
+                        renderMessage('⚡ *[' + lastError + ']*', 'director', 'Оркестратор');
+                        if (elAi) elAi.className = 'status-item offline';
+                    }
+                    stopStallWatchdog(); stopButtonWatchdog(); stopTimerFreezeWatchdog(); stopHardWatchdog();
+                    clearTimeout(timeoutId);
+                    return;
+                }
                 usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
