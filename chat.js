@@ -902,6 +902,9 @@ const DUET_STEP_META = {
     6: { who: 'giga',  name: '🟣 GigaChat', title: 'проверка на ошибки' },
     7: { who: 'zveno', name: '🅰️ Zveno', title: 'проверка замечаний' }
 };
+/* Ждём слово Босса в дуэте. Кнопка ⏹ (стоп) должна это ожидание разбудить,
+   иначе обещание зависнет навсегда и чат останется «в работе». */
+let duetDecisionResolver = null;
 function _injectDuetLiveCss() {
     if (document.getElementById('duetLiveCss')) return;
     const st = document.createElement('style'); st.id = 'duetLiveCss';
