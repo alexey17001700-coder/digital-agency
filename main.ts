@@ -1367,11 +1367,11 @@ async function duetStepOnce(
         case 1:
             return await zShort(DUET_BRIEF_PROMPT, `ВОПРОС БОССА:\n${q}`, DUET_BRIEF_TOKENS);
         case 2:
-            return await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${q}\n\nЧЕРНОВИК ZVENO:\n${t}`, DUET_REMARK_TOKENS);
+            return await gShort(DUET_DESIGN_PROMPT, `ВОПРОС БОССА:\n${q}\n\nЧЕРНОВИК ZVENO:\n${t}`, DUET_REMARK_TOKENS);
         case 3:
             return await zShort(DUET_PLAN_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_BRIEF_TOKENS);
         case 4:
-            return await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_REMARK_TOKENS);
+            return await gShort(DUET_3D_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_REMARK_TOKENS);
         case 5:
             return await zShort(DUET_SUMMARY_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_BRIEF_TOKENS);
         case 6:
