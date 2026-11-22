@@ -784,8 +784,9 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     const apiKey = isArchitect ? (archKey || envKey) : (isFreeReq ? (freeKey || envKey) : (envKey || freeKey));
     if (!apiKey) throw new Error(isArchitect ? "Ключ Архитектора не вписан (кнопка 🅰️ → «Сохранить ключ»)" : "ZVENO_API_KEY не задан");
     if (isArchitect) zlog(`[ARCHITECT] канал ZVENO, ключ: ${archKey ? "свой (Босс)" : "серверный"}`);
-    const tailModels = isArchitect ? [] : (isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS]);
-    for (const m of tailModels) if (!modelChain.includes(m)) modelChain.push(m);
+    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
+       Цепочка — РОВНО ОДНА модель: та, что выбрал Босс. Упала — наверх
+       уходит честная ошибка. Никаких «а дальше бесплатные / платный резерв». */
 
     // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
     // никаких паролей и ограничений. Флаг isBoss оставлен для совместимости.
