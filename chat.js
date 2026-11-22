@@ -93,9 +93,9 @@ let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
    на основной сервер Штаба с бесплатным маршрутом (0 ₽, без карты).
    Отдельного ИИ-шлюза :8002 больше нет — только PROXY. */
 async function sendToFreeModel(text) {
-    const freeList = (typeof freeModels === 'function') ? freeModels() : [];
-    const freeId = freeList.length ? freeList[0].id : '';
-    const freeLabel = freeList.length ? freeList[0].label : 'free';
+    const freeId = (typeof firstFreeId === 'function') ? firstFreeId() : '';
+    const freeInfo = (typeof getModelInfo === 'function') ? getModelInfo(freeId) : null;
+    const freeLabel = (freeInfo && freeInfo.label) ? freeInfo.label : 'free';
     try {
         const r = await fetch(PROXY, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
