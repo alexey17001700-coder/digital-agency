@@ -258,6 +258,7 @@ grep -c GIGACHAT_KEY /root/.env           # должно быть 1
 | `.nexus_env`, `.nexus_ws_env` | Отдельные env для Чата |
 | `Caddyfile`, `Caddyfile.bak2` | Конфиг Caddy + бэкап |
 | `nexus_ws/` | Сервер Чата, порт 8001 |
+| ~~`nexus_ws/ai.ts`~~ | **УДАЛЁН.** Шлюз «Помощника» (порт 8002) снят — в Штабе один чат. Если порт 8002 ещё слушает: `pkill -f "ai.ts"` |
 | `ssl/` | `cert.pem` + `key.pem` для Caddy |
 | `start_all.sh`, `start.sh`, `status.sh`, `sync.sh` | Скрипты запуска/статуса/курьера |
 | `shtab.log`, `chat.log`, `caddy.log`, `sync.log`, `zveno.log` | Логи по службам |
