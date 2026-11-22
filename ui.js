@@ -151,6 +151,9 @@ function applyFreeModelButton() {
     const btn = document.getElementById('btnFreeModel');
     if (!btn) return;
     const f = (typeof freeModels === 'function') ? freeModels() : [];
+    /* Бесплатных моделей в Штабе больше нет — кнопка 🆓 не нужна, прячем. */
+    if (!f.length) { btn.style.display = 'none'; return; }
+    btn.style.display = '';
     const cur = f.find(m => m.id === selectedAIModel);
     if (cur) {
         btn.innerText = '🆓 Бесплатные: ' + cur.label;
