@@ -1317,6 +1317,8 @@ Deno.serve(async (request) => {
         // ГЛАВНАЯ РУЧКА: ИИ
         if (body.messages) {
             const userKeys = body.userKeys || {};
+            /* 🟣 КЛЮЧ СБЕРА ИЗ ПОЛЯ ⚙️ (userKeys.gigachat). Пусто — серверный. */
+            const gcKey = String((userKeys && (userKeys.gigachat || userKeys.gigachatKey)) || "").trim();
             let aiText = "";
 
             const reqModel = typeof body.model === "string" ? body.model.trim() : "";
