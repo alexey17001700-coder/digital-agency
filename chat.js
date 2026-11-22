@@ -1471,7 +1471,18 @@ async function sendMessage(overrideText = null, isKick = false) {
                     }
                 }
 
-                let finalPrompt = SYSTEM_PROMPT;
+                // Определяем модель ДО сборки промпта: для GigaChat нужен нейтральный текст.
+                let modelToUse = selectedAIModel;
+                if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
+                // ПЕРЕБОРА МОДЕЛЕЙ НЕТ: на сервер уходит ровно та модель, что выбрана Боссом.
+                if (typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
+                // ЖЁСТКАЯ ГАРАНТИЯ: кнопка 🟣 GigaChat включена — на сервер уходит ИМЕННО "gigachat".
+                if (selectedAIModel === 'gigachat') modelToUse = 'gigachat';
+                // 🟣 GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: наш боевой промпт
+                // («сисадмин», «управляешь кодом», «Архитектор») её триггерит. Для неё — нейтральный текст.
+                // 🅰️ Zveno и остальные — боевой SYSTEM_PROMPT без изменений.
+                const isGigaChatTurn = String(modelToUse).indexOf('gigachat') !== -1;
+                let finalPrompt = isGigaChatTurn ? NEUTRAL_PROMPT : SYSTEM_PROMPT;
                 if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
                 if (selectedAgents.length > 0) {
