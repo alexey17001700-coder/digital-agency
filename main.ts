@@ -1354,7 +1354,13 @@ Deno.serve(async (request) => {
             let aiText = "";
 
             const reqModel = typeof body.model === "string" ? body.model.trim() : "";
-            zlog(`[REQ] model="${reqModel || "(не указана → Архитектор)"}" image=${!!body.image}`);
+            /* ⚡ ДУЭТ: клиент может прислать model="duet" ИЛИ массив моделей
+               ["zveno","gigachat"] — оба варианта означают одну и ту же цепочку. */
+            const modelList: string[] = Array.isArray(body.model)
+                ? body.model.map((m: any) => String(m || "").trim().toLowerCase()).filter(Boolean)
+                : (reqModel ? [reqModel.toLowerCase()] : []);
+            const isDuetReq = modelList.includes("duet") || (modelList.includes("zveno") && modelList.includes("gigachat"));
+            zlog(`[REQ] model="${reqModel || "(не указана → Архитектор)"}" duet=${isDuetReq} image=${!!body.image}`);
 
             /* ❗ ДВА КАНАЛА, ЛИНЕЙНО, БЕЗ ПЕРЕБОРА (приказ Босса).
                Инструменты (Tools) включены в ОБОИХ каналах. */
