@@ -37,7 +37,8 @@
     'use strict';
 
     const SUP_KEY = 'shtabSupervisor';
-    const SUP_LIMIT_MS = 300000;    // 300 с — лимит кнопки отправки: только после него передача по времени
+    const SUP_LIMIT_MS = 300000;      // 300 с — лимит кнопки отправки (одиночный ответ)
+    const SUP_DUET_LIMIT_MS = 600000; // ⚡ Дуэт: сервер гонит ДВА запроса подряд (Zveno → GigaChat) — ждём вдвое дольше
     const SUP_FREEZE_MS = 15000;    // счётчик не менялся 15 с — считаем застывшим
     const SUP_TICK_MS = 3000;       // проверка каждые 3 с
     const SUP_MAX_HANDOFFS = 2;     // не больше 2 передач на одну задачу (стоп-кран)
