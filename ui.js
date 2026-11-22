@@ -96,66 +96,8 @@ function setMode(mode) {
    В Штабе строго два канала: 🅰️ Zveno и 🟣 GigaChat.
    Списков моделей и перебора больше нет — эти кнопки не нужны. */
 
-/* --- КНОПКА 🆓 БЕСПЛАТНЫЕ ---
-   Листает ТОЛЬКО бесплатные модели (free: true). Платные не трогает.
-   Долгое нажатие — та же панель выбора моделей. */
-function applyFreeModelButton() {
-    const btn = document.getElementById('btnFreeModel');
-    if (!btn) return;
-    const f = (typeof freeModels === 'function') ? freeModels() : [];
-    /* Бесплатных моделей в Штабе больше нет — кнопка 🆓 не нужна, прячем. */
-    if (!f.length) {
-        btn.style.display = 'none';
-        if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
-        return;
-    }
-    btn.style.display = '';
-    const cur = f.find(m => m.id === selectedAIModel);
-    if (cur) {
-        btn.innerText = '🆓 Бесплатные: ' + cur.label;
-        btn.style.background = cur.color || '#333';
-        btn.style.color = cur.text || '#fff';
-    } else {
-        btn.innerText = '🆓 Бесплатные: ' + (f.length ? 'выбрать' : 'нет');
-        btn.style.background = '#333'; btn.style.color = '#aaa';
-    }
-    // Выбрали бесплатную — кнопка 🟣 GigaChat гаснет сама (состояние не врёт).
-    if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
-}
-
-function toggleFreeModel() {
-    const f = (typeof freeModels === 'function') ? freeModels() : [];
-    if (!f.length) {
-        if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатных моделей в списке нет.]*', 'director', 'Оркестратор');
-        return;
-    }
-    let idx = f.findIndex(m => m.id === selectedAIModel);
-    if (idx < 0) idx = -1;
-    selectedAIModel = f[(idx + 1) % f.length].id;
-    localStorage.setItem('shtabAIModel', selectedAIModel);
-    applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🆓 *[Система: бесплатная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
-}
-
-function bindFreeModelButton() {
-    const btn = document.getElementById('btnFreeModel');
-    if (!btn || btn.dataset.freeBound === '1') return;
-    btn.dataset.freeBound = '1';
-    let pressTimer = null, longPressed = false;
-    const start = () => { longPressed = false; pressTimer = setTimeout(() => { longPressed = true; openAIModelPanel(); }, 600); };
-    const cancel = () => { clearTimeout(pressTimer); };
-    btn.addEventListener('touchstart', start, { passive: true });
-    btn.addEventListener('touchend', cancel);
-    btn.addEventListener('touchcancel', cancel);
-    btn.addEventListener('mousedown', start);
-    btn.addEventListener('mouseup', cancel);
-    btn.addEventListener('mouseleave', cancel);
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (longPressed) { longPressed = false; return; }
-        toggleFreeModel();
-    });
-}
+/* --- ЛИСТАЛОК БЕСПЛАТНЫХ МОДЕЛЕЙ БОЛЬШЕ НЕТ ---
+   Кнопка 🆓 убрана вместе со списком бесплатных моделей. */
 
 function openAIModelPanel() {
     if (document.getElementById('aiModelPanel')) return;
