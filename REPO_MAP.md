@@ -49,7 +49,7 @@
 - `sync.sh` — синхронизация каждые 10 сек
 - `three.module.js` — Three.js
 - `ui.js` — интерфейс
-- `version.json`
+- `version.json` — счётчик правок **Калькулятора окон (window_calc)**, НЕ Штаба (с Штабом не перемешивается)
 - `voice.js` — голос
 - `watchdog.js` — сторож
 - `watchdog.sh` — сторож (shell)
@@ -149,7 +149,7 @@
 - `index.html`
 - `space.js`
 - `sw.js`
-- `version.json`
+- `version.json` — счётчик правок **Калькулятора окон (window_calc)**, НЕ Штаба (с Штабом не перемешивается)
 
 ## 20. racing_game — ГОНКИ
 - `README.md`
