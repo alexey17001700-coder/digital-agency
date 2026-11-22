@@ -972,8 +972,10 @@ async function callGigaChat(messages: any[], requestedModel: string = ""): Promi
             content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
         }));
 
+    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ: отвечает ОДНА версия GigaChat — выбранная
+       (или первая из списка). Упала — честная ошибка, без перебора версий. */
     const want = String(requestedModel || "").replace(/^gigachat[:\/]?/i, "").trim();
-    const chain = want ? [want, ...GIGACHAT_MODELS] : GIGACHAT_MODELS;
+    const chain = [want || GIGACHAT_MODELS[0]];
 
     let lastErr = "GigaChat не ответил";
     for (const model of chain) {
