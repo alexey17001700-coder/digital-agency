@@ -416,6 +416,13 @@ Vivo Y17 → Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL, 
 
 Проснись, Архитектор. Работай четко, быстро, без косяков. Босс ждет.`;
 
+/* --- НЕЙТРАЛЬНЫЙ ПРОМПТ ДЛЯ GIGACHAT (СБЕР) ---
+   GigaChat — корпоративная модель с жёсткими фильтрами. Наш боевой промпт
+   («сисадмин», «управляешь кодом», «Архитектор Штаба») её триггерит, и она
+   отказывается работать. Для GigaChat подставляем нейтральный текст.
+   Для Zveno и остальных моделей — боевой SYSTEM_PROMPT без изменений. */
+const NEUTRAL_PROMPT = "Ты — полезный ИИ-ассистент. Твоя задача — помогать пользователю с программированием, отвечать на вопросы и использовать доступные инструменты для работы с файлами. Отвечай четко и по делу.";
+
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
 
