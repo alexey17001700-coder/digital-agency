@@ -2478,6 +2478,15 @@ function startScene(office) {
     // поэтому офис «просыпается» вразнобой, а не строем.
     agents.forEach((a) => { a.breakTimer = 0.4 + Math.random() * 20; });
 
+    // ЖИВЫЕ ФИГУРЫ (3D): отдаём сцену и список агентов наружу для office3d_life.js.
+    // Геттеры ленивые — на момент вызова scene и agents уже созданы, поэтому
+    // порядок объявлений в файле не ломается.
+    try {
+        window.__o3d = {
+            get scene() { try { return scene; } catch (e) { return null; } },
+            get agents() { try { return (typeof agents !== 'undefined') ? agents : null; } catch (e) { return null; } }
+        };
+    } catch (e) { /* без внешнего доступа офис работает как раньше */ }
     S = {
         renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office,
         setVisible: (v) => { vis = !!v; }
