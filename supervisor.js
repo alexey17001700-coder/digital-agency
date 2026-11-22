@@ -183,7 +183,7 @@
     function supHeartbeat(owner) {
         const st = supLoad();
         if (!st) return;
-        if (owner && !(st.parts && st.parts.length) && st.owner && owner !== st.owner) return;
+        if (owner && !(st.parts && st.parts.length) && st.owner && !supSameOwner(owner, st.owner)) return;
         st.lastSeen = Date.now();
         supSave(st);
     }
