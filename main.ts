@@ -1087,7 +1087,7 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
             const errText = await res.text();
             zlog(`[GIGACHAT-TOOLS] ${res.status}: ${errText.slice(0, 200)}`);
             // API ругается на tools — откат на обычный текст, чат не ломаем
-            return await callGigaChat(messages, model);
+            return await callGigaChat(messages, model, userKey);
         }
 
         const data = await res.json();
