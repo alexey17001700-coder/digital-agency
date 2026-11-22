@@ -609,6 +609,7 @@ function openModelSettingsPanel(id, onBack) {
 
     btn('🔌 Проверить связь с ключом', 'transparent', '#00e5ff', '#00e5ff', async () => {
         const v = String(keyInput.value || '').trim() || savedKey;
+        if (!v) { setMsg('Проверять нечего — ключ не вписан.', '#ffd700'); return; }
         setMsg('Проверяю…', '#8b98a5');
         try {
             const ctrl = new AbortController();
