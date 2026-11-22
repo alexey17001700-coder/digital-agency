@@ -648,7 +648,32 @@ function enhanceCodeBlocks(container) {
     });
 }
 
+/* --- КРАСИВОЕ ОКОШКО (HTML-ВИДЖЕТ ОТ МОДЕЛИ) ---
+   Обе модели (🅰️ Zveno и 🟣 GigaChat) могут вернуть готовый HTML-виджет,
+   обёрнутый в <div class='ai-widget'>. marked.parse пропускает сырой HTML
+   как есть (без экранирования), поэтому виджет рендерится одинаково для
+   обеих моделей. Здесь — только базовые стили карточки: если модель задала
+   свои inline-стили, они имеют приоритет и перекрывают эти. */
+function _injectWidgetCss() {
+    if (document.getElementById('aiWidgetCss')) return;
+    const st = document.createElement('style'); st.id = 'aiWidgetCss';
+    st.textContent = `
+    .ai-widget {
+        margin: 12px 0; padding: 16px 18px;
+        background: linear-gradient(145deg, rgba(0,229,255,.08), rgba(123,97,255,.08));
+        border: 1px solid rgba(0,229,255,.35); border-radius: 14px;
+        box-shadow: 0 6px 22px rgba(0,0,0,.28);
+        color: #e8f6ff; line-height: 1.5;
+    }
+    .ai-widget h1, .ai-widget h2, .ai-widget h3 { margin: 0 0 8px; color: #00e5ff; }
+    .ai-widget table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    .ai-widget th, .ai-widget td { padding: 6px 10px; border-bottom: 1px solid rgba(0,229,255,.18); text-align: left; }
+    .ai-widget img { max-width: 100%; border-radius: 10px; }
+    `;
+    document.head.appendChild(st);
+}
 function enhanceMediaInMessage(container) {
+    _injectWidgetCss();
     container.querySelectorAll('a').forEach(link => {
         const url = link.href;
         if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
