@@ -157,7 +157,11 @@ function applyFreeModelButton() {
     if (!btn) return;
     const f = (typeof freeModels === 'function') ? freeModels() : [];
     /* Бесплатных моделей в Штабе больше нет — кнопка 🆓 не нужна, прячем. */
-    if (!f.length) { btn.style.display = 'none'; return; }
+    if (!f.length) {
+        btn.style.display = 'none';
+        if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
+        return;
+    }
     btn.style.display = '';
     const cur = f.find(m => m.id === selectedAIModel);
     if (cur) {
