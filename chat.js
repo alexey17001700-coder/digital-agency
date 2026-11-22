@@ -1869,7 +1869,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                    Отдаём задачу надзирателю — он передаст её
                    бесплатной модели Штаба. */
                 if (isTooManySteps(aiText) && typeof supFailed === 'function') {
-                    supFailed('arch', 'упёрся в лимит шагов');
+                    supFailed(activeAgent, 'упёрся в лимит шагов');
                 } else {
                 stallKicks++;
                 markKickSent();
