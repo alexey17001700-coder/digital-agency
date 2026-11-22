@@ -894,7 +894,10 @@ async function callGigaChat(messages: any[], requestedModel: string = "", userKe
             "Accept": "application/json",
             "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
+        // maxTokens > 0 — жёсткий лимит длины (дуэт: короткая ремарка, экономия баланса).
+        body: JSON.stringify(maxTokens > 0
+            ? { model, messages: clean, temperature: 0.5, max_tokens: maxTokens }
+            : { model, messages: clean, temperature: 0.5 }),
         client: getGigaChatClient(),
         signal: AbortSignal.timeout(FETCH_TIMEOUT),
     } as any);
