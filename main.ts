@@ -1330,10 +1330,13 @@ Deno.serve(async (request) => {
                 // Босс явно выбрал GigaChat — идём напрямую в Сбер.
                 // GigaChat-2 умеет инструменты → идём через callGigaChatTools
                 // (внутри сам откатится на текст, если модель старая или API ругнётся).
-                if (/gigachat-?2/i.test(reqModel) || body.useTools) {
-                    aiText = await callGigaChatTools(body.messages, reqModel);
+                /* Канал 🟣 «gigachat» без версии = GigaChat-2-Max → инструменты ВКЛЮЧЕНЫ.
+                   Раньше голый "gigachat" уходил в текстовый режим без tools,
+                   и модель писала вызовы инструментов ТЕКСТОМ в чат. */
+                if (body.useTools || /gigachat-?2/i.test(reqModel) || /^gigachat[:\/]?$/i.test(reqModel)) {
+                    aiText = await callGigaChatTools(body.messages, reqModel, gcKey);
                 } else {
-                    aiText = await callGigaChat(body.messages, reqModel);
+                    aiText = await callGigaChat(body.messages, reqModel, gcKey);
                 }
             } else {
                 // АВТОПЕРЕБОР НА GIGACHAT ОТКЛЮЧЁН (приказ Босса).
