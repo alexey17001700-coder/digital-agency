@@ -907,10 +907,21 @@ async function tandemSpeak(agentName, txt, plainHistory) {
    1) Диалог: GigaChat → Архитектор, TANDEM_ROUNDS раундов (каждый — свой запрос).
    2) Итог: Архитектор собирает общий результат и отдаёт Боссу. */
 async function runTandemTurn(topic, isKick) {
-    const A = 'GigaChat', B = 'Архитектор';
+    const pair = tandemPair();
+    if (!pair) return false;
+    const A = pair[0], B = pair[1];
+    const mA = tandemVoiceModel(A), mB = tandemVoiceModel(B);
+    // Ключ каждого голоса проверяем ДО запроса: нет ключа — этот голос не работает.
+    const bad = [];
+    if (!modelKeyOk(mA)) bad.push(A + ' → нет ключа ' + modelKeyLabel(mA));
+    if (!modelKeyOk(mB)) bad.push(B + ' → нет ключа ' + modelKeyLabel(mB));
+    if (bad.length) {
+        renderMessage('⚠️ **Тандем не запущен:**\n' + bad.map(x => '• ' + x).join('\n') + '\n\nОткрой 🔑 API Ключи.', 'director', 'Оркестратор');
+        return false;
+    }
     const log = [];
     const asLog = () => log.map(x => x.who + ': ' + x.text).join('\n');
-    renderMessage('🤝 *[Тандем: GigaChat и Архитектор сначала обсуждают задачу между собой, потом дают общий результат.]*', 'director', 'Оркестратор');
+    renderMessage('🤝 *[Тандем: ' + A + ' и ' + B + ' сначала обсуждают задачу между собой, потом ' + B + ' даёт общий результат.]*', 'director', 'Оркестратор');
 
     for (let r = 1; r <= TANDEM_ROUNDS; r++) {
         // --- GigaChat ---
