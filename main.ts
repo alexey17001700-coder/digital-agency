@@ -768,14 +768,23 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     // Раньше здесь стоял ZVENO_MODEL (платный deepseek) — при пустом body.model
     // запрос молча уходил на платный маршрут и кушал баланс.
     const effectiveModel = reqModel || FREE_TEXT_MODELS[0];
-    modelChain.push(effectiveModel);
 
-    const isFreeReq = effectiveModel.endsWith(":free") || FREE_TEXT_MODELS.includes(effectiveModel);
+    /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ (model="zveno").
+       Работает ТОЛЬКО своей моделью ZVENO_MODEL и ТОЛЬКО своим ключом
+       (architectKey, если вписан; иначе серверный). Ни бесплатных маршрутов,
+       ни чужих ключей: упал — честная ошибка, без подмены другой моделью.
+       Так бюджет Архитектора и общий пул бесплатных моделей не смешиваются. */
+    const isArchitect = effectiveModel === "zveno";
+    modelChain.push(isArchitect ? ZVENO_MODEL : effectiveModel);
+
+    const isFreeReq = !isArchitect && (effectiveModel.endsWith(":free") || FREE_TEXT_MODELS.includes(effectiveModel));
     // Бесплатный маршрут — ключ бесплатный (если Босс его вписал), иначе серверный.
     // Платный маршрут — серверный ключ, чтобы freeKey не ронял платную модель.
-    const apiKey = isFreeReq ? (freeKey || envKey) : (envKey || freeKey);
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
-    const tailModels = isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS];
+    // Архитектор — СВОЙ ключ (architectKey), общий пул его не трогает.
+    const apiKey = isArchitect ? (archKey || envKey) : (isFreeReq ? (freeKey || envKey) : (envKey || freeKey));
+    if (!apiKey) throw new Error(isArchitect ? "Ключ Архитектора не вписан (кнопка 🅰️ → «Сохранить ключ»)" : "ZVENO_API_KEY не задан");
+    if (isArchitect) zlog(`[ARCHITECT] канал ZVENO, ключ: ${archKey ? "свой (Босс)" : "серверный"}`);
+    const tailModels = isArchitect ? [] : (isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS]);
     for (const m of tailModels) if (!modelChain.includes(m)) modelChain.push(m);
 
     // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
