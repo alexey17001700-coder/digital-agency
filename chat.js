@@ -1844,10 +1844,9 @@ function init() {
         selectedAIModel = firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
-    /* Мёртвая или неизвестная модель в памяти (например деактивированная
-       платформой dots) — уводим на живую бесплатную. Иначе запрос падал
-       «model has been deactivated» сразу после выключения Архитектора. */
-    if (DEAD_MODEL_IDS.indexOf(selectedAIModel) !== -1 || !AI_MODELS.some(m => m.id === selectedAIModel)) {
+    /* Неизвестная модель в памяти (старые бесплатные, Ollama и т.п.) —
+       уводим на разрешённую: остались только 🅰️ Zveno и 🟣 GigaChat. */
+    if (!AI_MODELS.some(m => m.id === selectedAIModel)) {
         selectedAIModel = firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
