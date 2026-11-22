@@ -716,54 +716,20 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
 async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false, requestedModel: string = ""): Promise<string> {
-    const envKey = Deno.env.get("ZVENO_API_KEY");
-    const freeKey = (userKeys && userKeys.freeKey) || "";
-    /* 🅰️ СВОЙ КЛЮЧ АРХИТЕКТОРА — отдельно от общих (freeKey) и от серверного.
-       Приходит только с кнопки 🅰️ в userKeys.architectKey. */
-    /* Ключ Архитектора приходит как userKeys.architectKey. Алиас userKeys.zveno
-       принимаем как страховку (старый ui.js в кэше телефона / прямой вызов). */
-    const archKey = String((userKeys && (userKeys.architectKey || userKeys.zveno)) || "").trim();
+    /* 🅰️ КАНАЛ ZVENO — ЛИНЕЙНО, БЕЗ ПЕРЕБОРА И БЕЗ РЕЗЕРВОВ.
+       Ключ ВСЕГДА серверный: ZVENO_API_KEY из /root/.env. В коде ключей НЕТ.
+       Босс в Штабе вводит кодовое слово ("zveno") — оно лишь подтверждает
+       вход в канал; реальный ключ подставляет сервер. */
+    const apiKey = Deno.env.get("ZVENO_API_KEY");
+    if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
 
-    // ❗ ПЕРЕБОРА НЕТ: в цепочке РОВНО ОДНА модель — та, что выбрал Босс.
-    // Бесплатных маршрутов в Штабе больше нет (список FREE_TEXT_MODELS пуст).
-    const modelChain: string[] = [];
-    const reqModel = String(requestedModel || "").trim();
-    // ❗ НИКАКОГО ПЕРЕВОДА (приказ Босса): сервер НЕ подменяет модель.
-    // Отвечает РОВНО та, что выбрал Босс. Не пришла / пустая — честная
-    // ошибка наверх, без автоподстановки и без «ухода на Архитектора».
-    if (!reqModel) throw new Error("Модель не указана. Выбери модель в Штабе (🧠 МОДЕЛЬ ИИ).");
-    const effectiveModel = reqModel;
+    const codeWord = String((userKeys && (userKeys.architectKey || userKeys.zveno)) || "").trim();
+    zlog(`[ZVENO] канал Архитектора, модель ${ZVENO_MODEL}, ключ: серверный${codeWord ? ` (кодовое слово: ${codeWord.toLowerCase() === ZVENO_CODE_WORD ? "верное" : "иное"})` : ""}`);
 
-    /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ (model="zveno").
-       Работает ТОЛЬКО своей моделью ZVENO_MODEL и ТОЛЬКО своим ключом
-       (architectKey, если вписан; иначе серверный). Ни бесплатных маршрутов,
-       ни чужих ключей: упал — честная ошибка, без подмены другой моделью.
-       Так бюджет Архитектора и общий пул бесплатных моделей не смешиваются. */
-    const isArchitect = effectiveModel === "zveno";
-    modelChain.push(isArchitect ? ZVENO_MODEL : effectiveModel);
-
-    const isFreeReq = !isArchitect && (effectiveModel.endsWith(":free") || FREE_TEXT_MODELS.includes(effectiveModel));
-    // Бесплатный маршрут — ключ бесплатный (если Босс его вписал), иначе серверный.
-    // Платный маршрут — серверный ключ, чтобы freeKey не ронял платную модель.
-    // Архитектор — СВОЙ ключ (architectKey), общий пул его не трогает.
-    const apiKey = isArchitect ? (archKey || envKey) : (isFreeReq ? (freeKey || envKey) : (envKey || freeKey));
-    if (!apiKey) throw new Error(isArchitect ? "Ключ Архитектора не вписан (кнопка 🅰️ → «Сохранить ключ»)" : "ZVENO_API_KEY не задан");
-    if (isArchitect) zlog(`[ARCHITECT] канал ZVENO, ключ: ${archKey ? "свой (Босс)" : "серверный"}`);
-    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
-       Цепочка — РОВНО ОДНА модель: та, что выбрал Босс. Упала — наверх
-       уходит честная ошибка. Никаких «а дальше бесплатные / платный резерв». */
-
-    // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
-    // никаких паролей и ограничений. Флаг isBoss оставлен для совместимости.
+    const activeModel = ZVENO_MODEL;
     const activeTools: any[] = TOOLS;
-
-    let lastError = "Все модели не ответили";
-
-    for (let mi = 0; mi < modelChain.length; mi++) {
-        const activeModel = modelChain[mi];
-        let currentMessages = JSON.parse(JSON.stringify(messages));
-        let weatherCard = "";
-        let modelFailed = false;
+    const currentMessages = JSON.parse(JSON.stringify(messages));
+    let weatherCard = "";
 
     for (let loop = 0; loop < 20; loop++) {
         const payload: any = {
