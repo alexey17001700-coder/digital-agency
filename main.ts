@@ -914,15 +914,50 @@ async function callGigaChat(messages: any[], requestedModel: string = "", userKe
 
 // =========================================
 // GIGACHAT С ИНСТРУМЕНТАМИ (FUNCTION CALLING)
-// Работает ТОЛЬКО для GigaChat-2 и выше. Старые версии — откат на текст.
-// Отличия от OpenAI: одиночный function_call вместо tool_calls,
-// роль "function" + name вместо role:"tool" + tool_call_id.
+// ОФИЦИАЛЬНЫЙ ФОРМАТ СБЕРА (не OpenAI!):
+//   запрос:  functions: [{ name, description, parameters }], function_call: "auto"
+//   ответ:   choices[0].message.function_call = { name, arguments }
+//   возврат: { role: "function", name, content }
+// ❗ БЫЛ БАГ: отправляли OpenAI-обёртку tools:[{type:"function",function:{...}}]
+//    с tool_choice. Сбер её НЕ читает → инструменты игнорировались, и модель
+//    писала вызов ТЕКСТОМ в чат («Выполняю команду» + блок кода), а сервер
+//    не мог его распознать. Теперь формат строго по документации Сбера.
 // =========================================
+const GIGACHAT_FUNCTIONS = TOOLS.map((t: any) => t.function);
+
+// СТРАХОВКА: если Сбер всё же не отдал function_call, но модель написала вызов
+// ТЕКСТОМ (в блоке кода или одной строкой) — перехватываем и выполняем сами.
+function parseTextToolCall(text: string): { name: string, args: any } | null {
+    if (!text || text.length > 600) return null;
+    const names = TOOLS.map((t: any) => t.function.name);
+    const fences = text.match(/```[a-z]*\s*([\s\S]*?)```/gi) || [];
+    const candidates = fences.length
+        ? fences.map((f) => f.replace(/```[a-z]*/gi, "").trim())
+        : [text.trim()];
+    for (const cand of candidates) {
+        for (const nm of names) {
+            const m = cand.match(new RegExp("^" + nm + "\\s*\\(([\\s\\S]*)\\)\\s*$"));
+            if (!m) continue;
+            const raw = (m[1] || "").trim();
+            let args: any = {};
+            if (raw.startsWith("{")) {
+                try { args = JSON.parse(raw); } catch { continue; }
+            } else if (raw) {
+                const s = raw.replace(/^["'`]|["'`]$/g, "").trim();
+                const def = TOOLS.find((t: any) => t.function.name === nm);
+                const req = def?.function?.parameters?.required || [];
+                if (req.length === 1) args[req[0]] = s;
+                else if (req.length === 0) args = {};
+                else continue;
+            }
+            return { name: nm, args };
+        }
+    }
+    return null;
+}
+
 async function callGigaChatTools(messages: any[], requestedModel: string = "", userKey: string = ""): Promise<string> {
     const token = await gigachatToken(userKey);
-    /* КАНАЛ 🟣 (model="gigachat" без версии) = САМАЯ СИЛЬНАЯ версия GigaChat-2.
-       Был баг: "gigachat" не проходил проверку /gigachat-?2/ → инструменты
-       молча отключались, и модель рисовала команды ТЕКСТОМ в чат. */
     /* ❗ ОДНА модель, БЕЗ ПЕРЕБОРА: канал 🟣 = GigaChat-2-Max (умеет инструменты). */
     const model = GIGACHAT_MODEL;
 
@@ -931,7 +966,9 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
     const MAX_LOOPS = 15;
 
     // Приводим историю к формату Сбера: content ВСЕГДА строка,
-    // роль function обязательно с полем name.
+    // роль function обязательно с полем name,
+    // у ассистента СОХРАНЯЕМ function_call (иначе Сбер не свяжет
+    // результат инструмента с вызовом и проигнорирует историю).
     const toClean = (arr: any[]) => arr
         .filter((m: any) => ["system", "user", "assistant", "function"].includes(m.role))
         .map((m: any) => {
@@ -939,14 +976,16 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
                 return { role: "function", name: m.name, content: String(m.content) };
             }
             const c = m.content;
-            return {
+            const out: any = {
                 role: m.role,
                 content: typeof c === "string" ? c : (c == null ? "" : JSON.stringify(c)),
             };
+            if (m.role === "assistant" && m.function_call) out.function_call = m.function_call;
+            return out;
         });
 
     for (let loop = 0; loop < MAX_LOOPS; loop++) {
-        // 1. Отправляем запрос с инструментами
+        // 1. Отправляем запрос с инструментами в формате Сбера (functions)
         const res = await fetch(GIGACHAT_API_URL, {
             method: "POST",
             headers: {
@@ -958,8 +997,8 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
                 model,
                 messages: toClean(history),
                 temperature: 0.5,
-                tools: TOOLS,
-                tool_choice: "auto",
+                functions: GIGACHAT_FUNCTIONS,
+                function_call: "auto",
             }),
             client: getGigaChatClient(),
             signal: AbortSignal.timeout(FETCH_TIMEOUT),
@@ -976,33 +1015,60 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
         const msg = data?.choices?.[0]?.message;
         if (!msg) return "Пустой ответ от GigaChat";
 
-        // 2. Модель вызвала инструмент
-        if (msg.function_call) {
+        // 2. Модель вызвала инструмент.
+        //    Основной формат Сбера — message.function_call.
+        //    На случай OpenAI-совместимого ответа читаем и tool_calls.
+        const fc = msg.function_call || (Array.isArray(msg.tool_calls) && msg.tool_calls[0]
+            ? { name: msg.tool_calls[0].function?.name, arguments: msg.tool_calls[0].function?.arguments }
+            : null);
+
+        if (fc && fc.name) {
             let args: any = {};
-            try {
-                args = JSON.parse(msg.function_call.arguments || "{}");
-            } catch (e) {
-                zlog(`[GIGACHAT-TOOLS] кривой JSON аргументов: ${msg.function_call.arguments}`);
+            const rawArgs = fc.arguments;
+            if (typeof rawArgs === "string") {
+                try { args = JSON.parse(rawArgs || "{}"); } catch { args = {}; }
+            } else if (rawArgs && typeof rawArgs === "object") {
+                args = rawArgs;   // Сбер отдаёт arguments уже объектом
             }
 
-            zlog(`[GIGACHAT-TOOLS] вызов ${msg.function_call.name}(${JSON.stringify(args).slice(0, 100)})`);
+            zlog(`[GIGACHAT-TOOLS] вызов ${fc.name}(${JSON.stringify(args).slice(0, 100)})`);
 
             let toolResult = "";
             try {
-                toolResult = await executeTool(msg.function_call.name, args);
+                toolResult = await executeTool(fc.name, args);
             } catch (e: any) {
                 toolResult = `Ошибка выполнения инструмента: ${e?.message || e}`;
             }
 
             // Ответ ассистента (с function_call) + результат инструмента (role: function)
-            history.push({ role: "assistant", content: null, function_call: msg.function_call });
+            history.push({ role: "assistant", content: "", function_call: { name: fc.name, arguments: args } });
             history.push({
                 role: "function",
-                name: msg.function_call.name,
+                name: fc.name,
                 content: String(toolResult).slice(0, MAX_TOOL_RESULT),
             });
 
             continue; // модель должна осмыслить результат
+        }
+
+        // 2б. Сбер не отдал function_call, но модель написала вызов ТЕКСТОМ.
+        //     Перехватываем, выполняем и отдаём результат как сообщение user
+        //     (без role:"function" — иначе Сбер отвергнет «висячий» результат).
+        const textCall = parseTextToolCall(String(msg.content || ""));
+        if (textCall) {
+            zlog(`[GIGACHAT-TOOLS] текстовый вызов перехвачен: ${textCall.name}(${JSON.stringify(textCall.args).slice(0, 100)})`);
+            let toolResult = "";
+            try {
+                toolResult = await executeTool(textCall.name, textCall.args);
+            } catch (e: any) {
+                toolResult = `Ошибка выполнения инструмента: ${e?.message || e}`;
+            }
+            history.push({ role: "assistant", content: String(msg.content || "") });
+            history.push({
+                role: "user",
+                content: `[СИСТЕМА: результат инструмента ${textCall.name}]\n${String(toolResult).slice(0, MAX_TOOL_RESULT)}\n[СИСТЕМА: выдай финальный ответ Боссу ТЕКСТОМ, без вызовов инструментов.]`,
+            });
+            continue;
         }
 
         // 3. Вызова нет — это финальный ответ
@@ -1010,8 +1076,8 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
         return msg.content || "Пустой ответ";
     }
 
-    // Лимит шагов: финальный запрос БЕЗ tools, чтобы получить хоть какой-то текст
-    zlog("[GIGACHAT-TOOLS] лимит шагов — финальный запрос без tools");
+    // Лимит шагов: финальный запрос БЕЗ инструментов, чтобы получить хоть какой-то текст
+    zlog("[GIGACHAT-TOOLS] лимит шагов — финальный запрос без инструментов");
     const finalRes = await fetch(GIGACHAT_API_URL, {
         method: "POST",
         headers: {
