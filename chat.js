@@ -1576,8 +1576,8 @@ async function sendMessage(overrideText = null, isKick = false) {
             else if (!kickGuardActive() && (looksTruncated(aiText) || isTooManySteps(aiText)) && stallKicks < STALL_MAX_KICKS) {
                 /* --- ЛИМИТ ШАГОВ СЕРВЕРА = ЗАДАЧА НЕ СДЕЛАНА ---
                    Пинать тем же лимитом бесполезно: модель снова упрётся.
-                   Отдаём задачу надзирателю — он передаст её следующему
-                   агенту (Помощник → бесплатная модель). */
+                   Отдаём задачу надзирателю — он передаст её
+                   бесплатной модели Штаба. */
                 if (isTooManySteps(aiText) && typeof supFailed === 'function') {
                     supFailed('arch', 'упёрся в лимит шагов');
                 } else {
