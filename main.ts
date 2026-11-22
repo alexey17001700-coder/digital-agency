@@ -1310,6 +1310,85 @@ async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<
     return weatherCard ? weatherCard + "\n\n" + out : out;
 }
 
+/* =========================================
+   ⚡ ДУЭТ — ЖИВОЙ ДИАЛОГ ПО ШАГАМ (приказ Босса)
+   Раньше сервер гнал все 8 шагов подряд и отдавал готовый блок.
+   Теперь клиент зовёт шаги ПО ОДНОМУ (body.duetStep = 1..8) и рисует
+   каждую реплику в чате сразу, как она пришла. После шага 7 клиент
+   показывает РЕШЕНИЕ и ждёт слово Босса, и только потом зовёт шаг 8.
+   Шаги 1–7 — короткие, без инструментов, с лимитом токенов (бюджет цел).
+   Шаг 8 — финал Zveno с инструментами (файлы, поиск, погода).
+   ========================================= */
+async function duetStepOnce(
+    step: number,
+    question: string,
+    talk: string,
+    extra: string,
+    messages: any[],
+    userKeys: any,
+    gcKey: string,
+): Promise<string> {
+    /* Короткий шаг Zveno: свой промпт, лимит токенов, БЕЗ инструментов. */
+    const zShort = async (prompt: string, note: string, tokens: number): Promise<string> => {
+        const apiKey = Deno.env.get("ZVENO_API_KEY");
+        if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
+        const res = await fetch(ZVENO_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: ZVENO_MODEL,
+                messages: [{ role: "system", content: prompt }, { role: "user", content: note }],
+                temperature: 0.3, max_tokens: tokens, tools: [], tool_choice: "none"
+            }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(`Дуэт Zveno: ${data?.error?.message || res.status}`);
+        const t = data?.choices?.[0]?.message?.content;
+        if (!t) throw new Error("Дуэт Zveno: пустой ответ");
+        return String(t).trim();
+    };
+    /* Короткий шаг GigaChat: нейтральный промпт, лимит токенов, БЕЗ tools. */
+    const gShort = async (prompt: string, note: string, tokens: number): Promise<string> => {
+        return String(await callGigaChat([{ role: "system", content: prompt }, { role: "user", content: note }], "", gcKey, tokens)).trim();
+    };
+
+    const q = question || "(вопрос не передан)";
+    const t = talk || "(обсуждения пока нет)";
+
+    switch (step) {
+        case 1:
+            return await zShort(DUET_BRIEF_PROMPT, `ВОПРОС БОССА:\n${q}`, DUET_BRIEF_TOKENS);
+        case 2:
+            return await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${q}\n\nЧЕРНОВИК ZVENO:\n${t}`, DUET_REMARK_TOKENS);
+        case 3:
+            return await zShort(DUET_PLAN_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_BRIEF_TOKENS);
+        case 4:
+            return await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_REMARK_TOKENS);
+        case 5:
+            return await zShort(DUET_SUMMARY_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ:\n${t}`, DUET_BRIEF_TOKENS);
+        case 6:
+            return await gShort(DUET_ERRORS_PROMPT, `ВОПРОС БОССА:\n${q}\n\nПЛАН И ОБСУЖДЕНИЕ:\n${t}`, DUET_CHECK_TOKENS);
+        case 7:
+            return await zShort(DUET_VERIFY_PROMPT, `ВОПРОС БОССА:\n${q}\n\nОБСУЖДЕНИЕ И ПРОВЕРКА:\n${t}`, DUET_CHECK_TOKENS);
+        case 8: {
+            /* ФИНАЛ: Zveno делает работу. Инструменты ВКЛЮЧЕНЫ.
+               В конец истории добавляем обсуждение и ДОБАВКУ БОССА. */
+            const fm = JSON.parse(JSON.stringify(messages || []));
+            const si = fm.findIndex((m: any) => m.role === "system");
+            if (si !== -1) fm[si].content = DUET_FINAL_PROMPT;
+            else fm.unshift({ role: "system", content: DUET_FINAL_PROMPT });
+            let note = `[ОБСУЖДЕНИЕ ДУЭТА — учти, но в ответе Боссу НЕ пересказывай]\n${t}`;
+            if (extra && extra.trim()) note += `\n\n[ДОБАВКА БОССА — обязательна к учёту]\n${extra.trim()}`;
+            fm.push({ role: "user", content: note });
+            zlog(`[DUET] шаг 8 — финал Zveno (добавка Босса: ${extra && extra.trim() ? "есть" : "нет"})`);
+            return await callZvenoAI(fm, userKeys, true, "duet");
+        }
+        default:
+            throw new Error(`Неизвестный шаг дуэта: ${step}`);
+    }
+}
+
 /* ⚡ КОРОТКИЕ ПРОМПТЫ ДУЭТА (приказ Босса: обсуждение короткое, бюджет цел). */
 const DUET_CHECK_TOKENS = 250;   // ~3 строки: проверка на ошибки и проверка замечаний
 
