@@ -452,7 +452,7 @@ function openVersionPanel() {
     box.style.cssText = 'width:100%;max-width:340px;background:#101418;border:1px solid #2a333d;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6);';
 
     const title = document.createElement('div');
-    title.textContent = '📦 ПРАВКИ: КАЛЬКУЛЯТОР ОКОН (АЛМАЗ)';
+    title.textContent = '📦 ПРАВКИ: ШТАБ';
     title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;';
     box.appendChild(title);
 
