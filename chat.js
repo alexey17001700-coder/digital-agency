@@ -864,7 +864,7 @@ function tandemVoiceModel(agentName) {
    кнопкой «Стоп»: Босс остановил — оба голоса замолкают сразу. */
 async function tandemAsk(speaker, sys, user, timeoutMs) {
     if (typeof takeTurnCall === 'function' && !takeTurnCall()) return null;   // бюджет запросов на вопрос исчерпан
-    const model = (speaker === 'GigaChat') ? 'gigachat' : tandemArchModel();
+    const model = tandemVoiceModel(speaker);
     let keys = {};
     try { keys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
     const ctrl = new AbortController();
