@@ -804,6 +804,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         else {
             try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
             if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+            stripDuplicateWeatherWidget(contentDiv, weatherCards.length > 0);
             weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
             if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director' && !isSystemNotice(cleanText)) speakText(cleanText, agentName);
             if (onComplete) onComplete();
