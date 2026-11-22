@@ -1302,9 +1302,19 @@ function handleImageSelect(event) {
    Плюс: главный запрос уходит БЕЗ картинки — иначе сервер снова
    уводит всё в зрение и отвечает описанием вместо решения задачи. */
 const VISION_PROMPT = 'Опиши это изображение максимально подробно и технически. Что за изделие или чертёж; сколько секций/створок; какая где открывается (глухая, поворотная, поворотно-откидная, откидная); где ручки и петли; какие размеры, цифры и надписи видны; как расположены элементы и линии. Только факты, списком, без вступлений и без вопросов.';
+/* --- ФОТО ИДЁТ ЧЕРЕЗ ZV-КЛЮЧ (ЗРЕНИЕ) ---
+   Босс: просмотр фото работает на том же ключе-роутере Zveno (ZV route),
+   что и Архитектор с бесплатными моделями. Ключ не введён — зрение не
+   работает, в чат летит предупреждение, запрос НЕ уходит. Никакой подмены
+   на серверный ключ. Модель зрения — 'zveno' (роутер сам ведёт в vision). */
 async function describeAttachedImage(base64) {
     if (!base64) return null;
     if (!takeTurnCall()) return null;   // бюджет запросов на вопрос исчерпан — зрение не тратим
+    // Ключ ZV route обязателен: нет ключа — фото не разбираем.
+    if (!modelKeyOk('zveno')) {
+        renderMessage('⚠️ **Фото не разобрано: ключ ' + modelKeyLabel('zveno') + ' не введён.** Открой 🔑 API Ключи.', 'director', 'Оркестратор');
+        return null;
+    }
     try {
         let vKeys = {};
         try { vKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
@@ -1313,7 +1323,7 @@ async function describeAttachedImage(base64) {
             body: JSON.stringify({
                 messages: [{ role: 'user', content: VISION_PROMPT }],
                 temperature: 0.2,
-                model: (typeof resolveAllowedModel === 'function') ? resolveAllowedModel(selectedAIModel) : selectedAIModel,
+                model: 'zveno',   // зрение — через ZV route (ключ freeKey)
                 userKeys: vKeys, freeKey: vKeys.freeKey || '',
                 image: base64, isBoss: true
             }),
