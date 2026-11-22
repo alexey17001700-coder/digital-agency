@@ -1585,6 +1585,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                     const fz = freeModels();
                     modelToUse = fz.length ? fz[0].id : 'gigachat';
                 }
+                // 🔑 ЖЁСТКАЯ ГАРАНТИЯ: модель выключена своей кнопкой — на сервер
+                // запрос к ней не уходит НИКОГДА, даже если пришла из старой памяти.
+                if (typeof modelEnabled === 'function' && modelToUse !== 'zveno' && !modelEnabled(modelToUse)) {
+                    const fm = freeModels().filter(m => modelEnabled(m.id));
+                    modelToUse = fm.length ? fm[0].id : 'gigachat';
+                }
                 usedModel = isOllama ? 'ollama' : modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
