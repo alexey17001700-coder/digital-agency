@@ -61,6 +61,26 @@
        Отвечает только та модель, что выбрал Босс. */
     const OWNER_NEXT = {};
 
+    /* ---------- РЕЖИМ ШТАБА: ⚡ ДУЭТ ----------
+       Босс включил ⚡ Дуэт — задачу ведут ОБА канала: 🅰️ Zveno пишет
+       черновик, 🟣 GigaChat проверяет и выдаёт финал. Сервер гонит ДВА
+       запроса подряд, поэтому и предел ожидания вдвое больше.
+       Состояние берём у chat.js (duetEnabled), с запасным чтением
+       localStorage — надзиратель остаётся самостоятельным файлом. */
+    function supDuetOn() {
+        try { if (typeof window.duetEnabled === 'function') return !!window.duetEnabled(); } catch (e) {}
+        try { return localStorage.getItem('shtabDuetOn') === 'on'; } catch (e) { return false; }
+    }
+    /* Предел ожидания под текущий режим: одиночный ответ или ⚡ дуэт. */
+    function supLimitMs() { return supDuetOn() ? SUP_DUET_LIMIT_MS : SUP_LIMIT_MS; }
+    /* Тот же ли владелец ведёт задачу. ⚡ Дуэт ведёт ОБА канала сразу,
+       поэтому ответ любого из них (arch или free) закрывает журнал дуэта. */
+    function supSameOwner(a, b) {
+        const x = String(a || ''), y = String(b || '');
+        if (x === y) return true;
+        return x === 'duet' || y === 'duet';
+    }
+
     let supTimer = null;
     let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
     let supAliveUntil = 0;          // до этого времени задача считается ЖИВОЙ — передача запрещена
