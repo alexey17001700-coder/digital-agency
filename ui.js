@@ -468,6 +468,7 @@ async function loadVersionCounter() {
         const limit = d.limit || 5;
         const edits = d.edits || 0;
         el.innerText = 'v' + d.version + ' · ' + edits + '/' + limit;
+        checkAppBuild(d);
         const box = document.getElementById('status-version');
         if (box) {
             box.style.borderColor = edits >= limit ? '#ff0055' : '#ffd700';
