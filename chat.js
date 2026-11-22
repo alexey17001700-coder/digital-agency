@@ -223,6 +223,88 @@ function resolveAllowedModel(id) {
     return f.length ? f[0].id : id;
 }
 
+/* =========================================
+   🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ (ZVENO)
+   Всё, что связано с ZVENO, Босс держит ОТДЕЛЬНО от остальных моделей:
+   1) своя кнопка 🅰️ (вкл/выкл) — единственный вход;
+   2) свой ключ (architectKey) — не общий ZV и не GigaChat;
+   3) автоподбор/автосмена Архитектора НЕ трогают (exclusive: true).
+   Выключен — запрос на ZVENO не уходит вообще.
+   Ключ хранится в shtabUserKeys на устройстве и уходит на сервер
+   в userKeys.architectKey. В код и в Git он НИКОГДА не пишется.
+   ========================================= */
+function architectEnabled() { try { return localStorage.getItem('shtabArchitectOn') === 'on'; } catch (e) { return false; } }
+function architectKey() {
+    try { const k = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; return k.architectKey || ''; } catch (e) { return ''; }
+}
+function setArchitectKey(v) {
+    let k = {};
+    try { k = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) { k = {}; }
+    k.architectKey = String(v || '').trim();
+    try { localStorage.setItem('shtabUserKeys', JSON.stringify(k)); } catch (e) {}
+    return k.architectKey;
+}
+function setArchitectEnabled(on) {
+    try { localStorage.setItem('shtabArchitectOn', on ? 'on' : 'off'); } catch (e) {}
+    if (!on && selectedAIModel === 'zveno') {
+        // Выключили Архитектора — уводим на прежнюю/бесплатную модель.
+        const prev = localStorage.getItem('shtabAIModelBeforeArch') || '';
+        const f = freeModels();
+        selectedAIModel = (prev && prev !== 'zveno' && getModelInfo(prev)) ? prev
+            : (f.length ? f[0].id : 'gigachat');
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    }
+    if (typeof applyArchitectButton === 'function') applyArchitectButton();
+    if (typeof applyAIModelButton === 'function') applyAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    if (typeof syncModeButtons === 'function') syncModeButtons();
+    if (typeof renderMessage === 'function') {
+        renderMessage(on
+            ? '🅰️ *[Архитектор ВКЛЮЧЁН — отдельный канал ZVENO. Автоподбор его не трогает.]*'
+            : '🅰️ *[Архитектор ВЫКЛЮЧЕН — ZVENO не выбирается и не подставляется.]*', 'director', 'Оркестратор');
+    }
+}
+/* ТОЛЬКО внешний вид кнопки — без вызова соседних apply-функций (без рекурсии). */
+function updateArchitectButtonVisual() {
+    const b = document.getElementById('btnArchitect');
+    if (!b) return;
+    if (architectEnabled()) {
+        b.classList.add('active', 'mode-on');
+        b.innerText = (selectedAIModel === 'zveno') ? '🅰️ Архитектор: ВКЛ' : '🅰️ Архитектор: ВКЛ';
+        b.style.borderColor = '#00e5ff';
+        b.style.color = '#00e5ff';
+        b.style.background = 'rgba(0,229,255,.14)';
+    } else {
+        b.classList.remove('active', 'mode-on');
+        b.innerText = '🅰️ Архитектор';
+        b.style.borderColor = '#00e5ff';
+        b.style.color = '#00e5ff';
+        b.style.background = '';
+    }
+}
+function applyArchitectButton() { updateArchitectButtonVisual(); }
+function selectArchitect() {
+    // Выбрать Архитектора вручную можно только при включённой кнопке.
+    if (!architectEnabled()) {
+        if (typeof renderMessage === 'function') renderMessage('🔒 *[Архитектор выключен. Включи кнопку 🅰️ — тогда ZVENO станет доступен.]*', 'director', 'Оркестратор');
+        return false;
+    }
+    if (selectedAIModel !== 'zveno') { try { localStorage.setItem('shtabAIModelBeforeArch', selectedAIModel); } catch (e) {} }
+    selectedAIModel = 'zveno';
+    try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    applyArchitectButton();
+    if (typeof applyAIModelButton === 'function') applyAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    return true;
+}
+window.architectEnabled = architectEnabled;
+window.architectKey = architectKey;
+window.setArchitectKey = setArchitectKey;
+window.setArchitectEnabled = setArchitectEnabled;
+window.applyArchitectButton = applyArchitectButton;
+window.updateArchitectButtonVisual = updateArchitectButtonVisual;
+window.selectArchitect = selectArchitect;
+
 /* --- ОТДЕЛЬНАЯ КНОПКА «🟣 GIGACHAT» ---
    Босс включает GigaChat (Сбер) одним тапом, не заходя в список моделей.
    Тап — включить, повторный тап — вернуть ту модель, что была до этого.
