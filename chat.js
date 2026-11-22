@@ -82,7 +82,7 @@ let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
-let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
+let selectedAIModel = localStorage.getItem('shtabAIModel') || 'gigachat';
 
 /* --- ОДИН ЧАТ: ВСЕГДА АРХИТЕКТОР ---
    Помощник и его ИИ-шлюз (:8002) убраны из Штаба. Переключателя «кому»
