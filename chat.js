@@ -1486,6 +1486,12 @@ async function sendMessage(overrideText = null, isKick = false) {
             const _ak = architectKey();
             if (_ak && String(selectedAIModel || '') === 'zveno') userKeys.architectKey = _ak;
         }
+        /* 🔑 СВОЙ КЛЮЧ ЛЮБОЙ МОДЕЛИ — отдельно от общих.
+           Уходит на сервер в userKeys[<id модели>] и только для выбранной модели. */
+        if (typeof modelKey === 'function') {
+            const _mk = modelKey(selectedAIModel);
+            if (_mk && String(selectedAIModel || '') !== 'zveno') userKeys[selectedAIModel] = _mk;
+        }
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
         let isBossSecret = false;
