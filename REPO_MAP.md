@@ -47,7 +47,6 @@
 - `voice.js` — голос
 - `watchdog.js` — сторож
 - `watchdog_app.html`
-- `watchdog_test.txt`
 
 ## 2. nexus_chat — ЧАТ
 - `CHAT_AI_GUIDE.md` — устройство чата (память)
