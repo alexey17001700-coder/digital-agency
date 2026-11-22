@@ -1186,49 +1186,145 @@ function lastUserText(messages: any[]): string {
 }
 
 async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<string> {
-    let draft = "";
-    let finalText = "";
-    let weatherCard = "";
+    /* ⚡ ДУЭТ (приказ Босса): полная цепочка обсуждения, всё КОРОТКО.
+       ШАГ 1 🅰️ Zveno    — краткий черновик
+       ШАГ 2 🟣 GigaChat — ремарка
+       ШАГ 3 🅰️ Zveno    — уточнённый план (учёл ремарку)
+       ШАГ 4 🟣 GigaChat — вторая ремарка
+       ШАГ 5 🟣 GigaChat — проверка на ошибки
+       ШАГ 6 🅰️ Zveno    — проверка замечаний
+       ШАГ 7 🅰️ Zveno    — ФИНАЛ: делает работу, инструменты ВКЛЮЧЕНЫ
+       Шаги 1–6 идут БЕЗ инструментов и с жёстким лимитом токенов — бюджет цел.
+       Предел DUET_MAX_STEPS = 7: цикл конечный, ответ в него не возвращается. */
+    const question = lastUserText(messages);
+    const lines: { who: string, text: string }[] = [];
     let lastErr = "";
+    let weatherCard = "";
 
-    for (let step = 1; step <= DUET_MAX_STEPS; step++) {
-        if (step === 1) {
-            // ШАГ 1 — 🅰️ Zveno: черновик. Инструменты включены.
-            try {
-                draft = await callZvenoAI(messages, userKeys, true, "duet");
-                const cm = draft.match(/\[\[WEATHER_CARD\]\][\s\S]*?\[\[\/WEATHER_CARD\]\]/);
-                if (cm) { weatherCard = cm[0]; draft = draft.replace(cm[0], "").trim(); }
-            } catch (e: any) {
-                lastErr = e?.message || String(e);
-                zlog(`[DUET] шаг 1 (Zveno) упал: ${lastErr}`);
-            }
-            if (!draft) break;   // черновика нет — критиковать нечего, дальше не идём
-        } else {
-            // ШАГ 2 — 🟣 GigaChat: критик и финальный ответ. Инструменты включены.
-            const criticMessages = [
-                { role: "system", content: DUET_CRITIC_PROMPT },
-                { role: "user", content: `ВОПРОС БОССА:\n${lastUserText(messages)}\n\nЧЕРНОВИК ОТ ДРУГОЙ МОДЕЛИ:\n${draft}` }
-            ];
-            try {
-                finalText = await callGigaChatTools(criticMessages, "duet", gcKey);
-            } catch (e: any) {
-                lastErr = e?.message || String(e);
-                zlog(`[DUET] шаг 2 (GigaChat) упал: ${lastErr}`);
-            }
-        }
+    const addLine = (who: string, text: string) => {
+        const s = String(text || "").replace(/\[\[[\s\S]*?\]\]/g, "").trim();
+        if (s) lines.push({ who: who, text: s.slice(0, 700) });
+        return s;
+    };
+    const talk = () => lines.map((l) => (l.who === "zveno" ? "🅰️ Zveno" : "🟣 GigaChat") + ": " + l.text).join("\n");
+
+    /* Короткий шаг Zveno: свой промпт, лимит токенов, БЕЗ инструментов. */
+    const zShort = async (prompt: string, note: string, tokens: number): Promise<string> => {
+        const apiKey = Deno.env.get("ZVENO_API_KEY");
+        if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
+        const res = await fetch(ZVENO_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: ZVENO_MODEL,
+                messages: [{ role: "system", content: prompt }, { role: "user", content: note }],
+                temperature: 0.3, max_tokens: tokens, tools: [], tool_choice: "none"
+            }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(`Дуэт Zveno: ${data?.error?.message || res.status}`);
+        const t = data?.choices?.[0]?.message?.content;
+        if (!t) throw new Error("Дуэт Zveno: пустой ответ");
+        return String(t).trim();
+    };
+    /* Короткий шаг GigaChat: нейтральный промпт, лимит токенов, БЕЗ tools. */
+    const gShort = async (prompt: string, note: string, tokens: number): Promise<string> => {
+        return String(await callGigaChat([{ role: "system", content: prompt }, { role: "user", content: note }], "", gcKey, tokens)).trim();
+    };
+
+    // ШАГ 1 — 🅰️ Zveno: краткий черновик.
+    let draft = "";
+    try {
+        draft = await zShort(DUET_BRIEF_PROMPT, `ВОПРОС БОССА:\n${question}`, DUET_BRIEF_TOKENS);
+        addLine("zveno", draft);
+    } catch (e: any) {
+        lastErr = e?.message || String(e);
+        zlog(`[DUET] шаг 1 (Zveno) упал: ${lastErr}`);
+    }
+    if (!draft) throw new Error(`Дуэт: Zveno не дал черновик (${lastErr || "нет ответа"})`);
+
+    // ШАГ 2 — 🟣 GigaChat: первая ремарка.
+    try {
+        const r = await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${question}\n\nЧЕРНОВИК ZVENO:\n${draft}`, DUET_REMARK_TOKENS);
+        addLine("giga", r);
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 2 (GigaChat) упал: ${lastErr}`); }
+
+    // ШАГ 3 — 🅰️ Zveno: уточнённый план с учётом ремарки.
+    let plan = draft;
+    try {
+        plan = await zShort(DUET_PLAN_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ:\n${talk()}`, DUET_BRIEF_TOKENS);
+        addLine("zveno", plan);
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 3 (Zveno) упал: ${lastErr}`); }
+
+    // ШАГ 4 — 🟣 GigaChat: вторая ремарка.
+    try {
+        const r = await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ:\n${talk()}`, DUET_REMARK_TOKENS);
+        addLine("giga", r);
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 4 (GigaChat) упал: ${lastErr}`); }
+
+    // ШАГ 5 — 🟣 GigaChat: проверка на ошибки.
+    try {
+        const r = await gShort(DUET_ERRORS_PROMPT, `ВОПРОС БОССА:\n${question}\n\nПЛАН И ОБСУЖДЕНИЕ:\n${talk()}`, DUET_CHECK_TOKENS);
+        addLine("giga", r);
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 5 (проверка GigaChat) упал: ${lastErr}`); }
+
+    // ШАГ 6 — 🅰️ Zveno: проверка замечаний.
+    try {
+        const r = await zShort(DUET_VERIFY_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ И ПРОВЕРКА:\n${talk()}`, DUET_CHECK_TOKENS);
+        addLine("zveno", r);
+    } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 6 (проверка Zveno) упал: ${lastErr}`); }
+
+    // ШАГ 7 — 🅰️ Zveno: ФИНАЛ. Инструменты ВКЛЮЧЕНЫ, полный ответ.
+    let finalText = "";
+    try {
+        const fm = JSON.parse(JSON.stringify(messages));
+        const si = fm.findIndex((m: any) => m.role === "system");
+        if (si !== -1) fm[si].content = DUET_FINAL_PROMPT;
+        else fm.unshift({ role: "system", content: DUET_FINAL_PROMPT });
+        fm.push({ role: "user", content: `[ОБСУЖДЕНИЕ ДУЭТА — учти, но в ответе Боссу НЕ пересказывай]\n${talk()}` });
+        finalText = await callZvenoAI(fm, userKeys, true, "duet");
+        const cm = finalText.match(/\[\[WEATHER_CARD\]\][\s\S]*?\[\[\/WEATHER_CARD\]\]/);
+        if (cm) { weatherCard = cm[0]; finalText = finalText.replace(cm[0], "").trim(); }
+    } catch (e: any) {
+        lastErr = e?.message || String(e);
+        zlog(`[DUET] шаг 7 (финал Zveno) упал: ${lastErr}`);
     }
 
-    if (finalText && finalText.trim()) {
-        zlog("[DUET] финал от GigaChat получен");
-        return weatherCard ? weatherCard + "\n\n" + finalText.trim() : finalText.trim();
+    if (!finalText) {
+        // Финал не вышел — отдаём последний план Zveno, Босс без ответа не остаётся.
+        const zvenoLines = lines.filter((l) => l.who === "zveno");
+        finalText = zvenoLines.length ? zvenoLines[zvenoLines.length - 1].text : draft;
+        zlog("[DUET] финал не получен — отдаю план Zveno");
     }
-    if (draft) {
-        // GigaChat упал — отдаём черновик Zveno, чтобы Босс не остался без ответа.
-        zlog("[DUET] финал от GigaChat не получен — отдаю черновик Zveno");
-        return weatherCard ? weatherCard + "\n\n" + draft : draft;
-    }
-    throw new Error(`Дуэт: обе модели не ответили (${lastErr || "нет ответа"})`);
+
+    const block = lines.length ? `[[DUET_THOUGHTS]]${JSON.stringify({ lines: lines })}[[/DUET_THOUGHTS]]` : "";
+    const out = block ? block + "\n\n" + finalText : finalText;
+    return weatherCard ? weatherCard + "\n\n" + out : out;
 }
+
+/* ⚡ КОРОТКИЕ ПРОМПТЫ ДУЭТА (приказ Босса: обсуждение короткое, бюджет цел). */
+const DUET_CHECK_TOKENS = 250;   // ~3 строки: проверка на ошибки и проверка замечаний
+
+const DUET_PLAN_PROMPT = `Ты — Цифровой Архитектор Штаба. РЕЖИМ «ДУЭТ», ШАГ 3 — УТОЧНЁННЫЙ ПЛАН.
+Тебе дали твой черновик и ремарку напарника-критика.
+Требования:
+1) максимум 4 строки: что принимаешь из ремарки и как меняешь план;
+2) без кода, без инструментов, без вступлений;
+3) по-русски, по делу.`;
+
+const DUET_ERRORS_PROMPT = `Ты — строгий проверяющий. РЕЖИМ «ДУЭТ», ШАГ 5 — ПРОВЕРКА НА ОШИБКИ.
+Ниже вопрос Босса и обсуждение плана.
+Требования:
+1) максимум 3 строки: только РЕАЛЬНЫЕ ошибки и риски (факты, форматы, безопасность, потеря данных);
+2) ошибок нет — напиши ровно: «Ошибок не вижу»;
+3) без кода, без инструментов, без вступлений.`;
+
+const DUET_VERIFY_PROMPT = `Ты — Цифровой Архитектор Штаба. РЕЖИМ «ДУЭТ», ШАГ 6 — ПРОВЕРКА ЗАМЕЧАНИЙ.
+Ниже вопрос Босса, ремарки и список возможных ошибок от напарника.
+Требования:
+1) максимум 3 строки: что принимаешь, что отклоняешь и почему;
+2) без кода, без инструментов, без вступлений.`;
 
 // =========================================
 // ОЗВУЧКА (EDGE-TTS, БЕСПЛАТНО)
