@@ -639,7 +639,10 @@ function openModelSettingsPanel(id, onBack) {
                на мёртвом ключе. Сначала смотрим r.ok и d.error, только потом текст. */
             const errText = (d && d.error) ? String(d.error) : (!r.ok ? ('HTTP ' + r.status) : '');
             if (errText) { setMsg('❌ Ключ не прошёл: ' + errText.replace(/^❌\s*\*\*Ошибка:\*\*\s*/, '').slice(0, 120), '#ff8888'); return; }
-            const txt = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '').trim() : '';
+            /* Ответ приходит по-разному: чат-путь кладёт choices, ручка
+               gigachatTest — поле answer. Читаем оба, иначе живой ключ
+               Сбера показывался как «пустой ответ». */
+            const txt = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '').trim() : String((d && d.answer) || '').trim();
             if (txt && txt.indexOf('❌') !== 0) setMsg('✅ Модель ответила: ' + txt.slice(0, 80), '#7ee08a');
             else setMsg('❌ Не ответила: пустой ответ', '#ff8888');
         } catch (e) {
