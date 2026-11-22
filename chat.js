@@ -1506,7 +1506,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     startSendTimer();                      // один счётчик на всё приложение, без наложения
 
     if (typeof resetAllStatuses === 'function') resetAllStatuses(); 
-    const activeAgent = (typeof isTandemMode === 'function' && isTandemMode()) ? 'Архитектор' : (selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор');
+    const activeAgent = (typeof isTandemMode === 'function' && isTandemMode()) ? tandemLead() : (selectedAgents.length === 1 ? selectedAgents[0] : 'Оркестратор');
     focusAgentCard(activeAgent);
 
     if (typeof updateAgentStatus === 'function') { updateAgentStatus(activeAgent, 'busy'); setAgentStatus(activeAgent, 'thinking'); }
