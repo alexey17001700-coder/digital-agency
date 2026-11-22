@@ -235,6 +235,30 @@
         };
         document.addEventListener('keydown', onKey);
 
+        // МОБИЛЬНЫЕ: свернул вкладку/приложение — ставим на паузу, чтобы
+        // инструкция не «прокрутилась» в фоне и не съела батарею.
+        st.onVis = () => { if (document.hidden && st && st.playing) togglePlay(); };
+        document.addEventListener('visibilitychange', st.onVis);
+
+        // СВАЙП по кадру: влево — следующая сцена, вправо — предыдущая.
+        const frame = el.querySelector('.tut-frame');
+        let tx = 0, ty = 0;
+        frame.addEventListener('touchstart', (e) => {
+            tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+        }, { passive: true });
+        frame.addEventListener('touchend', (e) => {
+            if (!st) return;
+            const dx = e.changedTouches[0].clientX - tx;
+            const dy = e.changedTouches[0].clientY - ty;
+            if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;   // это скролл, не свайп
+            if (dx < 0) {
+                if (st.i >= SCENES.length - 1) { close(); return; }
+                seek((st.i + 1) * SCENE_MS);
+            } else {
+                seek((st.i - 1) * SCENE_MS);
+            }
+        }, { passive: true });
+
         st.timer = setInterval(tick, TICK_MS);
     }
 
