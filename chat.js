@@ -88,7 +88,12 @@ let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
-let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
+/* --- ДЕФОЛТНОЙ МОДЕЛИ БОЛЬШЕ НЕТ ---
+   Босс: при загрузке не должно быть ничего выбрано по умолчанию. Пока Босс
+   сам не выбрал модель (🧠 Платные / 🆓 Бесплатные) или карточку со своим
+   маршрутом (GigaChat/Хакер/Критик/Архитектор/Оркестратор) — Штаб молчит:
+   запрос никуда не уходит, в чат летит «Выберите модель» (стоп-кран ниже). */
+let selectedAIModel = localStorage.getItem('shtabAIModel') || '';
 
 /* --- ОДИН ЧАТ: ВСЕГДА АРХИТЕКТОР ---
    Помощник и его ИИ-шлюз (:8002) убраны из Штаба. Переключателя «кому»
