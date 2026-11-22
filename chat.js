@@ -112,9 +112,9 @@ async function sendToFreeModel(text) {
         throw new Error((d && d.error) || 'пустой ответ');
     } catch (e) {
         const msg = (e && e.name === 'AbortError') ? 'таймаут 95 сек' : ((e && e.message) || 'сбой');
-        const errText = '⚠️ Бесплатная модель не ответила: ' + msg;
-        renderMessage(errText, 'director', 'Бесплатная модель');
-        addMessageToHistory(errText, 'director', 'Бесплатная модель');
+        const errText = '⚠️ Резервный канал не ответил: ' + msg;
+        renderMessage(errText, 'director', 'Резерв (GigaChat)');
+        addMessageToHistory(errText, 'director', 'Резерв (GigaChat)');
         return false;
     }
 }
