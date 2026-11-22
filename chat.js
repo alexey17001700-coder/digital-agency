@@ -1546,7 +1546,7 @@ async function sendMessage(overrideText = null, isKick = false) {
     // следующий вызов, и старый таймаут обрывал ЧУЖОЙ запрос. Теперь каждый
     // запрос абортится ровно своим контроллером через 330 с.
     const myCtrl = new AbortController(); currentAbortController = myCtrl;
-    const timeoutId = setTimeout(() => myCtrl.abort(), 330000); clearTimeout(watchdogTimer);
+    const timeoutId = setTimeout(() => myCtrl.abort(), turnLimitMs()); clearTimeout(watchdogTimer);   // ⚡ в дуэте предел вдвое больше
 
     try {
         let success = false; let aiText = ""; let lastError = ""; let usedModel = "";
