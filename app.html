@@ -110,6 +110,9 @@
             if (typeof loadVersionCounter === 'function') loadVersionCounter();
             if (typeof startVersionAutoRefresh === 'function') startVersionAutoRefresh();
 
+            // Модалка «что обновилось» — один раз после обновления версии Штаба.
+            if (typeof checkUpdateNotice === 'function') checkUpdateNotice();
+
             // СТРАХОВКА: если 3D-модуль не выполнился — пробуем загрузить его ещё раз,
             // и только потом сообщаем о проблеме (без этого кнопка «Офис» молча
             // открывала старый 2D-офис и было непонятно, что случилось).
