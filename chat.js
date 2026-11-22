@@ -188,7 +188,9 @@ function modelBadgeText(id) {
    resolveAllowedModel() — страховка: платная модель при отключённых платных
    не уйдёт на сервер, запрос уедет на бесплатный маршрут. */
 function freeModels() { return AI_MODELS.filter(m => m && m.free); }
-function paidModels() { return AI_MODELS.filter(m => m && !m.free); }
+/* Платные — БЕЗ Архитектора: 🅰️ Zveno живёт отдельным каналом (свой ключ,
+   своя кнопка) и в общий список платных моделей не попадает. */
+function paidModels() { return AI_MODELS.filter(m => m && !m.free && m.id !== 'zveno'); }
 function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
 function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
