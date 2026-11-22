@@ -178,7 +178,11 @@ const AGENT_ROUTES = {
     'GigaChat':   { model: 'gigachat', key: 'gigachat' },
     'Хакер':      { model: 'deepseek', key: 'deepseekKey' },
     'Критик':     { model: 'yandex',   key: 'yandexKey' },
-    'Архитектор': { model: 'zveno',    key: 'freeKey' }
+    'Архитектор': { model: 'zveno',    key: 'freeKey' },
+    /* Оркестратор — это я, Архитектор Штаба: тот же мозг Zveno и тот же
+       ключ-роутер ZV route (freeKey). Выбрал карточку Оркестратора —
+       уходит Zveno. Ключа нет — предупреждение и стоп. */
+    'Оркестратор': { model: 'zveno',   key: 'freeKey' }
 };
 function agentRoute(name) { return AGENT_ROUTES[name] || null; }
 
