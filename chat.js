@@ -235,6 +235,8 @@ function updateGigaChatButtonVisual() {
         b.style.color = '#7B61FF';
         b.style.background = '';
     }
+    // Плашка GigaChat в карточке агента (внизу экрана) — держим в том же состоянии.
+    if (typeof updateGigaCardBadge === 'function') { try { updateGigaCardBadge(); } catch (e) {} }
 }
 function applyGigaChatButton() {
     updateGigaChatButtonVisual();
