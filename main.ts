@@ -11,7 +11,6 @@ const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 // ВАЖНО: embed-модели сюда НЕ ВКЛЮЧАТЬ — они не умеют чат и дадут ошибку.
 // =========================================
 const FREE_TEXT_MODELS = [
-    "dots-studio/dots-3-note-preview:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "nvidia/nemotron-3.5-lightning:free",
