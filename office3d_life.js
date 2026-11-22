@@ -64,9 +64,16 @@
         return out;
     }
 
-    /* --- Голова и глаза внутри модели -------------------------------------- */
+    /* --- Голова и глаза внутри модели --------------------------------------
+       Риг агента: aHead = SphereGeometry(0.115), aHair = 0.118, aEye = 0.014,
+       aEar = 0.028, aAntTip = 0.020. Поэтому:
+       • голова — сфера с радиусом, ближайшим к 0.115;
+       • глаза — только мелкие сферы 0.008…0.018 (уши и антенна отсекаются);
+       • крутим РОДИТЕЛЯ головы (там же волосы, уши, нос), но только если
+         в нём же лежат глаза и это не корень модели — иначе поворот
+         закрутил бы всё тело. */
     function findParts(model) {
-        let head = null;
+        let head = null, headErr = 1e9;
         const eyes = [];
         try {
             model.traverse(function (o) {
@@ -75,11 +82,24 @@
                 if (g.type !== 'SphereGeometry') return;
                 const r = g.parameters && g.parameters.radius;
                 if (!r) return;
-                if (r > 0.09 && r < 0.14) { if (!head) head = o; }
-                else if (r < 0.03) eyes.push(o);
+                if (r > 0.09 && r < 0.14) {
+                    const err = Math.abs(r - 0.115);
+                    if (err < headErr) { headErr = err; head = o; }
+                } else if (r > 0.008 && r < 0.018) {
+                    eyes.push(o);
+                }
             });
         } catch (e) { /* модель без геометрии — пропускаем */ }
-        return { head: head, eyes: eyes };
+
+        let pivot = head;
+        if (head && head.parent && head.parent !== model) {
+            let eyesInside = 0;
+            try {
+                head.parent.traverse(function (o) { if (eyes.indexOf(o) !== -1) eyesInside++; });
+            } catch (e) { eyesInside = 0; }
+            if (eyesInside > 0) pivot = head.parent;
+        }
+        return { head: pivot, eyes: eyes };
     }
 
     /* --- Ритм моргания: 0.08 (закрыто) … 1 (открыто) ------------------------ */
