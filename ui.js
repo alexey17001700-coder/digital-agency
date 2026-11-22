@@ -608,7 +608,13 @@ function openModelSettingsPanel(id, onBack) {
         try {
             const ctrl = new AbortController();
             const tid = setTimeout(() => ctrl.abort(), 30000);
-            const uk = {}; if (v) uk[id] = v;
+            /* 🅰️ КЛЮЧ АРХИТЕКТОРА УХОДИТ ПОД ПРАВИЛЬНЫМ ИМЕНЕМ.
+               Сервер (callZvenoAI) читает ТОЛЬКО userKeys.architectKey.
+               Раньше шестерёнка ⚙️ у zveno слала userKeys.zveno — сервер его
+               не видел и проверка падала на СЕРВЕРНЫЙ ключ, а если тот битый —
+               приходило «missing or invalid authorization». Отсюда «ошибка»
+               на живом ключе Босса. */
+            const uk = {}; if (v) uk[id === 'zveno' ? 'architectKey' : id] = v;
             const r = await fetch(PROXY, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages: [{ role: 'user', content: 'ку' }], temperature: 0.2, model: id, userKeys: uk, isBoss: true }),
