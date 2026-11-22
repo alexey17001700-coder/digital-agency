@@ -68,12 +68,13 @@ function startSendTimer() {
         if (!isGenerating) { stopSendTimer(); return; }                        // ответ пришёл — стоп
         if (!sendBtn || sendBtn.className.indexOf('stop-active') === -1) { stopSendTimer(); return; } // кнопка не в работе — стоп
         const ms = Date.now() - sendStartTime;
-        if (ms >= TIMER_MAX_MS) {                                              // запрос мёртв — не зашкаливаем
+        const maxMs = turnLimitMs();                                           // ⚡ в дуэте предел вдвое больше
+        if (ms >= maxMs) {                                                     // запрос мёртв — не зашкаливаем
             stopSendTimer();
             isGenerating = false;
             try { if (currentAbortController) currentAbortController.abort(); } catch (e) {}
             sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = '➤'; sendBtn.style.fontSize = '';
-            renderMessage(`⏱️ *[Система: запрос висел больше ${Math.round(TIMER_MAX_MS / 1000)} с — счётчик сброшен, кнопка освобождена.]*`, 'director', 'Оркестратор');
+            renderMessage(`⏱️ *[Система: запрос висел больше ${Math.round(maxMs / 1000)} с — счётчик сброшен, кнопка освобождена.]*`, 'director', 'Оркестратор');
             return;
         }
         sendBtn.innerText = (ms / 1000).toFixed(1) + "s";
