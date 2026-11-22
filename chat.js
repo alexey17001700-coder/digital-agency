@@ -1601,10 +1601,14 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
                 let modelToUse = selectedAIModel;
+                // --- КАРТОЧКА → МОДЕЛЬ (реестр маршрутов) ---
+                // Выбрана ОДНА карточка со своим маршрутом — уходит ЕЁ модель:
+                // GigaChat → Сбер, Хакер → DeepSeek, Критик → Yandex, Архитектор → Zveno.
+                if (selectedAgents.length === 1 && agentRoute(selectedAgents[0])) modelToUse = agentRoute(selectedAgents[0]).model;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
                 if (isBossSecret) modelToUse = 'zveno';
-                // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
-                if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
+                // АВТОПОДМЕНЫ НЕТ: платная модель не подменяется бесплатной молча.
+                // Нет ключа под модель — предупреждение и стоп (проверка ниже).
                 // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
                 // Раньше секрет-ключ (deepseekKey = "zveno"/"boss") молча подменял выбор на
                 // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
