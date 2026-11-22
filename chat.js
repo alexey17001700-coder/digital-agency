@@ -1501,7 +1501,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     lastError = 'Модель выключена кнопкой';
                     return;
                 }
-                usedModel = isOllama ? 'ollama' : modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
+                usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
