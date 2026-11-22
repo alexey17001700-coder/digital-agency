@@ -861,8 +861,9 @@ function buildDuetThoughts(t) {
         const tx = document.createElement('span'); tx.className = 'duet-text'; tx.textContent = s;
         row.appendChild(w); row.appendChild(tx); box.appendChild(row);
     };
-    /* ⚡ ЦЕПОЧКА ОБСУЖДЕНИЯ (приказ Босса): звено → гига → звено → гига →
-       гига (проверка на ошибки) → звено (проверка) → звено (делает работу).
+    /* ⚡ ЦЕПОЧКА ОБСУЖДЕНИЯ (приказ Босса): звено → гига (супер-дизайн) →
+       звено → гига (мега-кодер 3D) → звено (сводка) → гига (тест на ошибки) →
+       звено (проверка) → звено (делает работу).
        Сервер присылает lines — массив реплик по порядку. Старый формат
        {brief, remark} поддерживаем как запасной. */
     if (t && Array.isArray(t.lines) && t.lines.length) {
