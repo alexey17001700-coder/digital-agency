@@ -53,6 +53,7 @@ function unselectAgentFromModal() {
     selectedAgents = selectedAgents.filter(a => a !== name);
     const card = document.getElementById('agent-' + name);
     if (card) card.classList.remove('selected');
+    if (typeof updateTandemCards === 'function') updateTandemCards();
     if (typeof setAgentStatus === 'function') setAgentStatus(name, 'idle');
     document.getElementById('agentModal').classList.remove('active');
 }
