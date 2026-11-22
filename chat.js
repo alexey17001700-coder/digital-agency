@@ -1837,10 +1837,25 @@ function init() {
     /* Мёртвая модель в «памяти до Архитектора» / «до GigaChat».
        Иначе выключение 🅰️ возвращало деактивированную dots — и чат падал
        «model has been deactivated». Чистим память при старте. */
+    /* --- ЧИСТКА ПАМЯТИ ОТ СТАРЫХ МОДЕЛЕЙ (приказ Босса) ---
+       В Штабе строго две модели: 🅰️ Zveno и 🟣 GigaChat. Всё, что осталось
+       в localStorage от прежних списков (Nemotron, Dots, Flint, Yandex,
+       DeepSeek, Ollama и флаги платных), вычищается при старте. */
     try {
+        localStorage.removeItem('shtabAIModels');      // старый сохранённый список моделей
+        localStorage.removeItem('shtabPaidModels');    // флаг «платные модели»
         const _pa = localStorage.getItem('shtabAIModelBeforeArch') || '';
         if (_pa && !AI_MODELS.some(m => m.id === _pa)) localStorage.removeItem('shtabAIModelBeforeArch');
         const _pg = localStorage.getItem('shtabAIModelBeforeGiga') || '';
         if (_pg && !AI_MODELS.some(m => m.id === _pg)) localStorage.removeItem('shtabAIModelBeforeGiga');
+        // Карты вкл/выкл и ключей — оставляем только два живых канала.
+        const _on = JSON.parse(localStorage.getItem('shtabModelOn') || '{}') || {};
+        const _onClean = {};
+        Object.keys(_on).forEach(k => { if (AI_MODELS.some(m => m.id === k)) _onClean[k] = _on[k]; });
+        localStorage.setItem('shtabModelOn', JSON.stringify(_onClean));
+        const _keys = JSON.parse(localStorage.getItem('shtabModelKeys') || '{}') || {};
+        const _keysClean = {};
+        Object.keys(_keys).forEach(k => { if (AI_MODELS.some(m => m.id === k)) _keysClean[k] = _keys[k]; });
+        localStorage.setItem('shtabModelKeys', JSON.stringify(_keysClean));
     } catch (e) {}
 }
