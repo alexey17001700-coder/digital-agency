@@ -211,53 +211,14 @@ function resolveAllowedModel(id) {
     return f.length ? f[0].id : id;
 }
 
-/* --- ОТДЕЛЬНАЯ КНОПКА «🟣 GIGACHAT» ---
-   Босс включает GigaChat (Сбер) одним тапом, не заходя в список моделей.
-   Тап — включить, повторный тап — вернуть ту модель, что была до этого.
-   Выбор запоминается на устройстве (shtabAIModel). */
+/* --- КНОПКА «🟣 GIGACHAT» УБРАНА ---
+   Босс: отдельная кнопка не нужна. Выбрал карточку GigaChat (зелёная
+   подсветка) — GigaChat и работает (см. sendMessage: selectedAgents
+   содержит 'GigaChat' → модель 'gigachat'). Снял выбор — выключился.
+   Функции оставлены заглушками: их зовут ui.js и init() через typeof. */
 function isGigaChatActive() { return selectedAIModel === 'gigachat'; }
-/* ТОЛЬКО внешний вид кнопки — без вызова соседних apply-функций.
-   Так её можно звать из applyAIModelButton / applyFreeModelButton
-   без бесконечной рекурсии (те зовут её, она — их). */
-function updateGigaChatButtonVisual() {
-    const b = document.getElementById('btnGigaChat');
-    if (!b) return;
-    if (isGigaChatActive()) {
-        b.classList.add('active');
-        b.innerText = '🟣 GigaChat: ВКЛ';
-        b.style.borderColor = '#7B61FF';
-        b.style.color = '#b9a8ff';
-        b.style.background = 'rgba(123,97,255,.16)';
-    } else {
-        b.classList.remove('active');
-        b.innerText = '🟣 GigaChat';
-        b.style.borderColor = '#7B61FF';
-        b.style.color = '#7B61FF';
-        b.style.background = '';
-    }
-    // Плашка GigaChat в карточке агента (внизу экрана) — держим в том же состоянии.
-    if (typeof updateGigaCardBadge === 'function') { try { updateGigaCardBadge(); } catch (e) {} }
-}
-function applyGigaChatButton() {
-    updateGigaChatButtonVisual();
-    // Кнопки «Платные» / «Бесплатные» перерисовываем, чтобы не показывали чужой выбор.
-    if (typeof applyAIModelButton === 'function') { try { applyAIModelButton(); } catch (e) {} }
-    if (typeof applyFreeModelButton === 'function') { try { applyFreeModelButton(); } catch (e) {} }
-}
-function toggleGigaChat() {
-    if (isGigaChatActive()) {
-        const prev = localStorage.getItem('shtabAIModelBeforeGiga') || 'yandex';
-        selectedAIModel = getModelInfo(prev) ? prev : 'yandex';
-        renderMessage('🟣 *[GigaChat выключен — вернул прежнюю модель]*', 'director', 'Оркестратор');
-    } else {
-        localStorage.setItem('shtabAIModelBeforeGiga', selectedAIModel);
-        selectedAIModel = 'gigachat';
-        renderMessage('🟣 *[GigaChat включён — следующие ответы идут через Сбер (GIGACHAT_KEY)]*', 'director', 'Оркестратор');
-    }
-    try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
-    applyGigaChatButton();
-}
-window.toggleGigaChat = toggleGigaChat;
+function updateGigaChatButtonVisual() { /* кнопки больше нет — ничего не рисуем */ }
+function applyGigaChatButton() { /* кнопки больше нет — ничего не применяем */ }
 window.applyGigaChatButton = applyGigaChatButton;
 
 /* --- БЮДЖЕТ ЗАПРОСОВ НА ОДИН ВОПРОС БОССА ---
