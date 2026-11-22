@@ -1622,15 +1622,22 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
                 
                 if (selectedAgents.length > 0) {
-                    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+                    /* --- КАРТОЧКА НЕ ПОДМЕНЯЕТ ПРОМПТ ШТАБА ---
+                       Босс: при выборе карточки включался ДРУГОЙ промпт — роль
+                       агента вставала ПЕРЕД промптом Штаба и перебивала его
+                       (Оркестратор начинал «разбивать на шаги и назначать
+                       исполнителей» вместо работы Архитектора).
+                       Теперь промпт Штаба (SYSTEM_PROMPT) — ГЛАВНЫЙ и идёт первым,
+                       а роль карточки — только ДОПОЛНЕНИЕ к нему, не замена. */
+                    let agentPrompt = `[РОЛЬ]: ${selectedAgents.join(', ')}.\n`;
                     if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
-                    else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+                    else agentPrompt += `Отвечай от лица ${selectedAgents[0]} — это только ТОН и зона ответственности.\n`;
                     selectedAgents.forEach(agentName => {
                         let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-                        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                        agentPrompt += `[ДОПОЛНЕНИЕ К РОЛИ ${agentName}]: ${directive}\n`;
                         if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
                     });
-                    finalPrompt = agentPrompt + "\n" + finalPrompt;
+                    finalPrompt = finalPrompt + "\n\n=== РОЛЬ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\n" + agentPrompt + "Правила выше (Архитектор Штаба) ГЛАВНЕЕ роли: не подменяй их и не пересказывай.\n";
                 }
                 
                 if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
