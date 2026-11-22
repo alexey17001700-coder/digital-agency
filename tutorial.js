@@ -198,6 +198,7 @@
         if (!st) return;
         clearInterval(st.timer);
         document.removeEventListener('keydown', onKey);
+        if (st.onVis) document.removeEventListener('visibilitychange', st.onVis);
         st.el.remove();
         st = null;
         seenSet();   // закрыл (досмотрел или пропустил) — больше не вылезает само
