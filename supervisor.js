@@ -278,7 +278,9 @@
         }
 
         const prev = st.owner;
-        const next = OWNER_NEXT[prev];
+        /* Карточка Босса (Оркестратор, Хакер, Критик…) в цепочке замены не
+           прописана — её задача уходит бесплатной модели Штаба, а не в стоп-кран. */
+        const next = OWNER_NEXT[prev] || 'free';
         if (!next) { supStopKran(st); return; }
         const now = Date.now();
         st.owner = next;
