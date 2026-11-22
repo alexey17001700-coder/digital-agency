@@ -458,9 +458,17 @@
         try { localStorage.setItem(UPDATE_SEEN_KEY, v); } catch (e) { /* хранилище недоступно — окно просто покажется снова */ }
     }
 
+    // Версия, которая сейчас показана в модалке. Нужна, чтобы в момент
+    // ЗАКРЫТИЯ окна записать метку «это обновление Босс уже видел».
+    let lastShownVersion = null;
+
     function closeUpdateNotice() {
         const m = document.getElementById('updateModal');
         if (m) m.classList.remove('active');
+        // Босс: закрыл окно — снова не показывать. Метку ставим именно при
+        // закрытии (крестик, клик по фону, кнопка «Понятно») — так окно
+        // гарантированно не вылезет повторно даже если хранилище сбоило.
+        if (lastShownVersion) seenVersionSet(lastShownVersion);
     }
     window.closeUpdateNotice = closeUpdateNotice;
 
