@@ -15,7 +15,7 @@ window.bootAllBrains = async function() {
 
 // Эта функция вызывается из chat.js, ТОЛЬКО если у пользователя нет ключей
 window.generateLocalResponse = async function(agentName, userMessage) {
-    return `⚠️ **API ключи не найдены!**\n\nШтаб работает только на твоих личных ключах. Нажми на иконку ключа 🔑 вверху и введи ключ DeepSeek или Yandex, чтобы я начал думать.`;
+    return `⚠️ **Ключи не найдены!**\n\nВ Штабе два канала: 🅰️ Zveno и 🟣 GigaChat. Открой ⚙️ → «🔑 API Ключи» и проверь ключ нужного канала.`;
 };
 
 // Автозапуск
