@@ -73,7 +73,14 @@
     function supClear() {
         try { localStorage.removeItem(SUP_KEY); } catch (e) {}
     }
-    function ownerLabel(o) { return OWNER_LABEL[o] || ('👤 ' + o); }
+    /* Подпись владельца задачи. Босс разговаривает с ЛЮБОЙ карточкой
+       (Оркестратор, Хакер, Критик…), поэтому имя карточки показываем
+       с её иконкой, а не подменяем на «Архитектор». */
+    function ownerLabel(o) {
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }
 
     /* ---------- ЖИВОЙ АГЕНТ: ПРИЗНАКИ ЖИЗНИ ----------
        Передача задачи — только когда агент МЁРТВ. Пока он работает,
