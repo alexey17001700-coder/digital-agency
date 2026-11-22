@@ -1333,8 +1333,6 @@ async function sendMessage(overrideText = null, isKick = false) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
                 messagesToSend = messagesToSend.filter(m => m.content && m.content.trim() !== '');
-                // Ответы Помощника в контекст Архитектора не подмешиваем — это чужой диалог.
-                messagesToSend = messagesToSend.filter(m => m.agentName !== 'Помощник');
                 // Приложенный файл: подмешиваем содержимое в последнее сообщение Босса (только на этот запрос).
                 if (attachedFile && attachedFile.content) {
                     for (let i = messagesToSend.length - 1; i >= 0; i--) {
