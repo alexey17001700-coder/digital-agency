@@ -296,6 +296,10 @@ function modeBtnIsOn(btn) {
             if (typeof freeModels !== 'function' || typeof selectedAIModel === 'undefined') return false;
             return !!freeModels().find(m => m && m.id === selectedAIModel);
         }
+        if (btn.id === 'btnArchitect') {                 // 🅰️ Архитектор — горит, если канал включён
+            if (typeof architectEnabled !== 'function') return false;
+            return !!architectEnabled();
+        }
     } catch (e) {}
     return false;
 }
