@@ -882,6 +882,189 @@ function renderDuetThoughts(div, thoughts) {
     div.appendChild(buildDuetThoughts(thoughts));
 }
 
+/* =========================================
+   ⚡ ДУЭТ — ЖИВОЙ ДИАЛОГ В ЧАТЕ (приказ Босса)
+   =========================================
+   Босс хочет ВИДЕТЬ, как модели обсуждают задачу, ДО начала работы.
+   Поэтому шаги дуэта идут ПО ОДНОМУ: клиент зовёт сервер (duetStep = 1..8),
+   и каждая реплика сразу появляется в чате. После шага 7 показывается
+   РЕШЕНИЕ и поле «добавить своё» — и только после слова Босса Zveno
+   делает финальную работу (шаг 8, инструменты включены).
+   Бюджет: шаги 1–7 короткие (лимит токенов на сервере), полный ответ — один. */
+const DUET_STEP_META = {
+    1: { who: 'zveno', name: '🅰️ Zveno', title: 'черновик' },
+    2: { who: 'giga',  name: '🟣 GigaChat', title: 'ремарка' },
+    3: { who: 'zveno', name: '🅰️ Zveno', title: 'уточнённый план' },
+    4: { who: 'giga',  name: '🟣 GigaChat', title: 'вторая ремарка' },
+    5: { who: 'zveno', name: '🅰️ Zveno', title: 'сводка' },
+    6: { who: 'giga',  name: '🟣 GigaChat', title: 'проверка на ошибки' },
+    7: { who: 'zveno', name: '🅰️ Zveno', title: 'проверка замечаний' }
+};
+function _injectDuetLiveCss() {
+    if (document.getElementById('duetLiveCss')) return;
+    const st = document.createElement('style'); st.id = 'duetLiveCss';
+    st.textContent = `
+    .duet-live .duet-thoughts { background: rgba(255,215,0,.07); }
+    .duet-line.pending .duet-text { color: #8fb8c8; font-style: italic; }
+    .duet-decision {
+        margin: 10px 0 4px; padding: 12px 14px;
+        background: rgba(0,229,255,.07);
+        border: 1px solid rgba(0,229,255,.45); border-radius: 12px;
+    }
+    .duet-decision-title { font-size: 12px; font-weight: 700; color: #00e5ff; margin-bottom: 8px; letter-spacing: .3px; }
+    .duet-decision-input {
+        width: 100%; box-sizing: border-box; resize: vertical;
+        background: rgba(0,0,0,.35); color: #e8f6ff;
+        border: 1px solid rgba(0,229,255,.35); border-radius: 9px;
+        padding: 8px 10px; font-family: inherit; font-size: 13px; line-height: 1.4;
+    }
+    .duet-decision-input:focus { outline: none; border-color: #00e5ff; }
+    .duet-decision-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .duet-btn {
+        padding: 8px 14px; border-radius: 9px; font-family: inherit;
+        font-size: 13px; font-weight: 700; cursor: pointer; transition: .18s;
+    }
+    .duet-btn-go { background: rgba(0,229,255,.18); color: #00e5ff; border: 1px solid rgba(0,229,255,.6); }
+    .duet-btn-go:hover { background: rgba(0,229,255,.32); }
+    .duet-btn-no { background: rgba(255,102,136,.12); color: #ff6688; border: 1px solid rgba(255,102,136,.5); }
+    .duet-btn-no:hover { background: rgba(255,102,136,.24); }
+    .duet-btn:disabled { opacity: .55; cursor: default; }
+    `;
+    document.head.appendChild(st);
+}
+function createDuetLiveBlock() {
+    _injectDuetThoughtsCss(); _injectDuetLiveCss();
+    const div = document.createElement('div'); div.className = 'chat-msg msg-director duet-live';
+    const header = document.createElement('div'); header.className = 'msg-name';
+    header.innerHTML = '<span class="msg-avatar">⚡</span> Дуэт';
+    div.appendChild(header);
+    const box = document.createElement('div'); box.className = 'duet-thoughts';
+    const title = document.createElement('div'); title.className = 'duet-thoughts-title';
+    title.textContent = '⚡ Дуэт — живое обсуждение';
+    box.appendChild(title);
+    div.appendChild(box);
+    chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
+    return { div: div, box: box };
+}
+function addDuetLiveLine(box, who, text, pending) {
+    const row = document.createElement('div'); row.className = 'duet-line' + (pending ? ' pending' : '');
+    const w = document.createElement('span'); w.className = 'duet-who ' + (who === 'giga' ? 'giga' : 'zveno');
+    w.textContent = who === 'giga' ? '🟣 GigaChat:' : '🅰️ Zveno:';
+    const tx = document.createElement('span'); tx.className = 'duet-text'; tx.textContent = String(text || '');
+    row.appendChild(w); row.appendChild(tx); box.appendChild(row);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return row;
+}
+/* РЕШЕНИЕ + слово Босса: поле «добавить своё» и кнопки «Начать работу» / «Отмена». */
+function buildDuetDecision(onStart, onCancel) {
+    _injectDuetLiveCss();
+    const box = document.createElement('div'); box.className = 'duet-decision';
+    const title = document.createElement('div'); title.className = 'duet-decision-title';
+    title.textContent = '⚡ РЕШЕНИЕ ГОТОВО — добавь своё, и Zveno начнёт работу';
+    box.appendChild(title);
+    const ta = document.createElement('textarea');
+    ta.className = 'duet-decision-input'; ta.rows = 3;
+    ta.placeholder = 'Добавь своё (необязательно): что учесть, что изменить, чего не делать…';
+    box.appendChild(ta);
+    const row = document.createElement('div'); row.className = 'duet-decision-row';
+    const go = document.createElement('button'); go.type = 'button'; go.className = 'duet-btn duet-btn-go'; go.textContent = '▶️ Начать работу';
+    const no = document.createElement('button'); no.type = 'button'; no.className = 'duet-btn duet-btn-no'; no.textContent = '✖ Отмена';
+    go.onclick = () => { const v = ta.value.trim(); go.disabled = true; no.disabled = true; ta.disabled = true; go.textContent = '⏳ Zveno работает…'; onStart(v); };
+    no.onclick = () => { go.disabled = true; no.disabled = true; ta.disabled = true; no.textContent = '⏹ Отменено'; onCancel(); };
+    row.appendChild(go); row.appendChild(no); box.appendChild(row);
+    return box;
+}
+/* ОДИН шаг дуэта: сервер отвечает обычным choices[0].message.content. */
+async function duetAskStep(step, question, talk, extra, messages, userKeys, signal) {
+    const res = await fetch(PROXY, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            duetStep: step,
+            duetQuestion: question || '',
+            duetTalk: talk || '',
+            duetExtra: extra || '',
+            messages: messages || [],
+            userKeys: userKeys || {},
+            isBoss: true
+        }),
+        signal: signal
+    });
+    const data = await res.json();
+    if (!res.ok || !data || !data.choices || !data.choices[0]) {
+        throw new Error((data && data.error) || ('Ошибка сервера: ' + res.status));
+    }
+    return String(data.choices[0].message.content || '').trim();
+}
+/* ПОЛНЫЙ ЖИВОЙ ДУЭТ: шаги 1–7 в чат → пауза на слово Босса → шаг 8 (работа). */
+async function runDuetLive(question, messages, userKeys, signal) {
+    const live = createDuetLiveBlock();
+    const talk = [];
+    const talkText = () => talk.map(l => (l.who === 'zveno' ? '🅰️ Zveno' : '🟣 GigaChat') + ': ' + l.text).join('\n');
+    let failed = 0;
+
+    for (let step = 1; step <= 7; step++) {
+        const meta = DUET_STEP_META[step];
+        const pending = addDuetLiveLine(live.box, meta.who, meta.name + ' — ' + meta.title + '…', true);
+        try {
+            const txt = await duetAskStep(step, question, talkText(), '', messages, userKeys, signal);
+            pending.remove();
+            addDuetLiveLine(live.box, meta.who, txt);
+            talk.push({ who: meta.who, text: txt });
+        } catch (e) {
+            pending.remove();
+            if (e && e.name === 'AbortError') throw e;
+            failed++;
+            addDuetLiveLine(live.box, meta.who, '⚠️ шаг не удался: ' + ((e && e.message) || e));
+        }
+    }
+
+    if (!talk.length) return { error: 'Дуэт: ни одна модель не ответила (' + failed + ' сбоев)' };
+
+    const decision = await new Promise((resolve) => {
+        const box = buildDuetDecision(
+            (extra) => resolve({ go: true, extra: extra }),
+            () => resolve({ go: false, extra: '' })
+        );
+        live.div.appendChild(box);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+
+    if (!decision.go) {
+        renderMessage('⚡ *[Дуэт: Босс отменил работу — Zveno не запускался.]*', 'director', 'Оркестратор');
+        return { error: 'Дуэт остановлен Боссом' };
+    }
+
+    const pendingFinal = addDuetLiveLine(live.box, 'zveno', '🅰️ Zveno — делает работу…', true);
+    let finalText = '';
+    try {
+        finalText = await duetAskStep(8, question, talkText(), decision.extra, messages, userKeys, signal);
+    } catch (e) {
+        pendingFinal.remove();
+        if (e && e.name === 'AbortError') throw e;
+        return { error: 'Дуэт: финал не вышел — ' + ((e && e.message) || e) };
+    }
+    pendingFinal.remove();
+    if (!finalText) return { error: 'Дуэт: финал пустой' };
+
+    addMessageToHistory(finalText, 'director', 'Оркестратор');
+    await new Promise(resolve => { typeMessage(finalText, 'director', 'Оркестратор', resolve); });
+    renderMessage(modelBadgeText('duet'), 'director', 'Оркестратор');
+
+    // Метка [ЭТАП N/M] — большая задача продолжается этапами, как в обычном режиме.
+    const stage = parseStageMarker(finalText);
+    if (typeof window.supStage === 'function') window.supStage(stage);
+    if (stage && typeof window.supAlive === 'function') window.supAlive();
+    if (stage && stageKicks < STAGE_MAX_KICKS) {
+        stageKicks++;
+        renderMessage(`🧩 *[Система: этап ${stage.cur}/${stage.total} закрыт. Авто-пинок — прошу продолжить этап ${stage.cur + 1}.]*`, 'director', 'Оркестратор');
+        const nextStageText = `продолжи этап ${stage.cur + 1} из ${stage.total}`;
+        renderMessage(nextStageText, 'boss'); addMessageToHistory(nextStageText, 'boss');
+        if (typeof supResume === 'function') supResume('arch');
+        setTimeout(() => sendMessage(nextStageText, true), 900);
+    }
+    return { final: finalText };
+}
+
 async function manualDeploy(file, code) {
     if (confirm(`Внедрить новый код в файл ${file}?`)) {
         try {
