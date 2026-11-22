@@ -134,7 +134,7 @@ const AI_MODELS_DEFAULT = [
        автосмена моделей его НЕ трогают. Вход только через кнопку 🅰️. */
     { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000', exclusive: true },
     /* --- БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход, без карты) --- */
-    { id: 'dots-studio/dots-3-note-preview:free', label: 'Dots3-Note', color: '#ffd700', text: '#000', free: true },
+    /* dots-studio/dots-3-note-preview:free — ДЕАКТИВИРОВАНА платформой, из списка убрана */
     { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: 'Nemotron 3 Nano Omni', color: '#76b900', text: '#000', free: true },
     { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra', color: '#76b900', text: '#000', free: true },
     { id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning', color: '#76b900', text: '#000', free: true },
