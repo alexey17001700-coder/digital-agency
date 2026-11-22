@@ -306,6 +306,65 @@ window.applyArchitectButton = applyArchitectButton;
 window.updateArchitectButtonVisual = updateArchitectButtonVisual;
 window.selectArchitect = selectArchitect;
 
+/* =========================================
+   🔑 УНИВЕРСАЛЬНЫЙ КАНАЛ МОДЕЛИ (вкл/выкл + свой ключ)
+   У КАЖДОЙ модели — своя кнопка вкл/выкл и своё поле ключа,
+   ровно как у Архитектора (🅰️ ZVENO). Логика одна на всех:
+   1) shtabModelOn   — { id: 'on'|'off' }  (по умолчанию ВКЛ);
+   2) shtabModelKeys — { id: 'ключ' }      (ключ модели, отдельно от общих);
+   3) выключенная модель не выбирается, не подставляется автоподбором
+      и запрос к ней на сервер НЕ уходит;
+   4) ключ уходит на сервер в userKeys[<id модели>] и в код/Git не пишется.
+   Архитектор (zveno) живёт своей кнопкой 🅰️ — здесь он только читается.
+   ========================================= */
+function modelOnMap() { try { return JSON.parse(localStorage.getItem('shtabModelOn')) || {}; } catch (e) { return {}; } }
+function modelKeysMap() { try { return JSON.parse(localStorage.getItem('shtabModelKeys')) || {}; } catch (e) { return {}; } }
+function modelEnabled(id) {
+    if (!id) return false;
+    if (id === 'zveno') return architectEnabled();          // Архитектор — своя кнопка 🅰️
+    const m = modelOnMap();
+    return m[id] !== 'off';                                  // по умолчанию модель включена
+}
+function modelKey(id) {
+    if (!id) return '';
+    if (id === 'zveno') return architectKey();               // ключ Архитектора — отдельно
+    const k = modelKeysMap();
+    return k[id] || '';
+}
+function setModelKey(id, v) {
+    if (!id) return '';
+    if (id === 'zveno') return setArchitectKey(v);           // Архитектор пишет в свой слот
+    const k = modelKeysMap();
+    k[id] = String(v || '').trim();
+    try { localStorage.setItem('shtabModelKeys', JSON.stringify(k)); } catch (e) {}
+    return k[id];
+}
+function setModelEnabled(id, on) {
+    if (!id) return false;
+    if (id === 'zveno') { setArchitectEnabled(on); return on; }   // Архитектор — своя кнопка 🅰️
+    const m = modelOnMap();
+    m[id] = on ? 'on' : 'off';
+    try { localStorage.setItem('shtabModelOn', JSON.stringify(m)); } catch (e) {}
+    // Выключили модель, которая сейчас выбрана — уводим на разрешённую.
+    if (!on && selectedAIModel === id) {
+        const f = freeModels().filter(x => modelEnabled(x.id));
+        selectedAIModel = f.length ? f[0].id : 'gigachat';
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    }
+    if (typeof applyAIModelButton === 'function') applyAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    if (typeof applyGigaChatButton === 'function') applyGigaChatButton();
+    if (typeof applyArchitectButton === 'function') applyArchitectButton();
+    if (typeof renderModelPanel === 'function') renderModelPanel();
+    return on;
+}
+window.modelEnabled = modelEnabled;
+window.modelKey = modelKey;
+window.setModelKey = setModelKey;
+window.setModelEnabled = setModelEnabled;
+window.modelOnMap = modelOnMap;
+window.modelKeysMap = modelKeysMap;
+
 /* --- ОТДЕЛЬНАЯ КНОПКА «🟣 GIGACHAT» ---
    Босс включает GigaChat (Сбер) одним тапом, не заходя в список моделей.
    Тап — включить, повторный тап — вернуть ту модель, что была до этого.
