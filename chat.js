@@ -203,15 +203,25 @@ function setPaidEnabled(on) {
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
 }
-function allowedModels() { return freeModels().concat(paidEnabled() ? paidModels() : []); }
+/* В список разрешённых попадают ТОЛЬКО включённые модели: выключенную
+   кнопкой модель нельзя выбрать и нельзя подставить автоподбором. */
+function allowedModels() {
+    return freeModels().filter(m => modelEnabled(m.id))
+        .concat(paidEnabled() ? paidModels().filter(m => modelEnabled(m.id)) : []);
+}
 function resolveAllowedModel(id) {
     /* 🅰️ АРХИТЕКТОР — ТОЛЬКО ВРУЧНУЮ. Кнопка 🅰️ выключена — ZVENO
        не выбирается и не подставляется ничем: ни автоподбором, ни
        автосменой, ни аварийным резервом. */
     if (id === 'zveno') {
         if (architectEnabled()) return id;
-        const ff = freeModels();
+        const ff = freeModels().filter(m => modelEnabled(m.id));
         return ff.length ? ff[0].id : 'gigachat';
+    }
+    /* 🔑 УНИВЕРСАЛЬНО: модель выключена своей кнопкой — уходим на включённую. */
+    if (!modelEnabled(id)) {
+        const fe = freeModels().filter(m => modelEnabled(m.id));
+        return fe.length ? fe[0].id : 'gigachat';
     }
     const info = getModelInfo(id);
     if (info && info.free) return id;
