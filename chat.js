@@ -238,7 +238,9 @@ function modelBadgeText(id) {
    resolveAllowedModel() — страховка: платная модель при отключённых платных
    не уйдёт на сервер, запрос уедет на бесплатный маршрут. */
 function freeModels() { return AI_MODELS.filter(m => m && m.free); }
-function paidModels() { return AI_MODELS.filter(m => m && !m.free); }
+/* Платные модели для КНОПОК. Модели с agentOnly (DeepSeek, GigaChat)
+   в кнопках не листаются — они выбираются только карточкой агента. */
+function paidModels() { return AI_MODELS.filter(m => m && !m.free && !m.agentOnly); }
 function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
 function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
