@@ -25,6 +25,9 @@
     .mode-switch .mode-extra { display: contents; }
     .mode-switch:not(.expanded) .mode-extra .mode-btn { display: none; }
     .mode-switch:not(.expanded) .mode-extra .mode-btn.mode-on { display: inline-block; }
+    /* Кнопка «🤝 Тандем» видна ВСЕГДА — даже когда панель свёрнута в шестерёнку.
+       Раньше она пряталась вместе с остальными кнопками, и Босс её не находил. */
+    .mode-switch:not(.expanded) #btnTandem { display: inline-block; }
     .mode-switch .gear-btn { border: 1px solid #00e5ff; color: #00e5ff; background: #141414; }
     .mode-switch .gear-btn.active { background: #00e5ff; color: #000; }
     </style>
