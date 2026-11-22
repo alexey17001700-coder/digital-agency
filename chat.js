@@ -1487,6 +1487,15 @@ async function sendMessage(overrideText = null, isKick = false) {
         stopSendTimer();   // старый секундомер гасим сразу, не ждём нового старта
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
+    /* --- НИКТО НЕ ВЫБРАН → НИКТО НЕ РАБОТАЕТ ---
+       Босс: пустая панель — это НЕ «просто кнопка» и НЕ Архитектор по умолчанию.
+       Ни одна карточка не выбрана — Надзиратель задачу НЕ берёт (supStart не зовётся),
+       запрос никуда не уходит, в чат летит «Выберите Агента», текст остаётся в поле.
+       Правило только для сообщения Босса: авто-пинки и «продолжи этап» не блокируем. */
+    if (!overrideText && !isKick && (!Array.isArray(selectedAgents) || selectedAgents.length === 0)) {
+        renderMessage('⚠️ **Выберите Агента.** Ни одна карточка не выбрана — работать некому.\n\nТапни карточку в панели: 👑 Оркестратор, 📐 Архитектор, 🕵️ Хакер, 🧐 Критик, 🤖 GigaChat.', 'director', 'Оркестратор');
+        return;
+    }
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
