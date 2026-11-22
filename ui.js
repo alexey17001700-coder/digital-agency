@@ -231,6 +231,12 @@ function openAIModelPanel() {
     title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;';
     box.appendChild(title);
 
+    /* Подсказка: кнопки 🧠/🆓 больше НЕ листают модели — тап только вкл/выкл. */
+    const tip = document.createElement('div');
+    tip.textContent = 'Выбор модели — здесь. Тап по кнопке 🧠 или 🆓 в панели только ВКЛЮЧАЕТ и ВЫКЛЮЧАЕТ уже выбранную модель.';
+    tip.style.cssText = 'font-size:11px;color:#8b98a5;line-height:1.4;margin-bottom:10px;';
+    box.appendChild(tip);
+
     const rowStyle = (active) => 'display:block;width:100%;text-align:left;padding:11px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid ' + (active ? '#00e5ff' : '#2a333d') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'transparent') + ';color:#e6edf3;';
     const pick = (m) => {
         selectedAIModel = m.id;
