@@ -1568,7 +1568,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 return;
             }
             // Тандем не дал ни одной реплики (сбой сети/лимит) — отдаём задачу надзирателю.
-            if (typeof supFailed === 'function') supFailed('arch', 'тандем не ответил');
+            if (typeof supFailed === 'function') supFailed(activeAgent, 'тандем не ответил');
             return;
         }
         let success = false; let aiText = ""; let lastError = ""; let usedModel = "";
