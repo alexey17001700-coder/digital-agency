@@ -855,13 +855,26 @@ function buildDuetThoughts(t) {
         const tx = document.createElement('span'); tx.className = 'duet-text'; tx.textContent = s;
         row.appendChild(w); row.appendChild(tx); box.appendChild(row);
     };
+    /* ⚡ ЦЕПОЧКА ОБСУЖДЕНИЯ (приказ Босса): звено → гига → звено → гига →
+       гига (проверка на ошибки) → звено (проверка) → звено (делает работу).
+       Сервер присылает lines — массив реплик по порядку. Старый формат
+       {brief, remark} поддерживаем как запасной. */
+    if (t && Array.isArray(t.lines) && t.lines.length) {
+        t.lines.forEach(l => {
+            const who = String((l && l.who) || '');
+            if (who === 'giga') add('🟣 GigaChat:', 'giga', l.text);
+            else add('🅰️ Zveno:', 'zveno', l.text);
+        });
+        return box;
+    }
     add('🅰️ Zveno:', 'zveno', t && t.brief);
     add('🟣 GigaChat:', 'giga', t && t.remark);
     return box;
 }
 function renderDuetThoughts(div, thoughts) {
     if (!div || !thoughts) return;
-    if (!thoughts.brief && !thoughts.remark) return;
+    const hasLines = Array.isArray(thoughts.lines) && thoughts.lines.length > 0;
+    if (!hasLines && !thoughts.brief && !thoughts.remark) return;
     div.appendChild(buildDuetThoughts(thoughts));
 }
 
