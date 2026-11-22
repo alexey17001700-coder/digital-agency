@@ -36,7 +36,6 @@
 - `office.js` — офис
 - `office3d.js` — офис 3D
 - `pc.png` — компьютер
-- `probe_test.html`
 - `safe.js`
 - `start.sh` — запуск
 - `style.css` — стили
