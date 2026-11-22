@@ -1533,6 +1533,16 @@ async function sendMessage(overrideText = null, isKick = false) {
         renderMessage('⚠️ **Выберите Агента.** Ни одна карточка не выбрана — работать некому.\n\nТапни карточку в панели: 👑 Оркестратор, 📐 Архитектор, 🕵️ Хакер, 🧐 Критик, 🤖 GigaChat.', 'director', 'Оркестратор');
         return;
     }
+    /* --- НИ МОДЕЛЬ, НИ КАРТОЧКА СО СВОИМ МАРШРУТОМ → НИЧЕГО НЕ РАБОТАЕТ ---
+       Босс: дефолтной модели больше нет. Выбрана карточка без своего маршрута
+       (например Дизайнер) и модель не выбрана — запрос никуда не уходит.
+       Работает только явный выбор Босса: модель на 🧠/🆓 ИЛИ карточка со
+       своим маршрутом (у неё своя модель и свой ключ). */
+    const cardRouteReady = Array.isArray(selectedAgents) && selectedAgents.length > 0 && selectedAgents.every(a => !!agentRoute(a));
+    if (!overrideText && !isKick && !selectedAIModel && !cardRouteReady) {
+        renderMessage('⚠️ **Выберите модель.** Ни модель, ни карточка со своим маршрутом не выбраны — работать нечем.\n\nТапни 🧠 Платные или 🆓 Бесплатные (долгое нажатие — список моделей), либо карточку: 👑 Оркестратор, 📐 Архитектор, 🕵️ Хакер, 🧐 Критик, 🤖 GigaChat.', 'director', 'Оркестратор');
+        return;
+    }
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
