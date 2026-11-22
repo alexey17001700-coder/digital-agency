@@ -505,6 +505,135 @@ function openArchitectPanel() {
 }
 window.openArchitectPanel = openArchitectPanel;
 
+/* =========================================
+   ⚙️ НАСТРОЙКА ЛЮБОЙ МОДЕЛИ (вкл/выкл + свой ключ)
+   Ровно та же логика, что у Архитектора 🅰️, только для каждой модели:
+   1) ВКЛ / ВЫКЛ — выключенная модель не выбирается и не подставляется
+      автоподбором, запрос к ней на сервер не уходит;
+   2) СВОЙ КЛЮЧ модели — отдельно от общих ключей, живёт на устройстве
+      и уходит на сервер в userKeys[<id модели>]. В код и Git — НИКОГДА.
+   ========================================= */
+function openModelSettingsPanel(id, onBack) {
+    if (!id) return;
+    const info = (typeof getModelInfo === 'function') ? getModelInfo(id) : null;
+    const label = (info && info.label) ? info.label : id;
+    const old = document.getElementById('modelSettingsPanel');
+    if (old) old.remove();
+
+    const on = (typeof modelEnabled === 'function') ? modelEnabled(id) : true;
+    const savedKey = (typeof modelKey === 'function') ? modelKey(id) : '';
+
+    const ov = document.createElement('div');
+    ov.id = 'modelSettingsPanel';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:340px;background:#0d1418;border:1px solid #2a333d;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6);max-height:85vh;overflow-y:auto;';
+
+    const title = document.createElement('div');
+    title.textContent = '⚙️ ' + label;
+    title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.4px;margin-bottom:4px;';
+    box.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.textContent = 'Своя кнопка вкл/выкл и свой ключ. Автоподбор выключенную модель не трогает.';
+    sub.style.cssText = 'font-size:11px;color:#8b98a5;line-height:1.4;margin-bottom:12px;';
+    box.appendChild(sub);
+
+    const sw = document.createElement('button');
+    sw.textContent = on ? '● ВКЛ — тап, чтобы выключить' : '○ ВЫКЛ — тап, чтобы включить';
+    sw.style.cssText = 'display:block;width:100%;text-align:left;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid ' + (on ? '#00e5ff' : '#2a333d') + ';background:' + (on ? 'rgba(0,229,255,.14)' : 'transparent') + ';color:' + (on ? '#00e5ff' : '#8b98a5') + ';';
+    sw.onclick = () => {
+        if (typeof setModelEnabled !== 'function') return;
+        setModelEnabled(id, !on);
+        openModelSettingsPanel(id, onBack);
+    };
+    box.appendChild(sw);
+
+    const kv = document.createElement('div');
+    kv.textContent = savedKey ? '🔑 Ключ вписан: •••••••• (на устройстве)' : '🔑 Ключ не вписан — идёт по общим ключам сервера';
+    kv.style.cssText = 'font-size:11px;color:' + (savedKey ? '#7ee08a' : '#8b98a5') + ';margin:12px 0 6px;line-height:1.4;';
+    box.appendChild(kv);
+
+    const keyWrap = document.createElement('div');
+    keyWrap.style.cssText = 'position:relative;margin-bottom:8px;';
+    const keyInput = document.createElement('input');
+    keyInput.type = 'password';
+    keyInput.className = 'modal-textarea';
+    keyInput.placeholder = savedKey ? 'Новый ключ (пусто — оставить текущий)' : 'Ключ модели';
+    keyInput.style.cssText = 'height:40px;margin-bottom:0;padding-right:42px;width:100%;box-sizing:border-box;';
+    const eye = document.createElement('button');
+    eye.textContent = '👁';
+    eye.style.cssText = 'position:absolute;right:10px;top:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#aaa;';
+    eye.onclick = () => { keyInput.type = keyInput.type === 'password' ? 'text' : 'password'; eye.textContent = keyInput.type === 'password' ? '👁' : '🙈'; };
+    keyWrap.appendChild(keyInput); keyWrap.appendChild(eye);
+    box.appendChild(keyWrap);
+
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:12px;line-height:1.4;margin-bottom:8px;min-height:14px;';
+    box.appendChild(msg);
+    const setMsg = (t, c) => { msg.textContent = t || ''; msg.style.color = c || '#8b98a5'; };
+
+    const btn = (label2, bg, color, border, fn) => {
+        const b = document.createElement('button');
+        b.textContent = label2;
+        b.style.cssText = 'display:block;width:100%;padding:11px;margin-top:8px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';';
+        b.onclick = fn;
+        box.appendChild(b);
+        return b;
+    };
+
+    btn('💾 Сохранить ключ', '#00e5ff', '#000', '#00e5ff', () => {
+        const v = String(keyInput.value || '').trim();
+        if (!v) { setMsg(savedKey ? 'Ключ не изменён.' : 'Впиши ключ — поле пустое.', '#ffd700'); return; }
+        if (typeof setModelKey !== 'function') { setMsg('Функция ключа не загружена.', '#ff8888'); return; }
+        setModelKey(id, v);
+        keyInput.value = '';
+        setMsg('✅ Ключ сохранён на устройстве.', '#7ee08a');
+        if (typeof syncModeButtons === 'function') syncModeButtons();
+        setTimeout(() => openModelSettingsPanel(id, onBack), 700);
+    });
+
+    btn('🔌 Проверить связь с ключом', 'transparent', '#00e5ff', '#00e5ff', async () => {
+        const v = String(keyInput.value || '').trim() || savedKey;
+        setMsg('Проверяю…', '#8b98a5');
+        try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 30000);
+            const uk = {}; if (v) uk[id] = v;
+            const r = await fetch(PROXY, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: [{ role: 'user', content: 'ку' }], temperature: 0.2, model: id, userKeys: uk, isBoss: true }),
+                signal: ctrl.signal
+            });
+            clearTimeout(tid);
+            const d = await r.json().catch(() => ({}));
+            const txt = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '').trim() : '';
+            if (txt) setMsg('✅ Модель ответила: ' + txt.slice(0, 80), '#7ee08a');
+            else setMsg('❌ Не ответила: ' + ((d && d.error) || ('HTTP ' + r.status)), '#ff8888');
+        } catch (e) {
+            setMsg('❌ ' + ((e && e.name === 'AbortError') ? 'таймаут 30 с' : ((e && e.message) || 'сбой сети')), '#ff8888');
+        }
+    });
+
+    btn('🗑️ Удалить ключ', 'transparent', '#ff6688', '#ff0055', () => {
+        if (!confirm('Удалить ключ этой модели с устройства?')) return;
+        if (typeof setModelKey === 'function') setModelKey(id, '');
+        setMsg('Ключ удалён.', '#ff8888');
+        setTimeout(() => openModelSettingsPanel(id, onBack), 700);
+    });
+
+    const back = document.createElement('button');
+    back.textContent = 'НАЗАД К СПИСКУ';
+    back.style.cssText = 'display:block;width:100%;padding:10px;margin-top:12px;border:1px solid #2a333d;border-radius:9px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;';
+    back.onclick = () => { ov.remove(); if (typeof onBack === 'function') onBack(); };
+    box.appendChild(back);
+
+    ov.appendChild(box);
+    ov.addEventListener('click', e => { if (e.target === ov) { ov.remove(); if (typeof onBack === 'function') onBack(); } });
+    document.body.appendChild(ov);
+}
+window.openModelSettingsPanel = openModelSettingsPanel;
+
 function refreshShtab() {
     if (!confirm("🔄 Обновить Штаб? Страница перезагрузится.")) return;
     if ('caches' in window) {
