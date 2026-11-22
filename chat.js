@@ -1837,10 +1837,6 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-    if (typeof applyAIModelButton === 'function') applyAIModelButton();
-    if (typeof bindAIModelButton === 'function') bindAIModelButton();
-    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
-    if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
     if (typeof applyArchitectButton === 'function') applyArchitectButton(); // 🅰️ Архитектор: своя кнопка, своё состояние
     // Страховка: выбрана ZVENO, а Архитектор выключен — уходим на разрешённую модель.
