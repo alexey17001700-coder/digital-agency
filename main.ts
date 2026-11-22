@@ -1252,9 +1252,9 @@ async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<
     }
     if (!draft) throw new Error(`Дуэт: Zveno не дал черновик (${lastErr || "нет ответа"})`);
 
-    // ШАГ 2 — 🟣 GigaChat: первая ремарка.
+    // ШАГ 2 — 🟣 GigaChat: супер-дизайнер (как сделать красиво).
     try {
-        const r = await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${question}\n\nЧЕРНОВИК ZVENO:\n${draft}`, DUET_REMARK_TOKENS);
+        const r = await gShort(DUET_DESIGN_PROMPT, `ВОПРОС БОССА:\n${question}\n\nЧЕРНОВИК ZVENO:\n${draft}`, DUET_REMARK_TOKENS);
         addLine("giga", r);
     } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 2 (GigaChat) упал: ${lastErr}`); }
 
