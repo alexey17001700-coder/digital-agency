@@ -365,7 +365,7 @@
         return out;
     }
     function supOnlineAgents() {
-        const list = ['arch', 'assistant', 'free'];
+        const list = ['arch', 'free'];
         supOnlineCache.list.forEach(function (n) { if (list.indexOf(n) === -1) list.push(n); });
         return list;
     }
