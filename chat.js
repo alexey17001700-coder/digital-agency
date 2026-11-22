@@ -1930,4 +1930,13 @@ function init() {
         selectedAIModel = firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
+    /* Мёртвая модель в «памяти до Архитектора» / «до GigaChat».
+       Иначе выключение 🅰️ возвращало деактивированную dots — и чат падал
+       «model has been deactivated». Чистим память при старте. */
+    try {
+        const _pa = localStorage.getItem('shtabAIModelBeforeArch') || '';
+        if (_pa && !AI_MODELS.some(m => m.id === _pa)) localStorage.removeItem('shtabAIModelBeforeArch');
+        const _pg = localStorage.getItem('shtabAIModelBeforeGiga') || '';
+        if (_pg && !AI_MODELS.some(m => m.id === _pg)) localStorage.removeItem('shtabAIModelBeforeGiga');
+    } catch (e) {}
 }
