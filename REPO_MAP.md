@@ -10,15 +10,19 @@
 ---
 
 ## 1. digital-agency — ШТАБ (главный)
-Файлы (39):
+Файлы (46):
 - `.nojekyll`
 - `APP_WORKLOG.md` — журнал работ приложения
+- `CHAT_ARCHITECTURE.md` — **память: как устроен наш чат (один диалог — Архитектор)**
+- `GITHUB_APK_PLAN.md` — план сборки APK
 - `LICENSE`
 - `OWNER.md` — данные владельца
 - `PROMPT_BOSS.md` — промт Босса
-- `README.md`
+- `README.md` — описание проекта
+- `REPO_MAP.md` — эта карта
 - `SERVER_DIAGNOSTICS.md` — **память проекта** (ремонт, история правок)
 - `STEP_QUEUE.md` — очередь шагов
+- `SYSTEM_PROMPT.md` — системный промт Архитектора
 - `TASKS_CLEANUP.md`
 - `agents.js` — агенты
 - `app.html` — главный интерфейс Штаба
@@ -26,7 +30,6 @@
 - `backup.html`
 - `char1.png` `char2.png` `char3.png` `char4.png` — персонажи
 - `chat.js` — чат
-- `CHAT_ARCHITECTURE.md` — **память: как устроен наш чат и разделённый экран**
 - `cooler.png` — кулер
 - `index.html` — точка входа
 - `local_ai.js` — локальный ИИ
@@ -37,8 +40,10 @@
 - `office3d.js` — офис 3D
 - `pc.png` — компьютер
 - `safe.js`
+- `server_dump.sh` — дамп состояния сервера
 - `start.sh` — запуск
 - `style.css` — стили
+- `supervisor.js` — сторож ответов Архитектора
 - `sw.js` — service worker
 - `sync.sh` — синхронизация каждые 10 сек
 - `three.module.js` — Three.js
@@ -46,7 +51,9 @@
 - `version.json`
 - `voice.js` — голос
 - `watchdog.js` — сторож
+- `watchdog.sh` — сторож (shell)
 - `watchdog_app.html`
+- `zveno_balance.js` — баланс звена
 
 ## 2. nexus_chat — ЧАТ
 - `CHAT_AI_GUIDE.md` — устройство чата (память)
