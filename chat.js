@@ -687,6 +687,19 @@ function enhanceMediaInMessage(container) {
     enhanceCodeBlocks(container);
 }
 
+/* --- ЗАЩИТА ОТ ДВОЙНОГО ОКНА ПОГОДЫ ---
+   Если в ответе уже есть служебная метка [[WEATHER_CARD]] (её рендерит сам
+   чат), ручной HTML-виджет <div class='ai-widget'> с погодой больше НЕ
+   дублируем — иначе Босс видит два окна подряд. Виджеты на другие темы
+   (не про погоду) остаются как есть. */
+const WEATHER_WIDGET_RE = /погод|°c|°с|температур|weather|влажност|осадк|ветер/i;
+function stripDuplicateWeatherWidget(container, hasWeatherCard) {
+    if (!container || !hasWeatherCard) return;
+    container.querySelectorAll('.ai-widget').forEach(w => {
+        if (WEATHER_WIDGET_RE.test(w.textContent || '')) w.remove();
+    });
+}
+
 async function manualDeploy(file, code) {
     if (confirm(`Внедрить новый код в файл ${file}?`)) {
         try {
