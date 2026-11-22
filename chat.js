@@ -1635,7 +1635,11 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
                 // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
                 const selModelInfo = getModelInfo(selectedAIModel);
-                if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
+                if (selModelInfo && selModelInfo.free && selectedAgents.length > 0) modelToUse = selectedAIModel;
+                // --- НИКТО НЕ ВЫБРАН → ОРКЕСТРАТОР = АРХИТЕКТОР (я) ---
+                // Босс: пустая панель — это не «просто кнопка», а сам Архитектор.
+                // Модель Zveno, ключ ZV route (freeKey). Нет ключа — предупреждение и стоп.
+                if (selectedAgents.length === 0) modelToUse = 'zveno';
                 // ЖЁСТКАЯ ГАРАНТИЯ №2: кнопка 🟣 GigaChat включена — на сервер уходит
                 // ИМЕННО "gigachat". Тот же секрет-ключ Босса (deepseekKey = "zveno"/"boss")
                 // подменял выбор на платную Zveno — из-за этого кнопка GigaChat «не работала»:
