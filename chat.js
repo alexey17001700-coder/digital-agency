@@ -1499,12 +1499,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 
                 if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
 
-                let modelToUse = selectedAIModel;
-                if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                // ПЕРЕБОРА МОДЕЛЕЙ НЕТ: на сервер уходит ровно та модель, что выбрана Боссом.
-                if (typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
-                // ЖЁСТКАЯ ГАРАНТИЯ: кнопка 🟣 GigaChat включена — на сервер уходит ИМЕННО "gigachat".
-                if (selectedAIModel === 'gigachat') modelToUse = 'gigachat';
+                // (modelToUse определена выше — до сборки промпта, чтобы подменить промпт для GigaChat)
                 // 🅰️ Архитектор выключен кнопкой — запрос не отправляем вообще.
                 // Никакой подмены на другую модель: честный отказ Боссу.
                 if (modelToUse === 'zveno' && !architectEnabled()) {
