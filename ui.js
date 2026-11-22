@@ -106,7 +106,12 @@ function applyAIModelButton() {
     const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
     const paid = (typeof paidModels === 'function') ? paidModels() : [];
     /* Платных моделей в Штабе больше нет — кнопка 🧠 не нужна, прячем. */
-    if (!paid.length) { btn.style.display = 'none'; return; }
+    if (!paid.length) {
+        btn.style.display = 'none';
+        if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+        if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
+        return;
+    }
     btn.style.display = '';
     const cur = paid.find(m => m.id === selectedAIModel);
     if (cur) {
