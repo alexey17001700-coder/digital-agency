@@ -668,18 +668,12 @@ if (name === "create_github_repo") {
 // ЗАПРОС К ZVENO (ЗРЕНИЕ)
 // =========================================
 async function callZvenoVision(messages: any[], imageBase64: string, userKeys: any = {}, requestedModel: string = ""): Promise<string> {
-    const apiKey = (userKeys && userKeys.freeKey) || Deno.env.get("ZVENO_API_KEY");
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
+    /* 👁 ЗРЕНИЕ — ЛИНЕЙНО, ОДНА модель, БЕЗ ПЕРЕБОРА.
+       Ключ ВСЕГДА серверный: ZVENO_API_KEY из /root/.env. В коде ключей НЕТ. */
+    const apiKey = Deno.env.get("ZVENO_API_KEY");
+    if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
 
-    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ: фото смотрит ОДНА модель — выбранная Боссом
-       (или бесплатная VL, если модель не пришла). Упала — честная ошибка. */
-    const visionChain: string[] = [];
-    const reqModel = String(requestedModel || "").trim();
-    if (reqModel && (reqModel.endsWith(":free") || reqModel.toLowerCase().includes("-vl"))) visionChain.push(reqModel);
-    else if (FREE_VISION_MODELS.length) visionChain.push(FREE_VISION_MODELS[0]);
-    else visionChain.push("openai/gpt-4o-mini");
-
-    let visionMessages = JSON.parse(JSON.stringify(messages));
+    const visionMessages = JSON.parse(JSON.stringify(messages));
 
     // Жестко перебиваем промпт, чтобы модель не отказывалась смотреть фото
     const systemIndex = visionMessages.findIndex((m: any) => m.role === "system");
@@ -691,7 +685,7 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
         visionMessages.unshift({ role: "system", content: visionPrompt });
     }
 
-    let lastMsg = visionMessages[visionMessages.length - 1];
+    const lastMsg = visionMessages[visionMessages.length - 1];
 
     if (lastMsg && lastMsg.role === "user") {
         const textPrompt = lastMsg.content || "Опиши, что изображено на этом фото.";
@@ -701,50 +695,22 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
         ];
     }
 
-    let lastVisionError = "Все VL-модели не ответили";
+    const res = await fetch(ZVENO_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ model: VISION_MODEL, messages: visionMessages, max_tokens: 1024, temperature: 0.7 }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT)
+    });
 
-    for (let vi = 0; vi < visionChain.length; vi++) {
-        const visionModel = visionChain[vi];
-        const payload = {
-            model: visionModel,
-            messages: visionMessages,
-            max_tokens: 1024,
-            temperature: 0.7
-        };
-
-        try {
-            const res = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT)
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-                lastVisionError = `${visionModel}: ${data?.error?.message || res.status}`;
-                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
-                continue;
-            }
-            const text = data.choices?.[0]?.message?.content;
-            if (!text) {
-                lastVisionError = `${visionModel}: пустой ответ`;
-                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
-                continue;
-            }
-            zlog(`[VISION] ответила модель: ${visionModel}`);
-            return text;
-        } catch (e: any) {
-            lastVisionError = `${visionModel}: ${e?.message || e}`;
-            zlog(`[VISION-FALLBACK] ${lastVisionError}`);
-            continue;
-        }
-    }
-
-    throw new Error(`Ошибка Vision: ${lastVisionError}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Vision: ${data?.error?.message || res.status}`);
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error("Vision: пустой ответ");
+    zlog(`[VISION] ответила модель: ${VISION_MODEL}`);
+    return text;
 }
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
