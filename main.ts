@@ -889,46 +889,26 @@ async function callGigaChat(messages: any[], requestedModel: string = "", userKe
             content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
         }));
 
-    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ: отвечает ОДНА версия GigaChat — выбранная
-       (или первая из списка). Упала — честная ошибка, без перебора версий. */
-    const want = String(requestedModel || "").replace(/^gigachat[:\/]?/i, "").trim();
-    const chain = [want || GIGACHAT_MODELS[0]];
+    /* ❗ ПЕРЕБОРА НЕТ: отвечает ОДНА модель GigaChat. Упала — честная ошибка. */
+    const model = GIGACHAT_MODELS[0];
+    const res = await fetch(GIGACHAT_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    } as any);
 
-    let lastErr = "GigaChat не ответил";
-    for (const model of chain) {
-        try {
-            const res = await fetch(GIGACHAT_API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-                body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
-                client: getGigaChatClient(),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT),
-            } as any);
-
-            const data = await res.json();
-            if (!res.ok) {
-                lastErr = `${model}: ${data?.message || res.status}`;
-                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
-                continue;
-            }
-            const text = data?.choices?.[0]?.message?.content;
-            if (!text) {
-                lastErr = `${model}: пустой ответ`;
-                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
-                continue;
-            }
-            zlog(`[GIGACHAT] ответила модель: ${model}`);
-            return text;
-        } catch (e: any) {
-            lastErr = `${model}: ${e?.message || e}`;
-            zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
-        }
-    }
-    throw new Error(lastErr);
+    const data = await res.json();
+    if (!res.ok) throw new Error(`${model}: ${data?.message || res.status}`);
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error(`${model}: пустой ответ`);
+    zlog(`[GIGACHAT] ответила модель: ${model}`);
+    return text;
 }
 
 // =========================================
