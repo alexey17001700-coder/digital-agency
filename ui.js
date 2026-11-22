@@ -127,22 +127,30 @@ function applyAIModelButton() {
 }
 
 function toggleAIModel() {
-    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
     const list = (typeof paidModels === 'function') ? paidModels() : [];
-    if (!on) {
-        if (typeof renderMessage === 'function') renderMessage('🔒 *[Система: платные модели отключены. Долгое нажатие на 🧠 — включить.]*', 'director', 'Оркестратор');
-        return;
-    }
     if (!list.length) {
         if (typeof renderMessage === 'function') renderMessage('💳 *[Система: платных моделей в списке нет.]*', 'director', 'Оркестратор');
         return;
     }
-    let idx = list.findIndex(m => m.id === selectedAIModel);
-    if (idx < 0) idx = -1;
-    selectedAIModel = list[(idx + 1) % list.length].id;
-    localStorage.setItem('shtabAIModel', selectedAIModel);
+    // Выбранная платная модель включена → тап её ВЫКЛЮЧАЕТ (выбор снимается).
+    const cur = list.find(m => m.id === selectedAIModel);
+    if (cur) {
+        try { localStorage.setItem('shtabLastPaidModel', cur.id); } catch (e) {}
+        selectedAIModel = '';
+        try { localStorage.removeItem('shtabAIModel'); } catch (e) {}
+        applyAIModelButton();
+        if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + cur.label + ' ВЫКЛЮЧЕНА. Тап по 🧠 — включить снова.]*', 'director', 'Оркестратор');
+        return;
+    }
+    // Ничего не выбрано → тап ВКЛЮЧАЕТ последнюю выбранную платную модель.
+    let last = '';
+    try { last = localStorage.getItem('shtabLastPaidModel') || ''; } catch (e) {}
+    const back = list.find(m => m.id === last) || list[0];
+    if (typeof paidEnabled === 'function' && !paidEnabled() && typeof setPaidEnabled === 'function') setPaidEnabled(true);
+    selectedAIModel = back.id;
+    try { localStorage.setItem('shtabAIModel', back.id); } catch (e) {}
     applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
+    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + back.label + ' ВКЛЮЧЕНА.]*', 'director', 'Оркестратор');
 }
 
 /* --- КНОПКА 🆓 БЕСПЛАТНЫЕ ---
