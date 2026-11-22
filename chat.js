@@ -1280,31 +1280,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearAttachPreview();
     }
 
-    /* --- ПЕРЕКЛЮЧАТЕЛЬ «КОМУ»: выбран Помощник — запрос уходит в ИИ-шлюз,
-       ответ печатается в ЭТОТ ЖЕ чат. Архитектор не вызывается, деньги не тратятся. --- */
-    if (!overrideText && !isKick && chatTarget === 'assistant') {
-        let assistText = text;
-        if (attachedFile && attachedFile.content) {
-            assistText = '[ФАЙЛ: ' + attachedFile.name + ']\n```\n' + attachedFile.content + '\n```\n\n' + assistText;
-        }
-        isGenerating = true; lastSendSuccess = false;
-        // НАДЗИРАТЕЛЬ: задача ушла Помощнику — пишем в журнал, кто её ведёт.
-        if (typeof supStart === 'function') supStart(assistText, 'assistant');
-        sendBtn.disabled = false; sendBtn.className = 'send-btn stop-active'; sendBtn.innerText = '0.0s'; sendBtn.style.fontSize = '12px';
-        startSendTimer();
-        let assistOk = false;
-        try { assistOk = await sendToAssistant(assistText); }
-        finally {
-            isGenerating = false; stopSendTimer();
-            attachedImageBase64 = null; attachedFile = null; clearAttachPreview();
-            sendBtn.disabled = false; sendBtn.className = 'send-btn'; sendBtn.innerText = '➤'; sendBtn.style.fontSize = '';
-        }
-        // НАДЗИРАТЕЛЬ: ответил — задача закрыта; сорвался — помечаем сбой.
-        if (typeof supAnswered === 'function' && assistOk) supAnswered('assistant');
-        else if (typeof supFailed === 'function') supFailed('assistant', 'Помощник не ответил');
-        return;
-    }
-
     // НАДЗИРАТЕЛЬ: задачу ведёт Архитектор — пишем в журнал.
     if (!overrideText && !isKick && typeof supStart === 'function') supStart(text, 'arch');
     isGenerating = true; lastSendSuccess = false; const mySeq = ++sendSeq;
