@@ -272,27 +272,21 @@ function openAIModelPanel() {
         return wrap;
     };
 
-    // БЕСПЛАТНЫЕ — всегда доступны, отдельным блоком.
-    const free = (typeof freeModels === 'function') ? freeModels() : [];
-    section('🆓 БЕСПЛАТНЫЕ', '#7ee08a');
-    if (!free.length) hint('Нет бесплатных моделей в списке.');
-    free.forEach(m => box.appendChild(modelRow(m)));
+    /* --- ДВА КАНАЛА ШТАБА (приказ Босса) ---
+       Бесплатные модели (Nemotron, Flint и др.), Yandex и DeepSeek убраны
+       полностью. Остались только: 🅰️ Архитектор (свой ключ) и 🟣 GigaChat.
+       У каждого своя шестерёнка ⚙️ — вкл/выкл и свой ключ. */
+    const zInfo = (typeof AI_MODELS !== 'undefined') ? AI_MODELS.find(m => m && m.id === 'zveno') : null;
+    section('🅰️ АРХИТЕКТОР (ZVENO) — свой ключ', '#00e5ff');
+    if (zInfo) box.appendChild(modelRow(zInfo));
+    else hint('Канал Архитектора не загружен.');
 
-    // ПЛАТНЫЕ — можно отключить целиком одним тапом.
-    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
-    section('💳 ПЛАТНЫЕ', '#ffd700');
-    const sw = document.createElement('button');
-    sw.textContent = on ? '🔓 Платные: ВКЛ — тап, чтобы отключить' : '🔒 Платные: ВЫКЛ — тап, чтобы включить';
-    sw.style.cssText = 'display:block;width:100%;text-align:left;padding:10px;margin-bottom:8px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;border:1px solid ' + (on ? '#ffd700' : '#2a333d') + ';background:' + (on ? 'rgba(255,215,0,.10)' : 'transparent') + ';color:' + (on ? '#ffd700' : '#8b98a5') + ';';
-    sw.onclick = () => { setPaidEnabled(!paidEnabled()); ov.remove(); openAIModelPanel(); };
-    box.appendChild(sw);
+    const gInfo = (typeof AI_MODELS !== 'undefined') ? AI_MODELS.find(m => m && m.id === 'gigachat') : null;
+    section('🟣 GIGACHAT (СБЕР) — ключ на сервере', '#7B61FF');
+    if (gInfo) box.appendChild(modelRow(gInfo));
+    else hint('Канал GigaChat не загружен.');
 
-    const paid = (typeof paidModels === 'function') ? paidModels() : [];
-    if (on) {
-        paid.forEach(m => box.appendChild(modelRow(m)));
-    } else {
-        hint('Платные отключены — скрыты и не выбираются. Запросы идут только на бесплатные.');
-    }
+    hint('Бесплатных моделей в Штабе нет — только Архитектор и GigaChat.');
 
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';
