@@ -282,7 +282,7 @@ function openAIModelPanel() {
     else hint('Канал Архитектора не загружен.');
 
     const gInfo = (typeof AI_MODELS !== 'undefined') ? AI_MODELS.find(m => m && m.id === 'gigachat') : null;
-    section('🟣 GIGACHAT (СБЕР) — ключ на сервере', '#7B61FF');
+    section('🟣 GIGACHAT (СБЕР) — свой ключ или серверный', '#7B61FF');
     if (gInfo) box.appendChild(modelRow(gInfo));
     else hint('Канал GigaChat не загружен.');
 
