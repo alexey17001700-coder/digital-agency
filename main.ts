@@ -1183,47 +1183,80 @@ function lastUserText(messages: any[]): string {
 }
 
 async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<string> {
-    let draft = "";
-    let finalText = "";
+    let brief = "";      // шаг 1: КРАТКИЙ черновик Zveno
+    let remark = "";     // шаг 2: КОРОТКАЯ ремарка GigaChat
+    let finalText = "";  // шаг 3: ФИНАЛ Zveno (с инструментами)
     let weatherCard = "";
     let lastErr = "";
+    const question = lastUserText(messages);
 
     for (let step = 1; step <= DUET_MAX_STEPS; step++) {
         if (step === 1) {
-            // ШАГ 1 — 🅰️ Zveno: черновик. Инструменты включены.
+            // ШАГ 1 — 🅰️ Zveno: краткий черновик. Без инструментов, лимит токенов.
             try {
-                draft = await callZvenoAI(messages, userKeys, true, "duet");
-                const cm = draft.match(/\[\[WEATHER_CARD\]\][\s\S]*?\[\[\/WEATHER_CARD\]\]/);
-                if (cm) { weatherCard = cm[0]; draft = draft.replace(cm[0], "").trim(); }
+                brief = await callZvenoBrief(messages);
             } catch (e: any) {
                 lastErr = e?.message || String(e);
-                zlog(`[DUET] шаг 1 (Zveno) упал: ${lastErr}`);
+                zlog(`[DUET] шаг 1 (Zveno, черновик) упал: ${lastErr}`);
             }
-            if (!draft) break;   // черновика нет — критиковать нечего, дальше не идём
-        } else {
-            // ШАГ 2 — 🟣 GigaChat: критик и финальный ответ. Инструменты включены.
-            const criticMessages = [
-                { role: "system", content: DUET_CRITIC_PROMPT },
-                { role: "user", content: `ВОПРОС БОССА:\n${lastUserText(messages)}\n\nЧЕРНОВИК ОТ ДРУГОЙ МОДЕЛИ:\n${draft}` }
+            if (!brief) break;   // черновика нет — обсуждать нечего, дальше не идём
+        } else if (step === 2) {
+            // ШАГ 2 — 🟣 GigaChat: короткая ремарка. Без инструментов, лимит токенов.
+            const remarkMessages = [
+                { role: "system", content: DUET_REMARK_PROMPT },
+                { role: "user", content: `ВОПРОС БОССА:\n${question}\n\nКРАТКИЙ ЧЕРНОВИК НАПАРНИКА:\n${brief}` }
             ];
             try {
-                finalText = await callGigaChatTools(criticMessages, "duet", gcKey);
+                remark = await callGigaChat(remarkMessages, "duet", gcKey, DUET_REMARK_TOKENS);
             } catch (e: any) {
                 lastErr = e?.message || String(e);
-                zlog(`[DUET] шаг 2 (GigaChat) упал: ${lastErr}`);
+                zlog(`[DUET] шаг 2 (GigaChat, ремарка) упал: ${lastErr}`);
+            }
+            // Ремарка не пришла — не страшно: финал всё равно делает Zveno.
+        } else {
+            // ШАГ 3 — 🅰️ Zveno: ФИНАЛ. Инструменты включены.
+            const finalMessages = messages.concat([
+                { role: "assistant", content: `[МОЙ КРАТКИЙ ЧЕРНОВИК]: ${brief}` },
+                { role: "user", content: `[РЕМАРКА КРИТИКА]: ${remark || "(ремарки нет)"}\n\n[СИСТЕМА: ${DUET_FINAL_PROMPT}]` }
+            ]);
+            try {
+                finalText = await callZvenoAI(finalMessages, userKeys, true, "duet");
+                const cm = finalText.match(/\[\[WEATHER_CARD\]\][\s\S]*?\[\[\/WEATHER_CARD\]\]/);
+                if (cm) { weatherCard = cm[0]; finalText = finalText.replace(cm[0], "").trim(); }
+            } catch (e: any) {
+                lastErr = e?.message || String(e);
+                zlog(`[DUET] шаг 3 (Zveno, финал) упал: ${lastErr}`);
             }
         }
     }
 
+    /* --- КОРОТКОЕ ОБСУЖДЕНИЕ — В ЧАТ ---
+       Босс видит ход мысли обеих моделей, но компактно: сервер отдаёт
+       переписку отдельной меткой, клиент рисует её диалогом ПЕРЕД финалом. */
+    const thoughts = (brief || remark)
+        ? `[[DUET_THOUGHTS]]${JSON.stringify({ brief: brief || "", remark: remark || "" })}[[/DUET_THOUGHTS]]\n\n`
+        : "";
+
     if (finalText && finalText.trim()) {
-        zlog("[DUET] финал от GigaChat получен");
-        return weatherCard ? weatherCard + "\n\n" + finalText.trim() : finalText.trim();
+        zlog("[DUET] шаг 3 — финал от Zveno получен");
+        const body = weatherCard ? weatherCard + "\n\n" + finalText.trim() : finalText.trim();
+        return thoughts + body;
     }
-    if (draft) {
-        // GigaChat упал — отдаём черновик Zveno, чтобы Босс не остался без ответа.
-        zlog("[DUET] финал от GigaChat не получен — отдаю черновик Zveno");
-        return weatherCard ? weatherCard + "\n\n" + draft : draft;
+    if (brief) {
+        // Финал не вышел — отдаём краткий черновик, чтобы Босс не остался без ответа.
+        zlog("[DUET] финал не получен — отдаю краткий черновик Zveno");
+        const body = weatherCard ? weatherCard + "\n\n" + brief : brief;
+        return thoughts + body;
     }
+
+    // Zveno молчит — дуэт не состоится. Отдаём слово GigaChat, чтобы Босс не остался без ответа.
+    try {
+        const solo = await callGigaChatTools(messages, "duet", gcKey);
+        if (solo && solo.trim()) {
+            zlog("[DUET] Zveno молчит — ответил GigaChat");
+            return solo.trim();
+        }
+    } catch (e: any) { lastErr = e?.message || String(e); }
     throw new Error(`Дуэт: обе модели не ответили (${lastErr || "нет ответа"})`);
 }
 
