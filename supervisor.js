@@ -566,9 +566,10 @@
 
         const generating = (typeof isGenerating !== 'undefined') && isGenerating;
         const silent = now - (st.lastSeen || st.startedAt || now);
+        const limit = supLimitMs();   // ⚡ в дуэте лимит вдвое больше: сервер гонит два запроса
 
-        // 2) ГЛАВНОЕ: 300 с ещё не вышло и агент жив — не трогаем.
-        if (generating && silent < SUP_LIMIT_MS) return;
+        // 2) ГЛАВНОЕ: лимит ещё не вышел и агент жив — не трогаем.
+        if (generating && silent < limit) return;
         if (!generating && silent < SUP_FREEZE_MS) return;
 
         // 2б) ЖИВОЙ АГЕНТ — НЕ ПЕРЕДАЁМ. Печатается ответ, крутятся этапы
