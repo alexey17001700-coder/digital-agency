@@ -137,6 +137,7 @@
         supStageInfo = null; supDistributed = false;   // новая задача — этапы и распределение с нуля
         supLastActivity = 0;                           // прошлая жизнь не считается
         supAlive(SUP_ALIVE_MS);                        // агент только взял задачу — он жив
+        if (supDuetOn()) owner = 'duet';               // ⚡ Дуэт: задачу ведут оба канала
         const prev = supLoad();
         const history = (prev && Array.isArray(prev.history)) ? prev.history : [];
         const now = Date.now();
