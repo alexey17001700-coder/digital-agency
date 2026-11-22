@@ -1310,8 +1310,14 @@ Deno.serve(async (request) => {
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
             } else if (/^gigachat/i.test(reqModel)) {
-                // Босс явно выбрал GigaChat — идём напрямую в Сбер
-                aiText = await callGigaChat(body.messages, reqModel);
+                // Босс явно выбрал GigaChat — идём напрямую в Сбер.
+                // GigaChat-2 умеет инструменты → идём через callGigaChatTools
+                // (внутри сам откатится на текст, если модель старая или API ругнётся).
+                if (/gigachat-?2/i.test(reqModel) || body.useTools) {
+                    aiText = await callGigaChatTools(body.messages, reqModel);
+                } else {
+                    aiText = await callGigaChat(body.messages, reqModel);
+                }
             } else {
                 // АВТОПЕРЕБОР НА GIGACHAT ОТКЛЮЧЁН (приказ Босса).
                 // GigaChat — ОТДЕЛЬНОЕ подключение: работает ТОЛЬКО когда Босс
