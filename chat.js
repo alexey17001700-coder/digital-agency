@@ -2002,6 +2002,8 @@ function init() {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
+    if (typeof ensureDuetButton === 'function') ensureDuetButton();         // ⚡ кнопка «Дуэт» в панели режимов
+    if (typeof applyDuetButton === 'function') applyDuetButton();           // ⚡ Дуэт: своё состояние на кнопке
     if (typeof applyArchitectButton === 'function') applyArchitectButton(); // 🅰️ Архитектор: своя кнопка, своё состояние
     // Страховка: выбрана ZVENO, а Архитектор выключен — уходим на разрешённую модель.
     if (typeof architectEnabled === 'function' && !architectEnabled() && selectedAIModel === 'zveno') {
