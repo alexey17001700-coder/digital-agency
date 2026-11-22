@@ -1482,22 +1482,35 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // («сисадмин», «управляешь кодом», «Архитектор») её триггерит. Для неё — нейтральный текст.
                 // 🅰️ Zveno и остальные — боевой SYSTEM_PROMPT без изменений.
                 const isGigaChatTurn = String(modelToUse).indexOf('gigachat') !== -1;
+                /* --- ЖЁСТКАЯ ИЗОЛЯЦИЯ ПРОМПТОВ ПО МОДЕЛИ ---
+                   GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: ей уходит
+                   ТОЛЬКО нейтральный короткий промпт. Ни память о Боссе, ни инструкции
+                   агентов к нему НЕ подмешиваются — иначе снова сработают фильтры.
+                   Zveno и остальные — полный боевой SYSTEM_PROMPT без изменений. */
                 let finalPrompt = isGigaChatTurn ? NEUTRAL_PROMPT : SYSTEM_PROMPT;
-                if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
-                
-                if (selectedAgents.length > 0) {
-                    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-                    if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
-                    else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
-                    selectedAgents.forEach(agentName => {
-                        let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-                        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
-                        if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
-                    });
-                    finalPrompt = agentPrompt + "\n" + finalPrompt;
+                if (!isGigaChatTurn) {
+                    if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+
+                    if (selectedAgents.length > 0) {
+                        let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+                        if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
+                        else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+                        selectedAgents.forEach(agentName => {
+                            let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
+                            agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                            if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                        });
+                        finalPrompt = agentPrompt + "\n" + finalPrompt;
+                    }
                 }
-                
-                if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
+
+                /* --- РОВНО ОДНО СИСТЕМНОЕ СООБЩЕНИЕ, ПОД ТЕКУЩУЮ МОДЕЛЬ ---
+                   История чата могла быть создана под ДРУГУЮ модель (Zveno ↔ GigaChat).
+                   Все старые системные сообщения из истории УДАЛЯЕМ и подставляем
+                   РОВНО ОДНО новое — собранное прямо здесь, под текущую модель.
+                   Промпты Zveno и GigaChat физически не могут смешаться. */
+                messagesToSend = messagesToSend.filter(m => m.role !== 'system');
+                messagesToSend.unshift({ role: 'system', content: finalPrompt });
 
                 // (modelToUse определена выше — до сборки промпта, чтобы подменить промпт для GigaChat)
                 // 🅰️ Архитектор выключен кнопкой — запрос не отправляем вообще.
