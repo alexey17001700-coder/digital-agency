@@ -140,54 +140,14 @@ function modelBadgeText(id) {
     return '❔ *[Модель: ' + ((info && info.label) || id) + ']*';
 }
 
-/* --- БЕСПЛАТНЫЕ / ПЛАТНЫЕ ---
-   freeModels() — модели с пометкой free: true (кнопка 🆓 Бесплатные).
-   paidEnabled() — разрешены ли платные (переключатель в панели 🧠 ИИ).
-   allowedModels() — то, что реально можно выбрать сейчас.
-   resolveAllowedModel() — страховка: платная модель при отключённых платных
-   не уйдёт на сервер, запрос уедет на бесплатный маршрут. */
-function freeModels() { return AI_MODELS.filter(m => m && m.free); }
-/* --- ЖИВАЯ МОДЕЛЬ ПО УМОЛЧАНИЮ ---
-   dots-studio платформа ДЕАКТИВИРОВАЛА. Раньше при выключении Архитектора
-   (и в других местах) дефолтом бралась freeModels()[0] — то есть мёртвая
-   dots. Отсюда ошибка «model has been deactivated» после выключения 🅰️.
-   Теперь дефолт — первая ВКЛЮЧЁННАЯ и живая бесплатная модель. */
-const DEAD_MODEL_IDS = [];   // мёртвых моделей в списке больше нет — бесплатные убраны полностью
-function firstFreeId() {
-    /* Бесплатных моделей в Штабе БОЛЬШЕ НЕТ (приказ Босса).
-       Остались два канала: 🅰️ Архитектор (zveno) и 🟣 GigaChat.
-       Все прежние места, где скрипт «уходил на бесплатную», теперь
-       ведут на GigaChat — единственный канал, кроме Архитектора. */
-    return 'gigachat';
-}
-/* Платные — БЕЗ Архитектора: 🅰️ Zveno живёт отдельным каналом (свой ключ,
-   своя кнопка) и в общий список платных моделей не попадает. */
-/* Платных моделей в списке больше нет: GigaChat идёт своей кнопкой 🟣,
-   Архитектор — своей 🅰️. Список платных пуст намеренно. */
-function paidModels() { return AI_MODELS.filter(m => m && !m.free && m.id !== 'zveno' && m.id !== 'gigachat'); }
-function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
-function setPaidEnabled(on) {
-    localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
-    const cur = getModelInfo(selectedAIModel);
-    if (!on && cur && !cur.free && cur.id !== 'gigachat') {
-        selectedAIModel = firstFreeId();
-        localStorage.setItem('shtabAIModel', selectedAIModel);
-    }
-    if (typeof applyAIModelButton === 'function') applyAIModelButton();
-    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
-}
-/* В список разрешённых попадают ТОЛЬКО включённые модели: выключенную
-   кнопкой модель нельзя выбрать и нельзя подставить автоподбором. */
-/* Разрешено ровно то, что есть в списке и не выключено кнопкой:
-   Архитектор (если включён 🅰️) и GigaChat. */
-function allowedModels() {
-    return AI_MODELS.filter(m => m && modelEnabled(m.id));
-}
+/* --- ДВА КАНАЛА: БЕЗ СПИСКОВ, БЕЗ ПЕРЕБОРА (приказ Босса) ---
+   В Штабе строго две модели: 🅰️ Zveno и 🟣 GigaChat.
+   Бесплатных маршрутов, платных списков и автоподбора больше нет. */
+function firstFreeId() { return 'gigachat'; }   // модель по умолчанию, если 🅰️ выключен
 function resolveAllowedModel(id) {
     /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
        Отвечает ТОЛЬКО та модель, которую выбрал Босс. Упала — в чат идёт
-       честная ошибка. Автоподмена на бесплатную/другую модель запрещена:
-       никакого автоподбора, никакой автосмены, никакого «аварийного резерва». */
+       честная ошибка. Автоподмена на другую модель запрещена. */
     return id || selectedAIModel || 'gigachat';
 }
 
