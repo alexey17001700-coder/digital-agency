@@ -333,6 +333,12 @@ function applyGigaChatButton() {
     if (typeof applyFreeModelButton === 'function') { try { applyFreeModelButton(); } catch (e) {} }
 }
 function toggleGigaChat() {
+    /* ⚡ В дуэте оба канала в работе: тап по 🟣 сначала выключает дуэт. */
+    if (typeof duetEnabled === 'function' && duetEnabled()) {
+        setDuet(false);
+        renderMessage('⚡ *[Дуэт выключен тапом по 🟣 — теперь отвечает одна модель.]*', 'director', 'Оркестратор');
+        return;
+    }
     if (isGigaChatActive()) {
         /* Возврат на прежнюю модель. Если её больше нет в списке
            (модели убраны) — честно встаём на сам GigaChat. */
