@@ -168,7 +168,7 @@
         const st = supLoad();
         if (!st) return;
         const now = Date.now();
-        if (!st.parts || !st.parts.length) st.owner = owner || st.owner || 'arch';
+        if ((!st.parts || !st.parts.length) && !st.owner) st.owner = owner || 'arch';   // ⚡ дуэт не перебиваем
         st.status = 'waiting';
         st.startedAt = now;
         st.lastSeen = now;
