@@ -253,17 +253,13 @@ function setPaidEnabled(on) {
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
 }
 function allowedModels() { return freeModels().concat(paidEnabled() ? paidModels() : []); }
-function resolveAllowedModel(id) {
-    const info = getModelInfo(id);
-    if (info && info.free) return id;
-    /* GigaChat идёт по ключу Сбера (GIGACHAT_KEY на сервере), а не по платному
-       маршруту ZVENO. Поэтому выключенные «платные» его не подменяют: иначе
-       отдельная кнопка 🟣 GigaChat молча уезжала на бесплатную модель. */
-    if (id === 'gigachat') return id;
-    if (paidEnabled()) return id;
-    const f = freeModels();
-    return f.length ? f[0].id : id;
-}
+/* --- АВТОПОДМЕНЫ БОЛЬШЕ НЕТ ---
+   Раньше при выключенных платных эта функция МОЛЧА подменяла платную модель
+   на бесплатную. Босс: подмен не должно быть вообще. Выбрал модель — уходит
+   ИМЕННО она; нет ключа — предупреждение и стоп (проверка modelKeyOk).
+   Функция оставлена как «пропуск без изменений»: её зовут фоновые задачи
+   и askAgent, чтобы ничего не упало. */
+function resolveAllowedModel(id) { return id; }
 
 /* --- КНОПКА «🟣 GIGACHAT» УБРАНА ---
    Босс: отдельная кнопка не нужна. Выбрал карточку GigaChat (зелёная
