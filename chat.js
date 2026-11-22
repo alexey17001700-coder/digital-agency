@@ -252,8 +252,14 @@ function setArchitectEnabled(on) {
     if (!on && selectedAIModel === 'zveno') {
         // Выключили Архитектора — уводим на прежнюю/бесплатную модель.
         const prev = localStorage.getItem('shtabAIModelBeforeArch') || '';
-        selectedAIModel = (prev && prev !== 'zveno' && getModelInfo(prev) && modelEnabled(prev)) ? prev
-            : firstFreeId();
+        /* ❗ ЖИВАЯ ПРОВЕРКА (была фиктивной).
+           Раньше стояло getModelInfo(prev) — а она ВСЕГДА что-то возвращает
+           (при неудаче отдаёт первую модель списка). Из-за этого мёртвая
+           dots-studio из памяти «до Архитектора» проходила как живая и уходила
+           на сервер: «model has been deactivated» каждый раз при выключении 🅰️.
+           Теперь сверяемся с РЕАЛЬНЫМ списком моделей. */
+        const prevReal = !!(prev && prev !== 'zveno' && AI_MODELS.some(m => m.id === prev) && modelEnabled(prev));
+        selectedAIModel = prevReal ? prev : firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
     if (typeof applyArchitectButton === 'function') applyArchitectButton();
