@@ -1237,14 +1237,13 @@ function startHardWatchdog() {
     stopHardWatchdog();
     hardStartTime = Date.now();
     hardStartCount = chatContainer ? chatContainer.children.length : 0;
-    const hardLimit = turnLimitMs();   // ⚡ в дуэте ждём вдвое дольше
     hardWatchdog = setInterval(() => {
         if (!isGenerating) { stopHardWatchdog(); return; }
         const answered = chatContainer && chatContainer.children.length > hardStartCount;
         if (answered) { stopHardWatchdog(); return; }
-        if (Date.now() - hardStartTime >= HARD_TIMEOUT_MS) {
+        if (Date.now() - hardStartTime >= hardLimit) {
             stopHardWatchdog();
-            handoffOrKick('прошло 300 с, ответа нет');
+            handoffOrKick('прошло ' + Math.round(hardLimit / 1000) + ' с, ответа нет');
         }
     }, 3000);
 }
