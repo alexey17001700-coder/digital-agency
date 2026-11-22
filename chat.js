@@ -45,7 +45,10 @@ let lastSendSuccess = false;   // пришёл ли ответ — от этог
    единого sendStartTime. */
 let sendTimerLoop = null;
 let sendStartTime = 0;
-const TIMER_MAX_MS = 330000;   // 330 с — предел (совпадает с таймаутом запроса): выше не растёт
+const TIMER_MAX_MS = 330000;   // 330 с — предел одиночного запроса (совпадает с таймаутом): выше не растёт
+/* ⚡ ДУЭТ: сервер гонит два запроса подряд (Zveno → GigaChat) — времени вдвое больше. */
+const DUET_TIMEOUT_MS = 630000;   // 630 с — предел дуэта (два запроса + запас)
+function turnLimitMs() { return (typeof duetEnabled === 'function' && duetEnabled()) ? DUET_TIMEOUT_MS : TIMER_MAX_MS; }
 /* --- ОДИН СЧЁТЧИК НА ВСЁ ПРИЛОЖЕНИЕ ---
    Раньше на КАЖДЫЙ вызов sendMessage (в т.ч. авто-пинок, «продолжи этап»)
    создавался свой setInterval. Два-три интервала писали в кнопку по очереди:
