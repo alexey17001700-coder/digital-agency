@@ -586,7 +586,7 @@
 
         // 3) Причина передачи.
         let why = '';
-        if (silent >= SUP_LIMIT_MS) why = 'лимит 300 с истёк';
+        if (silent >= limit) why = 'лимит ' + Math.round(limit / 1000) + ' с истёк';
         else if (!generating && !t.alive) why = 'счётчик пропал, ответа нет';
         else if (t.alive) why = 'счётчик застыл на ' + t.text;
         else return;
