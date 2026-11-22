@@ -103,7 +103,7 @@
             const GUARD_KEY = 'shtabShellReloadBuild';
             async function checkShellBuild() {
                 try {
-                    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+                    const r = await fetch('shtab_version.json?t=' + Date.now(), { cache: 'no-store' });
                     if (!r.ok) return;
                     const j = await r.json();
                     const serverBuild = parseInt(j.build, 10);
