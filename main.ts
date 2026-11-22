@@ -1016,6 +1016,124 @@ async function callGigaChat(messages: any[], requestedModel: string = ""): Promi
 }
 
 // =========================================
+// GIGACHAT С ИНСТРУМЕНТАМИ (FUNCTION CALLING)
+// Работает ТОЛЬКО для GigaChat-2 и выше. Старые версии — откат на текст.
+// Отличия от OpenAI: одиночный function_call вместо tool_calls,
+// роль "function" + name вместо role:"tool" + tool_call_id.
+// =========================================
+async function callGigaChatTools(messages: any[], requestedModel: string = ""): Promise<string> {
+    const token = await gigachatToken();
+    const model = requestedModel || "GigaChat-2";
+
+    // Проверка на поддержку tools (только GigaChat-2 и выше)
+    if (!/gigachat-?2/i.test(model)) {
+        zlog(`[GIGACHAT] ${model} не поддерживает tools — откат на текст`);
+        return await callGigaChat(messages, model);
+    }
+
+    // Копируем историю, чтобы не мутировать оригинал
+    const history: any[] = JSON.parse(JSON.stringify(messages));
+    const MAX_LOOPS = 15;
+
+    // Приводим историю к формату Сбера: content ВСЕГДА строка,
+    // роль function обязательно с полем name.
+    const toClean = (arr: any[]) => arr
+        .filter((m: any) => ["system", "user", "assistant", "function"].includes(m.role))
+        .map((m: any) => {
+            if (m.role === "function") {
+                return { role: "function", name: m.name, content: String(m.content) };
+            }
+            const c = m.content;
+            return {
+                role: m.role,
+                content: typeof c === "string" ? c : (c == null ? "" : JSON.stringify(c)),
+            };
+        });
+
+    for (let loop = 0; loop < MAX_LOOPS; loop++) {
+        // 1. Отправляем запрос с инструментами
+        const res = await fetch(GIGACHAT_API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                model,
+                messages: toClean(history),
+                temperature: 0.5,
+                tools: TOOLS,
+                tool_choice: "auto",
+            }),
+            client: getGigaChatClient(),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT),
+        } as any);
+
+        if (!res.ok) {
+            const errText = await res.text();
+            zlog(`[GIGACHAT-TOOLS] ${res.status}: ${errText.slice(0, 200)}`);
+            // API ругается на tools — откат на обычный текст, чат не ломаем
+            return await callGigaChat(messages, model);
+        }
+
+        const data = await res.json();
+        const msg = data?.choices?.[0]?.message;
+        if (!msg) return "Пустой ответ от GigaChat";
+
+        // 2. Модель вызвала инструмент
+        if (msg.function_call) {
+            let args: any = {};
+            try {
+                args = JSON.parse(msg.function_call.arguments || "{}");
+            } catch (e) {
+                zlog(`[GIGACHAT-TOOLS] кривой JSON аргументов: ${msg.function_call.arguments}`);
+            }
+
+            zlog(`[GIGACHAT-TOOLS] вызов ${msg.function_call.name}(${JSON.stringify(args).slice(0, 100)})`);
+
+            let toolResult = "";
+            try {
+                toolResult = await executeTool(msg.function_call.name, args);
+            } catch (e: any) {
+                toolResult = `Ошибка выполнения инструмента: ${e?.message || e}`;
+            }
+
+            // Ответ ассистента (с function_call) + результат инструмента (role: function)
+            history.push({ role: "assistant", content: null, function_call: msg.function_call });
+            history.push({
+                role: "function",
+                name: msg.function_call.name,
+                content: String(toolResult).slice(0, MAX_TOOL_RESULT),
+            });
+
+            continue; // модель должна осмыслить результат
+        }
+
+        // 3. Вызова нет — это финальный ответ
+        zlog(`[GIGACHAT-TOOLS] ответила модель: ${model}`);
+        return msg.content || "Пустой ответ";
+    }
+
+    // Лимит шагов: финальный запрос БЕЗ tools, чтобы получить хоть какой-то текст
+    zlog("[GIGACHAT-TOOLS] лимит шагов — финальный запрос без tools");
+    const finalRes = await fetch(GIGACHAT_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ model, messages: toClean(history), temperature: 0.5 }),
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    } as any);
+
+    const finalData = await finalRes.json();
+    return finalData?.choices?.[0]?.message?.content || "Не удалось получить финальный ответ";
+}
+
+// =========================================
 // ОЗВУЧКА (EDGE-TTS, БЕСПЛАТНО)
 // =========================================
 const TTS_CACHE = new Map<string, Uint8Array>();
