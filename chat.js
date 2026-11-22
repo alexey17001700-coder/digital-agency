@@ -1913,8 +1913,7 @@ function init() {
     if (typeof applyArchitectButton === 'function') applyArchitectButton(); // 🅰️ Архитектор: своя кнопка, своё состояние
     // Страховка: выбрана ZVENO, а Архитектор выключен — уходим на разрешённую модель.
     if (typeof architectEnabled === 'function' && !architectEnabled() && selectedAIModel === 'zveno') {
-        const _f = freeModels();
-        selectedAIModel = _f.length ? _f[0].id : 'gigachat';
+        selectedAIModel = firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
 }
