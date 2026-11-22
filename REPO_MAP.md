@@ -41,6 +41,7 @@
 - `pc.png` — компьютер
 - `safe.js`
 - `server_dump.sh` — дамп состояния сервера
+- `shtab_version.json` — **счётчик правок ШТАБА** (читает оболочка index.html и плашка версии)
 - `start.sh` — запуск
 - `style.css` — стили
 - `supervisor.js` — сторож ответов Архитектора
