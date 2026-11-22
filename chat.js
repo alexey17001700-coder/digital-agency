@@ -126,24 +126,17 @@ async function sendToFreeModel(text) {
    Модель с полем free: true попадает на отдельную кнопку 🆓 Бесплатные.
    Платные можно отключить целиком (флаг shtabPaidModels) — тогда они
    не показываются в панели и не выбираются. */
+/* ❗ В ШТАБЕ ОСТАЛИСЬ ДВА КАНАЛА (приказ Босса):
+   1) 🅰️ АРХИТЕКТОР (zveno) — я, отдельный канал со своим ключом;
+   2) 🟣 GIGACHAT — Сбер, по серверному ключу GIGACHAT_KEY.
+   Все бесплатные модели (Nemotron, Flint, dots и т.п.), Yandex, DeepSeek
+   и локальная Ollama УБРАНЫ из списка полностью. Выбрать их нельзя,
+   и в запросах они больше не появляются. */
 const AI_MODELS_DEFAULT = [
-    { id: 'yandex',   label: 'Yandex',    color: '#333',    text: '#aaa' },
-    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
-    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
     /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ. exclusive: true — автоподбор и
        автосмена моделей его НЕ трогают. Вход только через кнопку 🅰️. */
-    { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000', exclusive: true },
-    /* --- БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход, без карты) --- */
-    /* dots-studio/dots-3-note-preview:free — ДЕАКТИВИРОВАНА платформой, из списка убрана */
-    { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: 'Nemotron 3 Nano Omni', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3.5-super-vl:free', label: 'Nemotron 3.5 Super VL', color: '#76b900', text: '#000', free: true },
-    { id: 'recursive/flint-v1.0:free', label: 'Flint', color: '#ff7043', text: '#000', free: true },
-    /* --- ЛОКАЛЬНАЯ МОДЕЛЬ НА ПК (Ollama) ---
-       Работает без ключей и без оплаты: запрос уходит на свой ПК через
-       шлюз Caddy (путь /ollama/*). Имя модели хранится в localStorage. */
-    { id: 'ollama', label: 'Ollama (ПК)', color: '#ff9800', text: '#000', free: true }
+    { id: 'zveno',    label: 'Архитектор (Zveno)', color: '#00e5ff', text: '#000', exclusive: true },
+    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
