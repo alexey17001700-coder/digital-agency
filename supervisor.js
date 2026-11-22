@@ -47,10 +47,9 @@
 
     const OWNER_LABEL = {
         arch: '🏛 Архитектор',
-        assistant: '🤖 Помощник',
         free: '🆓 Бесплатная модель'
     };
-    const OWNER_NEXT = { arch: 'assistant', assistant: 'free' };   // цепочка замены
+    const OWNER_NEXT = { arch: 'free' };   // цепочка замены: Архитектор → Бесплатная модель
 
     let supTimer = null;
     let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
