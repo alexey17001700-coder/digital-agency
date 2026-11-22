@@ -924,27 +924,29 @@ async function runTandemTurn(topic, isKick) {
     renderMessage('🤝 *[Тандем: ' + A + ' и ' + B + ' сначала обсуждают задачу между собой, потом ' + B + ' даёт общий результат.]*', 'director', 'Оркестратор');
 
     for (let r = 1; r <= TANDEM_ROUNDS; r++) {
-        // --- GigaChat ---
-        const gigaSys = `Ты — GigaChat, агент Штаба. ${AGENT_DIRECTIVES['GigaChat']}
-Ты работаешь В ТАНДЕМЕ с Архитектором Штаба. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
+        // --- Голос A ---
+        const dirA = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[A]) || '';
+        const aSys = `Ты — ${A}, агент Штаба. ${dirA}
+Ты работаешь В ТАНДЕМЕ с ${B}. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
 Скажи коротко (2–4 предложения): что предлагаешь по задаче Босса, что важно учесть, где риск.
-Обращайся к Архитектору по имени. Без приветствий, без пересказа задачи, без вопросов к Боссу.`;
-        const gigaUser = `ЗАДАЧА БОССА: ${topic}\n\n` + (log.length ? `ЧТО УЖЕ СКАЗАНО В ДИАЛОГЕ:\n${asLog()}\n\n` : '(диалог только начинается — ты первый)\n\n') + 'Твоя реплика:';
-        const gigaText = await tandemAsk(A, gigaSys, gigaUser);
-        if (!gigaText) break;
-        log.push({ who: A, text: gigaText });
-        await tandemSpeak(A, gigaText);
+Обращайся к ${B} по имени. Без приветствий, без пересказа задачи, без вопросов к Боссу.`;
+        const aUser = `ЗАДАЧА БОССА: ${topic}\n\n` + (log.length ? `ЧТО УЖЕ СКАЗАНО В ДИАЛОГЕ:\n${asLog()}\n\n` : '(диалог только начинается — ты первый)\n\n') + 'Твоя реплика:';
+        const aText = await tandemAsk(A, aSys, aUser);
+        if (!aText) break;
+        log.push({ who: A, text: aText });
+        await tandemSpeak(A, aText);
 
-        // --- Архитектор ---
-        const archSys = `Ты — Архитектор Штаба. ${AGENT_DIRECTIVES['Архитектор']}
-Ты работаешь В ТАНДЕМЕ с GigaChat. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
-Ответь GigaChat коротко (2–4 предложения): согласен или нет, что добавляешь, что решаем.
-Обращайся к GigaChat по имени. Без приветствий и без вопросов к Боссу.`;
-        const archUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ:\n${asLog()}\n\nТвоя реплика (ответ GigaChat):`;
-        const archText = await tandemAsk(B, archSys, archUser);
-        if (!archText) break;
-        log.push({ who: B, text: archText });
-        await tandemSpeak(B, archText);
+        // --- Голос B ---
+        const dirB = (typeof AGENT_DIRECTIVES !== 'undefined' && AGENT_DIRECTIVES[B]) || '';
+        const bSys = `Ты — ${B}, агент Штаба. ${dirB}
+Ты работаешь В ТАНДЕМЕ с ${A}. Идёт раунд ${r} из ${TANDEM_ROUNDS}.
+Ответь ${A} коротко (2–4 предложения): согласен или нет, что добавляешь, что решаем.
+Обращайся к ${A} по имени. Без приветствий и без вопросов к Боссу.`;
+        const bUser = `ЗАДАЧА БОССА: ${topic}\n\nДИАЛОГ:\n${asLog()}\n\nТвоя реплика (ответ ${A}):`;
+        const bText = await tandemAsk(B, bSys, bUser);
+        if (!bText) break;
+        log.push({ who: B, text: bText });
+        await tandemSpeak(B, bText);
     }
 
     if (!log.length) return false;   // ни один голос не ответил — пусть сработает надзиратель/пинок
