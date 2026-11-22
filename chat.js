@@ -936,9 +936,9 @@ async function tandemSpeak(agentName, txt, plainHistory) {
    1) Диалог: GigaChat → Архитектор, TANDEM_ROUNDS раундов (каждый — свой запрос).
    2) Итог: Архитектор собирает общий результат и отдаёт Боссу. */
 async function runTandemTurn(topic, isKick) {
-    const pair = tandemPair();
-    if (!pair) return false;
-    const A = pair[0], B = pair[1];
+    const order = tandemOrder();
+    if (!order) return false;
+    const A = order[0], B = order[1];   // A — правая рука, B — ГЛАВНЫЙ (Архитектор)
     const mA = tandemVoiceModel(A), mB = tandemVoiceModel(B);
     // Ключ каждого голоса проверяем ДО запроса: нет ключа — этот голос не работает.
     const bad = [];
