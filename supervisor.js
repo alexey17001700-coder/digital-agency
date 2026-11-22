@@ -669,7 +669,7 @@
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.supTimerBroken = supBreak;        // chat.js: счётчик оборвался / 300 с → задача уходит дальше
+    window.supTimerBroken = supBreak;        // chat.js: счётчик оборвался / 330 с → задача уходит дальше
     window.supAlive = supAlive;              // chat.js: агент жив (этап, Совет, фон, ответ)
     window.supNoteActivity = supNoteActivity;// chat.js: в ленте движение — агент работает
     window.supStage = supStage;              // chat.js: задача разбита на этапы [ЭТАП N/M]
