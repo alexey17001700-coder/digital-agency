@@ -269,6 +269,20 @@ function openAIModelPanel() {
         hint('Платные отключены — скрыты и не выбираются. Запросы идут только на бесплатные.');
     }
 
+    /* --- СНЯТЬ ВЫБОР МОДЕЛИ ---
+       Босс: дефолта нет — значит должна быть и обратная кнопка. Убрал выбор,
+       и Штаб снова молчит, пока Босс не выберет модель явно. */
+    const reset = document.createElement('button');
+    reset.textContent = '🚫 УБРАТЬ ВЫБОР МОДЕЛИ';
+    reset.style.cssText = 'width:100%;padding:9px;margin-top:8px;border:1px solid #ff0055;border-radius:8px;background:transparent;color:#ff6688;font-size:13px;cursor:pointer;';
+    reset.onclick = () => {
+        selectedAIModel = '';
+        localStorage.removeItem('shtabAIModel');
+        applyAIModelButton();
+        ov.remove();
+    };
+    box.appendChild(reset);
+
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';
     close.style.cssText = 'width:100%;padding:9px;border:1px solid #2a333d;border-radius:8px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;margin-top:4px;';
