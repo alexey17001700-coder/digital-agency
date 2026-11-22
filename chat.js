@@ -277,6 +277,8 @@ function setModelKey(id, v) {
 function setModelEnabled(id, on) {
     if (!id) return false;
     if (id === 'zveno') { setArchitectEnabled(on); return on; }   // Архитектор — своя кнопка 🅰️
+    /* ⚡ Дуэт невозможен с одним каналом: выключили 🟣 — дуэт гаснет сам. */
+    if (!on && id === 'gigachat' && typeof duetEnabled === 'function' && duetEnabled()) setDuet(false);
     const m = modelOnMap();
     m[id] = on ? 'on' : 'off';
     try { localStorage.setItem('shtabModelOn', JSON.stringify(m)); } catch (e) {}
