@@ -966,8 +966,8 @@ async function runTandemTurn(topic, isKick) {
         return false;
     }
     await tandemSpeak(B, finalText, true);
-    renderMessage(modelBadgeText('gigachat'), 'director', 'Оркестратор');
-    renderMessage(modelBadgeText(tandemArchModel()), 'director', 'Оркестратор');
+    renderMessage(modelBadgeText(mA), 'director', 'Оркестратор');
+    renderMessage(modelBadgeText(mB), 'director', 'Оркестратор');
     return true;
 }
 window.runTandemTurn = runTandemTurn;
