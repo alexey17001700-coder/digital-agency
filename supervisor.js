@@ -24,7 +24,20 @@
    Передач не больше SUP_MAX_HANDOFFS — иначе два ИИ зациклятся.
 
    РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ:
-     supSplit(text) — опрашивает агентов (кто онлайн), режет задачу
+     supSplit(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) — опрашивает агентов (кто онлайн), режет задачу
      на части и раздаёт: каждый агент делает свою часть, другим не мешает.
 
    Файл самостоятельный: всё внешнее — через typeof-проверки.
@@ -79,7 +92,20 @@
     /* Подпись владельца задачи. Босс разговаривает с ЛЮБОЙ карточкой
        (Оркестратор, Хакер, Критик…), поэтому имя карточки показываем
        с её иконкой, а не подменяем на «Архитектор». */
-x
+    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }
 
     /* ---------- ЖИВОЙ АГЕНТ: ПРИЗНАКИ ЖИЗНИ ----------
        Передача задачи — только когда агент МЁРТВ. Пока он работает,
@@ -91,7 +117,20 @@ x
        5) chat.js явно позвал supAlive() (этап, Совет, фон, ответ).
        Любой из них — задача живая, передача запрещена. */
     function supAlive(ms) {
-        supAliveUntil = Math.max(supAliveUntil, Date.now() + (ms || SUP_ALIVE_MS));
+        supAliveUntil = Math.ma    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }(supAliveUntil, Date.now() + (ms || SUP_ALIVE_MS));
     }
     function supNoteActivity() { supLastActivity = Date.now(); supAlive(); }
     /* Свежая жизнь: только что был ответ/печать или идут этапы.
@@ -131,7 +170,20 @@ x
     }
 
     /* Задача взята в работу. owner: 'arch' | 'assistant' | 'free' | имя агента */
-    function supStart(text, owner) {
+    function supStart(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, owner) {
         supStageInfo = null; supDistributed = false;   // новая задача — этапы и распределение с нуля
         supLastActivity = 0;                           // прошлая жизнь не считается
         supAlive(SUP_ALIVE_MS);                        // агент только взял задачу — он жив
@@ -139,16 +191,68 @@ x
         const history = (prev && Array.isArray(prev.history)) ? prev.history : [];
         const now = Date.now();
         supSave({
-            text: String(text || '').slice(0, SUP_TEXT_LIMIT),
+            te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: String(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t || '').slice(0, SUP_TEXT_LIMIT),
             owner: owner || 'arch',
             status: 'waiting',                 // waiting | answered | failed
             handoffs: 0,
             startedAt: now,
             lastSeen: now,
-            lastTimerText: '',
+            lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: '',
             lastTimerChange: now,
             parts: [],
-            partIndex: 0,
+            partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }: 0,
             history: history
         });
         supLog('📋 Задачу взял ' + ownerLabel(owner));
@@ -156,8 +260,34 @@ x
         /* БОЛЬШАЯ ЗАДАЧА + НЕСКОЛЬКО АГЕНТОВ ОНЛАЙН → делим сразу.
            Надзиратель опрашивает агентов, считает, кто на связи, и раскидывает
            задачу между ними. Это НЕ передача: счётчик handoffs не растёт. */
-        if (supIsBigTask(text)) {
-            supSplitByOnline(text);   // опрос реальных моделей → делим по тем, кто онлайн
+        if (supIsBigTask(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t)) {
+            supSplitByOnline(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t);   // опрос реальных моделей → делим по тем, кто онлайн
         }
     }
 
@@ -171,7 +301,20 @@ x
         st.status = 'waiting';
         st.startedAt = now;
         st.lastSeen = now;
-        st.lastTimerText = '';
+        st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = '';
         st.lastTimerChange = now;
         st.reason = '';
         supSave(st);
@@ -194,24 +337,271 @@ x
         supNoteActivity();   // ответ пришёл — агент жив, задача не брошена
 
         if (st.parts && st.parts.length) {
-            const p = st.parts[st.partIndex];
+            const p = st.parts[st.partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }];
             if (p) { p.status = 'done'; p.lastSeen = Date.now(); }
-            const nextIdx = st.parts.findIndex(function (x) { return x.status !== 'done' && x.status !== 'failed'; });
-            if (nextIdx === -1) {
+            const ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }tId    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    } = st.parts.findInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }(function (    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }) { return     /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }.status !== 'done' &&     /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }.status !== 'failed'; });
+            if (ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }tId    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    } === -1) {
                 st.status = 'answered';
                 st.lastSeen = Date.now();
                 supSave(st);
                 supLog('✅ Разбитая задача собрана — все ' + st.parts.length + ' частей готовы');
                 return;
             }
-            st.partIndex = nextIdx;
+            st.partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    } = ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }tId    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    };
             st.status = 'waiting';
             st.lastSeen = Date.now();
             st.lastTimerChange = Date.now();
-            st.lastTimerText = '';
+            st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = '';
             supSave(st);
-            supLog('🧩 Часть ' + (nextIdx + 1) + '/' + st.parts.length + ' → ' + ownerLabel(st.parts[nextIdx].owner));
-            supDispatchPart(st.parts[nextIdx]);
+            supLog('🧩 Часть ' + (ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }tId    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    } + 1) + '/' + st.parts.length + ' → ' + ownerLabel(st.parts[ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }tId    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }].owner));
+            supDispatchPart(st.parts[ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }tId    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }]);
             return;
         }
 
@@ -245,24 +635,115 @@ x
 
         /* Разбитая задача: передаём ТОЛЬКО зависшую часть, остальные не трогаем. */
         if (st.parts && st.parts.length) {
-            const p = st.parts[st.partIndex];
+            const p = st.parts[st.partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }];
             if (!p) { supStopKran(st); return; }
             if ((p.handoffs || 0) >= SUP_MAX_HANDOFFS) {
                 p.status = 'failed';
                 supSave(st);
-                supLog('🛑 Часть ' + (st.partIndex + 1) + ' не сделана (' + ownerLabel(p.owner) + ') — нужен Босс');
+                supLog('🛑 Часть ' + (st.partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    } + 1) + ' не сделана (' + ownerLabel(p.owner) + ') — нужен Босс');
                 return;
             }
-            const next = OWNER_NEXT[p.owner] || 'free';
+            const ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = OWNER_NEXT[p.owner] || 'free';
             p.handoffs = (p.handoffs || 0) + 1;
             const prev = p.owner;
-            p.owner = next;
+            p.owner = ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t;
             p.lastSeen = Date.now();
             st.lastSeen = Date.now();
             st.lastTimerChange = Date.now();
-            st.lastTimerText = '';
+            st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = '';
             supSave(st);
-            supLog('🔄 Часть ' + (st.partIndex + 1) + ': ' + ownerLabel(prev) + ' → ' + ownerLabel(next) + ' (' + p.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
+            supLog('🔄 Часть ' + (st.partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    } + 1) + ': ' + ownerLabel(prev) + ' → ' + ownerLabel(ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) + ' (' + p.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
             supDispatchPart(p);
             return;
         }
@@ -273,26 +754,130 @@ x
            и раздаём свободным агентам, чтобы работа шла параллельно. */
         if (st.big && !supDistributed && supStageInfo && supStageInfo.total > 1) {
             supDistributed = true;
-            if (supSplit(st.text)) return;
+            if (supSplit(st.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t)) return;
         }
 
         const prev = st.owner;
         /* Карточка Босса (Оркестратор, Хакер, Критик…) в цепочке замены не
            прописана — её задача уходит бесплатной модели Штаба, а не в стоп-кран. */
-        const next = OWNER_NEXT[prev] || 'free';
-        if (!next) { supStopKran(st); return; }
+        const ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = OWNER_NEXT[prev] || 'free';
+        if (!ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) { supStopKran(st); return; }
         const now = Date.now();
-        st.owner = next;
+        st.owner = ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t;
         st.handoffs = (st.handoffs || 0) + 1;
         st.status = 'waiting';
         st.startedAt = now;
         st.lastSeen = now;
-        st.lastTimerText = '';
+        st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = '';
         st.lastTimerChange = now;
         st.reason = '';
         supSave(st);
-        supLog('🔄 ' + ownerLabel(prev) + ' → ' + ownerLabel(next) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
-        supDispatch(st.text, next);
+        supLog('🔄 ' + ownerLabel(prev) + ' → ' + ownerLabel(ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
+        supDispatch(st.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t);
     }
 
     /* Стоп-кран: передачи исчерпаны — дальше только Босс. */
@@ -304,16 +889,68 @@ x
     }
 
     /* Отправляем задачу новому владельцу и следим за результатом. */
-    async function supDispatch(text, owner) {
+    async function supDispatch(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, owner) {
         supBusyCount++;
         try {
             if (owner === 'free' && typeof window.sendToFreeModel === 'function') {
-                const ok = await window.sendToFreeModel(text);
+                const ok = await window.sendToFreeModel(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t);
                 if (ok) supAnswered('free'); else supFailed('free', 'Бесплатная модель не ответила');
             } else if (owner === 'arch' && typeof window.sendMessage === 'function') {
-                window.sendMessage(text, true);   // Архитектор сам закроет журнал
+                window.sendMessage(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, true);   // Архитектор сам закроет журнал
             } else if (typeof window.askAgent === 'function') {
-                const ok = await window.askAgent(owner, text);
+                const ok = await window.askAgent(owner, te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t);
                 if (ok) supAnswered(owner); else supFailed(owner, 'агент не ответил');
             } else {
                 supFailed(owner, 'нет канала для передачи');
@@ -327,7 +964,20 @@ x
 
     async function supDispatchPart(p) {
         if (!p) return;
-        await supDispatch(p.text, p.owner);
+        await supDispatch(p.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, p.owner);
     }
 
     /* ---------- РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ ---------- */
@@ -343,7 +993,20 @@ x
     let supGatewayBase = '';
 
     /* --- ИИ-ШЛЮЗ :8002 УБРАН ИЗ ШТАБА ---
-       Помощник и его шлюз (nexus_ws/ai.ts, порт 8002) больше не существуют.
+       Помощник и его шлюз (ne    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }us_ws/ai.ts, порт 8002) больше не существуют.
        Опрос «кто онлайн» и распределение задачи по моделям шлюза не нужны:
        задача всегда идёт Архитектору, при сбое — бесплатной модели Штаба.
        Функция оставлена заглушкой, чтобы не ломать вызовы. */
@@ -361,12 +1024,77 @@ x
                 const card = cards[i];
                 const name = String(card.id || '').replace('agent-', '');
                 if (!name) continue;
-                const stText = card.querySelector('.agent-status-text');
+                const stTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = card.querySelector('.agent-status-te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t');
                 out.push({
                     name: name,
                     busy: card.classList.contains('working'),
                     error: card.classList.contains('error'),
-                    status: stText ? String(stText.innerText || '') : ''
+                    status: stTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t ? String(stTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t.innerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t || '') : ''
                 });
             }
         } catch (e) { /* нет DOM — работаем базовыми каналами */ }
@@ -374,7 +1102,20 @@ x
     }
     function supOnlineAgents() {
         const list = ['arch', 'free'];
-        supOnlineCache.list.forEach(function (n) { if (list.indexOf(n) === -1) list.push(n); });
+        supOnlineCache.list.forEach(function (n) { if (list.inde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }Of(n) === -1) list.push(n); });
         return list;
     }
     /* Свободные = реально онлайн модели, не занятые локальной карточкой.
@@ -399,18 +1140,83 @@ x
     }
 
     /* Режем задачу на части: по файлам → по пунктам → по абзацам. */
-    function supSplitText(text) {
-        const src = String(text || '').trim();
+    function supSplitTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) {
+        const src = String(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t || '').trim();
         const parts = [];
 
         // 1) по файлам [FILE: путь] / [READ: путь]
         const fileRe = /\[(?:FILE|READ):\s*([^\]]+)\]/gi;
         const files = [];
         let m;
-        while ((m = fileRe.exec(src)) !== null) files.push(m[1].trim());
+        while ((m = fileRe.e    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }ec(src)) !== null) files.push(m[1].trim());
         if (files.length >= 2) {
             return files.map(function (f, i) {
-                return { text: 'Часть ' + (i + 1) + '/' + files.length + '. Работай только с файлом ' + f + '.\n\nОбщая задача: ' + src, file: f };
+                return { te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: 'Часть ' + (i + 1) + '/' + files.length + '. Работай только с файлом ' + f + '.\n\nОбщая задача: ' + src, file: f };
             });
         }
 
@@ -419,7 +1225,20 @@ x
         const bullets = lines.filter(function (l) { return /^([-•*]|\d+[.)])\s+/.test(l); });
         if (bullets.length >= 2) {
             return bullets.map(function (l, i) {
-                return { text: 'Часть ' + (i + 1) + '/' + bullets.length + '. Сделай ТОЛЬКО этот пункт, остальные не трогай:\n' + l };
+                return { te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: 'Часть ' + (i + 1) + '/' + bullets.length + '. Сделай ТОЛЬКО этот пункт, остальные не трогай:\n' + l };
             });
         }
 
@@ -427,16 +1246,81 @@ x
         const paras = src.split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
         if (paras.length >= 2) {
             return paras.map(function (p, i) {
-                return { text: 'Часть ' + (i + 1) + '/' + paras.length + '. Сделай ТОЛЬКО эту часть, остальные не трогай:\n' + p };
+                return { te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: 'Часть ' + (i + 1) + '/' + paras.length + '. Сделай ТОЛЬКО эту часть, остальные не трогай:\n' + p };
             });
         }
 
-        return [{ text: src }];
+        return [{ te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: src }];
     }
 
     /* Разбить большую задачу и раздать частям разных агентов. */
-    function supSplit(text, owners) {
-        const chunks = supSplitText(text);
+    function supSplit(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, owners) {
+        const chunks = supSplitTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t);
         if (chunks.length < 2) {
             supLog('🧩 Задача не делится — веду её целиком');
             return false;
@@ -445,7 +1329,33 @@ x
         const now = Date.now();
         const parts = chunks.map(function (c, i) {
             return {
-                text: c.text,
+                te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: c.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t,
                 file: c.file || '',
                 owner: pool[i % pool.length],
                 status: 'waiting',
@@ -454,16 +1364,68 @@ x
             };
         });
         supSave({
-            text: String(text || '').slice(0, SUP_TEXT_LIMIT),
+            te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: String(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t || '').slice(0, SUP_TEXT_LIMIT),
             owner: parts[0].owner,
             status: 'waiting',
             handoffs: 0,
             startedAt: now,
             lastSeen: now,
-            lastTimerText: '',
+            lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: '',
             lastTimerChange: now,
             parts: parts,
-            partIndex: 0,
+            partInde    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }: 0,
             history: []
         });
         supDistributed = true;
@@ -476,14 +1438,40 @@ x
     /* ---------- ДЕЛЁЖ ПО ОНЛАЙНУ ----------
        Опрашиваем модели и, если на связи минимум две, режем задачу между ними:
        каждая часть уходит СВОЕЙ модели (provider), файлы не пересекаются. */
-    async function supSplitByOnline(text) {
+    async function supSplitByOnline(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) {
         const p = await supPollOnline();
         supLog(supOnlineReport());
         if (supDistributed) return false;
         const online = (p.list || []).slice(0, SUP_DISTRIBUTE_MAX);
         if (online.length >= 2) {
             supLog('🧩 Делю между онлайн-моделями: ' + online.join(' · '));
-            return supSplit(text, online);
+            return supSplit(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, online);
         }
         if (online.length === 1) supLog('🧩 Онлайн одна модель (' + online[0] + ') — веду задачу целиком');
         return false;
@@ -491,17 +1479,69 @@ x
 
     /* ---------- ВЫВОД В ЛЕНТУ ---------- */
 
-    function supLog(text) {
+    function supLog(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) {
         try {
-            if (typeof renderMessage === 'function') renderMessage(text, 'director', 'Надзиратель');
+            if (typeof renderMessage === 'function') renderMessage(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, 'director', 'Надзиратель');
         } catch (e) { /* лента недоступна — молчим */ }
     }
 
     /* ---------- БОЛЬШАЯ ЛИ ЗАДАЧА ----------
        Признаки: длинный текст, несколько файлов, несколько пунктов списка
        или прямая просьба «раздели/распредели задачу». */
-    function supIsBigTask(text) {
-        const s = String(text || '');
+    function supIsBigTask(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) {
+        const s = String(te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t || '');
         if (s.length >= 400) return true;
         if (/раздели\s+задач|распредели\s+задач|по\s+агентам|параллельно/i.test(s)) return true;
         const files = s.match(/\[(?:FILE|READ):\s*[^\]]+\]/gi);
@@ -521,7 +1561,20 @@ x
         const pool = free.length >= 2 ? free : online;
         if (pool.length >= 2) {
             supLog('🔎 Опрос агентов: онлайн ' + online.length + ', свободны ' + free.length + ' — делю большую задачу');
-            supSplit(st.text, pool);
+            supSplit(st.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t, pool);
             return;
         }
         st.startedAt = Date.now();
@@ -540,15 +1593,158 @@ x
     /* ---------- ДЕТЕКТ МОЛЧАНИЯ ---------- */
 
     function timerState(st, now) {
-        const btnText = (typeof sendBtn !== 'undefined' && sendBtn) ? String(sendBtn.innerText || '') : '';
-        const timerAlive = /\d/.test(btnText);
-        if (timerAlive && btnText !== st.lastTimerText) {
-            st.lastTimerText = btnText;
+        const btnTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = (typeof sendBtn !== 'undefined' && sendBtn) ? String(sendBtn.innerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t || '') : '';
+        const timerAlive = /\d/.test(btnTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t);
+        if (timerAlive && btnTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t !== st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) {
+            st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = btnTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t;
             st.lastTimerChange = now;
             st.lastSeen = now;
-            return { alive: true, text: btnText };
+            return { alive: true, te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
         }
-        return { alive: timerAlive, text: btnText };
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: btnTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t };
+        }
+        return { alive: timerAlive, te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t: btnTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t };
     }
 
     function supTick() {
@@ -558,7 +1754,33 @@ x
 
         const now = Date.now();
         const t = timerState(st, now);
-        if (t.alive && t.text === st.lastTimerText) supSave(st);
+        if (t.alive && t.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t === st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t) supSave(st);
 
         // 1) Счётчик тикает — агент работает.
         if (t.alive && (now - (st.lastTimerChange || now)) < SUP_FREEZE_MS) return;
@@ -576,7 +1798,20 @@ x
         if (supRecentlyAlive()) {
             st.lastSeen = now;
             st.startedAt = now;
-            st.lastTimerText = '';
+            st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = '';
             st.lastTimerChange = now;
             supSave(st);
             return;
@@ -586,7 +1821,20 @@ x
         let why = '';
         if (silent >= SUP_LIMIT_MS) why = 'лимит 300 с истёк';
         else if (!generating && !t.alive) why = 'счётчик пропал, ответа нет';
-        else if (t.alive) why = 'счётчик застыл на ' + t.text;
+        else if (t.alive) why = 'счётчик застыл на ' + t.te    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t;
         else return;
 
         /* 300 с истекли, а агент ЖИВОЙ (запрос идёт, счётчик тикает) —
@@ -613,7 +1861,20 @@ x
         if (supRecentlyAlive()) {
             st.lastSeen = now;
             st.startedAt = now;
-            st.lastTimerText = '';
+            st.lastTimerTe    /* Тандем (2+ карточки): в журнале пишем пару, а не одного агента. */
+    function supIsTandem() {
+        try { return (typeof selectedAgents !== 'undefined' && Array.isArray(selectedAgents) && selectedAgents.length >= 2); } catch (e) { return false; }
+    }
+    function ownerLabel(o) {
+        if (supIsTandem()) {
+            let pair = '';
+            try { pair = selectedAgents.slice(0, 3).join(' + '); } catch (e) {}
+            if (pair) return '🤝 Тандем: ' + pair;
+        }
+        if (OWNER_LABEL[o]) return OWNER_LABEL[o];
+        try { if (typeof AGENT_ICONS !== 'undefined' && AGENT_ICONS[o]) return AGENT_ICONS[o] + ' ' + o; } catch (e) {}
+        return '👤 ' + o;
+    }t = '';
             st.lastTimerChange = now;
             supSave(st);
             return true;                        // агент жив — передачи не будет
