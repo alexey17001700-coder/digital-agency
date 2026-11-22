@@ -233,17 +233,35 @@ function openAIModelPanel() {
         box.appendChild(e);
     };
 
+    /* --- СТРОКА МОДЕЛИ: выбор + шестерёнка настроек ---
+       У КАЖДОЙ модели справа шестерёнка ⚙️ — там своя кнопка ВКЛ/ВЫКЛ
+       и своё поле ключа, ровно как у Архитектора 🅰️.
+       Выключенная модель в списке видна, но зачёркнута и не выбирается:
+       тап по ней открывает настройки. */
+    const modelRow = (m) => {
+        const active = (m.id === selectedAIModel);
+        const en = (typeof modelEnabled === 'function') ? modelEnabled(m.id) : true;
+        const hasKey = !!(typeof modelKey === 'function' && modelKey(m.id));
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;gap:6px;align-items:stretch;margin-bottom:8px;';
+        const main = document.createElement('button');
+        main.textContent = (active ? '✅ ' : '') + m.label + (m.free ? ' 🆓' : '') + (en ? '' : ' · ВЫКЛ') + (hasKey ? ' 🔑' : '');
+        main.style.cssText = rowStyle(active) + 'margin-bottom:0;flex:1;min-width:0;' + (en ? '' : 'opacity:.5;text-decoration:line-through;');
+        main.onclick = () => { if (!en) { openModelSettingsPanel(m.id, () => { ov.remove(); openAIModelPanel(); }); return; } pick(m); };
+        const gear = document.createElement('button');
+        gear.textContent = '⚙️';
+        gear.title = 'Вкл/выкл и свой ключ модели';
+        gear.style.cssText = 'flex:0 0 auto;width:42px;border-radius:8px;cursor:pointer;font-size:15px;border:1px solid ' + (hasKey ? '#00e5ff' : (en ? '#2a333d' : '#ff6688')) + ';background:' + (hasKey ? 'rgba(0,229,255,.12)' : 'transparent') + ';color:#e6edf3;';
+        gear.onclick = () => openModelSettingsPanel(m.id, () => { ov.remove(); openAIModelPanel(); });
+        wrap.appendChild(main); wrap.appendChild(gear);
+        return wrap;
+    };
+
     // БЕСПЛАТНЫЕ — всегда доступны, отдельным блоком.
     const free = (typeof freeModels === 'function') ? freeModels() : [];
     section('🆓 БЕСПЛАТНЫЕ', '#7ee08a');
     if (!free.length) hint('Нет бесплатных моделей в списке.');
-    free.forEach(m => {
-        const row = document.createElement('button');
-        row.textContent = (m.id === selectedAIModel ? '✅ ' : '') + m.label + '  🆓';
-        row.style.cssText = rowStyle(m.id === selectedAIModel);
-        row.onclick = () => pick(m);
-        box.appendChild(row);
-    });
+    free.forEach(m => box.appendChild(modelRow(m)));
 
     // ПЛАТНЫЕ — можно отключить целиком одним тапом.
     const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
