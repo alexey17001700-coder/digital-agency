@@ -1545,9 +1545,8 @@ async function sendMessage(overrideText = null, isKick = false) {
 
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                if (isBossSecret) modelToUse = 'zveno';
-                // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
-                if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
+                // ПЕРЕБОРА МОДЕЛЕЙ НЕТ: на сервер уходит ровно та модель, что выбрана Боссом.
+                if (typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
                 // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
                 // Раньше секрет-ключ (deepseekKey = "zveno"/"boss") молча подменял выбор на
                 // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
