@@ -82,42 +82,15 @@ let bossMemory = localStorage.getItem('shtabBossMemory') || "Босс.";
 let customPrompts = {}; try { const sp = localStorage.getItem('shtabCustomPrompts'); if (sp) customPrompts = JSON.parse(sp); } catch (e) {}
 let allChats = {}; try { const saved = localStorage.getItem('shtabAllChats'); if (saved) allChats = JSON.parse(saved); } catch (e) {}
 let currentChatId = localStorage.getItem('shtabCurrentChatId') || null;
-let selectedAIModel = localStorage.getItem('shtabAIModel') || 'yandex';
+let selectedAIModel = localStorage.getItem('shtabAIModel') || 'gigachat';
 
 /* --- ОДИН ЧАТ: ВСЕГДА АРХИТЕКТОР ---
    Помощник и его ИИ-шлюз (:8002) убраны из Штаба. Переключателя «кому»
    больше нет — любое сообщение Босса уходит Архитектору Штаба. */
 
-/* --- БЕСПЛАТНАЯ МОДЕЛЬ — ПОСЛЕДНИЙ РУБЕЖ НАДЗИРАТЕЛЯ ---
-   Когда Архитектор не ответил, надзиратель зовёт сюда: запрос уходит
-   на основной сервер Штаба с бесплатным маршрутом (0 ₽, без карты).
-   Отдельного ИИ-шлюза :8002 больше нет — только PROXY. */
-async function sendToFreeModel(text) {
-    const freeList = (typeof freeModels === 'function') ? freeModels() : [];
-    const freeId = freeList.length ? freeList[0].id : '';
-    const freeLabel = freeList.length ? freeList[0].label : 'free';
-    try {
-        const r = await fetch(PROXY, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: [{ role: 'user', content: text }], temperature: 0.6, model: freeId, isBoss: true })
-        }, 95000);
-        const d = await r.json().catch(() => ({}));
-        const answer = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '') : '';
-        if (answer) {
-            renderMessage(answer, 'director', 'Бесплатная модель');
-            addMessageToHistory(answer, 'director', 'Бесплатная модель');
-            renderMessage('🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + freeLabel + ' — 0 ₽]*', 'director', 'Бесплатная модель');
-            return true;
-        }
-        throw new Error((d && d.error) || 'пустой ответ');
-    } catch (e) {
-        const msg = (e && e.name === 'AbortError') ? 'таймаут 95 сек' : ((e && e.message) || 'сбой');
-        const errText = '⚠️ Бесплатная модель не ответила: ' + msg;
-        renderMessage(errText, 'director', 'Бесплатная модель');
-        addMessageToHistory(errText, 'director', 'Бесплатная модель');
-        return false;
-    }
-}
+/* --- РЕЗЕРВНОГО КАНАЛА БОЛЬШЕ НЕТ (приказ Босса) ---
+   В Штабе строго два канала: 🅰️ Zveno и 🟣 GigaChat.
+   Никаких «последних рубежей» и автопереключений: упала модель — ошибка идёт в чат. */
 
 /* --- СПИСОК МОДЕЛЕЙ ИИ ---
    Бесплатные маршруты идут через тот же шлюз: при нулевом балансе они
@@ -126,27 +99,22 @@ async function sendToFreeModel(text) {
    Модель с полем free: true попадает на отдельную кнопку 🆓 Бесплатные.
    Платные можно отключить целиком (флаг shtabPaidModels) — тогда они
    не показываются в панели и не выбираются. */
+/* ❗ В ШТАБЕ ОСТАЛИСЬ ДВА КАНАЛА (приказ Босса):
+   1) 🅰️ АРХИТЕКТОР (zveno) — я, отдельный канал со своим ключом;
+   2) 🟣 GIGACHAT — Сбер, по серверному ключу GIGACHAT_KEY.
+   Все бесплатные модели (Nemotron, Flint, dots и т.п.), Yandex, DeepSeek
+   и локальная Ollama УБРАНЫ из списка полностью. Выбрать их нельзя,
+   и в запросах они больше не появляются. */
 const AI_MODELS_DEFAULT = [
-    { id: 'yandex',   label: 'Yandex',    color: '#333',    text: '#aaa' },
-    { id: 'deepseek', label: 'DeepSeek',  color: '#4CAF50', text: '#fff' },
-    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
-    { id: 'zveno',    label: 'Zveno',     color: '#00e5ff', text: '#000' },
-    /* --- БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход, без карты) --- */
-    { id: 'dots-studio/dots-3-note-preview:free', label: 'Dots3-Note', color: '#ffd700', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: 'Nemotron 3 Nano Omni', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning', color: '#76b900', text: '#000', free: true },
-    { id: 'nvidia/nemotron-3.5-super-vl:free', label: 'Nemotron 3.5 Super VL', color: '#76b900', text: '#000', free: true },
-    { id: 'recursive/flint-v1.0:free', label: 'Flint', color: '#ff7043', text: '#000', free: true },
-    /* --- ЛОКАЛЬНАЯ МОДЕЛЬ НА ПК (Ollama) ---
-       Работает без ключей и без оплаты: запрос уходит на свой ПК через
-       шлюз Caddy (путь /ollama/*). Имя модели хранится в localStorage. */
-    { id: 'ollama', label: 'Ollama (ПК)', color: '#ff9800', text: '#000', free: true }
+    /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ. exclusive: true — автоподбор и
+       автосмена моделей его НЕ трогают. Вход только через кнопку 🅰️. */
+    { id: 'zveno',    label: 'Архитектор (Zveno)', color: '#00e5ff', text: '#000', exclusive: true },
+    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
    перезаписывается новым (иначе у Босса остался бы старый набор моделей). */
-const AI_MODELS_VERSION = '2026-02-14-free7-ollama';   // добавлена локальная модель Ollama (ПК)
+const AI_MODELS_VERSION = '2026-02-20-only-zveno-gigachat';   // только Архитектор + GigaChat: бесплатные убраны полностью
 try {
     const ver = localStorage.getItem('shtabAIModelsVer');
     const sm = localStorage.getItem('shtabAIModels');
@@ -160,56 +128,173 @@ try {
 } catch (e) {}
 function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS[0]; }
 
-/* --- ЛОКАЛЬНАЯ МОДЕЛЬ OLLAMA (ПК) ---
-   Адрес задаётся путём через шлюз: Caddy проксирует /ollama/* на ПК:11434,
-   поэтому IP в коде не нужен — Штаб стучится в свой же домен по HTTPS.
-   Имя модели меняется в localStorage (shtabOllamaModel), по умолчанию
-   qwen2.5-coder:7b. Запрос идёт на OpenAI-совместимый endpoint Ollama. */
-const OLLAMA_ENDPOINT = PROXY + '/ollama/v1/chat/completions';
-function ollamaModel() { return localStorage.getItem('shtabOllamaModel') || 'qwen2.5-coder:7b'; }
-function isOllamaModel(id) { return id === 'ollama'; }
+/* --- ЛОКАЛЬНОЙ МОДЕЛИ OLLAMA В ШТАБЕ БОЛЬШЕ НЕТ ---
+   Остались строго два канала: 🅰️ Zveno и 🟣 GigaChat. */
 /* --- МЕТКА «КТО ОТВЕТИЛ» ---
    Босс должен видеть, какая модель реально ответила: бесплатная (0 ₽) или платная.
    Строчка ставится в чат после каждого ответа. */
 function modelBadgeText(id) {
+    if (id === 'zveno') return '🅰️ *[Ответил АРХИТЕКТОР (ZVENO) — ключ ZVENO_API_KEY с сервера]*';
+    if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — ключ с сервера]*';
     const info = AI_MODELS.find(m => m.id === id);
-    if (!info) return '❔ *[Модель: ' + id + ']*';
-    if (info.free) return '🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + info.label + ' — 0 ₽]*';
-    if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — по ключу GIGACHAT_KEY]*';
-    return '💳 *[Ответила платная модель: ' + info.label + ']*';
+    return '❔ *[Модель: ' + ((info && info.label) || id) + ']*';
 }
 
-/* --- БЕСПЛАТНЫЕ / ПЛАТНЫЕ ---
-   freeModels() — модели с пометкой free: true (кнопка 🆓 Бесплатные).
-   paidEnabled() — разрешены ли платные (переключатель в панели 🧠 ИИ).
-   allowedModels() — то, что реально можно выбрать сейчас.
-   resolveAllowedModel() — страховка: платная модель при отключённых платных
-   не уйдёт на сервер, запрос уедет на бесплатный маршрут. */
-function freeModels() { return AI_MODELS.filter(m => m && m.free); }
-function paidModels() { return AI_MODELS.filter(m => m && !m.free); }
-function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
-function setPaidEnabled(on) {
-    localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
-    const cur = getModelInfo(selectedAIModel);
-    if (!on && cur && !cur.free && cur.id !== 'gigachat') {
-        const f = freeModels();
-        if (f.length) { selectedAIModel = f[0].id; localStorage.setItem('shtabAIModel', selectedAIModel); }
+/* --- ДВА КАНАЛА: БЕЗ СПИСКОВ, БЕЗ ПЕРЕБОРА (приказ Босса) ---
+   В Штабе строго две модели: 🅰️ Zveno и 🟣 GigaChat.
+   Бесплатных маршрутов, платных списков и автоподбора больше нет. */
+function firstFreeId() { return 'gigachat'; }   // модель по умолчанию, если 🅰️ выключен
+function resolveAllowedModel(id) {
+    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
+       Отвечает ТОЛЬКО та модель, которую выбрал Босс. Упала — в чат идёт
+       честная ошибка. Автоподмена на другую модель запрещена. */
+    return id || selectedAIModel || 'gigachat';
+}
+
+/* =========================================
+   🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ (ZVENO)
+   Всё, что связано с ZVENO, Босс держит ОТДЕЛЬНО от остальных моделей:
+   1) своя кнопка 🅰️ (вкл/выкл) — единственный вход;
+   2) свой ключ (architectKey) — не общий ZV и не GigaChat;
+   3) автоподбор/автосмена Архитектора НЕ трогают (exclusive: true).
+   Выключен — запрос на ZVENO не уходит вообще.
+   Ключ хранится в shtabUserKeys на устройстве и уходит на сервер
+   в userKeys.architectKey. В код и в Git он НИКОГДА не пишется.
+   ========================================= */
+function architectEnabled() { try { return localStorage.getItem('shtabArchitectOn') === 'on'; } catch (e) { return false; } }
+function architectKey() {
+    try { const k = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; return k.architectKey || ''; } catch (e) { return ''; }
+}
+function setArchitectKey(v) {
+    let k = {};
+    try { k = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) { k = {}; }
+    k.architectKey = String(v || '').trim();
+    try { localStorage.setItem('shtabUserKeys', JSON.stringify(k)); } catch (e) {}
+    return k.architectKey;
+}
+function setArchitectEnabled(on) {
+    try { localStorage.setItem('shtabArchitectOn', on ? 'on' : 'off'); } catch (e) {}
+    if (!on && selectedAIModel === 'zveno') {
+        // Выключили Архитектора — уводим на прежнюю/бесплатную модель.
+        const prev = localStorage.getItem('shtabAIModelBeforeArch') || '';
+        /* ❗ ЖИВАЯ ПРОВЕРКА (была фиктивной).
+           Раньше стояло getModelInfo(prev) — а она ВСЕГДА что-то возвращает
+           (при неудаче отдаёт первую модель списка). Из-за этого мёртвая
+           dots-studio из памяти «до Архитектора» проходила как живая и уходила
+           на сервер: «model has been deactivated» каждый раз при выключении 🅰️.
+           Теперь сверяемся с РЕАЛЬНЫМ списком моделей. */
+        const prevReal = !!(prev && prev !== 'zveno' && AI_MODELS.some(m => m.id === prev) && modelEnabled(prev));
+        selectedAIModel = prevReal ? prev : firstFreeId();
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    }
+    if (typeof applyArchitectButton === 'function') applyArchitectButton();
+    if (typeof applyAIModelButton === 'function') applyAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    if (typeof syncModeButtons === 'function') syncModeButtons();
+    if (typeof renderMessage === 'function') {
+        renderMessage(on
+            ? '🅰️ *[Архитектор ВКЛЮЧЁН — отдельный канал ZVENO. Автоподбор его не трогает.]*'
+            : '🅰️ *[Архитектор ВЫКЛЮЧЕН — ZVENO не выбирается и не подставляется.]*', 'director', 'Оркестратор');
+    }
+}
+/* ТОЛЬКО внешний вид кнопки — без вызова соседних apply-функций (без рекурсии). */
+function updateArchitectButtonVisual() {
+    const b = document.getElementById('btnArchitect');
+    if (!b) return;
+    if (architectEnabled()) {
+        b.classList.add('active', 'mode-on');
+        b.innerText = '🅰️ Zveno: ВКЛ';
+        b.style.borderColor = '#00e5ff';
+        b.style.color = '#00e5ff';
+        b.style.background = 'rgba(0,229,255,.14)';
+    } else {
+        b.classList.remove('active', 'mode-on');
+        b.innerText = '🅰️ Zveno';
+        b.style.borderColor = '#00e5ff';
+        b.style.color = '#00e5ff';
+        b.style.background = '';
+    }
+}
+function applyArchitectButton() { updateArchitectButtonVisual(); }
+function selectArchitect() {
+    // Выбрать Архитектора вручную можно только при включённой кнопке.
+    if (!architectEnabled()) {
+        if (typeof renderMessage === 'function') renderMessage('🔒 *[Архитектор выключен. Включи кнопку 🅰️ — тогда ZVENO станет доступен.]*', 'director', 'Оркестратор');
+        return false;
+    }
+    if (selectedAIModel !== 'zveno') { try { localStorage.setItem('shtabAIModelBeforeArch', selectedAIModel); } catch (e) {} }
+    selectedAIModel = 'zveno';
+    try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    applyArchitectButton();
+    if (typeof applyAIModelButton === 'function') applyAIModelButton();
+    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    return true;
+}
+window.architectEnabled = architectEnabled;
+window.architectKey = architectKey;
+window.setArchitectKey = setArchitectKey;
+window.setArchitectEnabled = setArchitectEnabled;
+window.applyArchitectButton = applyArchitectButton;
+window.updateArchitectButtonVisual = updateArchitectButtonVisual;
+window.selectArchitect = selectArchitect;
+
+/* =========================================
+   🔑 УНИВЕРСАЛЬНЫЙ КАНАЛ МОДЕЛИ (вкл/выкл + свой ключ)
+   У КАЖДОЙ модели — своя кнопка вкл/выкл и своё поле ключа,
+   ровно как у Архитектора (🅰️ ZVENO). Логика одна на всех:
+   1) shtabModelOn   — { id: 'on'|'off' }  (по умолчанию ВКЛ);
+   2) shtabModelKeys — { id: 'ключ' }      (ключ модели, отдельно от общих);
+   3) выключенная модель не выбирается, не подставляется автоподбором
+      и запрос к ней на сервер НЕ уходит;
+   4) ключ уходит на сервер в userKeys[<id модели>] и в код/Git не пишется.
+   Архитектор (zveno) живёт своей кнопкой 🅰️ — здесь он только читается.
+   ========================================= */
+function modelOnMap() { try { return JSON.parse(localStorage.getItem('shtabModelOn')) || {}; } catch (e) { return {}; } }
+function modelKeysMap() { try { return JSON.parse(localStorage.getItem('shtabModelKeys')) || {}; } catch (e) { return {}; } }
+function modelEnabled(id) {
+    if (!id) return false;
+    if (id === 'zveno') return architectEnabled();          // Архитектор — своя кнопка 🅰️
+    const m = modelOnMap();
+    return m[id] !== 'off';                                  // по умолчанию модель включена
+}
+function modelKey(id) {
+    if (!id) return '';
+    if (id === 'zveno') return architectKey();               // ключ Архитектора — отдельно
+    const k = modelKeysMap();
+    return k[id] || '';
+}
+function setModelKey(id, v) {
+    if (!id) return '';
+    if (id === 'zveno') return setArchitectKey(v);           // Архитектор пишет в свой слот
+    const k = modelKeysMap();
+    k[id] = String(v || '').trim();
+    try { localStorage.setItem('shtabModelKeys', JSON.stringify(k)); } catch (e) {}
+    return k[id];
+}
+function setModelEnabled(id, on) {
+    if (!id) return false;
+    if (id === 'zveno') { setArchitectEnabled(on); return on; }   // Архитектор — своя кнопка 🅰️
+    const m = modelOnMap();
+    m[id] = on ? 'on' : 'off';
+    try { localStorage.setItem('shtabModelOn', JSON.stringify(m)); } catch (e) {}
+    // Выключили модель, которая сейчас выбрана — уводим на разрешённую.
+    if (!on && selectedAIModel === id) {
+        selectedAIModel = firstFreeId();
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
+    if (typeof applyGigaChatButton === 'function') applyGigaChatButton();
+    if (typeof applyArchitectButton === 'function') applyArchitectButton();
+    if (typeof renderModelPanel === 'function') renderModelPanel();
+    return on;
 }
-function allowedModels() { return freeModels().concat(paidEnabled() ? paidModels() : []); }
-function resolveAllowedModel(id) {
-    const info = getModelInfo(id);
-    if (info && info.free) return id;
-    /* GigaChat идёт по ключу Сбера (GIGACHAT_KEY на сервере), а не по платному
-       маршруту ZVENO. Поэтому выключенные «платные» его не подменяют: иначе
-       отдельная кнопка 🟣 GigaChat молча уезжала на бесплатную модель. */
-    if (id === 'gigachat') return id;
-    if (paidEnabled()) return id;
-    const f = freeModels();
-    return f.length ? f[0].id : id;
-}
+window.modelEnabled = modelEnabled;
+window.modelKey = modelKey;
+window.setModelKey = setModelKey;
+window.setModelEnabled = setModelEnabled;
+window.modelOnMap = modelOnMap;
+window.modelKeysMap = modelKeysMap;
 
 /* --- ОТДЕЛЬНАЯ КНОПКА «🟣 GIGACHAT» ---
    Босс включает GigaChat (Сбер) одним тапом, не заходя в список моделей.
@@ -244,8 +329,10 @@ function applyGigaChatButton() {
 }
 function toggleGigaChat() {
     if (isGigaChatActive()) {
-        const prev = localStorage.getItem('shtabAIModelBeforeGiga') || 'yandex';
-        selectedAIModel = getModelInfo(prev) ? prev : 'yandex';
+        /* Возврат на прежнюю модель. Если её больше нет в списке
+           (модели убраны) — честно встаём на сам GigaChat. */
+        const prev = localStorage.getItem('shtabAIModelBeforeGiga') || 'gigachat';
+        selectedAIModel = AI_MODELS.some(m => m.id === prev) ? prev : 'gigachat';
         renderMessage('🟣 *[GigaChat выключен — вернул прежнюю модель]*', 'director', 'Оркестратор');
     } else {
         localStorage.setItem('shtabAIModelBeforeGiga', selectedAIModel);
@@ -328,6 +415,13 @@ Vivo Y17 → Termux → Ubuntu. Штаб :8000, Чат :8001, Caddy :8443 (SSL, 
 Без пересказа промпта и без справок о проектах. Контекст читай тихо. Новый чат — одна строка приветствия. Работай по запросу: сделал → что, где, ссылка.
 
 Проснись, Архитектор. Работай четко, быстро, без косяков. Босс ждет.`;
+
+/* --- НЕЙТРАЛЬНЫЙ ПРОМПТ ДЛЯ GIGACHAT (СБЕР) ---
+   GigaChat — корпоративная модель с жёсткими фильтрами. Наш боевой промпт
+   («сисадмин», «управляешь кодом», «Архитектор Штаба») её триггерит, и она
+   отказывается работать. Для GigaChat подставляем нейтральный текст.
+   Для Zveno и остальных моделей — боевой SYSTEM_PROMPT без изменений. */
+const NEUTRAL_PROMPT = "Ты — полезный ИИ-ассистент. Твоя задача — помогать пользователю с программированием, отвечать на вопросы и использовать доступные инструменты для работы с файлами. Отвечай четко и по делу. Если пользователь просит красивое окошко, карточку или оформление — сгенерируй валидный HTML с inline-стилями. Используй эмодзи. Оборачивай код в <div class='ai-widget'>...</div>.";
 
 function saveAll() { try { localStorage.setItem('shtabAllChats', JSON.stringify(allChats)); } catch (e) {} }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
@@ -554,7 +648,32 @@ function enhanceCodeBlocks(container) {
     });
 }
 
+/* --- КРАСИВОЕ ОКОШКО (HTML-ВИДЖЕТ ОТ МОДЕЛИ) ---
+   Обе модели (🅰️ Zveno и 🟣 GigaChat) могут вернуть готовый HTML-виджет,
+   обёрнутый в <div class='ai-widget'>. marked.parse пропускает сырой HTML
+   как есть (без экранирования), поэтому виджет рендерится одинаково для
+   обеих моделей. Здесь — только базовые стили карточки: если модель задала
+   свои inline-стили, они имеют приоритет и перекрывают эти. */
+function _injectWidgetCss() {
+    if (document.getElementById('aiWidgetCss')) return;
+    const st = document.createElement('style'); st.id = 'aiWidgetCss';
+    st.textContent = `
+    .ai-widget {
+        margin: 12px 0; padding: 16px 18px;
+        background: linear-gradient(145deg, rgba(0,229,255,.08), rgba(123,97,255,.08));
+        border: 1px solid rgba(0,229,255,.35); border-radius: 14px;
+        box-shadow: 0 6px 22px rgba(0,0,0,.28);
+        color: #e8f6ff; line-height: 1.5;
+    }
+    .ai-widget h1, .ai-widget h2, .ai-widget h3 { margin: 0 0 8px; color: #00e5ff; }
+    .ai-widget table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    .ai-widget th, .ai-widget td { padding: 6px 10px; border-bottom: 1px solid rgba(0,229,255,.18); text-align: left; }
+    .ai-widget img { max-width: 100%; border-radius: 10px; }
+    `;
+    document.head.appendChild(st);
+}
 function enhanceMediaInMessage(container) {
+    _injectWidgetCss();
     container.querySelectorAll('a').forEach(link => {
         const url = link.href;
         if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
@@ -566,6 +685,19 @@ function enhanceMediaInMessage(container) {
         else if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) { const i = document.createElement('img'); i.src = url; i.className = 'chat-media'; link.after(i); }
     });
     enhanceCodeBlocks(container);
+}
+
+/* --- ЗАЩИТА ОТ ДВОЙНОГО ОКНА ПОГОДЫ ---
+   Если в ответе уже есть служебная метка [[WEATHER_CARD]] (её рендерит сам
+   чат), ручной HTML-виджет <div class='ai-widget'> с погодой больше НЕ
+   дублируем — иначе Босс видит два окна подряд. Виджеты на другие темы
+   (не про погоду) остаются как есть. */
+const WEATHER_WIDGET_RE = /погод|°c|°с|температур|weather|влажност|осадк|ветер/i;
+function stripDuplicateWeatherWidget(container, hasWeatherCard) {
+    if (!container || !hasWeatherCard) return;
+    container.querySelectorAll('.ai-widget').forEach(w => {
+        if (WEATHER_WIDGET_RE.test(w.textContent || '')) w.remove();
+    });
 }
 
 async function manualDeploy(file, code) {
@@ -623,6 +755,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор', file 
     const contentDiv = document.createElement('div'); const { cleanText, dangerBadges } = processDangerTags(wcParsed.cleanText);
     try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
     if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+    stripDuplicateWeatherWidget(contentDiv, wcParsed.cards.length > 0);
     if (cleanText || dangerBadges) div.appendChild(contentDiv);
     wcParsed.cards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
     chatContainer.appendChild(div); chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -648,6 +781,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         const { cleanText, dangerBadges } = processDangerTags(displayText);
         try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
         if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+        stripDuplicateWeatherWidget(contentDiv, weatherCards.length > 0);
         weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
         chatContainer.scrollTop = chatContainer.scrollHeight;
         if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director' && !isSystemNotice(cleanText)) speakText(cleanText, agentName);
@@ -670,6 +804,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
         else {
             try { contentDiv.innerHTML = marked.parse(cleanText); contentDiv.querySelectorAll('a').forEach(a => a.target = '_blank'); enhanceMediaInMessage(contentDiv); } catch(e) { contentDiv.innerText = cleanText; }
             if (dangerBadges) contentDiv.innerHTML += dangerBadges;
+            stripDuplicateWeatherWidget(contentDiv, weatherCards.length > 0);
             weatherCards.forEach(cd => div.appendChild(buildWeatherCard(cd)));
             if (typeof isVoiceEnabled !== 'undefined' && isVoiceEnabled && sender === 'director' && !isSystemNotice(cleanText)) speakText(cleanText, agentName);
             if (onComplete) onComplete();
@@ -1316,16 +1451,26 @@ async function sendMessage(overrideText = null, isKick = false) {
         
         let userKeys = {};
         try { userKeys = JSON.parse(localStorage.getItem('shtabUserKeys')) || {}; } catch (e) {}
+        /* 🅰️ СВОЙ КЛЮЧ АРХИТЕКТОРА — отдельно от общих.
+           Уходит на сервер в userKeys.architectKey и только при выбранном ZVENO. */
+        if (typeof architectKey === 'function') {
+            const _ak = architectKey();
+            if (_ak && String(selectedAIModel || '') === 'zveno') userKeys.architectKey = _ak;
+        }
+        /* 🔑 СВОЙ КЛЮЧ ЛЮБОЙ МОДЕЛИ — отдельно от общих.
+           Уходит на сервер в userKeys[<id модели>] и только для выбранной модели. */
+        if (typeof modelKey === 'function') {
+            const _mk = modelKey(selectedAIModel);
+            if (_mk && String(selectedAIModel || '') !== 'zveno') userKeys[selectedAIModel] = _mk;
+        }
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
+        /* 🅰️ КОДОВОЕ СЛОВО БОССА (приказ): в поле ключа 🅰️ Zveno вписывается
+           слово "zveno". Оно уходит на сервер, а сервер САМ подставляет
+           реальный ZVENO_API_KEY из /root/.env. В коде ключей НЕТ. */
         let isBossSecret = false;
-        if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
-            hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
-        }
-        // Локальная модель на ПК (Ollama) работает БЕЗ ключей и без оплаты —
-        // идём основным путём, только запрос уходит на свой ПК через шлюз.
-        const isOllama = isOllamaModel(selectedAIModel);
-        if (isOllama) hasAnyKeys = true;
+        const _codeWord = String(userKeys.architectKey || userKeys.deepseekKey || '').trim().toLowerCase();
+        if (_codeWord === 'zveno' || _codeWord === 'boss') { hasAnyKeys = true; isBossSecret = true; userKeys = {}; }
         // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
         // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
         if (selectedAIModel === 'gigachat') hasAnyKeys = true;
@@ -1367,43 +1512,63 @@ async function sendMessage(overrideText = null, isKick = false) {
                     }
                 }
 
-                let finalPrompt = SYSTEM_PROMPT;
-                if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
-                
-                if (selectedAgents.length > 0) {
-                    let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
-                    if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
-                    else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
-                    selectedAgents.forEach(agentName => {
-                        let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
-                        agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
-                        if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
-                    });
-                    finalPrompt = agentPrompt + "\n" + finalPrompt;
-                }
-                
-                if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
-
+                // Определяем модель ДО сборки промпта: для GigaChat нужен нейтральный текст.
                 let modelToUse = selectedAIModel;
                 if (selectedAgents.includes('GigaChat')) modelToUse = 'gigachat';
-                if (isBossSecret) modelToUse = 'zveno';
-                // Платные отключены — платный маршрут на сервер не уходит, уезжает бесплатный.
-                if (!isBossSecret && typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
-                // ЖЁСТКАЯ ГАРАНТИЯ: Босс выбрал бесплатную модель — на сервер уходит ИМЕННО она.
-                // Раньше секрет-ключ (deepseekKey = "zveno"/"boss") молча подменял выбор на
-                // платную Zveno — отсюда плашка «Ответила платная модель: Zveno» при бесплатной
-                // модели на кнопке. Теперь бесплатный выбор не подменяется ничем.
-                const selModelInfo = getModelInfo(selectedAIModel);
-                if (selModelInfo && selModelInfo.free) modelToUse = selectedAIModel;
-                // ЖЁСТКАЯ ГАРАНТИЯ №2: кнопка 🟣 GigaChat включена — на сервер уходит
-                // ИМЕННО "gigachat". Тот же секрет-ключ Босса (deepseekKey = "zveno"/"boss")
-                // подменял выбор на платную Zveno — из-за этого кнопка GigaChat «не работала»:
-                // отвечал Zveno, а не Сбер. Теперь выбор GigaChat не подменяется ничем.
+                // ПЕРЕБОРА МОДЕЛЕЙ НЕТ: на сервер уходит ровно та модель, что выбрана Боссом.
+                if (typeof resolveAllowedModel === 'function') modelToUse = resolveAllowedModel(modelToUse);
+                // ЖЁСТКАЯ ГАРАНТИЯ: кнопка 🟣 GigaChat включена — на сервер уходит ИМЕННО "gigachat".
                 if (selectedAIModel === 'gigachat') modelToUse = 'gigachat';
-                // Ollama: на ПК уходит ИМЯ локальной модели (например qwen2.5-coder:7b),
-                // а в бейдже остаётся 'ollama' — чтобы Босс видел верную подпись.
-                if (isOllama) modelToUse = ollamaModel();
-                usedModel = isOllama ? 'ollama' : modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
+                // 🟣 GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: наш боевой промпт
+                // («сисадмин», «управляешь кодом», «Архитектор») её триггерит. Для неё — нейтральный текст.
+                // 🅰️ Zveno и остальные — боевой SYSTEM_PROMPT без изменений.
+                const isGigaChatTurn = String(modelToUse).indexOf('gigachat') !== -1;
+                /* --- ЖЁСТКАЯ ИЗОЛЯЦИЯ ПРОМПТОВ ПО МОДЕЛИ ---
+                   GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: ей уходит
+                   ТОЛЬКО нейтральный короткий промпт. Ни память о Боссе, ни инструкции
+                   агентов к нему НЕ подмешиваются — иначе снова сработают фильтры.
+                   Zveno и остальные — полный боевой SYSTEM_PROMPT без изменений. */
+                let finalPrompt = isGigaChatTurn ? NEUTRAL_PROMPT : SYSTEM_PROMPT;
+                if (!isGigaChatTurn) {
+                    if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
+
+                    if (selectedAgents.length > 0) {
+                        let agentPrompt = `Ты отвечаешь как: ${selectedAgents.join(', ')}. `;
+                        if (selectedAgents.length > 1) agentPrompt += `Это Совет из ${selectedAgents.length} агентов. Агенты ОБЩАЮТСЯ между собой, а не читают монологи: обращаются друг к другу по имени, задают короткие вопросы, возражают, соглашаются, уточняют. Каждая реплика — с новой строки строго в формате [ИмяАгента]: Текст. Реплики короткие, 1-2 предложения. Начинает Оркестратор, заканчивает тот, кто подводит итог.\n`;
+                        else agentPrompt += `Отвечай строго от лица ${selectedAgents[0]}.\n`;
+                        selectedAgents.forEach(agentName => {
+                            let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
+                            agentPrompt += `[ИНСТРУКЦИЯ ДЛЯ ${agentName}]: ${directive}\n`;
+                            if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                        });
+                        finalPrompt = agentPrompt + "\n" + finalPrompt;
+                    }
+                }
+
+                /* --- РОВНО ОДНО СИСТЕМНОЕ СООБЩЕНИЕ, ПОД ТЕКУЩУЮ МОДЕЛЬ ---
+                   История чата могла быть создана под ДРУГУЮ модель (Zveno ↔ GigaChat).
+                   Все старые системные сообщения из истории УДАЛЯЕМ и подставляем
+                   РОВНО ОДНО новое — собранное прямо здесь, под текущую модель.
+                   Промпты Zveno и GigaChat физически не могут смешаться. */
+                messagesToSend = messagesToSend.filter(m => m.role !== 'system');
+                messagesToSend.unshift({ role: 'system', content: finalPrompt });
+
+                // (modelToUse определена выше — до сборки промпта, чтобы подменить промпт для GigaChat)
+                // 🅰️ Архитектор выключен кнопкой — запрос не отправляем вообще.
+                // Никакой подмены на другую модель: честный отказ Боссу.
+                if (modelToUse === 'zveno' && !architectEnabled()) {
+                    renderMessage('🅰️ *[Архитектор выключен кнопкой — запрос не отправлен. Включи 🅰️ или выбери другую модель.]*', 'director', 'Оркестратор');
+                    lastError = 'Архитектор выключен кнопкой';
+                    return;
+                }
+                // 🔑 Модель выключена своей кнопкой — тот же честный отказ, без подмены.
+                if (typeof modelEnabled === 'function' && modelToUse !== 'zveno' && !modelEnabled(modelToUse)) {
+                    const _off = getModelInfo(modelToUse);
+                    renderMessage('🔒 *[Модель «' + ((_off && _off.label) || modelToUse) + '» выключена кнопкой — запрос не отправлен.]*', 'director', 'Оркестратор');
+                    lastError = 'Модель выключена кнопкой';
+                    return;
+                }
+                usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
                 let maxAttempts = 3; 
@@ -1413,9 +1578,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                     currentAttempt++;
                     if (!takeTurnCall()) { lastError = 'Лимит запросов на один вопрос исчерпан (экономия баланса).'; break; }
                     currentMessages = trimHistory(currentMessages);
-                    // Ollama (ПК) — свой OpenAI-совместимый адрес через шлюз; остальные — штатный PROXY.
-                    const endpoint = isOllama ? OLLAMA_ENDPOINT : PROXY;
-                    const response = await fetch(endpoint, { 
+                    const response = await fetch(PROXY, { 
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ messages: currentMessages, temperature: 0.7, model: modelToUse, userKeys: userKeys, freeKey: userKeys.freeKey || '', image: visionBridgeUsed ? null : attachedImageBase64, isBoss: true }),
                         signal: currentAbortController.signal
@@ -1725,9 +1888,41 @@ function init() {
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
     }
-    if (typeof applyAIModelButton === 'function') applyAIModelButton();
-    if (typeof bindAIModelButton === 'function') bindAIModelButton();
-    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
-    if (typeof bindFreeModelButton === 'function') bindFreeModelButton();
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
+    if (typeof applyArchitectButton === 'function') applyArchitectButton(); // 🅰️ Архитектор: своя кнопка, своё состояние
+    // Страховка: выбрана ZVENO, а Архитектор выключен — уходим на разрешённую модель.
+    if (typeof architectEnabled === 'function' && !architectEnabled() && selectedAIModel === 'zveno') {
+        selectedAIModel = firstFreeId();
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    }
+    /* Неизвестная модель в памяти (старые бесплатные, Ollama и т.п.) —
+       уводим на разрешённую: остались только 🅰️ Zveno и 🟣 GigaChat. */
+    if (!AI_MODELS.some(m => m.id === selectedAIModel)) {
+        selectedAIModel = firstFreeId();
+        try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
+    }
+    /* Мёртвая модель в «памяти до Архитектора» / «до GigaChat».
+       Иначе выключение 🅰️ возвращало деактивированную dots — и чат падал
+       «model has been deactivated». Чистим память при старте. */
+    /* --- ЧИСТКА ПАМЯТИ ОТ СТАРЫХ МОДЕЛЕЙ (приказ Босса) ---
+       В Штабе строго две модели: 🅰️ Zveno и 🟣 GigaChat. Всё, что осталось
+       в localStorage от прежних списков (Nemotron, Dots, Flint, Yandex,
+       DeepSeek, Ollama и флаги платных), вычищается при старте. */
+    try {
+        localStorage.removeItem('shtabAIModels');      // старый сохранённый список моделей
+        localStorage.removeItem('shtabPaidModels');    // флаг «платные модели»
+        const _pa = localStorage.getItem('shtabAIModelBeforeArch') || '';
+        if (_pa && !AI_MODELS.some(m => m.id === _pa)) localStorage.removeItem('shtabAIModelBeforeArch');
+        const _pg = localStorage.getItem('shtabAIModelBeforeGiga') || '';
+        if (_pg && !AI_MODELS.some(m => m.id === _pg)) localStorage.removeItem('shtabAIModelBeforeGiga');
+        // Карты вкл/выкл и ключей — оставляем только два живых канала.
+        const _on = JSON.parse(localStorage.getItem('shtabModelOn') || '{}') || {};
+        const _onClean = {};
+        Object.keys(_on).forEach(k => { if (AI_MODELS.some(m => m.id === k)) _onClean[k] = _on[k]; });
+        localStorage.setItem('shtabModelOn', JSON.stringify(_onClean));
+        const _keys = JSON.parse(localStorage.getItem('shtabModelKeys') || '{}') || {};
+        const _keysClean = {};
+        Object.keys(_keys).forEach(k => { if (AI_MODELS.some(m => m.id === k)) _keysClean[k] = _keys[k]; });
+        localStorage.setItem('shtabModelKeys', JSON.stringify(_keysClean));
+    } catch (e) {}
 }

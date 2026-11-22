@@ -10,17 +10,13 @@ const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
 // БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход)
 // ВАЖНО: embed-модели сюда НЕ ВКЛЮЧАТЬ — они не умеют чат и дадут ошибку.
 // =========================================
-const FREE_TEXT_MODELS = [
-    "dots-studio/dots-3-note-preview:free",
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "recursive/flint-v1.0:free",
-];
+/* ❗ В ШТАБЕ СТРОГО ДВА КАНАЛА (приказ Босса): 🅰️ Zveno и 🟣 GigaChat.
+   Никаких бесплатных моделей, никаких списков и никакого автоперебора. */
+const ZVENO_CODE_WORD = "zveno";   // кодовое слово Босса: сервер сам подставит ZVENO_API_KEY из /root/.env
 
-const FREE_VISION_MODELS = [
-    "nvidia/nemotron-3.5-super-vl:free",
-];
+/* 👁 ЗРЕНИЕ — ОДНА модель, Босс её не выбирает.
+   Это «глаза» канала Zveno: фото → описание → в контекст. */
+const VISION_MODEL = "nvidia/nemotron-3.5-super-vl:free";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 // БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
@@ -672,18 +668,12 @@ if (name === "create_github_repo") {
 // ЗАПРОС К ZVENO (ЗРЕНИЕ)
 // =========================================
 async function callZvenoVision(messages: any[], imageBase64: string, userKeys: any = {}, requestedModel: string = ""): Promise<string> {
-    const apiKey = (userKeys && userKeys.freeKey) || Deno.env.get("ZVENO_API_KEY");
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
+    /* 👁 ЗРЕНИЕ — ЛИНЕЙНО, ОДНА модель, БЕЗ ПЕРЕБОРА.
+       Ключ ВСЕГДА серверный: ZVENO_API_KEY из /root/.env. В коде ключей НЕТ. */
+    const apiKey = Deno.env.get("ZVENO_API_KEY");
+    if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
 
-    // ЦЕПОЧКА FALLBACK: выбранная VL-модель → бесплатные VL → платный резерв (последним).
-    const visionChain: string[] = [];
-    const reqModel = String(requestedModel || "").trim();
-    if (reqModel && (reqModel.endsWith(":free") || reqModel.toLowerCase().includes("-vl"))) visionChain.push(reqModel);
-    else if (FREE_VISION_MODELS.length) visionChain.push(FREE_VISION_MODELS[0]);   // модель не пришла — бесплатная VL, не платная
-    for (const m of FREE_VISION_MODELS) if (!visionChain.includes(m)) visionChain.push(m);
-    if (!visionChain.includes("openai/gpt-4o-mini")) visionChain.push("openai/gpt-4o-mini");
-
-    let visionMessages = JSON.parse(JSON.stringify(messages));
+    const visionMessages = JSON.parse(JSON.stringify(messages));
 
     // Жестко перебиваем промпт, чтобы модель не отказывалась смотреть фото
     const systemIndex = visionMessages.findIndex((m: any) => m.role === "system");
@@ -695,7 +685,7 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
         visionMessages.unshift({ role: "system", content: visionPrompt });
     }
 
-    let lastMsg = visionMessages[visionMessages.length - 1];
+    const lastMsg = visionMessages[visionMessages.length - 1];
 
     if (lastMsg && lastMsg.role === "user") {
         const textPrompt = lastMsg.content || "Опиши, что изображено на этом фото.";
@@ -705,87 +695,41 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
         ];
     }
 
-    let lastVisionError = "Все VL-модели не ответили";
+    const res = await fetch(ZVENO_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ model: VISION_MODEL, messages: visionMessages, max_tokens: 1024, temperature: 0.7 }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT)
+    });
 
-    for (let vi = 0; vi < visionChain.length; vi++) {
-        const visionModel = visionChain[vi];
-        const payload = {
-            model: visionModel,
-            messages: visionMessages,
-            max_tokens: 1024,
-            temperature: 0.7
-        };
-
-        try {
-            const res = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT)
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-                lastVisionError = `${visionModel}: ${data?.error?.message || res.status}`;
-                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
-                continue;
-            }
-            const text = data.choices?.[0]?.message?.content;
-            if (!text) {
-                lastVisionError = `${visionModel}: пустой ответ`;
-                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
-                continue;
-            }
-            zlog(`[VISION] ответила модель: ${visionModel}`);
-            return text;
-        } catch (e: any) {
-            lastVisionError = `${visionModel}: ${e?.message || e}`;
-            zlog(`[VISION-FALLBACK] ${lastVisionError}`);
-            continue;
-        }
-    }
-
-    throw new Error(`Ошибка Vision: ${lastVisionError}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Vision: ${data?.error?.message || res.status}`);
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error("Vision: пустой ответ");
+    zlog(`[VISION] ответила модель: ${VISION_MODEL}`);
+    return text;
 }
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
 async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false, requestedModel: string = ""): Promise<string> {
-    const envKey = Deno.env.get("ZVENO_API_KEY");
-    const freeKey = (userKeys && userKeys.freeKey) || "";
+    /* 🅰️ КАНАЛ ZVENO — ЛИНЕЙНО, БЕЗ ПЕРЕБОРА И БЕЗ РЕЗЕРВОВ.
+       Ключ ВСЕГДА серверный: ZVENO_API_KEY из /root/.env. В коде ключей НЕТ.
+       Босс в Штабе вводит кодовое слово ("zveno") — оно лишь подтверждает
+       вход в канал; реальный ключ подставляет сервер. */
+    const apiKey = Deno.env.get("ZVENO_API_KEY");
+    if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
 
-    // ЦЕПОЧКА FALLBACK: первая — выбранная пользователем, дальше — все бесплатные по списку.
-    // Embed-модели в FREE_TEXT_MODELS не входят специально.
-    const modelChain: string[] = [];
-    const reqModel = String(requestedModel || "").trim();
-    // Модель от клиента не пришла — по умолчанию БЕСПЛАТНАЯ (dots), а не платная.
-    // Раньше здесь стоял ZVENO_MODEL (платный deepseek) — при пустом body.model
-    // запрос молча уходил на платный маршрут и кушал баланс.
-    const effectiveModel = reqModel || FREE_TEXT_MODELS[0];
-    modelChain.push(effectiveModel);
+    const codeWord = String((userKeys && (userKeys.architectKey || userKeys.zveno)) || "").trim();
+    zlog(`[ZVENO] канал Архитектора, модель ${ZVENO_MODEL}, ключ: серверный${codeWord ? ` (кодовое слово: ${codeWord.toLowerCase() === ZVENO_CODE_WORD ? "верное" : "иное"})` : ""}`);
 
-    const isFreeReq = effectiveModel.endsWith(":free") || FREE_TEXT_MODELS.includes(effectiveModel);
-    // Бесплатный маршрут — ключ бесплатный (если Босс его вписал), иначе серверный.
-    // Платный маршрут — серверный ключ, чтобы freeKey не ронял платную модель.
-    const apiKey = isFreeReq ? (freeKey || envKey) : (envKey || freeKey);
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
-    const tailModels = isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS];
-    for (const m of tailModels) if (!modelChain.includes(m)) modelChain.push(m);
-
-    // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
-    // никаких паролей и ограничений. Флаг isBoss оставлен для совместимости.
+    const activeModel = ZVENO_MODEL;
     const activeTools: any[] = TOOLS;
-
-    let lastError = "Все модели не ответили";
-
-    for (let mi = 0; mi < modelChain.length; mi++) {
-        const activeModel = modelChain[mi];
-        let currentMessages = JSON.parse(JSON.stringify(messages));
-        let weatherCard = "";
-        let modelFailed = false;
+    const currentMessages = JSON.parse(JSON.stringify(messages));
+    let weatherCard = "";
 
     for (let loop = 0; loop < 20; loop++) {
         const payload: any = {
@@ -796,38 +740,24 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
             tool_choice: "auto"
         };
 
-        let data: any = null;
-        try {
-            const res = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT)
-            });
-            data = await res.json();
-            if (!res.ok) {
-                lastError = `${activeModel}: ${data?.error?.message || res.status}`;
-                zlog(`[FALLBACK] ${lastError}`);
-                modelFailed = true;
-                break;
-            }
-        } catch (e: any) {
-            lastError = `${activeModel}: ${e?.message || e}`;
-            zlog(`[FALLBACK] ${lastError}`);
-            modelFailed = true;
-            break;
+        const res = await fetch(ZVENO_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            const errMsg = `${activeModel}: ${data?.error?.message || res.status}`;
+            zlog(`[ZVENO] ошибка: ${errMsg}`);
+            throw new Error(errMsg);   // ошибка уходит в чат как есть — без переключений
         }
 
         const msg = data?.choices?.[0]?.message;
-        if (!msg) {
-            lastError = `${activeModel}: пустой ответ`;
-            zlog(`[FALLBACK] ${lastError}`);
-            modelFailed = true;
-            break;
-        }
+        if (!msg) throw new Error(`${activeModel}: пустой ответ`);
 
         if (msg.tool_calls && msg.tool_calls.length > 0) {
             currentMessages.push(msg);
@@ -856,38 +786,31 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         }
 
         const answer = msg.content || "Пустой ответ";
-        zlog(`[MODEL] ответила: ${activeModel}`);
+        zlog(`[ZVENO] ответила: ${activeModel}`);
         return weatherCard ? weatherCard + "\n\n" + answer : answer;
     }
 
-    if (!modelFailed) {
-        // ЛИМИТ ШАГОВ: модель 20 раз подряд дёрнула инструменты и не выдала текст.
-        // Раньше задача молча умирала («Слишком много шагов. Задача прервана.»).
-        // Теперь делаем ФИНАЛЬНЫЙ вызов БЕЗ инструментов — модель обязана ответить текстом.
-        try {
-            const finalMessages = currentMessages.concat([{
-                role: "user",
-                content: "[СИСТЕМА: Лимит шагов исчерпан, инструменты ОТКЛЮЧЕНЫ. Выдай финальный ответ Боссу ТЕКСТОМ: что сделано, где, результат. Без вызовов инструментов.]"
-            }]);
-            const fres = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({ model: activeModel, messages: finalMessages, temperature: 0.5, tools: [], tool_choice: "none" }),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT)
-            });
-            const fdata = await fres.json();
-            const ftext = fdata?.choices?.[0]?.message?.content;
-            if (fres.ok && ftext) {
-                zlog(`[MODEL] финальный ответ без инструментов: ${activeModel}`);
-                return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
-            }
-        } catch (e: any) { zlog(`[FINAL] ${e?.message || e}`); }
-        return "⚠️ Слишком много шагов. Задача прервана.";
-    }
-    // Модель не ответила — переходим к следующей в цепочке
-    }
-
-    throw new Error(lastError);
+    // ЛИМИТ ШАГОВ: модель 20 раз подряд дёрнула инструменты и не выдала текст.
+    // Делаем ФИНАЛЬНЫЙ вызов БЕЗ инструментов — модель обязана ответить текстом.
+    try {
+        const finalMessages = currentMessages.concat([{
+            role: "user",
+            content: "[СИСТЕМА: Лимит шагов исчерпан, инструменты ОТКЛЮЧЕНЫ. Выдай финальный ответ Боссу ТЕКСТОМ: что сделано, где, результат. Без вызовов инструментов.]"
+        }]);
+        const fres = await fetch(ZVENO_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({ model: activeModel, messages: finalMessages, temperature: 0.5, tools: [], tool_choice: "none" }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT)
+        });
+        const fdata = await fres.json();
+        const ftext = fdata?.choices?.[0]?.message?.content;
+        if (fres.ok && ftext) {
+            zlog(`[ZVENO] финальный ответ без инструментов: ${activeModel}`);
+            return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
+        }
+    } catch (e: any) { zlog(`[FINAL] ${e?.message || e}`); }
+    return "⚠️ Слишком много шагов. Задача прервана.";
 }
 
 // =========================================
@@ -899,7 +822,8 @@ const GIGACHAT_KEY = Deno.env.get("GIGACHAT_KEY") || "";
 const GIGACHAT_SCOPE = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
 const GIGACHAT_OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
 const GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions";
-const GIGACHAT_MODELS = ["GigaChat-2-Max", "GigaChat-2-Pro", "GigaChat-2", "GigaChat-Pro", "GigaChat"];
+/* ❗ ОДНА модель GigaChat — без списка и без перебора (приказ Босса). */
+const GIGACHAT_MODEL = "GigaChat-2-Max";
 
 // Сертификат Минцифры отсутствует в системном хранилище — Deno ругается на TLS.
 // Создаём клиент, который игнорирует проверку ТОЛЬКО для доменов Сбера.
@@ -919,18 +843,24 @@ function getGigaChatClient(): any {
 
 let gcToken = "";
 let gcTokenExp = 0;
+let gcTokenKey = "";
 
-async function gigachatToken(): Promise<string> {
-    if (!GIGACHAT_KEY) throw new Error("GIGACHAT_KEY не задан в /root/.env");
+async function gigachatToken(userKey: string = ""): Promise<string> {
+    /* 🟣 КЛЮЧ ИЗ ПОЛЯ ⚙️ ГЛАВНЕЕ СЕРВЕРНОГО.
+       Был баг: userKeys.gigachat сервер НЕ читал вообще — вписанный Боссом
+       ключ Сбера был мёртвым грузом, всегда шёл GIGACHAT_KEY из /root/.env.
+       Теперь порядок: ключ из поля → серверный GIGACHAT_KEY. */
+    const key = String(userKey || "").trim() || GIGACHAT_KEY;
+    if (!key) throw new Error("Ключ GigaChat не вписан (⚙️ GigaChat → «Сохранить ключ»), и GIGACHAT_KEY не задан в /root/.env");
     const now = Date.now();
-    if (gcToken && now < gcTokenExp - 60000) return gcToken;
+    if (gcToken && gcTokenKey === key && now < gcTokenExp - 60000) return gcToken;
 
     const res = await fetch(GIGACHAT_OAUTH_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
-            "Authorization": `Basic ${GIGACHAT_KEY}`,
+            "Authorization": `Basic ${key}`,
             "RqUID": crypto.randomUUID(),
         },
         body: `scope=${encodeURIComponent(GIGACHAT_SCOPE)}`,
@@ -943,13 +873,14 @@ async function gigachatToken(): Promise<string> {
         throw new Error(`GigaChat OAuth ${res.status}: ${data?.message || data?.error || "нет токена"}`);
     }
     gcToken = data.access_token;
+    gcTokenKey = key;
     gcTokenExp = Number(data.expires_at) || (now + 25 * 60 * 1000);
-    zlog(`[GIGACHAT] получен access_token, scope=${GIGACHAT_SCOPE}`);
+    zlog(`[GIGACHAT] получен access_token, scope=${GIGACHAT_SCOPE}, ключ: ${String(userKey || "").trim() ? "свой (Босс)" : "серверный"}`);
     return gcToken;
 }
 
-async function callGigaChat(messages: any[], requestedModel: string = ""): Promise<string> {
-    const token = await gigachatToken();
+async function callGigaChat(messages: any[], requestedModel: string = "", userKey: string = ""): Promise<string> {
+    const token = await gigachatToken(userKey);
 
     // GigaChat не понимает OpenAI-формат tools — оставляем только текст
     const clean = messages
@@ -959,44 +890,222 @@ async function callGigaChat(messages: any[], requestedModel: string = ""): Promi
             content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
         }));
 
-    const want = String(requestedModel || "").replace(/^gigachat[:\/]?/i, "").trim();
-    const chain = want ? [want, ...GIGACHAT_MODELS] : GIGACHAT_MODELS;
+    /* ❗ ПЕРЕБОРА НЕТ: отвечает ОДНА модель GigaChat. Упала — честная ошибка. */
+    const model = GIGACHAT_MODEL;
+    const res = await fetch(GIGACHAT_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    } as any);
 
-    let lastErr = "GigaChat не ответил";
-    for (const model of chain) {
-        try {
-            const res = await fetch(GIGACHAT_API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-                body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
-                client: getGigaChatClient(),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT),
-            } as any);
+    const data = await res.json();
+    if (!res.ok) throw new Error(`${model}: ${data?.message || res.status}`);
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error(`${model}: пустой ответ`);
+    zlog(`[GIGACHAT] ответила модель: ${model}`);
+    return text;
+}
 
-            const data = await res.json();
-            if (!res.ok) {
-                lastErr = `${model}: ${data?.message || res.status}`;
-                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
-                continue;
+// =========================================
+// GIGACHAT С ИНСТРУМЕНТАМИ (FUNCTION CALLING)
+// ОФИЦИАЛЬНЫЙ ФОРМАТ СБЕРА (не OpenAI!):
+//   запрос:  functions: [{ name, description, parameters }], function_call: "auto"
+//   ответ:   choices[0].message.function_call = { name, arguments }
+//   возврат: { role: "function", name, content }
+// ❗ БЫЛ БАГ: отправляли OpenAI-обёртку tools:[{type:"function",function:{...}}]
+//    с tool_choice. Сбер её НЕ читает → инструменты игнорировались, и модель
+//    писала вызов ТЕКСТОМ в чат («Выполняю команду» + блок кода), а сервер
+//    не мог его распознать. Теперь формат строго по документации Сбера.
+// =========================================
+const GIGACHAT_FUNCTIONS = TOOLS.map((t: any) => t.function);
+
+// СТРАХОВКА: если Сбер всё же не отдал function_call, но модель написала вызов
+// ТЕКСТОМ (в блоке кода или одной строкой) — перехватываем и выполняем сами.
+function parseTextToolCall(text: string): { name: string, args: any } | null {
+    if (!text || text.length > 600) return null;
+    const names = TOOLS.map((t: any) => t.function.name);
+    const fences = text.match(/```[a-z]*\s*([\s\S]*?)```/gi) || [];
+    const candidates = fences.length
+        ? fences.map((f) => f.replace(/```[a-z]*/gi, "").trim())
+        : [text.trim()];
+    for (const cand of candidates) {
+        for (const nm of names) {
+            const m = cand.match(new RegExp("^" + nm + "\\s*\\(([\\s\\S]*)\\)\\s*$"));
+            if (!m) continue;
+            const raw = (m[1] || "").trim();
+            let args: any = {};
+            if (raw.startsWith("{")) {
+                try { args = JSON.parse(raw); } catch { continue; }
+            } else if (raw) {
+                const s = raw.replace(/^["'`]|["'`]$/g, "").trim();
+                const def = TOOLS.find((t: any) => t.function.name === nm);
+                const req = def?.function?.parameters?.required || [];
+                if (req.length === 1) args[req[0]] = s;
+                else if (req.length === 0) args = {};
+                else continue;
             }
-            const text = data?.choices?.[0]?.message?.content;
-            if (!text) {
-                lastErr = `${model}: пустой ответ`;
-                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
-                continue;
-            }
-            zlog(`[GIGACHAT] ответила модель: ${model}`);
-            return text;
-        } catch (e: any) {
-            lastErr = `${model}: ${e?.message || e}`;
-            zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+            return { name: nm, args };
         }
     }
-    throw new Error(lastErr);
+    return null;
+}
+
+async function callGigaChatTools(messages: any[], requestedModel: string = "", userKey: string = ""): Promise<string> {
+    const token = await gigachatToken(userKey);
+    /* ❗ ОДНА модель, БЕЗ ПЕРЕБОРА: канал 🟣 = GigaChat-2-Max (умеет инструменты). */
+    const model = GIGACHAT_MODEL;
+
+    // Копируем историю, чтобы не мутировать оригинал
+    const history: any[] = JSON.parse(JSON.stringify(messages));
+    const MAX_LOOPS = 15;
+
+    // Приводим историю к формату Сбера: content ВСЕГДА строка,
+    // роль function обязательно с полем name,
+    // у ассистента СОХРАНЯЕМ function_call (иначе Сбер не свяжет
+    // результат инструмента с вызовом и проигнорирует историю).
+    const toClean = (arr: any[]) => arr
+        .filter((m: any) => ["system", "user", "assistant", "function"].includes(m.role))
+        .map((m: any) => {
+            if (m.role === "function") {
+                /* ❗ Сбер требует СТРОГО валидный JSON в content результата функции.
+                   Была ошибка 422 "invalid function result json string", когда мы
+                   отправляли обычную строку. Оборачиваем в { result: ... }. */
+                const raw = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
+                let isObj = false;
+                try {
+                    const parsed = JSON.parse(raw);
+                    isObj = parsed !== null && typeof parsed === "object";
+                } catch { isObj = false; }
+                const payload = isObj ? raw : JSON.stringify({ result: raw });
+                return { role: "function", name: m.name, content: payload };
+            }
+            const c = m.content;
+            const out: any = {
+                role: m.role,
+                content: typeof c === "string" ? c : (c == null ? "" : JSON.stringify(c)),
+            };
+            if (m.role === "assistant" && m.function_call) out.function_call = m.function_call;
+            return out;
+        });
+
+    for (let loop = 0; loop < MAX_LOOPS; loop++) {
+        // 1. Отправляем запрос с инструментами в формате Сбера (functions)
+        const res = await fetch(GIGACHAT_API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                model,
+                messages: toClean(history),
+                temperature: 0.5,
+                functions: GIGACHAT_FUNCTIONS,
+                function_call: "auto",
+            }),
+            client: getGigaChatClient(),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT),
+        } as any);
+
+        if (!res.ok) {
+            const errText = await res.text();
+            zlog(`[GIGACHAT-TOOLS] ${res.status}: ${errText.slice(0, 200)}`);
+            // Ошибка уходит в чат как есть — никаких переключений на другую модель.
+            throw new Error(`GigaChat ${res.status}: ${errText.slice(0, 200)}`);
+        }
+
+        const data = await res.json();
+        const msg = data?.choices?.[0]?.message;
+        if (!msg) return "Пустой ответ от GigaChat";
+
+        // 2. Модель вызвала инструмент.
+        //    Основной формат Сбера — message.function_call.
+        //    На случай OpenAI-совместимого ответа читаем и tool_calls.
+        const fc = msg.function_call || (Array.isArray(msg.tool_calls) && msg.tool_calls[0]
+            ? { name: msg.tool_calls[0].function?.name, arguments: msg.tool_calls[0].function?.arguments }
+            : null);
+
+        if (fc && fc.name) {
+            let args: any = {};
+            const rawArgs = fc.arguments;
+            if (typeof rawArgs === "string") {
+                try { args = JSON.parse(rawArgs || "{}"); } catch { args = {}; }
+            } else if (rawArgs && typeof rawArgs === "object") {
+                args = rawArgs;   // Сбер отдаёт arguments уже объектом
+            }
+
+            zlog(`[GIGACHAT-TOOLS] вызов ${fc.name}(${JSON.stringify(args).slice(0, 100)})`);
+
+            let toolResult = "";
+            let toolFailed = false;
+            try {
+                toolResult = await executeTool(fc.name, args);
+            } catch (e: any) {
+                toolFailed = true;
+                toolResult = String(e?.message || e);
+            }
+            const safeResult = String(toolResult).slice(0, MAX_TOOL_RESULT);
+            /* ❗ Сбер требует валидный JSON в результате функции (иначе 422
+               "invalid function result json string"). Ошибку тоже отдаём JSON. */
+            const resultJson = toolFailed
+                ? JSON.stringify({ error: safeResult })
+                : JSON.stringify({ result: safeResult });
+
+            // Ответ ассистента (с function_call) + результат инструмента (role: function)
+            history.push({ role: "assistant", content: "", function_call: { name: fc.name, arguments: args } });
+            history.push({ role: "function", name: fc.name, content: resultJson });
+
+            continue; // модель должна осмыслить результат
+        }
+
+        // 2б. Сбер не отдал function_call, но модель написала вызов ТЕКСТОМ.
+        //     Перехватываем, выполняем и отдаём результат как сообщение user
+        //     (без role:"function" — иначе Сбер отвергнет «висячий» результат).
+        const textCall = parseTextToolCall(String(msg.content || ""));
+        if (textCall) {
+            zlog(`[GIGACHAT-TOOLS] текстовый вызов перехвачен: ${textCall.name}(${JSON.stringify(textCall.args).slice(0, 100)})`);
+            let toolResult = "";
+            try {
+                toolResult = await executeTool(textCall.name, textCall.args);
+            } catch (e: any) {
+                toolResult = `Ошибка выполнения инструмента: ${e?.message || e}`;
+            }
+            history.push({ role: "assistant", content: String(msg.content || "") });
+            history.push({
+                role: "user",
+                content: `[СИСТЕМА: результат инструмента ${textCall.name}]\n${String(toolResult).slice(0, MAX_TOOL_RESULT)}\n[СИСТЕМА: выдай финальный ответ Боссу ТЕКСТОМ, без вызовов инструментов.]`,
+            });
+            continue;
+        }
+
+        // 3. Вызова нет — это финальный ответ
+        zlog(`[GIGACHAT-TOOLS] ответила модель: ${model}`);
+        return msg.content || "Пустой ответ";
+    }
+
+    // Лимит шагов: финальный запрос БЕЗ инструментов, чтобы получить хоть какой-то текст
+    zlog("[GIGACHAT-TOOLS] лимит шагов — финальный запрос без инструментов");
+    const finalRes = await fetch(GIGACHAT_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ model, messages: toClean(history), temperature: 0.5 }),
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    } as any);
+
+    const finalData = await finalRes.json();
+    return finalData?.choices?.[0]?.message?.content || "Не удалось получить финальный ответ";
 }
 
 // =========================================
@@ -1148,7 +1257,9 @@ Deno.serve(async (request) => {
         // ПРОВЕРКА GIGACHAT — «жив ли помощник»
         if (body.gigachatTest) {
             try {
-                const t = await callGigaChat([{ role: "user", content: "Ответь одним словом: работает?" }], "");
+                // Проверяем ИМЕННО тот ключ, что вписан в поле (если он есть).
+                const gk = String((body.userKeys && (body.userKeys.gigachat || body.userKeys.gigachatKey)) || "").trim();
+                const t = await callGigaChat([{ role: "user", content: "Ответь одним словом: работает?" }], "", gk);
                 return json({ success: true, answer: t });
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
@@ -1168,22 +1279,23 @@ Deno.serve(async (request) => {
         // ГЛАВНАЯ РУЧКА: ИИ
         if (body.messages) {
             const userKeys = body.userKeys || {};
+            /* 🟣 КЛЮЧ СБЕРА ИЗ ПОЛЯ ⚙️ (userKeys.gigachat). Пусто — серверный. */
+            const gcKey = String((userKeys && (userKeys.gigachat || userKeys.gigachatKey)) || "").trim();
             let aiText = "";
 
             const reqModel = typeof body.model === "string" ? body.model.trim() : "";
-            zlog(`[REQ] model="${reqModel || "(не указана → бесплатная dots)"}" image=${!!body.image}`);
+            zlog(`[REQ] model="${reqModel || "(не указана → Архитектор)"}" image=${!!body.image}`);
 
+            /* ❗ ДВА КАНАЛА, ЛИНЕЙНО, БЕЗ ПЕРЕБОРА (приказ Босса).
+               Инструменты (Tools) включены в ОБОИХ каналах. */
             if (body.image) {
+                // 👁 Фото — зрение канала Zveno.
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
             } else if (/^gigachat/i.test(reqModel)) {
-                // Босс явно выбрал GigaChat — идём напрямую в Сбер
-                aiText = await callGigaChat(body.messages, reqModel);
+                // 🟣 GigaChat (Сбер) — ключ с сервера, инструменты ВКЛЮЧЕНЫ.
+                aiText = await callGigaChatTools(body.messages, reqModel, gcKey);
             } else {
-                // АВТОПЕРЕБОР НА GIGACHAT ОТКЛЮЧЁН (приказ Босса).
-                // GigaChat — ОТДЕЛЬНОЕ подключение: работает ТОЛЬКО когда Босс
-                // сам включил кнопку 🟣 GigaChat (тогда model="gigachat" и идёт
-                // ветка выше). Если ZVENO упал — ошибка уходит наверх, Сбер
-                // молча задачу НЕ подхватывает. Никакого скрытого резерва.
+                // 🅰️ Zveno — ключ ZVENO_API_KEY с сервера, инструменты ВКЛЮЧЕНЫ.
                 aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
             }
 
@@ -1193,6 +1305,9 @@ Deno.serve(async (request) => {
         return json({ success: false, error: "Неизвестный запрос" }, 400);
     } catch (e: any) {
         const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
-        return json({ success: false, error: msg, choices: [{ message: { content: `❌ **Ошибка:** ${msg}` } }] }, 500);
+        /* ❗ НА ОШИБКЕ choices НЕ КЛАДЁМ (был баг): клиент видел текст в choices
+           и принимал ошибку за нормальный ответ — отсюда «✅ Ключ живой.
+           Ответ: ❌ Ошибка: missing or invalid authorization» на мёртвом ключе. */
+        return json({ success: false, error: msg }, 500);
     }
 });
