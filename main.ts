@@ -266,13 +266,7 @@ async function handleBackup(body: any) {
             }
         } catch (e) {}
     }
-    // ОТКАТ: НИКОГДА не возвращаем из эталона серверный код и оболочку.
-    // Старый backup/main.ts с замком isBoss и старый index.html с запросом
-    // токена — именно они «возвращали» ошибку после каждого отката.
-    if (!body.isBackup) {
-        const ROLLBACK_KEEP = ["main.ts", "index.html"];
-        sourceFiles = sourceFiles.filter((f: any) => !ROLLBACK_KEEP.includes(f.name));
-    }
+    // ПРИКАЗ БОССА: откат возвращает ВСЕ файлы эталона, включая main.ts и index.html.
     if (sourceFiles.length === 0) return json({ success: false, error: body.isBackup ? "Нет файлов в корне" : "Папка backup пуста" }, 400);
 
     const tree: any[] = [];
