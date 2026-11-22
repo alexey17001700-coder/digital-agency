@@ -235,6 +235,9 @@ function openAIModelPanel() {
     const pick = (m) => {
         selectedAIModel = m.id;
         localStorage.setItem('shtabAIModel', selectedAIModel);
+        /* Запоминаем последнюю выбранную модель каждого типа: тап по кнопке
+           теперь только ВКЛЮЧАЕТ/ВЫКЛЮЧАЕТ её, а не листает список. */
+        try { localStorage.setItem(m.free ? 'shtabLastFreeModel' : 'shtabLastPaidModel', m.id); } catch (e) {}
         // Ollama (ПК): спрашиваем имя локальной модели — её грузит ПК.
         if (m.id === 'ollama') {
             const cur = localStorage.getItem('shtabOllamaModel') || 'qwen2.5-coder:7b';
