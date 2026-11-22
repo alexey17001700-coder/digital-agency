@@ -210,28 +210,11 @@ function allowedModels() {
         .concat(paidEnabled() ? paidModels().filter(m => modelEnabled(m.id)) : []);
 }
 function resolveAllowedModel(id) {
-    /* 🅰️ АРХИТЕКТОР — ТОЛЬКО ВРУЧНУЮ. Кнопка 🅰️ выключена — ZVENO
-       не выбирается и не подставляется ничем: ни автоподбором, ни
-       автосменой, ни аварийным резервом. */
-    if (id === 'zveno') {
-        if (architectEnabled()) return id;
-        const ff = freeModels().filter(m => modelEnabled(m.id));
-        return ff.length ? ff[0].id : 'gigachat';
-    }
-    /* 🔑 УНИВЕРСАЛЬНО: модель выключена своей кнопкой — уходим на включённую. */
-    if (!modelEnabled(id)) {
-        const fe = freeModels().filter(m => modelEnabled(m.id));
-        return fe.length ? fe[0].id : 'gigachat';
-    }
-    const info = getModelInfo(id);
-    if (info && info.free) return id;
-    /* GigaChat идёт по ключу Сбера (GIGACHAT_KEY на сервере), а не по платному
-       маршруту ZVENO. Поэтому выключенные «платные» его не подменяют: иначе
-       отдельная кнопка 🟣 GigaChat молча уезжала на бесплатную модель. */
-    if (id === 'gigachat') return id;
-    if (paidEnabled()) return id;
-    const f = freeModels();
-    return f.length ? f[0].id : id;
+    /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
+       Отвечает ТОЛЬКО та модель, которую выбрал Босс. Упала — в чат идёт
+       честная ошибка. Автоподмена на бесплатную/другую модель запрещена:
+       никакого автоподбора, никакой автосмены, никакого «аварийного резерва». */
+    return id || selectedAIModel || 'gigachat';
 }
 
 /* =========================================
