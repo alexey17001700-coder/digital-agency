@@ -157,33 +157,7 @@ function renderAgentsGrid() {
     });
     }
 
-/* --- СТИЛЬ ПЛАШКИ GIGACHAT В КАРТОЧКЕ ---
-   Кнопка занимает нижнюю полосу карточки агента GigaChat. */
-function _injectGigaCardCss() {
-    if (document.getElementById('gigaCardCss')) return;
-    const st = document.createElement('style'); st.id = 'gigaCardCss';
-    st.textContent = `
-    .agent-card.giga-card { padding-bottom: 26px; }
-    .giga-card-badge {
-        position: absolute; left: 8px; right: 8px; bottom: 4px;
-        padding: 3px 6px; font-size: 10px; font-weight: 700; font-family: inherit;
-        letter-spacing: .3px; text-align: center; line-height: 1.3;
-        background: rgba(123,97,255,.14); color: #7B61FF;
-        border: 1px solid rgba(123,97,255,.55); border-radius: 7px;
-        cursor: pointer; z-index: 4;
-    }
-    .giga-card-badge.on { background: #7B61FF; color: #fff; border-color: #7B61FF; }
-    `;
-    document.head.appendChild(st);
-}
-
-/* --- СОСТОЯНИЕ ПЛАШКИ GIGACHAT В КАРТОЧКЕ ---
-   Держим кнопку в карточке синхронной с выбором модели: зовётся из
-   updateGigaChatButtonVisual() (chat.js) при каждом изменении. */
-function updateGigaCardBadge() {
-    const b = document.getElementById('gigaCardBadge');
-    if (!b) return;
-    const on = (typeof isGigaChatActive === 'function') ? isGigaChatActive() : false;
-    b.innerText = on ? '🟣 GigaChat: ВКЛ' : '🟣 GigaChat: ВЫКЛ';
-    b.classList.toggle('on', on);
-}
+/* --- ПЛАШКА GIGACHAT В КАРТОЧКЕ УБРАНА ---
+   Босс: выбор агента = работа. Отдельная кнопка «🟣 GigaChat: ВКЛ/ВЫКЛ»
+   в карточке и в верхней панели больше не нужна — тап по карточке GigaChat
+   (зелёная подсветка) сам включает модель Сбера. */
