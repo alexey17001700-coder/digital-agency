@@ -1185,7 +1185,7 @@ Deno.serve(async (request) => {
             let aiText = "";
 
             const reqModel = typeof body.model === "string" ? body.model.trim() : "";
-            zlog(`[REQ] model="${reqModel || "(не указана → бесплатная dots)"}" image=${!!body.image}`);
+            zlog(`[REQ] model="${reqModel || "(не указана → Архитектор)"}" image=${!!body.image}`);
 
             if (body.image) {
                 aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
