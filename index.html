@@ -264,6 +264,16 @@
             else if (minTimePassed && !appLoaded) { document.querySelector('.splash-title').innerText = "Загрузка Штаба..."; }
             else if (appLoaded && minTimePassed && !aiReady) { document.querySelector('.splash-title').innerText = "Загрузка нейросети..."; }
         }
+        // ТИХИЙ ЗАПУСК: оболочка обновилась сама (см. «ЖИВОЕ ОБНОВЛЕНИЕ ШТАБА») —
+        // заставку не показываем вообще, чтобы Босс не видел перезагрузку.
+        try {
+            if (sessionStorage.getItem('shtabSilentBoot') === '1') {
+                sessionStorage.removeItem('shtabSilentBoot');
+                minTimePassed = true; aiReady = true;
+                splashScreen.classList.add('hidden');
+                clearInterval(matrixInterval);
+            }
+        } catch (e) {}
         function forceRefresh() {
             if ('caches' in window) { caches.keys().then((names) => { for (let name of names) caches.delete(name); }); }
             window.location.href = window.location.pathname + '?v=' + Date.now();
