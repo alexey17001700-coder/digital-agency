@@ -394,6 +394,8 @@ function openArchitectPanel() {
     sw.onclick = () => {
         if (typeof setArchitectEnabled !== 'function') return;
         setArchitectEnabled(!on);
+        // Включили канал — сразу переводим чат на Архитектора (ручной выбор).
+        if (!on && typeof selectArchitect === 'function') selectArchitect();
         openArchitectPanel();   // перерисовать меню под новое состояние
     };
     box.appendChild(sw);
