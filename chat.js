@@ -313,9 +313,10 @@ function isGigaChatActive() { return selectedAIModel === 'gigachat'; }
 function updateGigaChatButtonVisual() {
     const b = document.getElementById('btnGigaChat');
     if (!b) return;
-    if (isGigaChatActive()) {
+    const duet = (typeof duetEnabled === 'function') && duetEnabled();
+    if (isGigaChatActive() || duet) {
         b.classList.add('active');
-        b.innerText = '🟣 GigaChat: ВКЛ';
+        b.innerText = duet ? '🟣 GigaChat: ДУЭТ' : '🟣 GigaChat: ВКЛ';
         b.style.borderColor = '#7B61FF';
         b.style.color = '#b9a8ff';
         b.style.background = 'rgba(123,97,255,.16)';
