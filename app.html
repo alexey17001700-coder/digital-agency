@@ -435,6 +435,82 @@
         catch (e) { alert('Не удалось скопировать — выдели текст вручную.'); }
         document.body.removeChild(ta);
     }
+
+    /* =========================================
+       --- МОДАЛКА «ЧТО ОБНОВИЛОСЬ» ПРИ ЗАГРУЗКЕ ---
+       Босс: при загрузке Штаба должно вылезать окно с описанием обновления.
+       Источник — shtab_version.json (version + log). Показываем ОДИН РАЗ на
+       версию: сравниваем version с сохранённой в localStorage. Записи нет
+       (первый запуск на устройстве) — тоже показываем и запоминаем.
+       Повторно открыть можно из панели версии (кнопка «🎉 ЧТО ОБНОВИЛОСЬ»).
+       ========================================= */
+    const UPDATE_SEEN_KEY = 'shtabSeenVersion';
+
+    function closeUpdateNotice() {
+        const m = document.getElementById('updateModal');
+        if (m) m.classList.remove('active');
+    }
+    window.closeUpdateNotice = closeUpdateNotice;
+
+    async function checkUpdateNotice(force) {
+        try {
+            const r = await fetch('shtab_version.json?v=' + Date.now(), { cache: 'no-store' });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const d = await r.json();
+            const ver = String(d.version || '');
+            if (!ver) return;
+            const seen = localStorage.getItem(UPDATE_SEEN_KEY);
+            if (!force && seen === ver) return;   // это обновление уже видели — не мешаем
+            buildUpdateNotice(d, force ? null : seen);
+            localStorage.setItem(UPDATE_SEEN_KEY, ver);
+        } catch (e) {
+            console.warn('Модалка обновления: shtab_version.json не прочитан', e);
+        }
+    }
+    window.checkUpdateNotice = checkUpdateNotice;
+
+    function buildUpdateNotice(d, seen) {
+        const body = document.getElementById('updateBody');
+        const modal = document.getElementById('updateModal');
+        if (!body || !modal) return;
+        body.innerHTML = '';
+
+        const head = document.createElement('div');
+        head.textContent = seen
+            ? 'Версия ' + d.version + ' — что нового:'
+            : 'Версия ' + d.version + '. Обновление установлено.';
+        head.style.cssText = 'font-size:13px;color:#c9d6e2;margin-bottom:10px;line-height:1.4;';
+        body.appendChild(head);
+
+        const log = Array.isArray(d.log) ? d.log.slice().reverse() : [];
+        if (log.length) {
+            log.forEach(it => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;gap:8px;padding:9px;margin-bottom:8px;background:#121212;border:1px solid #222;border-radius:8px;font-size:12px;line-height:1.4;';
+                const n = document.createElement('span');
+                n.textContent = '#' + (it.n || '?');
+                n.style.cssText = 'color:#00e5ff;font-weight:700;flex:0 0 auto;';
+                const t = document.createElement('span');
+                t.textContent = it.text || '';
+                t.style.color = '#c9d6e2';
+                row.appendChild(n); row.appendChild(t);
+                body.appendChild(row);
+            });
+        } else {
+            const e = document.createElement('div');
+            e.textContent = 'Описание изменений не заполнено.';
+            e.style.cssText = 'font-size:12px;color:#8b98a5;';
+            body.appendChild(e);
+        }
+
+        const btn = document.createElement('button');
+        btn.textContent = '✅ Понятно, работаем';
+        btn.style.cssText = 'width:100%;padding:12px;margin-top:6px;background:#00e5ff;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:14px;cursor:pointer;';
+        btn.onclick = closeUpdateNotice;
+        body.appendChild(btn);
+
+        modal.classList.add('active');
+    }
     </script>
 </body>
 </html>
