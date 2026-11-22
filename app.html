@@ -106,7 +106,7 @@
             }
             if (failed.length) showBootError('Не загрузились файлы: ' + failed.join(', '));
 
-            // Плашка версии и счётчика правок (version.json).
+            // Плашка версии и счётчика правок ШТАБА (shtab_version.json).
             if (typeof loadVersionCounter === 'function') loadVersionCounter();
             if (typeof startVersionAutoRefresh === 'function') startVersionAutoRefresh();
 
