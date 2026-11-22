@@ -1487,13 +1487,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         stopSendTimer();   // старый секундомер гасим сразу, не ждём нового старта
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
-    /* --- НИ ОДНА КАРТОЧКА НЕ ВЫБРАНА — РАБОТАТЬ НЕКОМУ ---
-       Босс: пустая панель агентов = никто не работает. Просим выбрать
-       агента и НЕ отправляем запрос. Текст Босса остаётся в поле ввода. */
-    if (!overrideText && (!Array.isArray(selectedAgents) || selectedAgents.length === 0)) {
-        renderMessage('⚠️ **Выберите Агента.** Ни одна карточка не выбрана — работать некому.', 'director', 'Оркестратор');
-        return;
-    }
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
@@ -1815,7 +1808,7 @@ async function sendMessage(overrideText = null, isKick = false) {
             aiText = aiText.replace(taskRegex, '').trim();
             tasksToRun.forEach(t => { if (typeof updateAgentStatus === 'function') updateAgentStatus(t.agent, 'working'); runBackgroundTask(t.agent, t.task); });
             
-            addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Оркестратор'));
+            addMessageToHistory(aiText, 'director', selectedAgents.length > 1 ? 'Совет' : (selectedAgents[0] || 'Архитектор'));
             if (elAi) elAi.className = 'status-item online';
             const replies = parseAgentReplies(aiText); await playAgentReplies(replies);
             if (usedModel) renderMessage(modelBadgeText(usedModel), 'director', 'Оркестратор');
