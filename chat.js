@@ -213,9 +213,10 @@ function setPaidEnabled(on) {
 }
 /* В список разрешённых попадают ТОЛЬКО включённые модели: выключенную
    кнопкой модель нельзя выбрать и нельзя подставить автоподбором. */
+/* Разрешено ровно то, что есть в списке и не выключено кнопкой:
+   Архитектор (если включён 🅰️) и GigaChat. */
 function allowedModels() {
-    return freeModels().filter(m => modelEnabled(m.id))
-        .concat(paidEnabled() ? paidModels().filter(m => modelEnabled(m.id)) : []);
+    return AI_MODELS.filter(m => m && modelEnabled(m.id));
 }
 function resolveAllowedModel(id) {
     /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
