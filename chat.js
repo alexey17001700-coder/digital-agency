@@ -174,6 +174,8 @@ function setArchitectKey(v) {
     return k.architectKey;
 }
 function setArchitectEnabled(on) {
+    /* ⚡ Дуэт невозможен с одним каналом: выключили 🅰️ — дуэт гаснет сам. */
+    if (!on && typeof duetEnabled === 'function' && duetEnabled()) setDuet(false);
     try { localStorage.setItem('shtabArchitectOn', on ? 'on' : 'off'); } catch (e) {}
     if (!on && selectedAIModel === 'zveno') {
         // Выключили Архитектора — уводим на прежнюю/бесплатную модель.
