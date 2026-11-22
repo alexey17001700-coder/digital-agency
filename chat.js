@@ -349,8 +349,7 @@ function setModelEnabled(id, on) {
     try { localStorage.setItem('shtabModelOn', JSON.stringify(m)); } catch (e) {}
     // Выключили модель, которая сейчас выбрана — уводим на разрешённую.
     if (!on && selectedAIModel === id) {
-        const f = freeModels().filter(x => modelEnabled(x.id));
-        selectedAIModel = f.length ? f[0].id : 'gigachat';
+        selectedAIModel = firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
