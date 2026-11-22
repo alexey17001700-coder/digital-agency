@@ -786,41 +786,31 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         }
 
         const answer = msg.content || "Пустой ответ";
-        zlog(`[MODEL] ответила: ${activeModel}`);
+        zlog(`[ZVENO] ответила: ${activeModel}`);
         return weatherCard ? weatherCard + "\n\n" + answer : answer;
     }
 
-    if (!modelFailed) {
-        // ЛИМИТ ШАГОВ: модель 20 раз подряд дёрнула инструменты и не выдала текст.
-        // Раньше задача молча умирала («Слишком много шагов. Задача прервана.»).
-        // Теперь делаем ФИНАЛЬНЫЙ вызов БЕЗ инструментов — модель обязана ответить текстом.
-        try {
-            const finalMessages = currentMessages.concat([{
-                role: "user",
-                content: "[СИСТЕМА: Лимит шагов исчерпан, инструменты ОТКЛЮЧЕНЫ. Выдай финальный ответ Боссу ТЕКСТОМ: что сделано, где, результат. Без вызовов инструментов.]"
-            }]);
-            const fres = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({ model: activeModel, messages: finalMessages, temperature: 0.5, tools: [], tool_choice: "none" }),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT)
-            });
-            const fdata = await fres.json();
-            const ftext = fdata?.choices?.[0]?.message?.content;
-            if (fres.ok && ftext) {
-                zlog(`[MODEL] финальный ответ без инструментов: ${activeModel}`);
-                return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
-            }
-        } catch (e: any) { zlog(`[FINAL] ${e?.message || e}`); }
-        return "⚠️ Слишком много шагов. Задача прервана.";
-    }
-    // Модель не ответила — переходим к следующей в цепочке
-    }
-
-    /* ДИАГНОСТИКА ДЛЯ КНОПКИ «🔌 Проверить связь с ключом»:
-       Босс сразу видит, КАКОЙ ключ ушёл (свой Архитектора или серверный)
-       и КАКАЯ модель отвечала. Без этого «ошибка» ни о чём не говорит. */
-    throw new Error(`${lastError} [ключ: ${isArchitect ? (archKey ? "ваш (Архитектор)" : "серверный") : "серверный"}, модель: ${modelChain[0]}]`);
+    // ЛИМИТ ШАГОВ: модель 20 раз подряд дёрнула инструменты и не выдала текст.
+    // Делаем ФИНАЛЬНЫЙ вызов БЕЗ инструментов — модель обязана ответить текстом.
+    try {
+        const finalMessages = currentMessages.concat([{
+            role: "user",
+            content: "[СИСТЕМА: Лимит шагов исчерпан, инструменты ОТКЛЮЧЕНЫ. Выдай финальный ответ Боссу ТЕКСТОМ: что сделано, где, результат. Без вызовов инструментов.]"
+        }]);
+        const fres = await fetch(ZVENO_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({ model: activeModel, messages: finalMessages, temperature: 0.5, tools: [], tool_choice: "none" }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT)
+        });
+        const fdata = await fres.json();
+        const ftext = fdata?.choices?.[0]?.message?.content;
+        if (fres.ok && ftext) {
+            zlog(`[ZVENO] финальный ответ без инструментов: ${activeModel}`);
+            return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
+        }
+    } catch (e: any) { zlog(`[FINAL] ${e?.message || e}`); }
+    return "⚠️ Слишком много шагов. Задача прервана.";
 }
 
 // =========================================
