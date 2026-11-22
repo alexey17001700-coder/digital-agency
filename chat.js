@@ -204,6 +204,14 @@ function setPaidEnabled(on) {
 }
 function allowedModels() { return freeModels().concat(paidEnabled() ? paidModels() : []); }
 function resolveAllowedModel(id) {
+    /* 🅰️ АРХИТЕКТОР — ТОЛЬКО ВРУЧНУЮ. Кнопка 🅰️ выключена — ZVENO
+       не выбирается и не подставляется ничем: ни автоподбором, ни
+       автосменой, ни аварийным резервом. */
+    if (id === 'zveno') {
+        if (architectEnabled()) return id;
+        const ff = freeModels();
+        return ff.length ? ff[0].id : 'gigachat';
+    }
     const info = getModelInfo(id);
     if (info && info.free) return id;
     /* GigaChat идёт по ключу Сбера (GIGACHAT_KEY на сервере), а не по платному
