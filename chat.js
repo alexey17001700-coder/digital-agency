@@ -207,8 +207,8 @@ function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
     const cur = getModelInfo(selectedAIModel);
     if (!on && cur && !cur.free && cur.id !== 'gigachat') {
-        const f = freeModels();
-        if (f.length) { selectedAIModel = f[0].id; localStorage.setItem('shtabAIModel', selectedAIModel); }
+        selectedAIModel = firstFreeId();
+        localStorage.setItem('shtabAIModel', selectedAIModel);
     }
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
