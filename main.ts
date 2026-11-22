@@ -255,7 +255,8 @@ async function handleBackup(body: any) {
     if (body.isBackup) {
         const rootContents = await gitAPI("contents/");
         if (Array.isArray(rootContents)) {
-            sourceFiles = rootContents.filter((item: any) => item.type === 'file' && ![".gitignore", "README.md", "ai_brain.json"].includes(item.name)).map((item: any) => ({ name: item.name, sha: item.sha }));
+            // ПРИКАЗ БОССА: эталон сохраняет ВСЕ файлы корня, без исключений.
+            sourceFiles = rootContents.filter((item: any) => item.type === 'file').map((item: any) => ({ name: item.name, sha: item.sha }));
         }
     } else {
         try {
