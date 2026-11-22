@@ -104,9 +104,9 @@ async function sendToFreeModel(text) {
         const d = await r.json().catch(() => ({}));
         const answer = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '') : '';
         if (answer) {
-            renderMessage(answer, 'director', 'Бесплатная модель');
-            addMessageToHistory(answer, 'director', 'Бесплатная модель');
-            renderMessage('🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + freeLabel + ' — 0 ₽]*', 'director', 'Бесплатная модель');
+            renderMessage(answer, 'director', 'Резерв (GigaChat)');
+            addMessageToHistory(answer, 'director', 'Резерв (GigaChat)');
+            renderMessage('🟣 *[Резервный канал: ' + freeLabel + ']*', 'director', 'Резерв (GigaChat)');
             return true;
         }
         throw new Error((d && d.error) || 'пустой ответ');
