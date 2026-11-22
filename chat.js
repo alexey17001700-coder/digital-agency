@@ -209,7 +209,7 @@ function updateArchitectButtonVisual() {
         b.style.background = 'rgba(0,229,255,.14)';
     } else {
         b.classList.remove('active', 'mode-on');
-        b.innerText = '🅰️ Архитектор';
+        b.innerText = '🅰️ Zveno';
         b.style.borderColor = '#00e5ff';
         b.style.color = '#00e5ff';
         b.style.background = '';
