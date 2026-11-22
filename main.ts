@@ -1044,19 +1044,23 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
             zlog(`[GIGACHAT-TOOLS] вызов ${fc.name}(${JSON.stringify(args).slice(0, 100)})`);
 
             let toolResult = "";
+            let toolFailed = false;
             try {
                 toolResult = await executeTool(fc.name, args);
             } catch (e: any) {
-                toolResult = `Ошибка выполнения инструмента: ${e?.message || e}`;
+                toolFailed = true;
+                toolResult = String(e?.message || e);
             }
+            const safeResult = String(toolResult).slice(0, MAX_TOOL_RESULT);
+            /* ❗ Сбер требует валидный JSON в результате функции (иначе 422
+               "invalid function result json string"). Ошибку тоже отдаём JSON. */
+            const resultJson = toolFailed
+                ? JSON.stringify({ error: safeResult })
+                : JSON.stringify({ result: safeResult });
 
             // Ответ ассистента (с function_call) + результат инструмента (role: function)
             history.push({ role: "assistant", content: "", function_call: { name: fc.name, arguments: args } });
-            history.push({
-                role: "function",
-                name: fc.name,
-                content: String(toolResult).slice(0, MAX_TOOL_RESULT),
-            });
+            history.push({ role: "function", name: fc.name, content: resultJson });
 
             continue; // модель должна осмыслить результат
         }
