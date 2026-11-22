@@ -1030,14 +1030,18 @@ async function callGigaChat(messages: any[], requestedModel: string = "", userKe
 // Отличия от OpenAI: одиночный function_call вместо tool_calls,
 // роль "function" + name вместо role:"tool" + tool_call_id.
 // =========================================
-async function callGigaChatTools(messages: any[], requestedModel: string = ""): Promise<string> {
-    const token = await gigachatToken();
-    const model = requestedModel || "GigaChat-2";
+async function callGigaChatTools(messages: any[], requestedModel: string = "", userKey: string = ""): Promise<string> {
+    const token = await gigachatToken(userKey);
+    /* КАНАЛ 🟣 (model="gigachat" без версии) = САМАЯ СИЛЬНАЯ версия GigaChat-2.
+       Был баг: "gigachat" не проходил проверку /gigachat-?2/ → инструменты
+       молча отключались, и модель рисовала команды ТЕКСТОМ в чат. */
+    const asked = String(requestedModel || "").trim();
+    const model = (!asked || /^gigachat[:\/]?$/i.test(asked)) ? GIGACHAT_MODELS[0] : asked;
 
     // Проверка на поддержку tools (только GigaChat-2 и выше)
     if (!/gigachat-?2/i.test(model)) {
         zlog(`[GIGACHAT] ${model} не поддерживает tools — откат на текст`);
-        return await callGigaChat(messages, model);
+        return await callGigaChat(messages, model, userKey);
     }
 
     // Копируем историю, чтобы не мутировать оригинал
