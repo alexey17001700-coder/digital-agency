@@ -93,45 +93,127 @@
     <script>
         const PROXY = "https://shtab-boss.duckdns.org:8443";
 
-        // === СТОРОЖ ОБОЛОЧКИ (index.html) ===
-        // app.html грузится с ?v=<timestamp> и обновляется сам, а САМА оболочка — нет.
-        // Из-за этого старая закэшированная оболочка залипала на телефоне навсегда:
-        // кнопка «Откатить Штаб» из старой версии снова просила GitHub-токен, хотя
-        // в коде это давно убрано. Теперь оболочка сверяет свой build с shtab_version.json
-        // и, если на сервере новее, жёстко перезагружается в обход кэша (один раз — без петли).
+        // === СБОРКА ОБОЛОЧКИ (index.html) ===
+        // shellBuild в shtab_version.json — это сборка ИМЕННО оболочки.
+        // Обычные правки Штаба (build = app.html) оболочку больше НЕ дёргают:
+        // их подхватывает «ЖИВОЕ ОБНОВЛЕНИЕ» ниже, без перезагрузки страницы.
         // ВАЖНО: читаем СВОЙ файл shtab_version.json, а не общий version.json —
         // тот принадлежит Калькулятору окон (window_calc) и с Штабом не перемешивается.
-        // Метка сборки оболочки — по ней свежий app.html (кадр) понимает,
-        // что оболочка залипла в кэше, и лечит её.
-        window.SHTAB_SHELL_BUILD = 60;
-        (function () {
-            const SHELL_BUILD = 60;
-            const GUARD_KEY = 'shtabShellReloadBuild';
-            async function checkShellBuild() {
-                try {
-                    const r = await fetch('shtab_version.json?t=' + Date.now(), { cache: 'no-store' });
-                    if (!r.ok) return;
-                    const j = await r.json();
-                    const serverBuild = parseInt(j.build, 10);
-                    if (!serverBuild || serverBuild === SHELL_BUILD) {
-                        try { sessionStorage.removeItem(GUARD_KEY); } catch (e) {}
-                        return;
-                    }
-                    let already = null;
-                    try { already = sessionStorage.getItem(GUARD_KEY); } catch (e) {}
-                    if (already === String(serverBuild)) return; // уже пробовали — не зацикливаемся
-                    try { sessionStorage.setItem(GUARD_KEY, String(serverBuild)); } catch (e) {}
-                    location.replace(location.pathname + '?v=' + Date.now());
-                } catch (e) { /* нет version.json — молча живём дальше */ }
-            }
-            checkShellBuild();
-        })();
+        window.SHTAB_SHELL_BUILD = 66;
 
         const fabMenu = document.getElementById('fab-menu');
         const fabOverlay = document.getElementById('fab-overlay');
-        const appFrame = document.getElementById('app-frame');
+        let appFrame = document.getElementById('app-frame');
         const splashScreen = document.getElementById('splash-screen');
         appFrame.src = "app.html?v=" + Date.now();
+
+        // === ЖИВОЕ ОБНОВЛЕНИЕ ШТАБА — БЕЗ ВИДИМЫХ ПЕРЕЗАГРУЗОК ===
+        // Босс: «версия наверху сменилась, а Штаб не обновился» + «хочу, чтобы
+        // Штаб обновлялся сам, без видимых перезагрузок».
+        // Причина расхождения: плашка версии читает shtab_version.json ЖИВЬЁМ,
+        // а сам кадр app.html оставался старым из кэша браузера.
+        // Теперь оболочка целиком НЕ перезагружается (заставка не мигает): новый
+        // app.html грузится СКРЫТО в невидимый кадр и подменяет старый только
+        // когда полностью готов. Пустого экрана и мигания нет.
+        (function () {
+            const SHELL_BUILD = 66;
+            const SILENT_KEY = 'shtabSilentBoot';
+            const STUCK_KEY = 'shtabShellReloadBuild';
+            let frameBuild = 0;      // сборка кадра, которая сейчас на экране
+            let swapping = false;
+
+            function remember(build) {
+                if (build) frameBuild = build;
+                try { sessionStorage.setItem('shtabShellAppBuild', String(frameBuild)); } catch (e) {}
+            }
+
+            // Кадр сам сообщает свою сборку — так оболочка знает, что на экране.
+            window.addEventListener('message', function (e) {
+                const d = e.data || {};
+                if (d.type === 'shtab-frame-build') {
+                    remember(parseInt(d.build, 10));
+                    try { sessionStorage.removeItem(STUCK_KEY); } catch (er) {}
+                } else if (d.type === 'shtab-need-swap') {
+                    hotSwap(parseInt(d.build, 10));
+                }
+            });
+
+            // Бесшовная подмена кадра: новый грузится скрыто, старый убирается
+            // только после полной готовности нового.
+            function hotSwap(build) {
+                if (swapping) return;
+                swapping = true;
+                const next = document.createElement('iframe');
+                next.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;opacity:0;pointer-events:none;';
+                next.src = 'app.html?v=' + Date.now();
+                let settled = false;
+                next.onload = function () {
+                    if (settled) return;
+                    settled = true;
+                    const old = document.getElementById('app-frame');
+                    // Старому кадру говорим «меняю тебя» — чтобы он не перезагружал себя сам.
+                    try { if (old && old.contentWindow) old.contentWindow.postMessage({ type: 'shtab-swap-ok' }, '*'); } catch (e) {}
+                    next.id = 'app-frame';
+                    next.style.opacity = '1';
+                    next.style.pointerEvents = 'auto';
+                    next.onload = null;
+                    if (old && old.parentNode) old.parentNode.removeChild(old);
+                    appFrame = next;
+                    remember(build);
+                    swapping = false;
+                };
+                // Страховка: новый кадр не догрузился — снимаем скрытый, старый остаётся.
+                setTimeout(function () {
+                    if (settled) return;
+                    settled = true;
+                    try { if (next.parentNode) next.parentNode.removeChild(next); } catch (e) {}
+                    swapping = false;
+                }, 20000);
+                document.body.appendChild(next);
+            }
+
+            // Сверка сборок с сервером: при запуске, каждые 25 с и при возврате в Штаб.
+            async function check() {
+                try {
+                    const r = await fetch('shtab_version.json?v=' + Date.now(), { cache: 'no-store' });
+                    if (!r.ok) return;
+                    const j = await r.json();
+
+                    // 1) Кадр (app.html) отстал — тихий бесшовный подмен.
+                    const srv = parseInt(j.build, 10);
+                    if (srv && frameBuild && srv > frameBuild) { hotSwap(srv); return; }
+
+                    // 2) Сама оболочка (index.html) отстала — и только если реально
+                    // изменилась (поле shellBuild). Перезагружаем БЕЗ заставки.
+                    const srvShell = parseInt(j.shellBuild || 0, 10);
+                    if (srvShell && srvShell > SHELL_BUILD) {
+                        let tries = 0;
+                        try { tries = parseInt(sessionStorage.getItem(STUCK_KEY) || '0', 10) || 0; } catch (e) {}
+                        if (tries >= 3) return;
+                        try {
+                            sessionStorage.setItem(STUCK_KEY, String(tries + 1));
+                            sessionStorage.setItem(SILENT_KEY, '1');
+                        } catch (e) {}
+                        location.replace(location.pathname + '?v=' + Date.now());
+                    }
+                } catch (e) { /* нет shtab_version.json — молча живём дальше */ }
+            }
+            check();
+            setInterval(check, 25000);
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+            window.addEventListener('focus', check);
+
+            // Старый закэшированный кадр не умеет представляться. Если через 4 с от
+            // него нет метки сборки — он устарел: тихо подменяем на свежий.
+            setTimeout(function () {
+                if (frameBuild) return;
+                let fixed = '0';
+                try { fixed = sessionStorage.getItem('shtabStaleFrameFixed') || '0'; } catch (e) {}
+                if (fixed === '1') return;
+                try { sessionStorage.setItem('shtabStaleFrameFixed', '1'); } catch (e) {}
+                hotSwap(0);
+            }, 4000);
+        })();
         let matrixInterval;
         function startMatrix() {
             const canvas = document.getElementById('matrix-canvas');
@@ -178,6 +260,16 @@
             else if (minTimePassed && !appLoaded) { document.querySelector('.splash-title').innerText = "Загрузка Штаба..."; }
             else if (appLoaded && minTimePassed && !aiReady) { document.querySelector('.splash-title').innerText = "Загрузка нейросети..."; }
         }
+        // ТИХИЙ ЗАПУСК: оболочка обновилась сама (см. «ЖИВОЕ ОБНОВЛЕНИЕ ШТАБА») —
+        // заставку не показываем вообще, чтобы Босс не видел перезагрузку.
+        try {
+            if (sessionStorage.getItem('shtabSilentBoot') === '1') {
+                sessionStorage.removeItem('shtabSilentBoot');
+                minTimePassed = true; aiReady = true;
+                splashScreen.classList.add('hidden');
+                clearInterval(matrixInterval);
+            }
+        } catch (e) {}
         function forceRefresh() {
             if ('caches' in window) { caches.keys().then((names) => { for (let name of names) caches.delete(name); }); }
             window.location.href = window.location.pathname + '?v=' + Date.now();
