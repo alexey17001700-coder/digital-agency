@@ -197,7 +197,9 @@ function firstFreeId() {
 }
 /* Платные — БЕЗ Архитектора: 🅰️ Zveno живёт отдельным каналом (свой ключ,
    своя кнопка) и в общий список платных моделей не попадает. */
-function paidModels() { return AI_MODELS.filter(m => m && !m.free && m.id !== 'zveno'); }
+/* Платных моделей в списке больше нет: GigaChat идёт своей кнопкой 🟣,
+   Архитектор — своей 🅰️. Список платных пуст намеренно. */
+function paidModels() { return AI_MODELS.filter(m => m && !m.free && m.id !== 'zveno' && m.id !== 'gigachat'); }
 function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
 function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
