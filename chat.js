@@ -815,30 +815,15 @@ window.tandemLead = tandemLead;
    Босс видит режим тандема явно: кнопка в панели горит, а карточки
    GigaChat и Архитектора подсвечиваются фиолетовым «🤝».
    Тап по кнопке — включить/выключить тандем (localStorage shtabTandem). */
-function tandemEnabled() { return localStorage.getItem('shtabTandem') !== 'off'; }
+/* --- КНОПКА «🤝 ТАНДЕМ» УБРАНА ---
+   Босс: отдельная кнопка не нужна — тандем включается выбором двух карточек.
+   Функции оставлены заглушками: их зовут init() и ui.js через typeof. */
+function tandemEnabled() { return !!tandemPair(); }
 function syncTandemBtn() {
-    const b = document.getElementById('btnTandem');
-    if (b) {
-        const on = tandemEnabled();
-        b.classList.toggle('active', on);
-        b.innerText = on ? '🤝 Тандем: ВКЛ' : '🤝 Тандем: ВЫКЛ';
-        b.style.borderColor = '#7B61FF';
-        b.style.color = on ? '#b9a8ff' : '#7B61FF';
-        b.style.background = on ? 'rgba(123,97,255,.16)' : '';
-    }
     if (typeof syncModeButtons === 'function') { try { syncModeButtons(); } catch (e) {} }
     updateTandemCards();
 }
-function toggleTandem() {
-    const on = !tandemEnabled();
-    localStorage.setItem('shtabTandem', on ? 'on' : 'off');
-    syncTandemBtn();
-    if (typeof renderMessage === 'function') {
-        renderMessage(on
-            ? '🤝 *[Тандем включён: выбери GigaChat И Архитектора — они сначала обсудят задачу между собой, потом дадут общий результат.]*'
-            : '🤝 *[Тандем выключен: агенты снова отвечают как обычно.]*', 'director', 'Оркестратор');
-    }
-}
+function toggleTandem() { /* кнопки больше нет: тандем = две выбранные карточки */ }
 window.tandemEnabled = tandemEnabled;
 window.syncTandemBtn = syncTandemBtn;
 window.toggleTandem = toggleTandem;
