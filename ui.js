@@ -115,13 +115,8 @@ function openAIModelPanel() {
     const pick = (m) => {
         selectedAIModel = m.id;
         localStorage.setItem('shtabAIModel', selectedAIModel);
-        // Ollama (ПК): спрашиваем имя локальной модели — её грузит ПК.
-        if (m.id === 'ollama') {
-            const cur = localStorage.getItem('shtabOllamaModel') || 'qwen2.5-coder:7b';
-            const nm = prompt('Имя модели на ПК (Ollama):', cur);
-            if (nm && nm.trim()) localStorage.setItem('shtabOllamaModel', nm.trim());
-        }
-        applyAIModelButton();
+        if (typeof applyArchitectButton === 'function') applyArchitectButton();
+        if (typeof applyGigaChatButton === 'function') applyGigaChatButton();
         ov.remove();
     };
     const section = (label, color) => {
