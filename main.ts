@@ -764,9 +764,11 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
     // Бесплатных маршрутов в Штабе больше нет (список FREE_TEXT_MODELS пуст).
     const modelChain: string[] = [];
     const reqModel = String(requestedModel || "").trim();
-    // Модель от клиента не пришла ИЛИ пришла старая бесплатная (…:free) —
-    // уходим на канал Архитектора. Бесплатных маршрутов в Штабе нет.
-    const effectiveModel = (reqModel && !reqModel.endsWith(":free")) ? reqModel : ZVENO_MODEL;
+    // ❗ НИКАКОГО ПЕРЕВОДА (приказ Босса): сервер НЕ подменяет модель.
+    // Отвечает РОВНО та, что выбрал Босс. Не пришла / пустая — честная
+    // ошибка наверх, без автоподстановки и без «ухода на Архитектора».
+    if (!reqModel) throw new Error("Модель не указана. Выбери модель в Штабе (🧠 МОДЕЛЬ ИИ).");
+    const effectiveModel = reqModel;
 
     /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ (model="zveno").
        Работает ТОЛЬКО своей моделью ZVENO_MODEL и ТОЛЬКО своим ключом
