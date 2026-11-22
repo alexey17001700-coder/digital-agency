@@ -259,10 +259,14 @@ function paidModels() { return AI_MODELS.filter(m => m && !m.free && !m.agentOnl
 function paidEnabled() { return localStorage.getItem('shtabPaidModels') !== 'off'; }
 function setPaidEnabled(on) {
     localStorage.setItem('shtabPaidModels', on ? 'on' : 'off');
+    /* --- БЕЗ ПОДМЕН: выключил платные — выбор просто снимается ---
+       Босс: дефолтов и автоподмен нет. Раньше платная модель молча
+       заменялась первой бесплатной. Теперь выбор сбрасывается в пусто,
+       и Штаб ждёт явного выбора Босса. */
     const cur = getModelInfo(selectedAIModel);
-    if (!on && cur && !cur.free && cur.id !== 'gigachat') {
-        const f = freeModels();
-        if (f.length) { selectedAIModel = f[0].id; localStorage.setItem('shtabAIModel', selectedAIModel); }
+    if (!on && selectedAIModel && cur && !cur.free && cur.id !== 'gigachat') {
+        selectedAIModel = '';
+        localStorage.removeItem('shtabAIModel');
     }
     if (typeof applyAIModelButton === 'function') applyAIModelButton();
     if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
