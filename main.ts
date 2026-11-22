@@ -822,7 +822,8 @@ const GIGACHAT_KEY = Deno.env.get("GIGACHAT_KEY") || "";
 const GIGACHAT_SCOPE = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
 const GIGACHAT_OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
 const GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions";
-const GIGACHAT_MODELS = ["GigaChat-2-Max", "GigaChat-2-Pro", "GigaChat-2", "GigaChat-Pro", "GigaChat"];
+/* ❗ ОДНА модель GigaChat — без списка и без перебора (приказ Босса). */
+const GIGACHAT_MODEL = "GigaChat-2-Max";
 
 // Сертификат Минцифры отсутствует в системном хранилище — Deno ругается на TLS.
 // Создаём клиент, который игнорирует проверку ТОЛЬКО для доменов Сбера.
