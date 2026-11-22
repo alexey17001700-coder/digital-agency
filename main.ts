@@ -1295,7 +1295,9 @@ Deno.serve(async (request) => {
         // ПРОВЕРКА GIGACHAT — «жив ли помощник»
         if (body.gigachatTest) {
             try {
-                const t = await callGigaChat([{ role: "user", content: "Ответь одним словом: работает?" }], "");
+                // Проверяем ИМЕННО тот ключ, что вписан в поле (если он есть).
+                const gk = String((body.userKeys && (body.userKeys.gigachat || body.userKeys.gigachatKey)) || "").trim();
+                const t = await callGigaChat([{ role: "user", content: "Ответь одним словом: работает?" }], "", gk);
                 return json({ success: true, answer: t });
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
