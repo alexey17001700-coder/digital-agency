@@ -1572,6 +1572,8 @@ async function sendMessage(overrideText = null, isKick = false) {
         // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
         // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
         if (selectedAIModel === 'gigachat') hasAnyKeys = true;
+        // ⚡ ДУЭТ: оба канала работают на серверных ключах — свои поля не нужны.
+        if (typeof duetEnabled === 'function' && duetEnabled()) hasAnyKeys = true;
                 if (hasAnyKeys) {
             try {
                 let messagesToSend = allChats[currentChatId] ? [...allChats[currentChatId].messages] : [{role: "user", content: text}];
