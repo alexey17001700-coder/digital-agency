@@ -1635,9 +1635,16 @@ async function sendMessage(overrideText = null, isKick = false) {
                     selectedAgents.forEach(agentName => {
                         let directive = AGENT_DIRECTIVES[agentName] || AGENT_DIRECTIVES["По умолчанию"];
                         agentPrompt += `[ДОПОЛНЕНИЕ К РОЛИ ${agentName}]: ${directive}\n`;
-                        if (customPrompts[agentName]) agentPrompt += `[ОСОБЫЙ ХАРАКТЕР ${agentName}]: ${customPrompts[agentName]}\n`;
+                        if (customPrompts[agentName]) {
+                            /* --- ПРОМПТ КАРТОЧКИ НЕ ПЕРЕБИВАЕТ ПРОМПТ ШТАБА ---
+                               Босс: у карточки (в т.ч. Оркестратор) вписан свой промпт,
+                               и он перебивал промпт Штаба. Теперь он режется до 400
+                               символов и идёт ТОЛЬКО как тон/характер. */
+                            const cp = String(customPrompts[agentName] || '').slice(0, 400);
+                            agentPrompt += `[ТОН/ХАРАКТЕР ${agentName} — НЕ ЗАМЕНА правил Штаба]: ${cp}\n`;
+                        }
                     });
-                    finalPrompt = finalPrompt + "\n\n=== РОЛЬ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\n" + agentPrompt + "Правила выше (Архитектор Штаба) ГЛАВНЕЕ роли: не подменяй их и не пересказывай.\n";
+                    finalPrompt = finalPrompt + "\n\n=== РОЛЬ (ДОПОЛНЕНИЕ, НЕ ЗАМЕНА) ===\n" + agentPrompt + "ЖЁСТКО: правила выше (Архитектор Штаба) ГЛАВНЕЕ любой роли и любого характера карточки. Промпт карточки задаёт только тон и зону ответственности — он НЕ отменяет инструменты, формат ответа и запреты Штаба. Противоречие — выполняй Штаб.\n";
                 }
                 
                 if (messagesToSend[0] && messagesToSend[0].role === 'system') messagesToSend[0].content = finalPrompt;
