@@ -1498,6 +1498,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // Ollama: на ПК уходит ИМЯ локальной модели (например qwen2.5-coder:7b),
                 // а в бейдже остаётся 'ollama' — чтобы Босс видел верную подпись.
                 if (isOllama) modelToUse = ollamaModel();
+                // 🅰️ Архитектор выключен кнопкой — на ZVENO запрос не уходит НИКОГДА,
+                // даже если модель пришла из секрет-ключа или старой памяти.
+                if (modelToUse === 'zveno' && !architectEnabled()) {
+                    const fz = freeModels();
+                    modelToUse = fz.length ? fz[0].id : 'gigachat';
+                }
                 usedModel = isOllama ? 'ollama' : modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
