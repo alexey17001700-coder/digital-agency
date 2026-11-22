@@ -760,8 +760,8 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
        Приходит только с кнопки 🅰️ в userKeys.architectKey. */
     const archKey = String((userKeys && userKeys.architectKey) || "").trim();
 
-    // ЦЕПОЧКА FALLBACK: первая — выбранная пользователем, дальше — все бесплатные по списку.
-    // Embed-модели в FREE_TEXT_MODELS не входят специально.
+    // ❗ ПЕРЕБОРА НЕТ: в цепочке РОВНО ОДНА модель — та, что выбрал Босс.
+    // Бесплатных маршрутов в Штабе больше нет (список FREE_TEXT_MODELS пуст).
     const modelChain: string[] = [];
     const reqModel = String(requestedModel || "").trim();
     // Модель от клиента не пришла ИЛИ пришла старая бесплатная (…:free) —
