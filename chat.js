@@ -398,8 +398,10 @@ function applyGigaChatButton() {
 }
 function toggleGigaChat() {
     if (isGigaChatActive()) {
-        const prev = localStorage.getItem('shtabAIModelBeforeGiga') || 'yandex';
-        selectedAIModel = getModelInfo(prev) ? prev : 'yandex';
+        /* Возврат на прежнюю модель. Если её больше нет в списке
+           (модели убраны) — честно встаём на сам GigaChat. */
+        const prev = localStorage.getItem('shtabAIModelBeforeGiga') || 'gigachat';
+        selectedAIModel = AI_MODELS.some(m => m.id === prev) ? prev : 'gigachat';
         renderMessage('🟣 *[GigaChat выключен — вернул прежнюю модель]*', 'director', 'Оркестратор');
     } else {
         localStorage.setItem('shtabAIModelBeforeGiga', selectedAIModel);
