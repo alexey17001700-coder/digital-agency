@@ -794,11 +794,22 @@ window.askAgent = askAgent;
 const TANDEM_ROUNDS = 2;              // сколько раз они обменяются репликами (2 раунда = 4 реплики)
 const TANDEM_ASK_TIMEOUT = 90000;     // таймаут одного голоса, мс
 
-function isTandemMode() {
-    if (localStorage.getItem('shtabTandem') === 'off') return false;
-    return selectedAgents.includes('GigaChat') && selectedAgents.includes('Архитектор');
+/* --- ТАНДЕМ: ЛЮБАЯ ПАРА КАРТОЧЕК ---
+   Босс: тандем больше не привязан к «GigaChat + Архитектор». Выбрал РОВНО ДВЕ
+   карточки со своим маршрутом — они обсуждают задачу между собой и дают итог.
+   Кнопки 🤝 нет: режим включается самим выбором двух карточек.
+   Каждый голос говорит СВОИМ мозгом (модель из AGENT_ROUTES) и своим ключом. */
+function tandemPair() {
+    if (!Array.isArray(selectedAgents) || selectedAgents.length !== 2) return null;
+    const a = selectedAgents[0], b = selectedAgents[1];
+    if (!agentRoute(a) || !agentRoute(b)) return null;
+    return [a, b];
 }
+function isTandemMode() { return !!tandemPair(); }
+function tandemLead() { const p = tandemPair(); return p ? p[1] : 'Оркестратор'; }
 window.isTandemMode = isTandemMode;
+window.tandemPair = tandemPair;
+window.tandemLead = tandemLead;
 
 /* --- КНОПКА «🤝 ТАНДЕМ» И ПОДСВЕТКА КАРТОЧЕК ---
    Босс видит режим тандема явно: кнопка в панели горит, а карточки
