@@ -148,7 +148,7 @@ function renderAgentsGrid() {
         card.innerHTML = `
             <div class="idea-bulb">💡</div>
             <div class="agent-info">
-                <h4>${AGENT_ICONS[name]} ${name}</h4>
+                <h4><span class="agent-figure">${(typeof window.agentFigureSVG === 'function') ? window.agentFigureSVG(name, color) : ''}</span>${name}</h4>
                 <div class="agent-status-text status-idle" id="status-text-${name}">Ждет</div>
             </div>
             <div class="status-dot"></div>
