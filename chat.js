@@ -134,12 +134,10 @@ function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS
    Босс должен видеть, какая модель реально ответила: бесплатная (0 ₽) или платная.
    Строчка ставится в чат после каждого ответа. */
 function modelBadgeText(id) {
+    if (id === 'zveno') return '🅰️ *[Ответил АРХИТЕКТОР (ZVENO) — ключ ZVENO_API_KEY с сервера]*';
+    if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — ключ с сервера]*';
     const info = AI_MODELS.find(m => m.id === id);
-    if (!info) return '❔ *[Модель: ' + id + ']*';
-    if (id === 'zveno') return '🅰️ *[Ответил АРХИТЕКТОР (ZVENO) — отдельный канал, свой ключ]*';
-    if (info.free) return '🆓 *[Ответила БЕСПЛАТНАЯ модель: ' + info.label + ' — 0 ₽]*';
-    if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — по ключу GIGACHAT_KEY]*';
-    return '💳 *[Ответила платная модель: ' + info.label + ']*';
+    return '❔ *[Модель: ' + ((info && info.label) || id) + ']*';
 }
 
 /* --- БЕСПЛАТНЫЕ / ПЛАТНЫЕ ---
