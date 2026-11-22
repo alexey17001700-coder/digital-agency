@@ -280,6 +280,17 @@
         </div>
     </div>
 
+    <!-- Модалка: ЧТО ОБНОВИЛОСЬ В ШТАБЕ (показывается при загрузке после обновления) -->
+    <div class="modal-overlay" id="updateModal" onclick="if(event.target===this) closeUpdateNotice()">
+        <div class="modal-content" style="max-width: 92%; max-height: 85vh; overflow-y: auto; border-color: #00e5ff;">
+            <div class="modal-header">
+                <h2 style="color: #00e5ff;">🎉 Штаб обновлён</h2>
+                <button class="modal-close" onclick="closeUpdateNotice()">✖</button>
+            </div>
+            <div class="modal-body" id="updateBody"></div>
+        </div>
+    </div>
+
     <script>
     // Пошаговая инструкция по аварийному восстановлению (VIVO -> Termux -> Ubuntu).
     // Источник: SERVER_DIAGNOSTICS.md, разделы 2.1 и 12 (полная карта сервера).
