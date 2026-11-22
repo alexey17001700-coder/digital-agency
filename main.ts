@@ -1295,7 +1295,7 @@ async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<
         if (cm) { weatherCard = cm[0]; finalText = finalText.replace(cm[0], "").trim(); }
     } catch (e: any) {
         lastErr = e?.message || String(e);
-        zlog(`[DUET] шаг 7 (финал Zveno) упал: ${lastErr}`);
+        zlog(`[DUET] шаг 8 (финал Zveno) упал: ${lastErr}`);
     }
 
     if (!finalText) {
