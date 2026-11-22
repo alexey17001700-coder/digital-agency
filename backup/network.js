@@ -87,7 +87,10 @@ async function runConnectionTest() {
         if (ghEl) { ghEl.innerText = "❌ Блокирован"; ghEl.style.color = "#ff0000"; }
     }
     const aiEl = document.getElementById('t-ai-model');
-    if (aiEl) aiEl.innerText = "yandexgpt";
+    if (aiEl) {
+        const m = (typeof getModelInfo === 'function') ? getModelInfo(selectedAIModel) : null;
+        aiEl.innerText = m ? m.label : (selectedAIModel || '—');
+    }
                     }
 
 // --- ПОГОДА (Open-Meteo, без ключей) ---

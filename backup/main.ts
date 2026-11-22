@@ -5,6 +5,22 @@ const REPO_NAME = Deno.env.get("GITHUB_REPO") || "digital-agency";
 
 const ZVENO_URL = "https://api.zveno.ai/v1/chat/completions";
 const ZVENO_MODEL = "deepseek/deepseek-v4.1-flash";
+
+// =========================================
+// БЕСПЛАТНЫЕ МАРШРУТЫ (0 ₽ вход/выход)
+// ВАЖНО: embed-модели сюда НЕ ВКЛЮЧАТЬ — они не умеют чат и дадут ошибку.
+// =========================================
+const FREE_TEXT_MODELS = [
+    "dots-studio/dots-3-note-preview:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "recursive/flint-v1.0:free",
+];
+
+const FREE_VISION_MODELS = [
+    "nvidia/nemotron-3.5-super-vl:free",
+];
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
 // БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
@@ -15,6 +31,23 @@ const WRITE_ALLOWED_EXT = [
 const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удаления (проверяется в delete_file)
 const MAX_WRITE_SIZE = 500000;
 const MAX_TOOL_RESULT = 200000;
+
+// =========================================
+// ЛОГИ ZVENO — в ОТДЕЛЬНЫЙ файл, чтобы не засорять shtab.log
+// Смотреть:  tail -f /root/zveno.log
+// =========================================
+const ZVENO_LOG = Deno.env.get("ZVENO_LOG") || "/root/zveno.log";
+const ZVENO_LOG_MAX = 2 * 1024 * 1024; // 2 МБ — потом обнуляем
+function zlog(msg: string) {
+    const line = `[${new Date().toISOString()}] ${msg}\n`;
+    try {
+        try {
+            const st = Deno.statSync(ZVENO_LOG);
+            if (st.size > ZVENO_LOG_MAX) Deno.writeTextFileSync(ZVENO_LOG, "");
+        } catch (_e) { /* файла ещё нет — ок */ }
+        Deno.writeTextFileSync(ZVENO_LOG, line, { append: true });
+    } catch (_e) { /* нет прав на запись — молча пропускаем */ }
+}
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -198,7 +231,7 @@ async function getWeather(city: string) {
         wind: Number(wind), dir: windDir, hum: Number(hum), press: Number(press), visib: Number(visib),
         cloud: Number(cloud), precip: Number(precip) || 0, daily: [] as any[]
     };
-
+    
     const days = data.weather;
     if (Array.isArray(days) && days.length) {
         out += `\n📅 **Прогноз:**\n`;
@@ -235,8 +268,15 @@ async function handleBackup(body: any) {
                 sourceFiles = backupContents.filter((item: any) => item.type === 'file').map((item: any) => ({ name: item.name, sha: item.sha }));
             }
         } catch (e) {}
-              }
-      if (sourceFiles.length === 0) return json({ success: false, error: body.isBackup ? "Нет файлов в корне" : "Папка backup пуста" }, 400);
+    }
+    // ОТКАТ: НИКОГДА не возвращаем из эталона серверный код и оболочку.
+    // Старый backup/main.ts с замком isBoss и старый index.html с запросом
+    // токена — именно они «возвращали» ошибку после каждого отката.
+    if (!body.isBackup) {
+        const ROLLBACK_KEEP = ["main.ts", "index.html"];
+        sourceFiles = sourceFiles.filter((f: any) => !ROLLBACK_KEEP.includes(f.name));
+    }
+    if (sourceFiles.length === 0) return json({ success: false, error: body.isBackup ? "Нет файлов в корне" : "Папка backup пуста" }, 400);
 
     const tree: any[] = [];
     for (const file of sourceFiles) {
@@ -299,7 +339,7 @@ async function scanRepoFiles() {
                     path: file.name, opens, closes, diff, content,
                     description: `Скобки: { = ${opens}, } = ${closes} (не хватает ${diff})`,
                 });
-            }
+                            }
         } catch (e) {}
     }
     return json({ success: true, scanned: files.length, issues });
@@ -497,9 +537,9 @@ async function executeTool(name: string, args: any): Promise<string> {
     const newCode = oldCode.split(args.search).join(args.replace);
     await updateFileInRepo(args.path, newCode, targetRepo);
     return `Успех: файл "${args.path}" обновлен в ${targetRepo}.`;
-}
+      }
 
-if (name === "search_web") return await searchInternet(args.query);
+    if (name === "search_web") return await searchInternet(args.query);
 if (name === "get_weather") return await getWeather(args.city || "Саратов");
 
 if (name === "search_image") {
@@ -599,7 +639,6 @@ if (name === "create_github_repo") {
                 throw new Error("GitHub не вернул commit.");
             } catch (e: any) { return `Ошибка удаления: ${e.message}`; }
         }
-
         if (name === "enable_github_pages") {
             const repo = args.repo || REPO_NAME;
             try {
@@ -632,11 +671,17 @@ if (name === "create_github_repo") {
 // =========================================
 // ЗАПРОС К ZVENO (ЗРЕНИЕ)
 // =========================================
-async function callZvenoVision(messages: any[], imageBase64: string): Promise<string> {
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
+async function callZvenoVision(messages: any[], imageBase64: string, userKeys: any = {}, requestedModel: string = ""): Promise<string> {
+    const apiKey = (userKeys && userKeys.freeKey) || Deno.env.get("ZVENO_API_KEY");
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
 
-    const visionModel = "openai/gpt-4o-mini";
+    // ЦЕПОЧКА FALLBACK: выбранная VL-модель → бесплатные VL → платный резерв (последним).
+    const visionChain: string[] = [];
+    const reqModel = String(requestedModel || "").trim();
+    if (reqModel && (reqModel.endsWith(":free") || reqModel.toLowerCase().includes("-vl"))) visionChain.push(reqModel);
+    else if (FREE_VISION_MODELS.length) visionChain.push(FREE_VISION_MODELS[0]);   // модель не пришла — бесплатная VL, не платная
+    for (const m of FREE_VISION_MODELS) if (!visionChain.includes(m)) visionChain.push(m);
+    if (!visionChain.includes("openai/gpt-4o-mini")) visionChain.push("openai/gpt-4o-mini");
 
     let visionMessages = JSON.parse(JSON.stringify(messages));
 
@@ -660,83 +705,136 @@ async function callZvenoVision(messages: any[], imageBase64: string): Promise<st
         ];
     }
 
-    const payload = {
-        model: visionModel,
-        messages: visionMessages,
-        max_tokens: 1024,
-        temperature: 0.7
-    };
+    let lastVisionError = "Все VL-модели не ответили";
 
-    const res = await fetch(ZVENO_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(FETCH_TIMEOUT)
-    });
+    for (let vi = 0; vi < visionChain.length; vi++) {
+        const visionModel = visionChain[vi];
+        const payload = {
+            model: visionModel,
+            messages: visionMessages,
+            max_tokens: 1024,
+            temperature: 0.7
+        };
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `Ошибка Vision: ${res.status}`);
-    return data.choices?.[0]?.message?.content || "Пустой ответ";
+        try {
+            const res = await fetch(ZVENO_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT)
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                lastVisionError = `${visionModel}: ${data?.error?.message || res.status}`;
+                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
+                continue;
+            }
+            const text = data.choices?.[0]?.message?.content;
+            if (!text) {
+                lastVisionError = `${visionModel}: пустой ответ`;
+                zlog(`[VISION-FALLBACK] ${lastVisionError}`);
+                continue;
+            }
+            zlog(`[VISION] ответила модель: ${visionModel}`);
+            return text;
+        } catch (e: any) {
+            lastVisionError = `${visionModel}: ${e?.message || e}`;
+            zlog(`[VISION-FALLBACK] ${lastVisionError}`);
+            continue;
+        }
+    }
+
+    throw new Error(`Ошибка Vision: ${lastVisionError}`);
 }
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
-async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false): Promise<string> {
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
+async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean = false, requestedModel: string = ""): Promise<string> {
+    const envKey = Deno.env.get("ZVENO_API_KEY");
+    const freeKey = (userKeys && userKeys.freeKey) || "";
+
+    // ЦЕПОЧКА FALLBACK: первая — выбранная пользователем, дальше — все бесплатные по списку.
+    // Embed-модели в FREE_TEXT_MODELS не входят специально.
+    const modelChain: string[] = [];
+    const reqModel = String(requestedModel || "").trim();
+    // Модель от клиента не пришла — по умолчанию БЕСПЛАТНАЯ (dots), а не платная.
+    // Раньше здесь стоял ZVENO_MODEL (платный deepseek) — при пустом body.model
+    // запрос молча уходил на платный маршрут и кушал баланс.
+    const effectiveModel = reqModel || FREE_TEXT_MODELS[0];
+    modelChain.push(effectiveModel);
+
+    const isFreeReq = effectiveModel.endsWith(":free") || FREE_TEXT_MODELS.includes(effectiveModel);
+    // Бесплатный маршрут — ключ бесплатный (если Босс его вписал), иначе серверный.
+    // Платный маршрут — серверный ключ, чтобы freeKey не ронял платную модель.
+    const apiKey = isFreeReq ? (freeKey || envKey) : (envKey || freeKey);
     if (!apiKey) throw new Error("ZVENO_API_KEY не задан");
+    const tailModels = isFreeReq ? FREE_TEXT_MODELS : [ZVENO_MODEL, ...FREE_TEXT_MODELS];
+    for (const m of tailModels) if (!modelChain.includes(m)) modelChain.push(m);
 
-    let currentMessages = [...messages];
-    let maxLoops = 20; // Увеличено для сложных задач
-    let weatherCard = "";
+    // РЕЖИМ БОССА — ВСЕГДА. Режима гостя больше нет: все инструменты доступны,
+    // никаких паролей и ограничений. Флаг isBoss оставлен для совместимости.
+    const activeTools: any[] = TOOLS;
 
-    // РЕЖИМ ГОСТЯ: без флага Босса файловые инструменты отключены полностью
-    let activeTools: any[] = TOOLS;
-    const GUEST_TOOLS_DENY = ["write_file", "replace_in_file", "delete_file", "delete_github_repo"];
-    if (!isBoss) {
-        const GUEST_LOCK = `\n\n=== РЕЖИМ ГОСТЯ (ОГРАНИЧЕНИЯ) ===\nТы — дружелюбный и простой помощник. Общайся обычными словами, БЕЗ технического жаргона, без упоминания файлов, кода, репозиториев и серверов.\nСТРОГО ЗАПРЕЩЕНО вызывать инструменты: write_file, replace_in_file, delete_file, delete_github_repo. Любую просьбу изменить, удалить или записать файл вежливо отклоняй и предлагай обратиться к администратору.\nРазрешено: search_web, get_weather, search_image, create_github_repo, list_github_repos, list_repo_files, read_file, enable_github_pages.`;
-        const sysIdx = currentMessages.findIndex((m: any) => m.role === "system");
-        if (sysIdx !== -1) {
-            currentMessages[sysIdx] = { ...currentMessages[sysIdx], content: String(currentMessages[sysIdx].content || "") + GUEST_LOCK };
-        } else {
-            currentMessages.unshift({ role: "system", content: GUEST_LOCK.trim() });
-        }
-        activeTools = TOOLS.filter((t: any) => !GUEST_TOOLS_DENY.includes(t.function?.name));
-    }
+    let lastError = "Все модели не ответили";
 
-    for (let loop = 0; loop < maxLoops; loop++) {
+    for (let mi = 0; mi < modelChain.length; mi++) {
+        const activeModel = modelChain[mi];
+        let currentMessages = JSON.parse(JSON.stringify(messages));
+        let weatherCard = "";
+        let modelFailed = false;
+
+    for (let loop = 0; loop < 20; loop++) {
         const payload: any = {
-            model: ZVENO_MODEL,
+            model: activeModel,
             messages: currentMessages,
             temperature: 0.5,
             tools: activeTools,
             tool_choice: "auto"
         };
 
-        const res = await fetch(ZVENO_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(FETCH_TIMEOUT)
-        });
+        let data: any = null;
+        try {
+            const res = await fetch(ZVENO_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT)
+            });
+            data = await res.json();
+            if (!res.ok) {
+                lastError = `${activeModel}: ${data?.error?.message || res.status}`;
+                zlog(`[FALLBACK] ${lastError}`);
+                modelFailed = true;
+                break;
+            }
+        } catch (e: any) {
+            lastError = `${activeModel}: ${e?.message || e}`;
+            zlog(`[FALLBACK] ${lastError}`);
+            modelFailed = true;
+            break;
+        }
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || `Ошибка Zveno: ${res.status}`);
-
-        const msg = data.choices?.[0]?.message;
-        if (!msg) throw new Error("Пустой ответ от Zveno");
+        const msg = data?.choices?.[0]?.message;
+        if (!msg) {
+            lastError = `${activeModel}: пустой ответ`;
+            zlog(`[FALLBACK] ${lastError}`);
+            modelFailed = true;
+            break;
+        }
 
         if (msg.tool_calls && msg.tool_calls.length > 0) {
             currentMessages.push(msg);
             for (const tc of msg.tool_calls) {
                 const fnName = tc.function.name;
                 const fnArgs = JSON.parse(tc.function.arguments || "{}");
-                console.log(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
+                zlog(`[TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
                 const result = await executeTool(fnName, fnArgs);
 
                 let toolResult = result;
@@ -758,10 +856,147 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
         }
 
         const answer = msg.content || "Пустой ответ";
+        zlog(`[MODEL] ответила: ${activeModel}`);
         return weatherCard ? weatherCard + "\n\n" + answer : answer;
     }
 
-    return "⚠️ Слишком много шагов. Задача прервана.";
+    if (!modelFailed) {
+        // ЛИМИТ ШАГОВ: модель 20 раз подряд дёрнула инструменты и не выдала текст.
+        // Раньше задача молча умирала («Слишком много шагов. Задача прервана.»).
+        // Теперь делаем ФИНАЛЬНЫЙ вызов БЕЗ инструментов — модель обязана ответить текстом.
+        try {
+            const finalMessages = currentMessages.concat([{
+                role: "user",
+                content: "[СИСТЕМА: Лимит шагов исчерпан, инструменты ОТКЛЮЧЕНЫ. Выдай финальный ответ Боссу ТЕКСТОМ: что сделано, где, результат. Без вызовов инструментов.]"
+            }]);
+            const fres = await fetch(ZVENO_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                body: JSON.stringify({ model: activeModel, messages: finalMessages, temperature: 0.5, tools: [], tool_choice: "none" }),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT)
+            });
+            const fdata = await fres.json();
+            const ftext = fdata?.choices?.[0]?.message?.content;
+            if (fres.ok && ftext) {
+                zlog(`[MODEL] финальный ответ без инструментов: ${activeModel}`);
+                return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
+            }
+        } catch (e: any) { zlog(`[FINAL] ${e?.message || e}`); }
+        return "⚠️ Слишком много шагов. Задача прервана.";
+    }
+    // Модель не ответила — переходим к следующей в цепочке
+    }
+
+    throw new Error(lastError);
+}
+
+// =========================================
+// GIGACHAT (СБЕР) — ПОМОЩНИК
+// Ключ: GIGACHAT_KEY (Авторизационные данные), scope: GIGACHAT_SCOPE
+// Логи: tail -f /root/zveno.log
+// =========================================
+const GIGACHAT_KEY = Deno.env.get("GIGACHAT_KEY") || "";
+const GIGACHAT_SCOPE = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
+const GIGACHAT_OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
+const GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions";
+const GIGACHAT_MODELS = ["GigaChat-2-Max", "GigaChat-2-Pro", "GigaChat-2", "GigaChat-Pro", "GigaChat"];
+
+// Сертификат Минцифры отсутствует в системном хранилище — Deno ругается на TLS.
+// Создаём клиент, который игнорирует проверку ТОЛЬКО для доменов Сбера.
+let gigachatClient: any = null;
+function getGigaChatClient(): any {
+    if (gigachatClient) return gigachatClient;
+    try {
+        gigachatClient = Deno.createHttpClient({
+            unsafelyIgnoreCertificateErrors: ["ngw.devices.sberbank.ru", "gigachat.devices.sberbank.ru"],
+        });
+        return gigachatClient;
+    } catch (e: any) {
+        zlog(`[GIGACHAT] не удалось создать TLS-клиент: ${e?.message || e}`);
+        return undefined;
+    }
+}
+
+let gcToken = "";
+let gcTokenExp = 0;
+
+async function gigachatToken(): Promise<string> {
+    if (!GIGACHAT_KEY) throw new Error("GIGACHAT_KEY не задан в /root/.env");
+    const now = Date.now();
+    if (gcToken && now < gcTokenExp - 60000) return gcToken;
+
+    const res = await fetch(GIGACHAT_OAUTH_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "Authorization": `Basic ${GIGACHAT_KEY}`,
+            "RqUID": crypto.randomUUID(),
+        },
+        body: `scope=${encodeURIComponent(GIGACHAT_SCOPE)}`,
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(30000),
+    } as any);
+
+    const data = await res.json();
+    if (!res.ok || !data.access_token) {
+        throw new Error(`GigaChat OAuth ${res.status}: ${data?.message || data?.error || "нет токена"}`);
+    }
+    gcToken = data.access_token;
+    gcTokenExp = Number(data.expires_at) || (now + 25 * 60 * 1000);
+    zlog(`[GIGACHAT] получен access_token, scope=${GIGACHAT_SCOPE}`);
+    return gcToken;
+}
+
+async function callGigaChat(messages: any[], requestedModel: string = ""): Promise<string> {
+    const token = await gigachatToken();
+
+    // GigaChat не понимает OpenAI-формат tools — оставляем только текст
+    const clean = messages
+        .filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant")
+        .map((m: any) => ({
+            role: m.role,
+            content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        }));
+
+    const want = String(requestedModel || "").replace(/^gigachat[:\/]?/i, "").trim();
+    const chain = want ? [want, ...GIGACHAT_MODELS] : GIGACHAT_MODELS;
+
+    let lastErr = "GigaChat не ответил";
+    for (const model of chain) {
+        try {
+            const res = await fetch(GIGACHAT_API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                body: JSON.stringify({ model, messages: clean, temperature: 0.5 }),
+                client: getGigaChatClient(),
+                signal: AbortSignal.timeout(FETCH_TIMEOUT),
+            } as any);
+
+            const data = await res.json();
+            if (!res.ok) {
+                lastErr = `${model}: ${data?.message || res.status}`;
+                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+                continue;
+            }
+            const text = data?.choices?.[0]?.message?.content;
+            if (!text) {
+                lastErr = `${model}: пустой ответ`;
+                zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+                continue;
+            }
+            zlog(`[GIGACHAT] ответила модель: ${model}`);
+            return text;
+        } catch (e: any) {
+            lastErr = `${model}: ${e?.message || e}`;
+            zlog(`[GIGACHAT-FALLBACK] ${lastErr}`);
+        }
+    }
+    throw new Error(lastErr);
 }
 
 // =========================================
@@ -872,7 +1107,12 @@ Deno.serve(async (request) => {
     try {
         // СТАРЫЕ РУЧКИ (БЭКАПЫ)
         if (body.isBackup || body.isRollback) {
-            if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
+            // ЗАМКА «только с ключом Администратора» здесь НЕТ и быть не должно:
+            // флаг isBoss из тела запроса игнорируется, запрос пропускается всегда.
+            body.isBoss = true;
+            // Токен берётся ТОЛЬКО из переменной окружения сервера. У пользователя не спрашиваем.
+            if (!GITHUB_TOKEN) return json({ success: false, error: "Токен GitHub не задан на сервере" }, 500);
+            if (!REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
             return await handleBackup(body);
         }
 
@@ -905,6 +1145,14 @@ Deno.serve(async (request) => {
 
         if (body.scanRepo) return await scanRepoFiles();
 
+        // ПРОВЕРКА GIGACHAT — «жив ли помощник»
+        if (body.gigachatTest) {
+            try {
+                const t = await callGigaChat([{ role: "user", content: "Ответь одним словом: работает?" }], "");
+                return json({ success: true, answer: t });
+            } catch (e: any) { return json({ success: false, error: e.message }, 500); }
+        }
+
         if (body.checkStatus) {
             try {
                 const rootFiles = await gitAPI("contents/");
@@ -914,8 +1162,7 @@ Deno.serve(async (request) => {
                 return json({ success: true, totalRoot: rootNames.length, totalBackup: backupNames.length, missingInBackup: rootNames.filter((n: string) => !backupNames.includes(n)) });
             } catch (e: any) { return json({ success: false, error: e.message }, 500); }
         }
-
-        // ПОИСК
+            // ПОИСК
         if (body.searchQuery) return json({ success: true, results: await searchInternet(String(body.searchQuery)) });
 
         // ГЛАВНАЯ РУЧКА: ИИ
@@ -923,10 +1170,21 @@ Deno.serve(async (request) => {
             const userKeys = body.userKeys || {};
             let aiText = "";
 
+            const reqModel = typeof body.model === "string" ? body.model.trim() : "";
+            zlog(`[REQ] model="${reqModel || "(не указана → бесплатная dots)"}" image=${!!body.image}`);
+
             if (body.image) {
-                aiText = await callZvenoVision(body.messages, body.image);
+                aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
+            } else if (/^gigachat/i.test(reqModel)) {
+                // Босс явно выбрал GigaChat — идём напрямую в Сбер
+                aiText = await callGigaChat(body.messages, reqModel);
             } else {
-                aiText = await callZvenoAI(body.messages, userKeys, body.isBoss === true);
+                // АВТОПЕРЕБОР НА GIGACHAT ОТКЛЮЧЁН (приказ Босса).
+                // GigaChat — ОТДЕЛЬНОЕ подключение: работает ТОЛЬКО когда Босс
+                // сам включил кнопку 🟣 GigaChat (тогда model="gigachat" и идёт
+                // ветка выше). Если ZVENO упал — ошибка уходит наверх, Сбер
+                // молча задачу НЕ подхватывает. Никакого скрытого резерва.
+                aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
             }
 
             return json({ choices: [{ message: { content: aiText } }] });

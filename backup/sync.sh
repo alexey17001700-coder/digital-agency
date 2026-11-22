@@ -12,6 +12,16 @@
 REPO="alexey17001700-coder/digital-agency"
 URL="https://raw.githubusercontent.com/${REPO}/main/main.ts"
 
+# --- ИИ-шлюз Помощника (nexus_ws/ai.ts) — качаем в ./gateway ---
+# Без него Помощник молчит: сообщение уходит, отвечать некому.
+GW_REPO="alexey17001700-coder/nexus_ws"
+GW_URL="https://raw.githubusercontent.com/${GW_REPO}/main/ai.ts"
+GW_MEM_URL="https://raw.githubusercontent.com/${GW_REPO}/main/ai_memory.md"
+
+# --- СЕРВЕР ЧАТА (nexus_ws/main.ts) — качаем в ./chat ---
+# Раньше сервер чата никто не обновлял и не сторожил: упал — лежал.
+CHAT_URL="https://raw.githubusercontent.com/${GW_REPO}/main/main.ts"
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET="$DIR/main.ts"
 BACKUP="$DIR/main.ts.bak"
@@ -61,5 +71,43 @@ while true; do
   fi
 
   rm -f "$TMP"
+
+  # --- ИИ-шлюз: ai.ts + память. Обновляем отдельно, main.ts не трогаем. ---
+  mkdir -p "$DIR/gateway"
+  GW_TMP="$DIR/.tmp_ai_$$.ts"
+  if curl -fsSL --retry 3 --retry-delay 2 -o "$GW_TMP" "$GW_URL"; then
+    GW_SIZE=$(wc -c < "$GW_TMP" 2>/dev/null || echo 0)
+    if [ "$GW_SIZE" -gt 2000 ] && grep -q "Deno.serve" "$GW_TMP"; then
+      if ! cmp -s "$GW_TMP" "$DIR/gateway/ai.ts"; then
+        mv "$GW_TMP" "$DIR/gateway/ai.ts"
+        echo "$(date): ai.ts обновлён ($GW_SIZE bytes)"
+      fi
+    else
+      echo "$(date): ai.ts битый — не трогаю ($GW_SIZE bytes)"
+    fi
+  fi
+  rm -f "$GW_TMP"
+  curl -fsSL --retry 2 -o "$DIR/gateway/ai_memory.md" "$GW_MEM_URL" 2>/dev/null || true
+
+  # --- СЕРВЕР ЧАТА: nexus_ws/main.ts → ./chat/main.ts ---
+  # push_subs.json НЕ трогаем — это подписки на уведомления, они живут на сервере.
+  mkdir -p "$DIR/chat"
+  CH_TMP="$DIR/.tmp_chat_$$.ts"
+  if curl -fsSL --retry 3 --retry-delay 2 -o "$CH_TMP" "$CHAT_URL"; then
+    CH_SIZE=$(wc -c < "$CH_TMP" 2>/dev/null || echo 0)
+    if [ "$CH_SIZE" -gt 3000 ] && grep -q "Deno.serve" "$CH_TMP"; then
+      if ! cmp -s "$CH_TMP" "$DIR/chat/main.ts"; then
+        mv "$CH_TMP" "$DIR/chat/main.ts"
+        echo "$(date): chat/main.ts обновлён ($CH_SIZE bytes)"
+      fi
+    else
+      echo "$(date): chat/main.ts битый — не трогаю ($CH_SIZE bytes)"
+    fi
+  fi
+  rm -f "$CH_TMP"
+
+  # сторож серверов — всегда исполняемый
+  [ -f "$DIR/watchdog.sh" ] && chmod +x "$DIR/watchdog.sh" 2>/dev/null
+
   sleep 10
 done

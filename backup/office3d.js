@@ -14,7 +14,7 @@
 (function () {
 'use strict';
 
-const OFFICE3D_VERSION = 'v3.2 · build 24';
+const OFFICE3D_VERSION = 'v3.6 · build 28';
 
 /* Локальный файл пробуется ОТДЕЛЬНО (два способа), CDN — только как резерв. */
 const THREE_URLS = [
@@ -1007,6 +1007,52 @@ function buildBossDesk(scene, M, screenTex) {
     return g;
 }
 
+/* ------------------------------------------------------------------ */
+/*  РАБОЧИЕ ТЕРМИНАЛЫ (ЭТАП 4)                                         */
+/* ------------------------------------------------------------------ */
+/* Агент не просто «сидит и работает»: когда Босс даёт задачу в чате,
+   задействованный агент ВСТАЁТ из-за стола, уходит к рабочему терминалу
+   в коридоре, печатает — и только когда ответ реально пришёл в чат,
+   подходит к столу Босса и докладывает. */
+const TERMINAL_X = 6.1;         // корпус терминала (у стеклянной стены x=7)
+const TERMINAL_STAND_X = 5.05;  // где стоит агент — лицом к экрану
+const TERMINALS = [
+    { x: TERMINAL_X, standX: TERMINAL_STAND_X, standZ: -4.0 },
+    { x: TERMINAL_X, standX: TERMINAL_STAND_X, standZ: -1.8 },
+    { x: TERMINAL_X, standX: TERMINAL_STAND_X, standZ: 2.8 }
+];
+
+function buildTerminals(scene, M, screenTex) {
+    const screens = [];
+    TERMINALS.forEach(t => {
+        const g = new THREE.Group();
+        const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.14, 1.0), M.desk);
+        top.position.y = 1.05; g.add(top);
+        const legGeo = new THREE.BoxGeometry(0.14, 1.0, 0.14);
+        [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].forEach(p => {
+            const l = new THREE.Mesh(legGeo, M.dark);
+            l.position.set(p[0], 0.5, p[1]); g.add(l);
+        });
+        const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, 0.4, 8), M.plastic);
+        stand.position.set(0, 1.3, -0.2); g.add(stand);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 1.4), M.plastic);
+        body.position.set(0, 1.85, -0.2); g.add(body);
+        const scrMat = new THREE.MeshStandardMaterial({
+            map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 1.25
+        });
+        const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.8), scrMat);
+        scr.position.set(-0.08, 1.85, -0.2);
+        scr.rotation.y = -Math.PI / 2;   // экран смотрит на агента
+        g.add(scr);
+        const kbd = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 1.1), M.plastic);
+        kbd.position.set(-0.35, 1.14, 0.05); g.add(kbd);
+        g.position.set(t.x, 0, t.z);
+        scene.add(g);
+        screens.push(scr);
+    });
+    return screens;
+}
+
 function buildScene() {
     const M = mats();
     const scene = new THREE.Scene();
@@ -1066,6 +1112,9 @@ function buildScene() {
 
     // СТОЛ БОССА
     buildBossDesk(scene, M, screenMats[2].map);
+
+    // РАБОЧИЕ ТЕРМИНАЛЫ — куда агент уходит печатать по задаче Босса
+    scene.userData.terminalScreens = buildTerminals(scene, M, screenMats[1].map);
 
     // СЕРВЕРНАЯ
     [[9.5, -15.6], [11.4, -15.6], [13.3, -15.6], [15.2, -15.6]].forEach(p => {
@@ -1187,7 +1236,8 @@ function buildAgents(scene, spots) {
             home, homeYaw: Math.PI,
             state: 'sit', working: false, highlight: false,
             path: null, pi: 0, onDone: null,
-            breakTimer: 60 + Math.random() * 90,
+            terminal: -1, workPending: false, reportPending: false, reportText: null,
+            breakTimer: 8 + Math.random() * 60,
             toiletTimer: 120 + Math.random() * 150,
             taskTimer: 25 + Math.random() * 45,
             waitTimer: 0,
@@ -1207,6 +1257,7 @@ function poseSit(a) {
     a.rig.legR.rotation.x = -1.45;
     a.rig.kneeL.rotation.x = 1.40;
     a.rig.kneeR.rotation.x = 1.40;
+    a.rig.head.rotation.x = 0;
 }
 
 function poseStand(a) {
@@ -1215,6 +1266,25 @@ function poseStand(a) {
     a.rig.legR.rotation.x = 0;
     a.rig.kneeL.rotation.x = 0;
     a.rig.kneeR.rotation.x = 0;
+    a.rig.head.rotation.x = 0;
+}
+
+/* Поза «печатает за терминалом»: стоит, корпус наклонён к монитору,
+   руки на клавиатуре, кисти ходят в своём ритме. */
+function poseType(a, t) {
+    a.model.position.y = 0.90;
+    a.rig.legL.rotation.x = 0.04;
+    a.rig.legR.rotation.x = -0.04;
+    a.rig.kneeL.rotation.x = 0.05;
+    a.rig.kneeR.rotation.x = 0.05;
+    a.rig.torso.rotation.x = 0.16;
+    const s = Math.sin(t * 11 + a.phase);
+    a.rig.armL.rotation.x = -1.42 + s * 0.10;
+    a.rig.armR.rotation.x = -1.42 - s * 0.10;
+    a.rig.elbowL.rotation.x = -0.85 + s * 0.12;
+    a.rig.elbowR.rotation.x = -0.85 - s * 0.12;
+    a.rig.head.rotation.y = Math.sin(t * 1.3 + a.phase) * 0.14;
+    a.rig.head.rotation.x = 0.12;
 }
 
 function goTo(a, path, onDone) {
@@ -1308,6 +1378,226 @@ function routeFromBoss(homeX, homeZ) {
     ];
 }
 
+/* --- МАРШРУТ К РАБОЧЕМУ ТЕРМИНАЛУ И ОТ НЕГО К БОССУ (ЭТАП 4) --- */
+function routeToTerminal(homeX, homeZ, t) {
+    const exitZ = exitGapZ(homeZ);
+    const path = [
+        new THREE.Vector3(2.2, 0, homeZ + 1.0),
+        new THREE.Vector3(2.2, 0, exitZ),
+        new THREE.Vector3(CORRIDOR_X, 0, exitZ)
+    ];
+    if (Math.abs(t.standZ - exitZ) > 0.4) path.push(new THREE.Vector3(CORRIDOR_X, 0, t.standZ));
+    path.push(new THREE.Vector3(t.standX, 0, t.standZ));
+    return path;
+}
+
+/* От терминала (или из коридора) — к столу Босса, через проходы в стене. */
+function routeToBossFrom(x, z) {
+    const exitZ = exitGapZ(z);
+    const path = [];
+    if (Math.abs(exitZ - z) > 0.4) path.push(new THREE.Vector3(CORRIDOR_X, 0, exitZ));
+    path.push(new THREE.Vector3(2.2, 0, exitZ));
+    path.push(new THREE.Vector3(2.2, 0, BOSS_AISLE_Z));
+    path.push(new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_AISLE_Z));
+    path.push(new THREE.Vector3(BOSS_SPOT.x, 0, BOSS_SPOT.z));
+    return path;
+}
+
+/* Все агенты сцены — нужны, чтобы понять, какой терминал свободен. */
+let ALL_AGENTS = [];
+
+function agentByNameGlobal(name) {
+    for (let i = 0; i < ALL_AGENTS.length; i++) {
+        if (ALL_AGENTS[i] && ALL_AGENTS[i].name === name) return ALL_AGENTS[i];
+    }
+    return null;
+}
+
+/* --- ОТЧЁТ РЕАЛЬНЫМ ТЕКСТОМ ОТВЕТА -----------------------------------
+   Агент идёт к столу Босса не с «Готово, Босс!», а с началом настоящего
+   ответа, который пришёл в чат. Текст ловим на выводе — renderMessage(). */
+let LAST_ANSWER = { who: '', text: '' };
+
+function trimAnswer(s) {
+    let t = String(s || '');
+    t = t.replace(/```[\s\S]*?```/g, ' ');          // блоки кода — вон
+    t = t.replace(/\[FILE:[^\]]*\]/g, ' ');
+    t = t.replace(/[#*_>`|]/g, '').replace(/\s+/g, ' ').trim();
+    if (t.length > 88) t = t.slice(0, 86).trim() + '…';
+    return t;
+}
+
+/* Кому отдавать ответ: сначала по имени агента из чата, иначе — тому,
+   кто сейчас сидит за рабочим терминалом. */
+/* Служебные строки (система, статусы, «Совет») — это НЕ ответ агента.
+   Раньше они попадали в доклад: агент шёл к столу Босса с текстом
+   «Система: агент ищет в интернете…». Теперь такие строки в доклад не берём. */
+function isServiceText(t) {
+    const s = String(t || '');
+    if (/\[Система:/.test(s)) return true;
+    if (/^\s*[\*_`>#\s]*\[?\s*(Система|System|Совет)\b/i.test(s)) return true;
+    return false;
+}
+
+function captureAnswer(text, who) {
+    if (isServiceText(text)) return;
+    const t = trimAnswer(text);
+    if (!t) return;
+    LAST_ANSWER = { who: who || '', text: t };
+    let target = who ? agentByNameGlobal(who) : null;
+    if (!target) {
+        for (let i = 0; i < ALL_AGENTS.length; i++) {
+            if (ALL_AGENTS[i] && ALL_AGENTS[i].terminal >= 0) { target = ALL_AGENTS[i]; break; }
+        }
+    }
+    if (!target) {
+        for (let i = 0; i < ALL_AGENTS.length; i++) {
+            const a = ALL_AGENTS[i];
+            if (a && (a.state === 'deskwork' || a.state === 'type' || a.reportPending)) { target = a; break; }
+        }
+    }
+    if (target) {
+        target.reportText = t;
+        target.reportPending = true;   // ответ пришёл — пойдёт с докладом
+        target.working = false;        // и больше не «печатает»
+    }
+}
+
+/* ЗАДАЧА БОССА В ЧАТЕ. Чат не всегда помечает, кто именно занят, поэтому
+   офис сам выбирает исполнителя по смыслу задачи: сервер — Оркестратор,
+   безопасность — Охранник, код — Хакер и так далее. Если чат кого-то
+   пометил, офис ждёт его метку и никого лишнего не трогает. */
+function pickAgentForTask(text) {
+    const t = String(text || '');
+    if (/безопас|пароль|токен|уязвим|взлом|защит|секрет|шифр/i.test(t)) return 'Охранник';
+    if (/сервер|termux|ubuntu|nginx|порт|ssl|деплой|sync\.sh|caddy/i.test(t)) return 'Оркестратор';
+    if (/код|скрипт|баг|функци|\.js|html|css2?|файл|логи|api/i.test(t)) return 'Хакер';
+    if (/дизайн|верстк|css|макет|интерфейс|кнопк|цвет/i.test(t)) return 'Дизайнер';
+    if (/смет|цен[аы]|расч[её]т|калькул|стоим|бюджет|замер/i.test(t)) return 'Аналитик';
+    if (/план|этап|roadmap|сроки|задач/i.test(t)) return 'Оркестратор';
+    if (/текст|письм|реклам|пост|описан|заголов/i.test(t)) return 'Копирайтер';
+    if (/тест|проверь|сборк|баг-репорт/i.test(t)) return 'Тестировщик';
+    if (/найд|поиск|узнай|курс|погод/i.test(t)) return 'Исследователь';
+    return null;
+}
+
+let fallbackTaskTimer = null;
+
+function scheduleFallbackTask(text) {
+    if (fallbackTaskTimer) clearTimeout(fallbackTaskTimer);
+    fallbackTaskTimer = setTimeout(() => {
+        fallbackTaskTimer = null;
+        if (!ALL_AGENTS.length) return;
+        // кто-то уже занят по метке чата — не вмешиваемся
+        for (let i = 0; i < ALL_AGENTS.length; i++) {
+            const a = ALL_AGENTS[i];
+            if (a && (a.working || a.workPending || a.task || a.state === 'type' || a.state === 'deskwork')) return;
+        }
+        let name = pickAgentForTask(text);
+        let a = name ? agentByNameGlobal(name) : null;
+        if (!a) {
+            const free = [];
+            for (let i = 0; i < ALL_AGENTS.length; i++) {
+                const b = ALL_AGENTS[i];
+                if (b && b.state === 'sit' && !b.working) free.push(b);
+            }
+            if (!free.length) return;
+            a = free[(Math.random() * free.length) | 0];
+        }
+        const t = trimAnswer(text) || 'Задача Босса';
+        a.working = true;                       // держим занятым до ответа
+        a.workUntil = 0;
+        sendToComputer(a, t.length > 46 ? t.slice(0, 44) + '…' : t);
+    }, 1500);
+}
+
+function hookRenderMessage() {
+    const prev = window.renderMessage;
+    if (typeof prev !== 'function' || prev.__o3dHook) return !!prev;
+    const fn = function (text, type, who) {
+        try {
+            if (type === 'user') {
+                scheduleFallbackTask(text);
+            } else if (text) {
+                captureAnswer(text, who);
+            }
+        } catch (e) {}
+        return prev.apply(this, arguments);
+    };
+    fn.__o3dHook = true;
+    window.renderMessage = fn;
+    return true;
+}
+
+function terminalOf(a) { return a.terminal >= 0 ? TERMINALS[a.terminal] : null; }
+function releaseTerminal(a) { a.terminal = -1; a.reportPending = false; a.reportText = null; }
+
+function freeTerminalIndex() {
+    for (let i = 0; i < TERMINALS.length; i++) {
+        let taken = false;
+        for (let k = 0; k < ALL_AGENTS.length; k++) {
+            if (ALL_AGENTS[k] && ALL_AGENTS[k].terminal === i) { taken = true; break; }
+        }
+        if (!taken) return i;
+    }
+    return -1;
+}
+
+/* Агент встаёт из-за стола и уходит печатать. Если все терминалы заняты —
+   печатает за своим столом: работа всё равно видна. */
+function sendToComputer(a, taskText) {
+    if (a.state === 'type' || a.state === 'deskwork') return false;
+    if (a.state !== 'sit') { a.workPending = true; return false; }
+    const text = taskText || TASK_TEXTS[(Math.random() * TASK_TEXTS.length) | 0];
+    a.task = text;
+    a.workLeft = 150;          // предохранитель: дольше 150 с за компьютером не сидит
+    a.taskCube.visible = true;
+    say(a, text, 6000);
+    const ti = freeTerminalIndex();
+    if (ti < 0) {
+        a.terminal = -1;
+        a.workPending = false;
+        a.state = 'deskwork';
+        a.waitTimer = 6 + Math.random() * 5;
+        return true;
+    }
+    a.terminal = ti;
+    const t = TERMINALS[ti];
+    goTo(a, routeToTerminal(a.model.position.x, a.model.position.z, t), () => {
+        a.state = 'type';
+        a.workPending = false;                     // уже дошёл — повторный вызов не нужен
+        a.model.rotation.y = Math.PI / 2;          // лицом к экрану
+        a.waitTimer = a.reportPending ? 1.2 : (6 + Math.random() * 5);
+        say(a, 'Печатаю…', 2600, '#00e5ff');
+    });
+    return true;
+}
+
+/* Ответ пришёл в чат — агент бросает печать и идёт с докладом к Боссу. */
+function sendReportToBoss(a, text) {
+    if (a.state === 'report') return false;
+    if (a.state !== 'type' && a.state !== 'deskwork') {
+        a.reportPending = true;
+        if (text) a.reportText = text;
+        return false;
+    }
+    const t = terminalOf(a);
+    const msg = text || a.reportText || DONE_TEXTS[(Math.random() * DONE_TEXTS.length) | 0];
+    const path = t ? routeToBossFrom(t.standX, t.standZ) : routeToBoss(a.home.x, a.home.z);
+    a.terminal = -1;
+    a.reportPending = false;
+    a.taskCube.visible = true;
+    goTo(a, path, () => {
+        a.state = 'report';
+        a.waitTimer = 4 + Math.random() * 3;
+        a.taskCube.visible = false;
+        a.reportText = null;
+        say(a, msg, 5200, '#00ff88');
+        if (S && S.scene && S.scene.userData.bossHolo) S.scene.userData.bossHolo.userData.flash = 1;
+    });
+    return true;
+}
+
 /* Реплика над головой агента */
 function say(a, text, ms, color) {
     const col = color || ('#' + new THREE.Color(a.color).getHexString());
@@ -1346,9 +1636,11 @@ function sendToBoss(a, taskText) {
 }
 
 const BREAK_SPOTS = [
-    { x: 9.6, z: 11.4 },   // кулер (приемная)
-    { x: 10.4, z: -13.6 }, // серверная стойка
-    { x: 18.5, z: -15.4 }  // дверь «ВЫХОД»
+    { x: 9.6, z: 11.4 },    // кулер (приемная)
+    { x: 10.4, z: -13.6 },  // серверные стойки
+    { x: 18.5, z: -15.4 },  // дверь «ВЫХОД»
+    { x: 13.0, z: 2.2 },    // переговорная
+    { x: 12.4, z: 12.6 }    // приемная, диван
 ];
 
 let toiletCount = 0;
@@ -1356,17 +1648,73 @@ let toiletTimer = 60 + Math.random() * 60;
 
 let WALKERS = 0;   // сколько агентов сейчас идут — чтобы офис не «кишел»
 
+/* ХАОТИЧНОЕ РАСПИСАНИЕ: агент сам решает, когда встать и куда пойти.
+   Время подъёма — случайное (18–93 с), цель — тоже случайная: свои задачи
+   за компьютером, кулер, серверная, переговорная, приемная, дверь «ВЫХОД». */
+const STRETCH_TEXTS = ['Разомнусь…', 'Минуту передышки', 'Спина затекла', 'Глазам нужен отдых', 'Кофе бы…'];
+const TALK_TEXTS = ['Слушай, вопрос есть…', 'Как там с задачей?', 'Глянь мою ветку', 'Есть минута?', 'Сверимся по срокам'];
+const TALK_REPLY = ['Да, слушаю', 'Сейчас гляну', 'Потом, я в работе', 'Ага, понял', 'Через пару минут'];
+
+/* Пешком по опенспейсу от своего места к чужому столу */
+function routeToDesk(fromZ, tx, tz) {
+    return [
+        new THREE.Vector3(2.2, 0, fromZ + 1.0),
+        new THREE.Vector3(2.2, 0, tz + 1.0),
+        new THREE.Vector3(tx, 0, tz + 1.0)
+    ];
+}
+
+/* Пошёл к коллеге — «по делу»: подошёл, спросил, получил ответ */
+function walkToColleague(a) {
+    const others = [];
+    for (let i = 0; i < ALL_AGENTS.length; i++) {
+        const b = ALL_AGENTS[i];
+        if (b && b !== a && b.state === 'sit' && !b.working) others.push(b);
+    }
+    if (!others.length) return false;
+    const b = others[(Math.random() * others.length) | 0];
+    releaseTerminal(a);
+    goTo(a, routeToDesk(a.model.position.z, b.home.x, b.home.z), () => {
+        a.state = 'chat';
+        a.waitTimer = 5 + Math.random() * 7;
+        a.model.rotation.y = Math.atan2(
+            b.model.position.x - a.model.position.x,
+            b.model.position.z - a.model.position.z
+        );
+        say(a, TALK_TEXTS[(Math.random() * TALK_TEXTS.length) | 0], 3400);
+        if (b.state === 'sit') say(b, TALK_REPLY[(Math.random() * TALK_REPLY.length) | 0], 3400);
+    });
+    return true;
+}
+
+/* ХАОТИЧНОЕ РАСПИСАНИЕ: агент САМ решает, когда встать и куда пойти.
+   Пауза каждый раз новая и «рваная» — от 8 секунд до двух минут: иногда
+   встаёт почти сразу, иногда долго сидит. Варианты дел — случайные. */
 function agentBreak(a, dt) {
     if (a.state !== 'sit' || a.working) return;
     a.breakTimer -= dt;
     if (a.breakTimer > 0) return;
-    // одновременно гуляют максимум 2 агента, иначе офис выглядит хаотично
-    if (WALKERS >= 2) { a.breakTimer = 15 + Math.random() * 20; return; }
-    a.breakTimer = 110 + Math.random() * 130;
+    a.breakTimer = 8 + Math.random() * 112;
+    if (WALKERS >= 3) return;
+
+    const r = Math.random();
+    // 1) свои дела за компьютером (22%) — встал, ушёл печатать
+    if (r < 0.22) { if (sendToComputer(a, 'Свои задачи в работе')) return; }
+    // 2) пошёл к коллеге — спросить/обсудить (18%)
+    if (r < 0.40) { if (walkToColleague(a)) return; }
+    // 3) просто размялся у стола (14%)
+    if (r < 0.54) {
+        a.state = 'stretch';
+        a.waitTimer = 3 + Math.random() * 6;
+        say(a, STRETCH_TEXTS[(Math.random() * STRETCH_TEXTS.length) | 0], 2400);
+        return;
+    }
+    // 4) перекур: кулер, серверная, переговорная, приемная, выход (46%)
     const s = BREAK_SPOTS[(Math.random() * BREAK_SPOTS.length) | 0];
+    releaseTerminal(a);
     goTo(a, routeOut(a.model.position.z, s.x, s.z), () => {
         a.state = 'idle';
-        a.waitTimer = 5;
+        a.waitTimer = 4 + Math.random() * 9;
     });
 }
 
@@ -1425,6 +1773,8 @@ function agentTick(a, dt, t) {
             rig.torso.rotation.x = 0.06;
         }
     } else if (a.state === 'sit') {
+        // задача пришла, пока агент был в пути — вернулся за стол и сразу идёт печатать
+        if (a.workPending) { a.workPending = false; sendToComputer(a); }
         poseSit(a);
         rig.torso.rotation.x = 0.12 + Math.sin(t * 2.2 + a.phase) * 0.03;
         rig.armL.rotation.x = -1.30 + Math.sin(t * 7 + a.phase) * 0.10;
@@ -1433,6 +1783,14 @@ function agentTick(a, dt, t) {
         rig.elbowR.rotation.x = -0.55;
         rig.head.rotation.y = Math.sin(t * 0.7 + a.phase) * 0.25;
     } else if (a.state === 'hidden') {
+        // пришла задача от Босса — не сидит в санузле, выходит и идёт работать
+        if (a.workPending) {
+            a.workPending = false;
+            a.model.visible = true;
+            toiletCount = Math.max(0, toiletCount - 1);
+            goHome(a);
+            return;
+        }
         a.waitTimer -= dt;
         if (a.waitTimer <= 0) {
             a.model.visible = true;
@@ -1442,6 +1800,35 @@ function agentTick(a, dt, t) {
                 a.model.rotation.y = a.homeYaw;
                 poseSit(a);
             });
+        }
+    } else if (a.state === 'type') {
+        /* РАБОТА ЗА КОМПЬЮТЕРОМ: печатает, пока задача в работе.
+           Ответ пришёл в чат (reportPending) — бросает печать и идёт к Боссу. */
+        poseType(a, t);
+        a.workLeft = (a.workLeft || 0) - dt;
+        if (a.workLeft <= 0) a.working = false;   // предохранитель от вечной печати
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            if (a.reportPending) sendReportToBoss(a, a.reportText);
+            else if (a.working) { a.waitTimer = 8 + Math.random() * 6; }
+            else { releaseTerminal(a); goHome(a); }
+        }
+    } else if (a.state === 'deskwork') {
+        /* Все терминалы заняты — печатает за своим столом, работа видна. */
+        poseSit(a);
+        rig.torso.rotation.x = 0.22;
+        rig.armL.rotation.x = -1.46 + Math.sin(t * 9 + a.phase) * 0.16;
+        rig.armR.rotation.x = -1.46 + Math.sin(t * 9 + a.phase + 1.3) * 0.16;
+        rig.elbowL.rotation.x = -0.62;
+        rig.elbowR.rotation.x = -0.62;
+        rig.head.rotation.y = Math.sin(t * 1.4 + a.phase) * 0.10;
+        a.workLeft = (a.workLeft || 0) - dt;
+        if (a.workLeft <= 0) a.working = false;   // предохранитель от вечной печати
+        a.waitTimer -= dt;
+        if (a.waitTimer <= 0) {
+            if (a.reportPending) sendReportToBoss(a, a.reportText);
+            else if (a.working) { a.waitTimer = 7 + Math.random() * 5; }
+            else goHome(a);
         }
     } else if (a.state === 'report') {
         poseStand(a);
@@ -1463,6 +1850,8 @@ function agentTick(a, dt, t) {
             });
         }
     } else {
+        // пришла задача, а агент стоит по делам — не задерживается, идёт к столу
+        if (a.workPending) { releaseTerminal(a); goHome(a); }
         poseStand(a);
         const s = Math.sin(t * 1.8 + a.phase);
         rig.torso.rotation.x = s * 0.04;
@@ -1752,6 +2141,7 @@ function showFail(err, stage) {
         'background:#00e5ff;color:#000;border:none;font-weight:bold;cursor:pointer;';
     again.onclick = () => {
         box.remove();
+        destroyScene();   // полный пересбор: сцена могла остаться в аварийном виде
         hideOffice();
         setTimeout(() => { isOpen = true; showOffice(); }, 80);
     };
@@ -1768,6 +2158,36 @@ function showFail(err, stage) {
     else document.body.appendChild(box);
 }
 
+/* СЦЕНА СТРОИТСЯ ОДИН РАЗ И ЖИВЁТ ПОСТОЯННО.
+   Раньше офис собирался при нажатии кнопки и полностью уничтожался при
+   закрытии — поэтому Босс видел заставку «ЗАГРУЗКА 3D-ОФИСА…» и пустой офис.
+   Теперь сцена поднимается сразу при запуске приложения (prewarm), агенты
+   работают в фоне, а кнопка «Офис» только показывает уже живой офис. */
+let scenePromise = null;
+
+function ensureScene(office) {
+    if (S) return Promise.resolve(S);
+    if (scenePromise) return scenePromise;
+    scenePromise = loadThree().then(() => {
+        if (!S) startScene(office);
+        return S;
+    }).catch((err) => {
+        scenePromise = null;
+        throw err;
+    });
+    return scenePromise;
+}
+
+/* Подсказка по управлению показывается при КАЖДОМ открытии офиса,
+   а не один раз при сборке сцены. */
+function showHint(office) {
+    const hint = office.querySelector('.o3d-hint');
+    if (!hint) return;
+    hint.classList.remove('hide');
+    clearTimeout(hint.__t);
+    hint.__t = setTimeout(() => hint.classList.add('hide'), 6000);
+}
+
 function showOffice() {
     injectStyles();
     const chat = document.getElementById('chatContainer');
@@ -1779,33 +2199,36 @@ function showOffice() {
     office.style.display = 'block';
     if (btn) btn.classList.add('active');
 
-    if (!S) {
-        office.innerHTML = '<div class="o3d-load">ЗАГРУЗКА 3D-ОФИСА…</div>';
-        // СТОРОЖ: если загрузка не завершилась за 25 с — показываем причину,
-        // а не бесконечный спиннер.
-        const wd = setTimeout(() => {
-            if (isOpen && !S) {
-                const e = new Error('загрузка Three.js не завершилась за 25 с');
-                e.details = ['проверь доступность ./three.module.js в корне репозитория'];
-                showFail(e, 'таймаут загрузки');
-            }
-        }, 25000);
-        loadThree().then(() => {
-            clearTimeout(wd);
-            if (!isOpen) return;
-            try {
-                startScene(office);
-            } catch (e) {
-                if (e && !e.__stage) e.__stage = 'сборка сцены (buildScene / startScene)';
-                throw e;
-            }
-        }).catch((err) => {
-            clearTimeout(wd);
-            // НИКАКОГО молчаливого фолбэка: показываем полноэкранную диагностику
-            console.warn('[office3d] 3D-офис не запустился', err);
-            showFail(err, (err && err.__stage) || 'загрузка Three.js');
-        });
+    // СЦЕНА УЖЕ РАБОТАЕТ В ФОНЕ — показываем мгновенно, без заставки
+    if (S) {
+        if (S.setVisible) S.setVisible(true);
+        if (S.onResize) S.onResize();
+        showHint(office);
+        return;
     }
+
+    office.innerHTML = '<div class="o3d-load">ЗАГРУЗКА 3D-ОФИСА…</div>';
+    // СТОРОЖ: если загрузка не завершилась за 25 с — показываем причину,
+    // а не бесконечный спиннер.
+    const wd = setTimeout(() => {
+        if (isOpen && !S) {
+            const e = new Error('загрузка Three.js не завершилась за 25 с');
+            e.details = ['проверь доступность ./three.module.js в корне репозитория'];
+            showFail(e, 'таймаут загрузки');
+        }
+    }, 25000);
+    ensureScene(office).then(() => {
+        clearTimeout(wd);
+        if (!isOpen) return;
+        if (S && S.setVisible) S.setVisible(true);
+        if (S && S.onResize) S.onResize();
+        showHint(office);
+    }).catch((err) => {
+        clearTimeout(wd);
+        // НИКАКОГО молчаливого фолбэка: показываем полноэкранную диагностику
+        console.warn('[office3d] 3D-офис не запустился', err);
+        showFail(err, (err && err.__stage) || 'загрузка Three.js');
+    });
 }
 
 function startScene(office) {
@@ -1820,7 +2243,6 @@ function startScene(office) {
     hint.className = 'o3d-hint';
     hint.textContent = 'Тапни агента — карточка · Потяни — панорама · Щипок или ＋/− — зум';
     office.appendChild(hint);
-    setTimeout(() => hint.classList.add('hide'), 6000);
 
     const reset = document.createElement('button');
     reset.className = 'o3d-reset';
@@ -1837,7 +2259,9 @@ function startScene(office) {
 
     const renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    renderer.setSize(office.clientWidth, office.clientHeight);
+    // при предзагрузке контейнер скрыт (clientWidth = 0) — берём размер окна,
+    // точный размер выставит onResize при открытии офиса
+    renderer.setSize(office.clientWidth || window.innerWidth || 360, office.clientHeight || window.innerHeight || 640);
     if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = false;
     office.appendChild(renderer.domElement);
@@ -1850,6 +2274,7 @@ function startScene(office) {
         throw e;
     }
     const { scene, screens, agents, groups } = built;
+    ALL_AGENTS = agents;   // список агентов нужен, чтобы делить рабочие терминалы
     const { cam, st } = makeCamera(office);
     // кнопки зума подключаем ТОЛЬКО после того, как renderer/cam/st созданы
     zin.onclick = () => zoomAt(renderer.domElement, cam, st, st.distT * 0.78);
@@ -1900,6 +2325,15 @@ function startScene(office) {
         const a = agentByName[name];
         if (a) sendToBoss(a, text);
     };
+    // ЭТАП 4: две фазы работы — «ушёл печатать» и «пришёл с докладом».
+    window.office3dWork = function (name, text) {
+        const a = agentByName[name];
+        if (a) sendToComputer(a, text);
+    };
+    window.office3dReport = function (name, text) {
+        const a = agentByName[name];
+        if (a) sendReportToBoss(a, text);
+    };
 
     // СИНХРОНИЗАЦИЯ С СИСТЕМОЙ (статусы из ui.js → 3D-агенты)
     const prevUpdate = window.updateAgentInOffice;
@@ -1908,9 +2342,15 @@ function startScene(office) {
         const a = agentByName[name];
         if (!a) return;
         const busy = BUSY_STATES.includes(status);
+        const wasWorking = a.working;
         a.working = busy;
-        if (busy && a.state !== 'walk' && a.state !== 'hidden') {
-            goHome(a);
+        if (busy && !wasWorking) {
+            // ЗАДАЧА ОТ БОССА: агент встаёт из-за стола и уходит к компьютеру печатать.
+            sendToComputer(a);
+        } else if (!busy && wasWorking) {
+            // ОТВЕТ ПРИШЁЛ В ЧАТ: бросает печать и идёт с докладом к столу Босса —
+            // с началом настоящего ответа, а не с дежурной фразой.
+            sendReportToBoss(a, a.reportText || null);
         }
     };
 
@@ -1933,6 +2373,9 @@ function startScene(office) {
     const clock = new THREE.Clock();
     let raf = 0;
     let elapsed = 0;
+    /* Офис может быть скрыт (Босс закрыл кнопку): агенты продолжают жить —
+       симуляция идёт всегда, а кадры рисуем только когда офис виден. */
+    let vis = false;
 
     const tick = () => {
         raf = requestAnimationFrame(tick);
@@ -1947,6 +2390,16 @@ function startScene(office) {
         }
         for (let i = 0; i < screens.length; i++) {
             screens[i].material.emissiveIntensity = 1.35 + Math.sin(t * 3 + i) * 0.18;
+        }
+
+        // рабочие терминалы: занят — экран горит ярко и «строчит», свободен — ровно тлеет
+        const tscr = scene.userData.terminalScreens || [];
+        for (let i = 0; i < tscr.length; i++) {
+            let busy = false;
+            for (let k = 0; k < agents.length; k++) {
+                if (agents[k].terminal === i) { busy = true; break; }
+            }
+            tscr[i].material.emissiveIntensity = (busy ? 2.2 : 1.25) + Math.sin(t * (busy ? 9 : 3) + i) * 0.2;
         }
 
         // голо-панель Босса вспыхивает при докладе
@@ -2011,18 +2464,45 @@ function startScene(office) {
             if (zEl.__z !== z) { zEl.__z = z; zEl.textContent = '🔍 зум ' + z; }
         }
 
-        renderer.render(scene, cam);
+        // РЕНДЕР ТОЛЬКО КОГДА ОФИС ОТКРЫТ. Пока он скрыт, агенты продолжают
+        // жить (симуляция идёт), но кадры не рисуются — экономия батареи.
+        if (vis) renderer.render(scene, cam);
     };
     tick();
 
-    S = { renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office };
+    /* СТАРТОВАЯ ЖИЗНЬ: офис не «просыпается» при открытии кнопки — часть
+       агентов уже в пути с первых секунд, первый доклад Боссу через 2 с. */
+    bossTimer = 2;
+    toiletTimer = 30;
+    // ХАОС ПО РАСПИСАНИЮ: у каждого агента своё случайное время подъёма,
+    // поэтому офис «просыпается» вразнобой, а не строем.
+    agents.forEach((a) => { a.breakTimer = 0.4 + Math.random() * 20; });
+
+    S = {
+        renderer, scene, cam, st, raf, unbind, unbindPick, prevUpdate, onResize, office,
+        setVisible: (v) => { vis = !!v; }
+    };
 }
 
+/* ЗАКРЫТИЕ ОФИСА — ТОЛЬКО СКРЫТИЕ.
+   Сцена НЕ уничтожается: агенты продолжают работать в фоне (ходят, носят
+   задачи Боссу, уходят на перерыв), поэтому при следующем открытии кнопки
+   Босс сразу видит живой офис, а не пустые кресла. */
 function hideOffice() {
     const chat = document.getElementById('chatContainer');
     const office = document.getElementById('office-container');
     const btn = document.getElementById('btnOffice');
 
+    if (S && S.setVisible) S.setVisible(false);
+
+    if (office) office.style.display = 'none';
+    if (chat) chat.style.display = 'flex';
+    if (btn) btn.classList.remove('active');
+}
+
+/* ПОЛНЫЙ РАЗБОР СЦЕНЫ — нужен только для кнопки «⟲ Повторить» в диагностике
+   и при аварийном пересборе. В обычной работе не вызывается. */
+function destroyScene() {
     if (S) {
         cancelAnimationFrame(S.raf);
         S.unbind();
@@ -2048,6 +2528,7 @@ function hideOffice() {
         S.renderer.dispose();
         S = null;
     }
+    scenePromise = null;
     GEO = null;
     SHARED_M = null;
     toiletCount = 0;
@@ -2055,11 +2536,13 @@ function hideOffice() {
     bossCount = 0;
     bossTimer = 12 + Math.random() * 10;
     WALKERS = 0;
+    ALL_AGENTS = [];
     delete window.office3dSay;
     delete window.office3dTask;
-    if (office) { office.innerHTML = ''; office.style.display = 'none'; }
-    if (chat) chat.style.display = 'flex';
-    if (btn) btn.classList.remove('active');
+    delete window.office3dWork;
+    delete window.office3dReport;
+    const office = document.getElementById('office-container');
+    if (office) office.innerHTML = '';
 }
 
 /* ------------------------------------------------------------------ */
@@ -2081,6 +2564,7 @@ function install() {
             fn.__o3d = true;
             window.toggleOffice = fn;
         }
+        hookRenderMessage();   // ловим ответы из чата — агент докладывает их Боссу
         if (tries++ < 120) setTimeout(hook, 500);
         else console.warn('[office3d] toggleOffice не найден — 3D-офис не подключён');
     };
@@ -2125,6 +2609,24 @@ function install() {
     });
 
     loadThree().catch(() => console.warn('[office3d] 3D недоступен, останется 2D-офис'));
+
+    // ПРЕДЗАГРУЗКА: сцена поднимается СРАЗУ при запуске приложения, в скрытом
+    // контейнере. Кнопка «Офис» открывает уже работающий офис — агенты в этот
+    // момент ходят и работают, а не стоят на заставке загрузки.
+    setTimeout(() => { try { prewarm(); } catch (e) {} }, 1200);
+}
+
+/* Строит сцену заранее, не показывая её. Ошибку только логируем:
+   при открытии кнопки она всплывёт полноэкранной диагностикой. */
+function prewarm(tries) {
+    if (S || scenePromise) return;
+    const office = document.getElementById('office-container');
+    if (!office) {
+        // контейнер ещё не создан — пробуем снова (до 20 попыток, ~10 с)
+        if ((tries || 0) < 20) setTimeout(() => prewarm((tries || 0) + 1), 500);
+        return;
+    }
+    ensureScene(office).catch((e) => console.warn('[office3d] предзагрузка не удалась:', (e && e.message) || e));
 }
 
 function boot() {

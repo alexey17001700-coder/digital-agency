@@ -1,5 +1,13 @@
 /* --- БАЗА --- */
-body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100dvh; overflow: hidden; touch-action: pan-y; }
+/* --- ВЫСОТА СТРАНИЦЫ ---
+   height:100% (от html) — базовый вариант: работает в любом браузере и внутри
+   iframe оболочки. height:100dvh — уточнение для современных браузеров:
+   подстраивается под адресную строку и клавиатуру.
+   БЕЗ фолбэка height:100% старый браузер игнорировал dvh, body становился
+   высотой «по содержимому», .chat-container рос вместе с чатом и выталкивал
+   поле ввода и панель агентов за пределы экрана при большом числе сообщений. */
+html { height: 100%; }
+body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100%; height: 100dvh; overflow: hidden; touch-action: pan-y; }
 .sidebar { width: 260px; background-color: #121212; border-right: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s ease; position: absolute; height: 100%; z-index: 100; transform: translateX(-100%); }
 .sidebar.open { transform: translateX(0); }
 .sidebar-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
@@ -20,13 +28,22 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
 
 /* --- ОСНОВНАЯ ЗОНА --- */
-.main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; }
+.main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
 .top-bar { padding: 10px; background: #121212; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: relative; }
 .menu-btn { background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; flex-shrink: 0; }
 .top-bar h1 { font-size: 15px; margin: 0; color: #00e5ff; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
 /* --- СТАТУС-БАР --- */
-.status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 0; }
+.status-bar { display: flex; align-items: center; gap: 4px; margin-right: 5px; font-size: 9px; font-family: monospace; flex-shrink: 1; flex-wrap: wrap; justify-content: flex-end; row-gap: 3px; max-width: 62%; }
+/* Плашка версии и счётчика правок должна быть видна всегда — даже когда
+   статус-бар не влезает в узкий экран телефона. */
+#status-version { border-color: #ffd700; color: #ffd700; flex-shrink: 0; }
+#status-version .text { font-weight: 700; }
+@media (max-width: 480px) {
+    .status-bar { max-width: 58%; font-size: 8px; }
+    .status-item { padding: 2px 5px; }
+    #status-version { order: -1; }
+}
 .status-item { display: flex; align-items: center; gap: 3px; background: #1e1e1e; padding: 3px 6px; border-radius: 10px; border: 1px solid #333; transition: all 0.3s; }
 .status-item .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
 .status-item.online .dot { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
@@ -49,7 +66,13 @@ body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-
 .mode-btn.hacker-active { background: #ff0055; color: #fff; }
 
 /* --- ЧАТ --- */
-.chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
+/* Каркас чата: колонка занимает ВСЮ свободную высоту между панелью кнопок
+   и агентами. min-height:0 обязателен — без него flex-ребёнок не сжимается,
+   .chat-container растёт бесконечно и выталкивает поле ввода и агентов
+   за пределы экрана при большом числе сообщений. */
+.chat-split { display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.chat-col-main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+.chat-container { background: #0a0a0a; padding: 15px; flex-grow: 1; flex-shrink: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; overscroll-behavior-y: contain; }
 .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; user-select: text; -webkit-user-select: text; position: relative; touch-action: pan-y; }
 .msg-director { background: #2c3e50; color: #ffd700; align-self: flex-start; border-bottom-left-radius: 2px; }
 .msg-boss { background: #005662; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
@@ -190,6 +213,16 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 @keyframes blink-red-api { 0%, 100% { background-color: transparent; border: 2px solid #ff0055; color: #ff0055; } 50% { background-color: rgba(255, 0, 85, 0.3); border: 2px solid #ff0055; color: #ff0055; box-shadow: 0 0 10px #ff0055; } }
 #btnApiKeys.needs-keys { animation: blink-red-api 1s infinite !important; border: 2px solid #ff0055 !important; color: #ff0055 !important; }
 
+/* --- МИГАНИЕ КНОПКИ «ОБНОВИТЬ ШТАБ» ---
+   sync.sh подтягивает новый код каждые 10 с, но страница в телефоне остаётся
+   старой, пока её не обновишь. Как только chat.js на сервере изменился —
+   кнопка «🔄 Обновить штаб» начинает мигать жёлтым. */
+@keyframes blink-refresh {
+    0%, 100% { background: #333; color: #aaa; box-shadow: none; }
+    50% { background: #ffd700; color: #000; box-shadow: 0 0 12px #ffd700; }
+}
+.mode-btn.needs-update { animation: blink-refresh 1s infinite !important; }
+
 /* =========================================
    --- ПОГОДНАЯ КАРТОЧКА ---
    ========================================= */
@@ -254,3 +287,5 @@ button.send-btn.stop-active { background: #ff0055; color: #fff; animation: pulse
 .chat-thumbnail { max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; margin-top: 5px; border: 1px solid #555; transition: transform 0.2s; }
 .chat-thumbnail:hover { transform: scale(1.05); }
 .chat-thumbnail.expanded { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); max-width: 95vw; max-height: 95vh; z-index: 9999; box-shadow: 0 0 30px rgba(0,0,0,0.9); cursor: zoom-out; }
+
+/* Панель Помощника удалена — в Штабе один чат (Архитектор). */

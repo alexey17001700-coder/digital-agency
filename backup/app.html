@@ -9,6 +9,25 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
     <link rel="stylesheet" id="main-css">
+    <style>
+    /* РЕЖИМ «ЧАТ ОТДЕЛЬНО» (app.html?chatonly=1)
+       Открывается кнопкой 🪟 Чат отдельно в новом окне. Прячем агентов
+       и лишние панели — чат занимает весь экран. */
+    body.chat-only-mode .agents-wrapper { display: none !important; }
+    body.chat-only-mode .chat-split { grid-template-columns: 1fr !important; }
+    body.chat-only-mode .chat-col-main { width: 100% !important; }
+    body.chat-only-mode .chat-container { flex: 1 1 auto !important; min-height: 0 !important; }
+
+    /* --- КНОПКА-ШЕСТЕРЁНКА: ПАНЕЛЬ КНОПОК СВЁРНУТА ---
+       Все кнопки режимов лежат в .mode-extra. В свёрнутом виде видна только
+       шестерёнка ⚙️ и те кнопки, что СЕЙЧАС ВКЛЮЧЕНЫ (класс .mode-on).
+       Тап по шестерёнке разворачивает панель целиком. */
+    .mode-switch .mode-extra { display: contents; }
+    .mode-switch:not(.expanded) .mode-extra .mode-btn { display: none; }
+    .mode-switch:not(.expanded) .mode-extra .mode-btn.mode-on { display: inline-block; }
+    .mode-switch .gear-btn { border: 1px solid #00e5ff; color: #00e5ff; background: #141414; }
+    .mode-switch .gear-btn.active { background: #00e5ff; color: #000; }
+    </style>
     <script>
         const timestamp = new Date().getTime();
         document.getElementById('main-css').href = `style.css?v=${timestamp}`;
@@ -40,6 +59,14 @@
             showBootError('3D-офис недоступен: office3d.js не выполнился. Обнови страницу.');
         };
 
+        // Кнопка «Чат отдельно»: открывает ЭТУ ЖЕ страницу в отдельном окне
+        // в режиме ?chatonly=1 — без агентов и панелей, чат на весь экран.
+        window.openChatOnly = function () {
+            const url = window.location.pathname + '?chatonly=1';
+            const w = window.open(url, 'shtab_chat_only', 'width=520,height=820,menubar=no,toolbar=no,location=no,status=no');
+            if (!w) showBootError('Браузер заблокировал новое окно. Разреши всплывающие окна для Штаба.');
+        };
+
         // Кнопка «Голоса» в панели: если voice.js ещё не загрузился —
         // не молчим, а честно сообщаем. Как только voice.js выполнится,
         // он переопределит openVoiceLab на настоящую лабораторию.
@@ -55,7 +82,12 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'office.js', 'office3d.js', 'ui.js'];
+            // РЕЖИМ «ЧАТ ОТДЕЛЬНО»: app.html?chatonly=1 — прячем агентов и панели,
+            // чат занимает весь экран. Открывается кнопкой 🪟 Чат отдельно.
+            if (/[?&]chatonly=1/.test(window.location.search)) {
+                document.body.classList.add('chat-only-mode');
+            }
+            const scripts = ['agents.js', 'network.js', 'voice.js', 'local_ai.js', 'safe.js', 'chat.js', 'supervisor.js', 'office.js', 'office3d.js', 'ui.js', 'zveno_balance.js'];
             const failed = [];
 
             // Грузим параллельно: один упавший файл не тормозит и не ломает остальные.
@@ -73,6 +105,10 @@
                 showBootError('Не загрузилось ядро (chat.js/ui.js). Проверь связь и обнови страницу.');
             }
             if (failed.length) showBootError('Не загрузились файлы: ' + failed.join(', '));
+
+            // Плашка версии и счётчика правок ШТАБА (shtab_version.json).
+            if (typeof loadVersionCounter === 'function') loadVersionCounter();
+            if (typeof startVersionAutoRefresh === 'function') startVersionAutoRefresh();
 
             // СТРАХОВКА: если 3D-модуль не выполнился — пробуем загрузить его ещё раз,
             // и только потом сообщаем о проблеме (без этого кнопка «Офис» молча
@@ -114,20 +150,6 @@
         </div>
     </div>
 
-    <!-- Модалка Контента -->
-    <div class="modal-overlay" id="contentModal" onclick="if(event.target===this) this.classList.remove('active')">
-        <div class="modal-content" style="max-width: 90%; max-height: 80vh; overflow-y: auto; border-color: #ffd700;">
-            <div class="modal-header">
-                <h2 style="color: #ffd700;">📁 Контент</h2>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button onclick="clearContentFromButton()" style="background: #662222; color: #ff8888; border: 1px solid #ff8888; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">🗑️ Очистить</button>
-                    <button class="modal-close" style="color: #ff0055; font-size: 24px; border: none; background: none; cursor: pointer; padding: 0;" onclick="document.getElementById('contentModal').classList.remove('active')">✖</button>
-                </div>
-            </div>
-            <div class="modal-body" id="widgets-container"></div>
-        </div>
-    </div>
-
     <!-- Модалка API Ключей -->
     <div class="modal-overlay" id="apiModal" onclick="if(event.target===this) this.classList.remove('active')">
         <div class="modal-content" style="border-color: #00e5ff;" onclick="event.stopPropagation()">
@@ -153,6 +175,13 @@
                     <button onclick="toggleKeyVisibility('userDeepseekKey', this)" style="position: absolute; right: 10px; top: 8px; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa;">👁</button>
                 </div>
 
+                <label style="font-size: 12px; color: #7ee08a;">🆓 Ключ бесплатных моделей (ZV route):</label>
+                <div style="position: relative; margin-bottom: 6px;">
+                    <input type="password" id="userFreeKey" class="modal-textarea" style="height: 40px; margin-bottom: 0; padding-right: 40px;" placeholder="единый ключ ZV route">
+                    <button onclick="toggleKeyVisibility('userFreeKey', this)" style="position: absolute; right: 10px; top: 8px; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa;">👁</button>
+                </div>
+                <p style="font-size: 11px; color: #7ee08a; margin: 0 0 15px 0; line-height: 1.4;">Один ключ на все бесплатные маршруты (Dots3-Note, Nemotron, Flint). Баланс 0 ₽ — карта не нужна.</p>
+
                 <button onclick="saveApiSettings()" style="width: 100%; padding: 12px; background: #00e5ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💾 Сохранить ключи</button>
                 <button onclick="clearApiSettings()" style="width: 100%; padding: 12px; margin-top: 10px; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🗑️ Удалить ключи с этого устройства</button>
             </div>
@@ -168,12 +197,8 @@
                 <span style="cursor:pointer; font-size: 20px;" onclick="toggleSidebar()">✖</span>
             </div>
         </div>
-        <div class="boss-key-row">
-            <span class="boss-key" id="bossKeyBtn" onclick="toggleBossMode()" title="Служебный вход">🔑</span>
-        </div>
         <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
         <div class="chat-list" id="chatList"></div>
-        <button onclick="openRecoveryGuide()" title="Пошаговая инструкция по восстановлению сервера" style="margin: 10px; padding: 12px; background: #10202c; color: #00e5ff; border: 1px solid #00e5ff; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; flex-shrink: 0;">🚑 Восстановление сервера</button>
     </div>
 
     <div class="main-content">
@@ -185,6 +210,8 @@
                 <div class="status-item" id="status-ai" title="Нейросеть"><span class="dot"></span> <span class="text">AI</span></div>
                 <div class="status-item" id="status-ping" title="Задержка"><span class="text">-- ms</span></div>
                 <div class="status-item" id="status-alarm" title="Тревога"><span class="dot"></span> <span class="text">ALARM</span></div>
+                <div class="status-item" id="status-zveno" style="cursor:pointer; border-color:#00e5ff;" title="Баланс ZvenoAI"><span class="text" id="zveno-balance-text">ZVENO --</span></div>
+                <div class="status-item" id="status-version" style="cursor:pointer; border-color:#ffd700;" onclick="openVersionPanel()" title="Версия приложения и счётчик правок до обновления"><span class="text" id="version-text">v--</span></div>
                 <div class="status-item" id="btn-tester" style="cursor:pointer; border-color:#ffd700;" onclick="toggleTester()">📡 ТЕСТ</div>
             </div>
         </div>
@@ -199,31 +226,43 @@
             <button onclick="runConnectionTest()" style="width:100%; margin-top:10px; padding:8px; background:#00e5ff; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔄 Обновить</button>
         </div>
 
-        <div class="mode-switch">
-            <button class="mode-btn active" id="btnNormal" onclick="setMode('normal')">Обычный</button>
-            <button class="mode-btn" id="btnHacker" onclick="setMode('hacker')">🕵️ Хакер</button>
-            <button class="mode-btn" id="btnCouncil" onclick="toggleCouncil()">👥 Совет</button>
+        <div class="mode-switch" id="modeSwitch">
+            <button class="mode-btn gear-btn" id="btnModeGear" onclick="toggleModeMenu()" title="Все кнопки Штаба">⚙️</button>
+            <button class="mode-btn" id="btnRefreshShtab" onclick="refreshShtab()" title="Обновить Штаб" style="font-size:12px; padding:7px 14px; border:1px solid #00e5ff; color:#00e5ff; background:#141414; border-radius:15px;">🔄 Обновить</button>
+            <div class="mode-extra" id="modeExtra">
+            <button class="mode-btn active" id="btnDialogue" onclick="toggleAgentDialogue()">💬 Диалог: ВКЛ</button>
             <button class="mode-btn" id="btnVoiceToggle" onclick="toggleVoice()">🗣️ Озвучка: ВЫКЛ</button>
             <button class="mode-btn" id="btnVoiceLab" onclick="openVoiceLab()">🎛 Голоса</button>
-            <button class="mode-btn" onclick="document.getElementById('contentModal').classList.add('active')">📁 Контент</button>
             <button class="mode-btn" id="btnOffice" onclick="openOffice()">🏢 Офис</button>
-            <button class="mode-btn" id="btnAIModel" onclick="toggleAIModel()">🧠 ИИ: Yandex</button>
+            <button class="mode-btn" id="btnAIModel" title="Платные модели. Тап — следующая. Долгое нажатие — список моделей.">🧠 Платные</button>
+            <button class="mode-btn" id="btnFreeModel" title="Бесплатные модели. Тап — следующая. Долгое нажатие — список моделей.">🆓 Бесплатные</button>
+            <button class="mode-btn" id="btnGigaChat" onclick="toggleGigaChat()" title="GigaChat (Сбер). Тап — включить/выключить отдельно от остальных моделей." style="border-color:#7B61FF; color:#7B61FF;">🟣 GigaChat</button>
             <button class="mode-btn" onclick="openApiSettings()">🔑 API Ключи</button>
-            <button class="mode-btn" onclick="refreshShtab()">🔄 Обновить штаб</button>
+            <button class="mode-btn" id="btnRecovery" onclick="openRecoveryGuide()" title="Пошаговая инструкция по восстановлению сервера" style="border-color:#00e5ff; color:#00e5ff;">🚑 Ремонт сервера</button>
+            </div>
         </div>
 
+        <!-- ЧАТ БОССА С АРХИТЕКТОРОМ -->
+        <div class="chat-split" id="chatSplit">
+        <div class="chat-col-main">
         <div class="chat-container" id="chatContainer"></div>
         <div id="office-container" style="display: none; width: 100%; height: 100%; flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;"></div>
 
+        <div class="attach-preview" id="attachPreview"></div>
         <div class="input-area">
             <textarea id="chatInput" placeholder="Написать задачу..." rows="1"></textarea>
             <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
-            <button class="mode-btn" onclick="document.getElementById('imageInput').click()" style="background: #333; color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; flex-shrink: 0;">📎</button>
+            <button class="mode-btn" onclick="document.getElementById('imageInput').click()" style="background: #333; color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; flex-shrink: 0;" title="Отправить фото">📎</button>
+            <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)">
+            <button class="mode-btn" onclick="document.getElementById('fileInput').click()" style="background: #333; color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; flex-shrink: 0;" title="Отправить файл">📄</button>
             <button id="micBtn" onclick="toggleVoiceInput()" style="background: #333; color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; flex-shrink: 0; transition: all 0.2s;">🎤</button>
             <div class="send-btn-container">
                 <div id="final-time-badge" class="time-badge">0.0s</div>
                 <button class="send-btn" id="sendBtn" onclick="handleSendClick()">➤</button>
             </div>
+        </div>
+        </div>
+
         </div>
 
         <div class="agents-wrapper">
@@ -243,64 +282,84 @@
     </div>
 
     <script>
-    // Пошаговая инструкция по аварийному восстановлению (VIVO -> Termux).
-    // Источник: SERVER_DIAGNOSTICS.md, раздел 2.1.
+    // Пошаговая инструкция по аварийному восстановлению (VIVO -> Termux -> Ubuntu).
+    // Источник: SERVER_DIAGNOSTICS.md, разделы 2.1 и 12 (полная карта сервера).
+    // ВАЖНО: фронтенда на сервере НЕТ. Страница Штаба грузится с GitHub Pages,
+    // сервер отдаёт только API. Поэтому на сервере лежит ТОЛЬКО main.ts.
     const RECOVERY_STEPS = [
         {
-            title: 'Шаг 0. Подготовка',
-            note: 'Открой Termux, зайди в Ubuntu и создай 4 вкладки (свайп слева → NEW SESSION). Переименуй их долгим нажатием на название.',
-            cmds: ['proot-distro login ubuntu']
+            title: 'Шаг 0. Карта сервера — что где лежит',
+            note: 'Штаб = API на :8000 (страница грузится с GitHub Pages, на сервере фронтенда нет). Чат = :8001. Caddy = :8443, домен shtab-boss.duckdns.org. Всё живёт в /root.',
+            cmds: [
+                'proot-distro login ubuntu',
+                'ls -la /root/',
+                'cat /root/Caddyfile'
+            ]
+        },
+        {
+            title: 'Шаг 1. Диагностика — что именно упало',
+            note: 'Сначала смотрим, кто жив, и только потом поднимаем. Логи: shtab.log (Штаб), chat.log (Чат), caddy.log (SSL), sync.log (курьер), zveno.log (модели и GigaChat).',
+            cmds: [
+                'bash /root/status.sh',
+                'ps aux | grep -E "deno|caddy" | grep -v grep',
+                'tail -n 20 /root/shtab.log /root/chat.log /root/caddy.log /root/sync.log'
+            ]
         },
         {
             title: 'Вкладка 1: ШТАБ (порт 8000)',
-            note: 'Имена переменных именно GITHUB_OWNER и GITHUB_REPO. С REPO_OWNER / REPO_NAME сервер не увидит файлы (401).',
+            note: 'Имена переменных именно GITHUB_OWNER и GITHUB_REPO. Секреты лежат в /root/.env — подхватываем их одной строкой. Проверка ключа GigaChat: grep -c GIGACHAT_KEY /root/.env',
             cmds: [
-                'cd ~',
-                'export ZVENO_API_KEY="[ключ]"',
-                'export GITHUB_TOKEN="[токен]"',
-                'export GITHUB_OWNER="alexey17001700-coder"',
-                'export GITHUB_REPO="digital-agency"',
+                'cd /root',
+                'set -a; . /root/.env; set +a',
                 'deno run --allow-net --allow-env --allow-read --allow-write --allow-run --watch main.ts'
             ]
         },
         {
             title: 'Вкладка 2: CADDY (SSL / порт 8443)',
-            note: '⚠️ Caddy может исчезнуть при сбое. Если файла caddy-linux-arm64 нет — сначала скачай его (первая команда), потом запускай.',
+            note: 'Caddyfile: https_port 8443, /ws* и /stats* → 8001, /tts* и остальное → 8000. Сертификаты в /root/ssl/. Сначала проверь, есть ли бинарник в системе — качать заново только если нет.',
             cmds: [
-                'cd ~',
+                'which caddy || ls -l /root/caddy*',
                 '# если бинарника нет — скачать заново:',
-                'curl -L -o caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x caddy-linux-arm64',
-                './caddy-linux-arm64 run --config Caddyfile'
+                'curl -L -o /root/caddy-linux-arm64 "https://caddyserver.com/api/download?os=linux&arch=arm64" && chmod +x /root/caddy-linux-arm64',
+                'caddy run --config /root/Caddyfile'
             ]
         },
         {
             title: 'Вкладка 3: SYNC (Курьер)',
-            note: 'Зависнет и будет молчать — это нормально, он следит за обновлениями.',
-            cmds: ['cd ~', 'bash sync.sh']
+            note: 'Тянет ТОЛЬКО main.ts с GitHub каждые 3 секунды и кладёт в /root/main.ts (старый — в main.ts.bak). Зависнет и будет молчать — это нормально.',
+            cmds: ['cd /root', 'bash sync.sh']
         },
         {
             title: 'Вкладка 4: ЧАТ (порт 8001)',
-            note: '',
+            note: 'Сервер чата лежит в /root/nexus_ws. Секреты push-уведомлений — в /root/.nexus_ws_env.',
             cmds: [
-                'cd ~/nexus_ws',
-                'export VAPID_PRIVATE="[ключ]"',
-                'export VAPID_SUBJECT="mailto:admin@example.com"',
-                'export VAPID_PUBLIC="[ключ]"',
+                'cd /root/nexus_ws',
+                'set -a; . /root/.nexus_ws_env; set +a',
                 'deno run --allow-net --allow-env --allow-read --allow-run main.ts'
             ]
         },
         {
             title: 'Проверка после подъёма',
-            note: 'Ожидаемые коды: Штаб 405 (отвечает только на POST — это норма), Чат 200, Caddy 200.',
+            note: 'Штаб на GET отвечает 405 — это НОРМА (он принимает только POST). Боевой тест — POST-запрос ниже. Ответ с текстом = сервер жив.',
             cmds: [
-                'curl -s  -o /dev/null -w "Shtab: %{http_code}\\n" http://localhost:8000/',
-                'curl -s  -o /dev/null -w "Chat:  %{http_code}\\n" http://localhost:8001/',
-                'curl -sk -o /dev/null -w "Caddy: %{http_code}\\n" https://localhost:8443/'
+                'curl -s -o /dev/null -w "Shtab: %{http_code}\\n" http://localhost:8000/',
+                'curl -s -o /dev/null -w "Chat:  %{http_code}\\n" http://localhost:8001/',
+                'curl -sk -o /dev/null -w "Caddy: %{http_code}\\n" https://localhost:8443/',
+                'curl -s -X POST http://localhost:8000/ -H "Content-Type: application/json" -d \'{"messages":[{"role":"user","content":"Куку"}],"model":""}\' | head -c 300'
+            ]
+        },
+        {
+            title: 'Проверка GigaChat (Сбер)',
+            note: 'Отдельная ручка. Если вернул answer — ключ и TLS в порядке. Если «GIGACHAT_KEY не задан» — ключа нет в /root/.env. Сертификаты Сбера: /root/root_ca.pem, /root/sber_ca.pem.',
+            cmds: [
+                'curl -s -X POST http://localhost:8000/ -H "Content-Type: application/json" -d \'{"gigachatTest":true}\' | head -c 300',
+                'grep -c GIGACHAT_KEY /root/.env',
+                'tail -n 20 /root/zveno.log'
             ]
         },
         {
             title: '⚡ Быстрый подъём одной командой',
-            note: 'Если не хочется открывать 4 вкладки — поднять всё разом. Секреты (ZVENO_API_KEY, GITHUB_TOKEN, VAPID_*) задать в окружении ДО запуска. Логи: /root/shtab.log, /root/chat.log, /root/caddy.log, /root/sync.log.',
+            note: 'Если не хочется открывать 4 вкладки — поднять всё разом. Секреты (ZVENO_API_KEY, GITHUB_TOKEN, GIGACHAT_KEY, VAPID_*) задать в окружении ДО запуска. Логи: /root/shtab.log, /root/chat.log, /root/caddy.log, /root/sync.log.',
             cmds: ['bash /root/start_all.sh']
         }
     ];

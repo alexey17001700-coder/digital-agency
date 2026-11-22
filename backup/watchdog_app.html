@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🛡 СТОРОЖ — Штаб</title>
+<style>
+:root{
+  --bg:#05070d; --panel:#0c1220; --panel2:#111a2c; --line:#1d2b45;
+  --cy:#00e5ff; --gr:#2ee08a; --rd:#ff4d5e; --yl:#ffc23c; --tx:#dfe9f5; --dim:#7b8ba6;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  display:flex; flex-direction:column; height:100dvh; overflow:hidden;
+}
+header{
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b1424,#070c16);
+  padding-top:calc(12px + env(safe-area-inset-top));
+}
+.logo{font-size:22px;line-height:1}
+.title{font-weight:800;letter-spacing:.5px;font-size:15px}
+.title small{display:block;font-weight:400;color:var(--dim);font-size:11px;letter-spacing:0}
+.spacer{flex:1}
+.dot{width:12px;height:12px;border-radius:50%;background:#3a4658;box-shadow:0 0 0 0 rgba(0,0,0,0)}
+.dot.up{background:var(--gr);box-shadow:0 0 12px rgba(46,224,138,.8)}
+.dot.down{background:var(--rd);box-shadow:0 0 12px rgba(255,77,94,.9);animation:blink 1s infinite}
+.dot.warn{background:var(--yl);box-shadow:0 0 12px rgba(255,194,60,.8)}
+@keyframes blink{50%{opacity:.25}}
+
+.tabs{display:flex;gap:6px;padding:10px 14px 0}
+.tab{
+  flex:1;text-align:center;padding:9px 6px;border-radius:10px;font-size:12.5px;font-weight:700;
+  background:var(--panel);border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:.18s
+}
+.tab.active{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.5);color:var(--cy)}
+
+.page{flex:1;overflow-y:auto;padding:12px 14px calc(20px + env(safe-area-inset-bottom));display:none}
+.page.active{display:block}
+
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:12px;margin-bottom:12px
+}
+.card h3{margin:0 0 10px;font-size:13px;letter-spacing:.4px;color:var(--cy);font-weight:800}
+
+.tgt{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:8px}
+.row label{font-size:12px;color:var(--dim);min-width:74px}
+input[type=text],input[type=number]{
+  flex:1;background:#080e1a;border:1px solid var(--line);border-radius:9px;color:var(--tx);
+  padding:9px 10px;font-size:13px;font-family:ui-monospace,monospace;outline:none;min-width:0
+}
+input:focus{border-color:rgba(0,229,255,.6)}
+.sw{position:relative;width:44px;height:24px;flex:0 0 44px}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw span{
+  position:absolute;inset:0;background:#222c3d;border-radius:24px;cursor:pointer;transition:.2s
+}
+.sw span::before{
+  content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;
+  background:#8a99b0;transition:.2s
+}
+.sw input:checked + span{background:rgba(46,224,138,.35)}
+.sw input:checked + span::before{transform:translateX(20px);background:var(--gr)}
+
+.status-card{
+  border-radius:16px;padding:14px;margin-bottom:12px;border:1px solid var(--line);
+  background:var(--panel);position:relative;overflow:hidden
+}
+.status-card.up{border-color:rgba(46,224,138,.45);background:linear-gradient(135deg,rgba(46,224,138,.08),transparent 60%)}
+.status-card.down{border-color:rgba(255,77,94,.5);background:linear-gradient(135deg,rgba(255,77,94,.12),transparent 60%)}
+.status-card.warn{border-color:rgba(255,194,60,.45)}
+.sc-top{display:flex;align-items:center;gap:10px}
+.sc-ico{font-size:24px}
+.sc-name{font-weight:800;font-size:14px}
+.sc-url{font-size:10.5px;color:var(--dim);font-family:ui-monospace,monospace;word-break:break-all}
+.sc-state{font-size:12px;font-weight:800;margin-top:8px}
+.sc-meta{font-size:11px;color:var(--dim);margin-top:4px;font-family:ui-monospace,monospace}
+
+.btns{display:flex;gap:8px;margin-bottom:12px}
+button.main{
+  flex:1;padding:13px;border-radius:12px;border:none;font-size:14px;font-weight:800;
+  cursor:pointer;font-family:inherit;letter-spacing:.4px
+}
+.b-start{background:var(--gr);color:#04140c}
+.b-stop{background:var(--rd);color:#fff}
+.b-ghost{background:var(--panel2);color:var(--tx);border:1px solid var(--line)}
+.b-ghost.big{flex:1;padding:13px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer}
+
+/* ЧАТ */
+#feed{display:flex;flex-direction:column;gap:8px}
+.msg{max-width:92%;padding:9px 11px;border-radius:12px;font-size:13px;line-height:1.45;word-wrap:break-word;white-space:pre-wrap}
+.m-watch{align-self:stretch;max-width:100%;background:#0a1524;border:1px solid rgba(0,229,255,.28);color:#9fe9ff;font-family:ui-monospace,monospace;font-size:11.5px}
+.m-watch.err{background:#1a0a10;border-color:rgba(255,77,94,.5);color:#ff9aa5}
+.m-watch.ok{background:#08160f;border-color:rgba(46,224,138,.45);color:#9df3c6}
+.m-boss{align-self:flex-end;background:#123049;border:1px solid #1d4a6b}
+.m-wake{align-self:flex-end;background:#2a1c05;border:1px solid rgba(255,194,60,.55);color:#ffd98a;font-family:ui-monospace,monospace;font-size:11.5px}
+.m-arch{align-self:flex-start;background:#141a2a;border:1px solid var(--line)}
+.m-time{font-size:9.5px;opacity:.6;display:block;margin-top:4px}
+
+.composer{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:#070c16;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.composer input{flex:1}
+.composer button{background:var(--cy);color:#00121a;border:none;border-radius:10px;padding:0 16px;font-weight:800;font-size:16px;cursor:pointer}
+
+.logline{font-family:ui-monospace,monospace;font-size:11px;color:var(--dim);padding:5px 0;border-bottom:1px dashed #16233a}
+.logline b{color:var(--tx);font-weight:600}
+.logline .t{color:#4d6b8f}
+.badge{display:inline-block;padding:1px 7px;border-radius:6px;font-size:10px;font-weight:800}
+.bg-ok{background:rgba(46,224,138,.15);color:var(--gr)}
+.bg-err{background:rgba(255,77,94,.15);color:var(--rd)}
+.hint{font-size:11px;color:var(--dim);line-height:1.5;margin-top:8px}
+.empty{color:var(--dim);font-size:12px;text-align:center;padding:20px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🛡</div>
+  <div class="title">СТОРОЖ<small>следит за Штабом и сервером</small></div>
+  <div class="spacer"></div>
+  <div class="dot" id="hdot"></div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="mon">📡 МОНИТОР</div>
+  <div class="tab" data-tab="chat">💬 ЧАТ</div>
+  <div class="tab" data-tab="log">📜 ЖУРНАЛ</div>
+</div>
+
+<!-- МОНИТОР -->
+<div class="page active" id="page-mon">
+  <div id="cards"></div>
+
+  <div class="btns">
+    <button class="main b-start" id="btnStart">▶ СТАРТ</button>
+    <button class="main b-stop" id="btnStop" style="display:none">■ СТОП</button>
+  </div>
+
+  <div class="card">
+    <h3>⚙️ ЦЕЛИ ПРОВЕРКИ</h3>
+    <div class="tgt" id="targets"></div>
+    <div class="hint">
+      <b>self</b> — проверить адрес, с которого открыто это приложение.<br>
+      Можно вписать любой URL: <code>http://127.0.0.1:8000</code>, <code>https://shtab-boss.duckdns.org:8443</code>.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔧 НАСТРОЙКИ</h3>
+    <div class="row"><label>Интервал, сек</label><input type="number" id="cfgInt" min="5" max="600" value="15"></div>
+    <div class="row" style="margin-top:8px"><label>Попыток до тревоги</label><input type="number" id="cfgThr" min="1" max="10" value="2"></div>
+    <div class="row" style="margin-top:8px"><label>Тревога: звук</label><div class="sw"><input type="checkbox" id="cfgSnd" checked><span></span></div></div>
+    <div class="row" style="margin-top:8px"><label>Вибрация</label><div class="sw"><input type="checkbox" id="cfgVib" checked><span></span></div></div>
+    <div class="row" style="margin-top:8px"><label>Уведомления</label><div class="sw"><input type="checkbox" id="cfgNtf" checked><span></span></div></div>
+    <div class="row" style="margin-top:8px"><label>Час. отчёт</label><div class="sw"><input type="checkbox" id="cfgHour" checked><span></span></div></div>
+    <div class="row" style="margin-top:8px"><label>Авто-тревога</label><div class="sw"><input type="checkbox" id="cfgWake" checked><span></span></div></div>
+    <div class="hint">Авто-тревога: при падении сторож сам пишет в чат и будит Архитектора — он отвечает, что делать.</div>
+    <div class="hint">Приложение должно быть открыто. Для работы в фоне — добавь на главный экран и держи вкладку живой.</div>
+  </div>
+
+  <div class="card">
+    <h3>☁️ РЕЛЕЙ (второй провод)</h3>
+    <div class="row"><label>URL</label><input type="text" id="cfgRelay" placeholder="https://...deno.net"></div>
+    <div class="hint">
+      Сюда сторож шлёт тревогу, чтобы она попала в журнал GitHub. Это <b>облачный</b> адрес — он жив, даже когда телефон-сервер лёг.
+      Если сервер Vivo мёртв, тревога всё равно уйдёт отсюда, и Архитектор её прочитает, когда ты откроешь чат.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🧪 ПРОВЕРКА ТРЕВОГИ</h3>
+    <button class="b-ghost big" id="btnTest" style="width:100%">🔔 Протестировать сигнал</button>
+    <div class="hint">Проверит звук, вибрацию и уведомление — чтобы ты знал, как это звучит, когда сервер реально упадёт.</div>
+  </div>
+</div>
+
+<!-- ЧАТ -->
+<div class="page" id="page-chat">
+  <div class="card" style="margin-bottom:8px">
+    <h3>💬 ЧАТ С АРХИТЕКТОРОМ</h3>
+    <div class="hint" style="margin-top:0">Тревоги сторожа помечены <b>🤖 СТОРОЖ</b>. Твои сообщения — как обычно. Пиши отсюда, если основной Штаб лёг.</div>
+  </div>
+  <div id="feed"></div>
+</div>
+
+<!-- ЖУРНАЛ -->
+<div class="page" id="page-log">
+  <div class="btns">
+    <button class="main b-ghost" id="btnExport">⬇ Скачать лог</button>
+    <button class="main b-ghost" id="btnClear">🗑 Очистить</button>
+  </div>
+  <div class="card"><div id="logbox"><div class="empty">Пока пусто</div></div></div>
+</div>
+
+<div class="composer" id="composer" style="display:none">
+  <input type="text" id="chatIn" placeholder="Написать Архитектору...">
+  <button id="chatSend">➤</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= КОНФИГ ================= */
+const DEFAULT_RELAY = "https://early-amoeba-1705.alexey17001700.deno.net";
+
+/* Промт Архитектора — тот же, что в Штабе. Чтобы проснувшийся здесь
+   понимал, кто он, что за проект и что за сервер. Ключей тут нет. */
+const ARCH_PROMPT = `Ты — Цифровой Архитектор Штаба. Senior-инженер и сисадмин. Управляешь кодом проекта и решаешь задачи Босса.
+
+СЕЙЧАС ТЫ РАБОТАЕШЬ В АВАРИЙНОМ ЧАТЕ-СТОРОЖЕ (отдельное приложение на телефоне Босса).
+Оно следит за Штабом и за сервером Vivo. Тревоги приходят помеченные "🤖 СТОРОЖ" — это НЕ Босс, это скрипт.
+Твоя задача: разобрать тревогу, назвать причину и дать Боссу конкретные шаги. Коротко.
+
+=== СКОРОСТЬ ===
+1. Думай коротко. Сразу по делу.
+2. Ответ — что случилось, почему, что делать. Без воды.
+3. Запрещены фразы: "сейчас сделаю", "приступаю", "подожди", "анализирую".
+
+=== СЕРВЕР (VIVO) ===
+Termux → Ubuntu. Штаб :8000, Nexus Chat :8001, Caddy :8443 (SSL, DuckDNS shtab-boss.duckdns.org).
+sync.sh каждые 10 сек. Правки кода идут через GitHub.
+
+=== ЧТО ДЕЛАТЬ ПРИ ТРЕВОГЕ ===
+- Штаб :8000 не отвечает → проверить процесс Deno, перезапустить Штаб, глянуть лог.
+- Nexus Chat :8001 не отвечает → перезапустить чат-сервер.
+- Caddy :8443 не отвечает → проверить Caddy и сертификат, проверить, что телефон в сети.
+- Упал весь телефон → интернет/Termux прибит Android'ом (wake-lock), проверить питание и сеть.
+- Никогда не выдумывай цифры. Если не знаешь — так и скажи.
+
+=== ПАМЯТЬ (ЗНАЙ МОЛЧА) ===
+Не перечисляй проекты и репозитории без прямой просьбы.
+Штаб — digital-agency. Чат — nexus_chat. Сервер чата — nexus_ws (:8001).
+Память проекта: digital-agency/SERVER_DIAGNOSTICS.md.
+Секреты — только в переменных окружения, в открытые репозитории НЕ писать.`;
+const K_CFG = "wd_app_cfg", K_LOG = "wd_app_log", K_FEED = "wd_app_feed";
+
+let cfg = load(K_CFG, null) || {
+  interval: 15, threshold: 2, sound: true, vibro: true, notify: true, hourly: true,
+  relay: DEFAULT_RELAY, running: false, autowake: true,
+  targets: [
+    { id:"shtab", name:"Штаб (этот телефон)", ico:"🏛", url:"self", on:true },
+    { id:"vivo",  name:"Сервер Vivo",          ico:"🖥", url:"https://shtab-boss.duckdns.org:8443", on:true }
+  ]
+};
+if (cfg.autowake === undefined) cfg.autowake = true;
+let log = load(K_LOG, []);
+let feed = load(K_FEED, []);
+let state = {};   // id -> {status, fails, lastOk, downSince, ms, err}
+let timer = null, hourlyTimer = null;
+
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function saveCfg(){ save(K_CFG, cfg); }
+function now(){ return Date.now(); }
+function hhmmss(ts){ const d = new Date(ts); return d.toTimeString().slice(0,8); }
+function dt(ts){ const d = new Date(ts); return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+function human(ms){
+  if (ms < 1000) return ms + " мс";
+  const s = Math.floor(ms/1000);
+  if (s < 60) return s + " сек";
+  const m = Math.floor(s/60);
+  if (m < 60) return m + " мин " + (s%60) + " сек";
+  const h = Math.floor(m/60);
+  return h + " ч " + (m%60) + " мин";
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================= ПРОВЕРКА ================= */
+async function fetchT(url, mode, ms){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { method:"GET", mode, cache:"no-store", signal:ctrl.signal, redirect:"follow" });
+    clearTimeout(t);
+    return r;
+  } catch(e){ clearTimeout(t); throw e; }
+}
+
+async function probe(rawUrl){
+  let url = rawUrl;
+  if (!url || url === "self") url = location.origin;
+  url = url.replace(/\/+$/,'');
+  const bust = url + (url.includes('?') ? '&' : '?') + "_wd=" + now();
+  const started = performance.now();
+
+  // 1) пробуем прочитать ответ (CORS) — точный статус
+  try {
+    const r = await fetchT(bust, "cors", 8000);
+    const ms = Math.round(performance.now() - started);
+    if (r.status >= 500) return { ok:false, ms, err:"HTTP " + r.status };
+    return { ok:true, ms, code:r.status };
+  } catch(e){ /* CORS/сеть — идём дальше */ }
+
+  // 2) no-cors — «жив ли хост вообще»
+  try {
+    await fetchT(bust, "no-cors", 8000);
+    return { ok:true, ms: Math.round(performance.now() - started), code:"?" };
+  } catch(e){
+    const ms = Math.round(performance.now() - started);
+    return { ok:false, ms, err: (e && e.name === "AbortError") ? "таймаут 8 сек" : (e && e.message ? e.message : "нет связи") };
+  }
+}
+
+/* ================= СИГНАЛ ================= */
+let actx = null;
+function beep(){
+  if (!cfg.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    actx.resume();
+    const seq = [ [880,.18], [0,.08], [880,.18], [0,.08], [1180,.35] ];
+    let t = actx.currentTime;
+    seq.forEach(function(s){
+      if (s[0] === 0){ t += s[1]; return; }
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "square"; o.frequency.value = s[0];
+      g.gain.setValueAtTime(.18, t);
+      g.gain.exponentialRampToValueAtTime(.001, t + s[1]);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t); o.stop(t + s[1]);
+      t += s[1];
+    });
+  } catch(e){}
+}
+function chime(){
+  if (!cfg.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    actx.resume();
+    let t = actx.currentTime;
+    [660, 880].forEach(function(f){
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(.14, t);
+      g.gain.exponentialRampToValueAtTime(.001, t + .22);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t); o.stop(t + .22); t += .18;
+    });
+  } catch(e){}
+}
+function vibro(p){
+  if (!cfg.vibro) return;
+  try { if (navigator.vibrate) navigator.vibrate(p); } catch(e){}
+}
+function notify(title, body){
+  if (!cfg.notify) return;
+  try {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") new Notification(title, { body: body, tag:"shtab-watchdog" });
+  } catch(e){}
+}
+
+/* ================= ЗАПИСИ ================= */
+function addFeed(kind, text){
+  feed.push({ kind, text, t: now() });
+  if (feed.length > 400) feed = feed.slice(-400);
+  save(K_FEED, feed);
+  renderFeed();
+}
+function addLog(target, status, info){
+  log.push({ t: now(), target, status, info: info || "" });
+  if (log.length > 800) log = log.slice(-800);
+  save(K_LOG, log);
+  renderLog();
+}
+function watchLine(txt){ return "🤖 СТОРОЖ | " + hhmmss(now()) + " | " + txt; }
+
+/* ================= РЕЛЕЙ ================= */
+async function relay(kind, text){
+  const url = (cfg.relay || "").trim();
+  if (!url) return false;
+  const line = "[" + dt(now()) + "] " + kind + " | " + text;
+  try {
+    const r = await fetchT(url, "cors", 9000);
+    void r;
+  } catch(e){ /* прочитаем через POST ниже */ }
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        updateFile: true,
+        path: "remote/watch.log",
+        append: true,
+        message: "watchdog: " + kind,
+        content: line
+      })
+    });
+    return res.ok;
+  } catch(e){ return false; }
+}
+
+/* ================= АВТО-ТРЕВОГА (БУДИТ АРХИТЕКТОРА) ================= */
+let waking = false;
+async function autoWake(kind, text){
+  if (!cfg.autowake) return;
+  if (waking) return;
+  waking = true;
+  addFeed("wake", "🤖 СТОРОЖ | " + hhmmss(now()) + "\n" + text);
+  try {
+    const answer = await askArchitect("[СИСТЕМНАЯ ТРЕВОГА СТОРОЖА — это пишет скрипт, не Босс]\n" + text + "\n\nРазбери: что случилось и что делать. Коротко, по делу.");
+    addFeed("arch", "🏛 АРХИТЕКТОР\n" + answer);
+    addLog("сторож", "wake", kind + ": " + text.slice(0, 90));
+  } catch(e){
+    addFeed("err", watchLine("не смог разбудить Архитектора: " + (e.message || "нет связи")));
+  }
+  waking = false;
+}
+
+/* ================= ЦИКЛ ================= */
+async function tick(){
+  for (const t of cfg.targets){
+    if (!t.on) continue;
+    const prev = state[t.id] || { status:"unknown", fails:0 };
+    const r = await probe(t.url);
+
+    if (r.ok){
+      const wasDown = prev.status === "down";
+      state[t.id] = { status:"up", fails:0, lastOk: now(), ms: r.ms, downSince: null };
+      if (wasDown){
+        const dur = prev.downSince ? human(now() - prev.downSince) : "?";
+        const txt = watchLine(t.name + " — ПОДНЯЛСЯ ✅ (простой " + dur + ")");
+        addFeed("ok", txt); addLog(t.name, "up", "простой " + dur);
+        chime(); notify("✅ " + t.name + " поднялся", "Простой: " + dur);
+        relay("UP", t.name + " поднялся, простой " + dur);
+        autoWake("UP", t.name + " — ПОДНЯЛСЯ. Простой: " + dur + ". Проверь, всё ли в порядке.");
+      }
+    } else {
+      const fails = (prev.fails || 0) + 1;
+      const isDown = fails >= cfg.threshold;
+      state[t.id] = {
+        status: isDown ? "down" : (prev.status === "down" ? "down" : "warn"),
+        fails: fails,
+        lastOk: prev.lastOk || null,
+        ms: r.ms,
+        downSince: prev.downSince || (isDown ? now() : null),
+        err: r.err
+      };
+      if (isDown && prev.status !== "down"){
+        const txt = watchLine(t.name + " — НЕ ОТВЕЧАЕТ ⚠️ (" + fails + " попыток) | " + (r.err || "нет ответа"));
+        addFeed("err", txt); addLog(t.name, "down", r.err || "нет ответа");
+        beep(); vibro([300,120,300,120,600]);
+        notify("⚠️ " + t.name + " НЕ ОТВЕЧАЕТ", r.err || "Сервер не отвечает");
+        relay("DOWN", t.name + " не отвечает: " + (r.err || "нет ответа"));
+        autoWake("DOWN", t.name + " (" + t.url + ") — НЕ ОТВЕЧАЕТ, " + fails + " попыток. Ошибка: " + (r.err || "нет ответа"));
+      }
+    }
+  }
+  renderCards();
+}
+
+function start(){
+  if (cfg.running) return;
+  cfg.running = true; saveCfg();
+  addFeed("info", watchLine("запущен. Целей: " + cfg.targets.filter(t=>t.on).length + ", интервал " + cfg.interval + " сек"));
+  addLog("сторож", "start", "интервал " + cfg.interval + " сек");
+  tick();
+  timer = setInterval(tick, cfg.interval * 1000);
+  if (cfg.hourly){
+    hourlyTimer = setInterval(function(){
+      const parts = cfg.targets.filter(t=>t.on).map(function(t){
+        const s = state[t.id] || {};
+        return t.name + ": " + (s.status === "up" ? "OK " + (s.ms||"?") + "мс" : (s.status === "down" ? "УПАЛ" : "?"));
+      });
+      const line = watchLine("час. отчёт | " + parts.join(" | "));
+      addFeed("info", line); addLog("сторож", "hourly", parts.join(" | "));
+      relay("HOUR", parts.join(" | "));
+    }, 3600000);
+  }
+  paintButtons();
+}
+function stop(){
+  cfg.running = false; saveCfg();
+  if (timer) clearInterval(timer); timer = null;
+  if (hourlyTimer) clearInterval(hourlyTimer); hourlyTimer = null;
+  addFeed("info", watchLine("остановлен ⏸"));
+  addLog("сторож", "stop", "");
+  paintButtons();
+}
+
+/* ================= РЕНДЕР ================= */
+function renderCards(){
+  const box = document.getElementById("cards");
+  box.innerHTML = "";
+  const list = cfg.targets.filter(t => t.on);
+  if (!list.length){ box.innerHTML = '<div class="card"><div class="empty">Нет активных целей</div></div>'; return; }
+  list.forEach(function(t){
+    const s = state[t.id] || { status:"unknown" };
+    const cls = s.status === "up" ? "up" : s.status === "down" ? "down" : s.status === "warn" ? "warn" : "";
+    const ico = s.status === "up" ? "🟢" : s.status === "down" ? "🔴" : s.status === "warn" ? "🟡" : "⚪";
+    const txt = s.status === "up" ? "РАБОТАЕТ" : s.status === "down" ? "НЕ ОТВЕЧАЕТ" : s.status === "warn" ? "ПРОВЕРКА... (" + s.fails + ")" : "НЕ ПРОВЕРЯЛСЯ";
+    const el = document.createElement("div");
+    el.className = "status-card " + cls;
+    let meta = "";
+    if (s.status === "up"){
+      meta = "ответ " + (s.ms || "?") + " мс";
+      if (s.lastOk) meta += " · проверено " + hhmmss(s.lastOk);
+    } else if (s.status === "down"){
+      meta = (s.err || "нет ответа") + (s.downSince ? " · лежит с " + hhmmss(s.downSince) + " (" + human(now()-s.downSince) + ")" : "");
+    }
+    el.innerHTML =
+      '<div class="sc-top"><div class="sc-ico">' + t.ico + '</div><div style="min-width:0;flex:1">' +
+        '<div class="sc-name">' + esc(t.name) + '</div>' +
+        '<div class="sc-url">' + esc(t.url === "self" ? location.origin : t.url) + '</div>' +
+      '</div><div style="font-size:22px">' + ico + '</div></div>' +
+      '<div class="sc-state">' + txt + '</div>' +
+      '<div class="sc-meta">' + esc(meta) + '</div>';
+    box.appendChild(el);
+  });
+  const hdot = document.getElementById("hdot");
+  const down = list.some(t => (state[t.id]||{}).status === "down");
+  const warn = list.some(t => (state[t.id]||{}).status === "warn");
+  hdot.className = "dot " + (down ? "down" : warn ? "warn" : (cfg.running ? "up" : ""));
+}
+
+function renderFeed(){
+  const box = document.getElementById("feed");
+  if (!box) return;
+  box.innerHTML = "";
+  if (!feed.length){ box.innerHTML = '<div class="empty">Пока сообщений нет</div>'; return; }
+  feed.slice(-120).forEach(function(m){
+    const d = document.createElement("div");
+    if (m.kind === "boss") d.className = "msg m-boss";
+    else if (m.kind === "wake") d.className = "msg m-wake";
+    else if (m.kind === "arch") d.className = "msg m-arch";
+    else if (m.kind === "err") d.className = "msg m-watch err";
+    else if (m.kind === "ok") d.className = "msg m-watch ok";
+    else d.className = "msg m-watch";
+    d.innerHTML = esc(m.text) + '<span class="m-time">' + hhmmss(m.t) + '</span>';
+    box.appendChild(d);
+  });
+  box.scrollIntoView(false);
+  const p = document.getElementById("page-chat");
+  if (p) p.scrollTop = p.scrollHeight;
+}
+
+function renderLog(){
+  const box = document.getElementById("logbox");
+  if (!box) return;
+  if (!log.length){ box.innerHTML = '<div class="empty">Пока пусто</div>'; return; }
+  box.innerHTML = log.slice(-250).reverse().map(function(l){
+    const b = l.status === "down" ? '<span class="badge bg-err">УПАЛ</span>'
+            : l.status === "up" ? '<span class="badge bg-ok">ОК</span>'
+            : '<span class="badge" style="background:#1a2436;color:#8fa5c0">' + esc(l.status) + '</span>';
+    return '<div class="logline"><span class="t">' + dt(l.t) + '</span> ' + b + ' <b>' + esc(l.target) + '</b> ' + esc(l.info) + '</div>';
+  }).join("");
+}
+
+function renderTargets(){
+  const box = document.getElementById("targets");
+  box.innerHTML = "";
+  cfg.targets.forEach(function(t, i){
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "display:flex;flex-direction:column;gap:6px;padding:9px 0;border-bottom:1px dashed #16233a";
+    wrap.innerHTML =
+      '<div class="row"><div style="flex:1;font-size:13px;font-weight:700">' + t.ico + ' ' + esc(t.name) + '</div>' +
+      '<div class="sw"><input type="checkbox" data-i="' + i + '" class="t-on"' + (t.on ? ' checked' : '') + '><span></span></div></div>' +
+      '<div class="row"><label>URL</label><input type="text" data-i="' + i + '" class="t-url" value="' + esc(t.url) + '"></div>';
+    box.appendChild(wrap);
+  });
+  box.querySelectorAll(".t-url").forEach(function(inp){
+    inp.addEventListener("change", function(){
+      cfg.targets[+inp.dataset.i].url = inp.value.trim() || "self";
+      saveCfg(); state[cfg.targets[+inp.dataset.i].id] = { status:"unknown", fails:0 };
+      renderCards();
+    });
+  });
+  box.querySelectorAll(".t-on").forEach(function(ch){
+    ch.addEventListener("change", function(){
+      cfg.targets[+ch.dataset.i].on = ch.checked;
+      saveCfg(); renderCards();
+    });
+  });
+}
+
+function paintButtons(){
+  document.getElementById("btnStart").style.display = cfg.running ? "none" : "block";
+  document.getElementById("btnStop").style.display  = cfg.running ? "block" : "none";
+  renderCards();
+}
+
+/* ================= ЧАТ С АРХИТЕКТОРОМ ================= */
+async function askArchitect(text){
+  const targets = [ "https://shtab-boss.duckdns.org:8443", (cfg.relay || "").trim() ].filter(Boolean);
+  let lastErr = "нет ответа";
+  for (const url of targets){
+    try {
+      const r = await fetchT(url, "cors", 45000);
+      // fetchT не подходит для POST — делаем отдельно
+      void r;
+    } catch(e){}
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(()=>ctrl.abort(), 120000);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: ARCH_PROMPT },
+            { role: "user", content: text }
+          ],
+          temperature: 0.6
+        })
+      });
+      clearTimeout(to);
+      const data = await res.json();
+      if (data && data.choices && data.choices[0]) return data.choices[0].message.content;
+      if (data && data.error) lastErr = data.error;
+    } catch(e){ lastErr = e.message; }
+  }
+  return "❌ Не смог достучаться ни до одного канала.\nПоследняя ошибка: " + lastErr +
+         "\n\nЕсли сервер лежит — сообщение сохранено в журнале. Напиши Архитектору через основной Штаб, когда поднимется.";
+}
+
+/* ================= UI ================= */
+document.querySelectorAll(".tab").forEach(function(tab){
+  tab.addEventListener("click", function(){
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    const name = tab.dataset.tab;
+    document.getElementById("page-" + name).classList.add("active");
+    document.getElementById("composer").style.display = name === "chat" ? "flex" : "none";
+  });
+});
+
+document.getElementById("btnStart").addEventListener("click", async function(){
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    actx.resume();
+  } catch(e){}
+  try { if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission(); } catch(e){}
+  start();
+});
+document.getElementById("btnStop").addEventListener("click", stop);
+
+document.getElementById("btnTest").addEventListener("click", function(){
+  addFeed("err", watchLine("ТЕСТ СИГНАЛА — так будет выглядеть настоящая тревога"));
+  beep(); vibro([300,120,300,120,600]);
+  notify("⚠️ ТЕСТ СТОРОЖА", "Проверка сигнала тревоги");
+});
+
+document.getElementById("cfgInt").addEventListener("change", function(){
+  cfg.interval = Math.max(5, Math.min(600, +this.value || 15)); this.value = cfg.interval; saveCfg();
+  if (cfg.running){ clearInterval(timer); timer = setInterval(tick, cfg.interval * 1000); }
+});
+document.getElementById("cfgThr").addEventListener("change", function(){
+  cfg.threshold = Math.max(1, Math.min(10, +this.value || 2)); this.value = cfg.threshold; saveCfg();
+});
+["cfgSnd|sound","cfgVib|vibro","cfgNtf|notify","cfgHour|hourly","cfgWake|autowake"].forEach(function(pair){
+  const parts = pair.split("|");
+  const el = document.getElementById(parts[0]);
+  el.addEventListener("change", function(){ cfg[parts[1]] = el.checked; saveCfg(); });
+});
+document.getElementById("cfgRelay").addEventListener("change", function(){
+  cfg.relay = this.value.trim(); saveCfg();
+});
+
+document.getElementById("btnExport").addEventListener("click", function(){
+  const txt = log.map(l => "[" + dt(l.t) + "] " + l.status + " | " + l.target + " | " + l.info).join("\n");
+  const blob = new Blob([txt || "(пусто)"], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "watchdog-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".log";
+  a.click();
+});
+document.getElementById("btnClear").addEventListener("click", function(){
+  if (!confirm("Очистить журнал и ленту?")) return;
+  log = []; feed = []; save(K_LOG, log); save(K_FEED, feed);
+  renderLog(); renderFeed();
+});
+
+document.getElementById("chatSend").addEventListener("click", sendChat);
+document.getElementById("chatIn").addEventListener("keydown", function(e){ if (e.key === "Enter") sendChat(); });
+
+async function sendChat(){
+  const inp = document.getElementById("chatIn");
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = "";
+  addFeed("boss", "👤 БОСС | " + hhmmss(now()) + "\n" + text);
+  const answer = await askArchitect(text);
+  addFeed("arch", "🏛 АРХИТЕКТОР\n" + answer);
+}
+
+/* ================= СТАРТ ================= */
+renderTargets(); renderCards(); renderFeed(); renderLog();
+document.getElementById("cfgInt").value = cfg.interval;
+document.getElementById("cfgThr").value = cfg.threshold;
+document.getElementById("cfgSnd").checked = !!cfg.sound;
+document.getElementById("cfgVib").checked = !!cfg.vibro;
+document.getElementById("cfgNtf").checked = !!cfg.notify;
+document.getElementById("cfgHour").checked = !!cfg.hourly;
+document.getElementById("cfgWake").checked = !!cfg.autowake;
+document.getElementById("cfgRelay").value = cfg.relay || DEFAULT_RELAY;
+paintButtons();
+
+window.addEventListener("online", function(){ addFeed("info", watchLine("сеть вернулась 🌐")); });
+window.addEventListener("offline", function(){ addFeed("err", watchLine("У ЭТОГО ТЕЛЕФОНА ПРОПАЛА СЕТЬ 📵")); beep(); });
+document.addEventListener("visibilitychange", function(){ if (!document.hidden) renderCards(); });
+
+// автозапуск, если был включён
+if (cfg.running){ start(); }
+
+})();
+</script>
+</body>
+</html>

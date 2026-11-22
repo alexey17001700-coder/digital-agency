@@ -6,10 +6,16 @@
     <title>Штаб: Броня</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a0a0a">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <link rel="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0a0a'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='60'>👑</text></svg>">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; position: fixed; top: 0; left: 0; }
-        #app-frame { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; border: none; display: block; }
+        /* Кадр Штаба = ровно видимая область экрана.
+           100vh на телефоне — это высота БЕЗ адресной строки (большой вьюпорт),
+           поэтому низ кадра (поле ввода + панель агентов) прятался под адресной
+           строкой браузера. 100% от body (position:fixed) = видимая область. */
+        #app-frame { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: block; }
         #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #0a0a0a; z-index: 9999999; overflow: hidden; display: flex; justify-content: center; align-items: center; transition: opacity 0.8s ease-out, visibility 0.8s; }
         #splash-screen.hidden { opacity: 0; visibility: hidden; }
         #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
@@ -86,6 +92,41 @@
     </div>
     <script>
         const PROXY = "https://shtab-boss.duckdns.org:8443";
+
+        // === СТОРОЖ ОБОЛОЧКИ (index.html) ===
+        // app.html грузится с ?v=<timestamp> и обновляется сам, а САМА оболочка — нет.
+        // Из-за этого старая закэшированная оболочка залипала на телефоне навсегда:
+        // кнопка «Откатить Штаб» из старой версии снова просила GitHub-токен, хотя
+        // в коде это давно убрано. Теперь оболочка сверяет свой build с shtab_version.json
+        // и, если на сервере новее, жёстко перезагружается в обход кэша (один раз — без петли).
+        // ВАЖНО: читаем СВОЙ файл shtab_version.json, а не общий version.json —
+        // тот принадлежит Калькулятору окон (window_calc) и с Штабом не перемешивается.
+        // Метка сборки оболочки — по ней свежий app.html (кадр) понимает,
+        // что оболочка залипла в кэше, и лечит её.
+        window.SHTAB_SHELL_BUILD = 60;
+        (function () {
+            const SHELL_BUILD = 60;
+            const GUARD_KEY = 'shtabShellReloadBuild';
+            async function checkShellBuild() {
+                try {
+                    const r = await fetch('shtab_version.json?t=' + Date.now(), { cache: 'no-store' });
+                    if (!r.ok) return;
+                    const j = await r.json();
+                    const serverBuild = parseInt(j.build, 10);
+                    if (!serverBuild || serverBuild === SHELL_BUILD) {
+                        try { sessionStorage.removeItem(GUARD_KEY); } catch (e) {}
+                        return;
+                    }
+                    let already = null;
+                    try { already = sessionStorage.getItem(GUARD_KEY); } catch (e) {}
+                    if (already === String(serverBuild)) return; // уже пробовали — не зацикливаемся
+                    try { sessionStorage.setItem(GUARD_KEY, String(serverBuild)); } catch (e) {}
+                    location.replace(location.pathname + '?v=' + Date.now());
+                } catch (e) { /* нет version.json — молча живём дальше */ }
+            }
+            checkShellBuild();
+        })();
+
         const fabMenu = document.getElementById('fab-menu');
         const fabOverlay = document.getElementById('fab-overlay');
         const appFrame = document.getElementById('app-frame');
@@ -115,6 +156,9 @@
         startMatrix();
         let appLoaded = false, minTimePassed = false, aiReady = false;
         setTimeout(() => { minTimePassed = true; hideSplashIfReady(); }, 6000); 
+        // СТРАХОВКА: нейросеть не отчиталась (модель не скачалась, сеть отвалилась) —
+        // не держим Босса на заставке вечно. Через 20 с пускаем в Штаб в любом случае.
+        setTimeout(() => { aiReady = true; hideSplashIfReady(); }, 20000);
         appFrame.onload = () => { appLoaded = true; hideSplashIfReady(); };
         window.updateAILoading = function(pct, status, modelsHtml) {
             const s = document.getElementById('ai-loading-status');
@@ -144,8 +188,21 @@
         function pressSafeKey(num) { if (safePin.length < 4) { safePin += num; document.getElementById('safe-display').innerText = safePin.padEnd(4, '_'); } }
         function clearSafePin() { safePin = ""; document.getElementById('safe-display').innerText = "____"; document.getElementById('safe-display').style.color = "#00e5ff"; }
         function checkSafePin() { if (safePin === CORRECT_PIN) { document.getElementById('safe-display').innerText = "OK"; document.getElementById('safe-display').style.color = "#00ff00"; setTimeout(() => { document.getElementById('safe-lock-container').style.display = 'none'; document.getElementById('save-action-container').style.display = 'block'; }, 300); } else { document.getElementById('safe-display').innerText = "ERR"; document.getElementById('safe-display').style.color = "#ff0000"; setTimeout(clearSafePin, 1000); } }
-        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isBackup: true }) }); const d = await res.json(); if (d.success) alert("✅ Сохранено!"); else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
-        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { const res = await fetch(PROXY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRollback: true }) }); const d = await res.json(); if (d.success) { alert("✅ Откат выполнен!"); appFrame.src = "app.html?v=" + Date.now(); } else throw new Error(d.error); } catch (e) { alert("❌ " + e.message); } }
+        // === БЭКАП И ОТКАТ ЧЕРЕЗ СЕРВЕР (токен только в памяти сервера, у пользователя не спрашиваем) ===
+        async function shtabBackup(isBackup) {
+            const res = await fetch(PROXY, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(isBackup ? { isBackup: true, isBoss: true } : { isRollback: true, isBoss: true })
+            });
+            let data = null;
+            try { data = await res.json(); } catch (_e) { data = null; }
+            if (!data) throw new Error("Сервер не ответил");
+            if (!data.success) throw new Error(data.error || "Ошибка сервера");
+            return data.message || "Готово";
+        }
+        async function triggerBackup() { toggleMenu(); if (!confirm("💾 Сохранить эталон?")) return; try { alert("✅ " + await shtabBackup(true)); } catch (e) { alert("❌ " + e.message); } }
+        async function triggerRollback() { toggleMenu(); if (!confirm("⚠️ Откатить Штаб?")) return; try { alert("✅ " + await shtabBackup(false)); appFrame.src = "app.html?v=" + Date.now(); } catch (e) { alert("❌ " + e.message); } }
     </script>
 </body>
 </html>
