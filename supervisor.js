@@ -299,10 +299,7 @@
     async function supDispatch(text, owner) {
         supBusyCount++;
         try {
-            if (owner === 'assistant' && typeof window.sendToAssistant === 'function') {
-                const ok = await window.sendToAssistant(text);
-                if (ok) supAnswered('assistant'); else supFailed('assistant', 'Помощник не ответил');
-            } else if (owner === 'free' && typeof window.sendToFreeModel === 'function') {
+            if (owner === 'free' && typeof window.sendToFreeModel === 'function') {
                 const ok = await window.sendToFreeModel(text);
                 if (ok) supAnswered('free'); else supFailed('free', 'Бесплатная модель не ответила');
             } else if (owner === 'arch' && typeof window.sendMessage === 'function') {
