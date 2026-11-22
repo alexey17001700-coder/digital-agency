@@ -253,9 +253,8 @@ function setArchitectEnabled(on) {
     if (!on && selectedAIModel === 'zveno') {
         // Выключили Архитектора — уводим на прежнюю/бесплатную модель.
         const prev = localStorage.getItem('shtabAIModelBeforeArch') || '';
-        const f = freeModels();
-        selectedAIModel = (prev && prev !== 'zveno' && getModelInfo(prev)) ? prev
-            : (f.length ? f[0].id : 'gigachat');
+        selectedAIModel = (prev && prev !== 'zveno' && getModelInfo(prev) && modelEnabled(prev)) ? prev
+            : firstFreeId();
         try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
     }
     if (typeof applyArchitectButton === 'function') applyArchitectButton();
