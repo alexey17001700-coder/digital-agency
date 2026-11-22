@@ -457,6 +457,41 @@ function toggleKeyVisibility(inputId, btn) {
    Тап по плашке — панель с деталями и кнопкой перечитать. */
 let __versionData = null;
 
+/* --- ПРОВЕРКА: ТОТ ЛИ app.html КРУТИТСЯ В КАДРЕ ---
+   Босс: «я не обновился, а версия наверху сменилась». Причина: плашка читает
+   shtab_version.json с сервера и показывает НОВУЮ версию, а в кадре при этом
+   может крутиться СТАРЫЙ app.html из кэша браузера. Теперь кадр несёт свою
+   сборку (window.SHTAB_APP_BUILD) и сверяется с серверной:
+   - сборки совпали → всё честно, ничего не делаем;
+   - сервер новее → плашка честно пишет «старая сборка» и кадр перезагружается
+     в обход кэша (не больше 2 попыток подряд — защита от петли).
+   Так версия наверху и реально загруженный код больше не расходятся. */
+const APP_BUILD_GUARD_KEY = 'shtabAppBuildReload';
+
+function checkAppBuild(d) {
+    const loaded = parseInt(window.SHTAB_APP_BUILD, 10);
+    const server = parseInt(d && d.build, 10);
+    if (!loaded || !server || loaded === server) {
+        try { sessionStorage.removeItem(APP_BUILD_GUARD_KEY); } catch (e) {}
+        return;
+    }
+    const el = document.getElementById('version-text');
+    const box = document.getElementById('status-version');
+    if (el) el.innerText = 'v' + d.version + ' · ⚠️ старая сборка';
+    if (box) {
+        box.style.borderColor = '#ff0055';
+        box.title = 'В кадре старая сборка ' + loaded + ', на сервере ' + server + ' — перезагружаю в обход кэша';
+    }
+    let tries = 0;
+    try { tries = parseInt(sessionStorage.getItem(APP_BUILD_GUARD_KEY) || '0', 10) || 0; } catch (e) {}
+    if (tries >= 2) return;
+    try { sessionStorage.setItem(APP_BUILD_GUARD_KEY, String(tries + 1)); } catch (e) {}
+    setTimeout(() => {
+        try { location.replace(location.pathname + '?v=' + Date.now()); }
+        catch (e) { location.reload(); }
+    }, 600);
+}
+
 async function loadVersionCounter() {
     const el = document.getElementById('version-text');
     if (!el) return;
