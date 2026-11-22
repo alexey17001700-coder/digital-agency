@@ -482,7 +482,8 @@
             const seen = seenVersionGet();
             if (!force && seen === ver) return;   // это обновление уже видели — не мешаем
             buildUpdateNotice(d, force ? null : seen);
-            seenVersionSet(ver);
+            // Метку «видел» здесь НЕ ставим: она пишется только в момент
+            // закрытия окна (closeUpdateNotice). Босс: закрыл — больше не вылезает.
         } catch (e) {
             console.warn('Модалка обновления: shtab_version.json не прочитан', e);
         }
