@@ -1119,7 +1119,7 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
 // ИНСТРУМЕНТЫ НЕ ЛОМАЮТСЯ: каждый шаг работает СВОИМ родным механизмом —
 // Zveno через OpenAI tools, GigaChat через functions Сбера.
 // =========================================
-const DUET_MAX_STEPS = 3;
+const DUET_MAX_STEPS = 7;
 
 /* ⚡ БЮДЖЕТ ДУЭТА (приказ Босса): черновики КОРОТКИЕ.
    Шаги 1 и 2 — без инструментов и с лимитом токенов: только суть и замечания.
