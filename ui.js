@@ -92,62 +92,9 @@ function setMode(mode) {
     saveAll();
 }
 
-/* --- КНОПКА 🧠 ПЛАТНЫЕ ---
-   Листает ТОЛЬКО платные модели. Бесплатные не трогает — у них своя кнопка.
-   Долгое нажатие — панель выбора моделей (там же переключатель платных). */
-function applyAIModelButton() {
-    const btn = document.getElementById('btnAIModel');
-    if (!btn) return;
-    // Платная модель выбрана, а платные отключены — молча уходим на бесплатную.
-    if (typeof resolveAllowedModel === 'function') {
-        const fixed = resolveAllowedModel(selectedAIModel);
-        if (fixed !== selectedAIModel) { selectedAIModel = fixed; localStorage.setItem('shtabAIModel', fixed); }
-    }
-    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
-    const paid = (typeof paidModels === 'function') ? paidModels() : [];
-    /* Платных моделей в Штабе больше нет — кнопка 🧠 не нужна, прячем. */
-    if (!paid.length) {
-        btn.style.display = 'none';
-        if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
-        if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
-        return;
-    }
-    btn.style.display = '';
-    const cur = paid.find(m => m.id === selectedAIModel);
-    if (cur) {
-        btn.innerText = '🧠 Платные: ' + cur.label;
-        btn.style.background = cur.color || '#333';
-        btn.style.color = cur.text || '#aaa';
-    } else if (!on) {
-        btn.innerText = '🧠 Платные: ВЫКЛ';
-        btn.style.background = '#333'; btn.style.color = '#777';
-    } else {
-        btn.innerText = '🧠 Платные: выбрать';
-        btn.style.background = '#333'; btn.style.color = '#aaa';
-    }
-    if (typeof applyFreeModelButton === 'function') applyFreeModelButton();
-    // Выбрали другую модель — кнопка 🟣 GigaChat гаснет сама (состояние не врёт).
-    if (typeof updateGigaChatButtonVisual === 'function') updateGigaChatButtonVisual();
-}
-
-function toggleAIModel() {
-    const on = (typeof paidEnabled === 'function') ? paidEnabled() : true;
-    const list = (typeof paidModels === 'function') ? paidModels() : [];
-    if (!on) {
-        if (typeof renderMessage === 'function') renderMessage('🔒 *[Система: платные модели отключены. Долгое нажатие на 🧠 — включить.]*', 'director', 'Оркестратор');
-        return;
-    }
-    if (!list.length) {
-        if (typeof renderMessage === 'function') renderMessage('💳 *[Система: платных моделей в списке нет.]*', 'director', 'Оркестратор');
-        return;
-    }
-    let idx = list.findIndex(m => m.id === selectedAIModel);
-    if (idx < 0) idx = -1;
-    selectedAIModel = list[(idx + 1) % list.length].id;
-    localStorage.setItem('shtabAIModel', selectedAIModel);
-    applyAIModelButton();
-    if (typeof renderMessage === 'function') renderMessage('🧠 *[Система: платная модель ' + getModelInfo(selectedAIModel).label + ']*', 'director', 'Оркестратор');
-}
+/* --- КНОПКИ 🧠 ПЛАТНЫЕ И 🆓 БЕСПЛАТНЫЕ УБРАНЫ (приказ Босса) ---
+   В Штабе строго два канала: 🅰️ Zveno и 🟣 GigaChat.
+   Списков моделей и перебора больше нет — эти кнопки не нужны. */
 
 /* --- КНОПКА 🆓 БЕСПЛАТНЫЕ ---
    Листает ТОЛЬКО бесплатные модели (free: true). Платные не трогает.
