@@ -1265,9 +1265,9 @@ async function callDuet(messages: any[], userKeys: any, gcKey: string): Promise<
         addLine("zveno", plan);
     } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 3 (Zveno) упал: ${lastErr}`); }
 
-    // ШАГ 4 — 🟣 GigaChat: вторая ремарка.
+    // ШАГ 4 — 🟣 GigaChat: мега-кодер 3D (как собрать технически).
     try {
-        const r = await gShort(DUET_REMARK_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ:\n${talk()}`, DUET_REMARK_TOKENS);
+        const r = await gShort(DUET_3D_PROMPT, `ВОПРОС БОССА:\n${question}\n\nОБСУЖДЕНИЕ:\n${talk()}`, DUET_REMARK_TOKENS);
         addLine("giga", r);
     } catch (e: any) { lastErr = e?.message || String(e); zlog(`[DUET] шаг 4 (GigaChat) упал: ${lastErr}`); }
 
