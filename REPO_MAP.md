@@ -41,7 +41,6 @@
 - `style.css` — стили
 - `sw.js` — service worker
 - `sync.sh` — синхронизация каждые 10 сек
-- `test1.js`
 - `three.module.js` — Three.js
 - `ui.js` — интерфейс
 - `version.json`
