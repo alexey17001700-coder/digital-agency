@@ -355,6 +355,142 @@ function bindAIModelButton() {
         toggleAIModel();
     });
 }
+/* =========================================
+   🅰️ МЕНЮ АРХИТЕКТОРА (ZVENO) — ОТДЕЛЬНЫЙ КАНАЛ
+   Тап по кнопке 🅰️ открывает это меню. Здесь две вещи:
+   1) ВКЛ / ВЫКЛ канала — пока выключен, ZVENO не выбирается
+      и не подставляется ни автоподбором, ни автосменой;
+   2) СВОЙ КЛЮЧ Архитектора — отдельно от общих ключей.
+   Ключ на устройстве (localStorage) и уходит на сервер в запросе
+   (userKeys.architectKey). В код и в Git он НИКОГДА не пишется.
+   ========================================= */
+function openArchitectPanel() {
+    const old = document.getElementById('architectPanel');
+    if (old) old.remove();
+
+    const on = (typeof architectEnabled === 'function') ? architectEnabled() : false;
+    const savedKey = (typeof architectKey === 'function') ? architectKey() : '';
+
+    const ov = document.createElement('div');
+    ov.id = 'architectPanel';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:340px;background:#0d1418;border:1px solid #00e5ff;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,229,255,.18);max-height:85vh;overflow-y:auto;';
+
+    const title = document.createElement('div');
+    title.textContent = '🅰️ АРХИТЕКТОР (ZVENO)';
+    title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;color:#00e5ff;margin-bottom:4px;';
+    box.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.textContent = 'Отдельный канал. Автоподбор и автосмена его не трогают.';
+    sub.style.cssText = 'font-size:11px;color:#8b98a5;line-height:1.4;margin-bottom:12px;';
+    box.appendChild(sub);
+
+    /* --- ВКЛ / ВЫКЛ --- */
+    const sw = document.createElement('button');
+    sw.textContent = on ? '● ВКЛ — тап, чтобы выключить' : '○ ВЫКЛ — тап, чтобы включить';
+    sw.style.cssText = 'display:block;width:100%;text-align:left;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid ' + (on ? '#00e5ff' : '#2a333d') + ';background:' + (on ? 'rgba(0,229,255,.14)' : 'transparent') + ';color:' + (on ? '#00e5ff' : '#8b98a5') + ';';
+    sw.onclick = () => {
+        if (typeof setArchitectEnabled !== 'function') return;
+        setArchitectEnabled(!on);
+        openArchitectPanel();   // перерисовать меню под новое состояние
+    };
+    box.appendChild(sw);
+
+    const st = document.createElement('div');
+    st.textContent = savedKey ? '🔑 Ключ вписан: •••••••• (хранится на устройстве)' : '🔑 Ключ не вписан — Архитектор не ответит';
+    st.style.cssText = 'font-size:11px;color:' + (savedKey ? '#7ee08a' : '#ff8888') + ';margin:10px 0 6px;line-height:1.4;';
+    box.appendChild(st);
+
+    /* --- СВОЙ КЛЮЧ --- */
+    const keyWrap = document.createElement('div');
+    keyWrap.style.cssText = 'position:relative;margin-bottom:8px;';
+    const keyInput = document.createElement('input');
+    keyInput.type = 'password';
+    keyInput.id = 'architectKeyInput';
+    keyInput.className = 'modal-textarea';
+    keyInput.placeholder = savedKey ? 'Новый ключ ZVENO (пусто — оставить текущий)' : 'Ключ ZVENO';
+    keyInput.style.cssText = 'height:40px;margin-bottom:0;padding-right:42px;width:100%;box-sizing:border-box;';
+    const eye = document.createElement('button');
+    eye.textContent = '👁';
+    eye.style.cssText = 'position:absolute;right:10px;top:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#aaa;';
+    eye.onclick = () => { keyInput.type = keyInput.type === 'password' ? 'text' : 'password'; eye.textContent = keyInput.type === 'password' ? '👁' : '🙈'; };
+    keyWrap.appendChild(keyInput); keyWrap.appendChild(eye);
+    box.appendChild(keyWrap);
+
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:12px;line-height:1.4;margin-bottom:8px;min-height:14px;';
+    box.appendChild(msg);
+
+    const setMsg = (t, color) => { msg.textContent = t || ''; msg.style.color = color || '#8b98a5'; };
+
+    const btnRow = (label, bg, color, border, fn) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.style.cssText = 'display:block;width:100%;padding:11px;margin-top:8px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';';
+        b.onclick = fn;
+        box.appendChild(b);
+        return b;
+    };
+
+    btnRow('💾 Сохранить ключ', '#00e5ff', '#000', '#00e5ff', () => {
+        const v = String(keyInput.value || '').trim();
+        if (!v) { setMsg(savedKey ? 'Ключ не изменён.' : 'Впиши ключ — поле пустое.', '#ffd700'); return; }
+        if (typeof setArchitectKey !== 'function') { setMsg('Функция ключа не загружена.', '#ff8888'); return; }
+        setArchitectKey(v);
+        keyInput.value = '';
+        setMsg('✅ Ключ сохранён на устройстве.', '#7ee08a');
+        if (typeof applyArchitectButton === 'function') applyArchitectButton();
+        if (typeof syncModeButtons === 'function') syncModeButtons();
+        setTimeout(() => openArchitectPanel(), 700);
+    });
+
+    btnRow('🔌 Проверить связь с ключом', 'transparent', '#00e5ff', '#00e5ff', async () => {
+        const v = String(keyInput.value || '').trim() || savedKey;
+        if (!v) { setMsg('Проверять нечего — ключ не вписан.', '#ffd700'); return; }
+        setMsg('Проверяю…', '#8b98a5');
+        try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 30000);
+            const r = await fetch(PROXY, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: 'ку' }],
+                    temperature: 0.2, model: 'zveno',
+                    userKeys: { architectKey: v }, isBoss: true
+                }),
+                signal: ctrl.signal
+            });
+            clearTimeout(tid);
+            const d = await r.json().catch(() => ({}));
+            const txt = (d && d.choices && d.choices[0]) ? String(d.choices[0].message.content || '').trim() : '';
+            if (txt) { setMsg('✅ Ключ живой. Ответ: ' + txt.slice(0, 80), '#7ee08a'); }
+            else { setMsg('❌ Не ответил: ' + ((d && d.error) || ('HTTP ' + r.status)), '#ff8888'); }
+        } catch (e) {
+            setMsg('❌ ' + ((e && e.name === 'AbortError') ? 'таймаут 30 с' : ((e && e.message) || 'сбой сети')), '#ff8888');
+        }
+    });
+
+    btnRow('🗑️ Удалить ключ', 'transparent', '#ff6688', '#ff0055', () => {
+        if (!confirm('Удалить ключ Архитектора с этого устройства?')) return;
+        if (typeof setArchitectKey === 'function') setArchitectKey('');
+        setMsg('Ключ удалён.', '#ff8888');
+        setTimeout(() => openArchitectPanel(), 700);
+    });
+
+    const close = document.createElement('button');
+    close.textContent = 'ЗАКРЫТЬ';
+    close.style.cssText = 'display:block;width:100%;padding:10px;margin-top:12px;border:1px solid #2a333d;border-radius:9px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;';
+    close.onclick = () => ov.remove();
+    box.appendChild(close);
+
+    ov.appendChild(box);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+}
+window.openArchitectPanel = openArchitectPanel;
+
 function refreshShtab() {
     if (!confirm("🔄 Обновить Штаб? Страница перезагрузится.")) return;
     if ('caches' in window) {
