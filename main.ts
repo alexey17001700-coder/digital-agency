@@ -965,8 +965,9 @@ async function gigachatToken(userKey: string = ""): Promise<string> {
         throw new Error(`GigaChat OAuth ${res.status}: ${data?.message || data?.error || "нет токена"}`);
     }
     gcToken = data.access_token;
+    gcTokenKey = key;
     gcTokenExp = Number(data.expires_at) || (now + 25 * 60 * 1000);
-    zlog(`[GIGACHAT] получен access_token, scope=${GIGACHAT_SCOPE}`);
+    zlog(`[GIGACHAT] получен access_token, scope=${GIGACHAT_SCOPE}, ключ: ${String(userKey || "").trim() ? "свой (Босс)" : "серверный"}`);
     return gcToken;
 }
 
