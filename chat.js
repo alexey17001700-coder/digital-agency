@@ -1973,19 +1973,8 @@ function init() {
     if (typeof syncTandemBtn === 'function') syncTandemBtn();   // кнопка 🤝 Тандем показывает сохранённое состояние
 }
 
-/* --- ТАНДЕМ: АРХИТЕКТОР = ПЛАТНАЯ МОДЕЛЬ ---
-   Приказ Босса: в тандеме роль Архитектора играет ПЛАТНАЯ модель,
-   GigaChat остаётся второй стороной (Оркестратор).
-   Объявление стоит НИЖЕ старого — в JS последнее объявление с тем же
-   именем перекрывает предыдущее, поэтому старая версия не вызывается. */
-function tandemArchModel() {
-    const cur = getModelInfo(selectedAIModel);
-    if (cur && !cur.free && cur.id !== 'gigachat') return cur.id;   // выбрана платная — она и Архитектор
-    if (paidEnabled()) {
-        const paid = paidModels();
-        if (paid.length) return paid[0].id;                          // первая доступная платная
-    }
-    const free = freeModels();
-    if (free.length) return free[0].id;                              // платные выключены — бесплатная
-    return 'yandex';
-}
+/* --- ДУБЛЬ tandemArchModel УБРАН ---
+   Здесь лежала ВТОРАЯ (перекрывающая) версия tandemArchModel — из-за неё
+   модель голоса тандема считалась двумя разными способами, и было непонятно,
+   кто реально отвечает. Теперь модель голоса одна на всё: tandemVoiceModel()
+   по реестру маршрутов AGENT_ROUTES. */
