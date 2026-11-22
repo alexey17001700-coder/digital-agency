@@ -1,7 +1,16 @@
 /* ============================================================
-   НАДЗИРАТЕЛЬ — supervisor.js  v1.8-duet
+   НАДЗИРАТЕЛЬ — supervisor.js  v2.0-lean
    ------------------------------------------------------------
    Следит за диалогом Босса в Штабе и не даёт задаче умереть молча.
+
+   ЧТО ИЗМЕНИЛОСЬ В v2.0 (пересмотр под нынешние потребности Штаба):
+     • Вычищен весь мёртвый код убранных функций: передача задачи
+       другому агенту, дележ большой задачи между моделями, опрос
+       ИИ-шлюза :8002 (его больше нет). Файл стал вдвое короче и честнее.
+     • Настройки приведены к реальности Штаба: два канала (🅰️ Zveno,
+       🟣 GigaChat) + режим ⚡ Дуэт. Перебора моделей и дележа НЕТ.
+     • Пороги синхронизированы с chat.js: 330 с одиночный запрос,
+       630 с дуэт (сервер гонит два запроса подряд), заморозка 5 с.
 
    ГЛАВНЫЙ ПОРОГ: 330 СЕКУНД (реальный предел кнопки «Отправить»),
    в дуэте — 630 с (сервер гонит ДВА запроса подряд: Zveno → GigaChat).
@@ -9,11 +18,10 @@
    Пока лимит не вышел — агент считается живым, передача НЕ делается,
    сколько бы он ни думал.
 
-   ЖИЗНЬ (передача НЕ делается):
+   ЖИЗНЬ (задача НЕ останавливается):
      • на кнопке «Отправить» тикает счётчик;
      • isGenerating == true и прошло меньше 330 с (в дуэте — 630 с);
      • идёт авто-пинок «продолжи», следующий этап [ЭТАП N/M];
-     • большая задача разбита на части — каждая часть у своего агента;
      • печатается ответ (typingTimer) или в ленте было движение.
 
    СМЕРТЬ (задача останавливается, слово Боссу):
@@ -38,28 +46,21 @@
 (function () {
     'use strict';
 
-    const SUP_KEY = 'shtabSupervisor';
-    const SUP_LIMIT_MS = 330000;      // 330 с — реальный предел кнопки «Отправить» (chat.js: TIMER_MAX_MS)
-    const SUP_DUET_LIMIT_MS = 630000; // ⚡ Дуэт: сервер гонит ДВА запроса подряд (Zveno → GigaChat) — ждём вдвое дольше (chat.js: DUET_TIMEOUT_MS)
-    const SUP_FREEZE_MS = 5000;     // счётчик не менялся 5 с — считаем застывшим (chat.js: TIMER_FREEZE_MS)
-    const SUP_TICK_MS = 3000;       // проверка каждые 3 с
-    const SUP_MAX_HANDOFFS = 2;     // не больше 2 передач на одну задачу (стоп-кран)
-    const SUP_TEXT_LIMIT = 2000;    // столько текста задачи храним в журнале
-    const SUP_ALIVE_MS = 120000;    // признак жизни держится 120 с: агент работает — передача запрещена
-    const SUP_ACTIVITY_MS = 45000;  // движение в ленте за это время = агент жив
-    const SUP_DISTRIBUTE_MAX = 3;   // не больше 3 агентов на одну большую задачу
-    const SUP_NUDGE_MAX = 2;        // столько раз просим разбить задачу на этапы, потом передаём
-    const SUP_PING_TTL_MS = 30000;  // опрос «кто онлайн» кэшируем 30 с — модели не долбим
-    const SUP_PING_TIMEOUT = 20000; // сколько ждём /ai/ping
+    /* ---------- НАСТРОЙКИ (под нынешние потребности Штаба) ---------- */
+    const SUP_KEY = 'shtabSupervisor';   // ключ журнала в localStorage
+    const SUP_LIMIT_MS = 330000;         // 330 с — предел одиночного запроса (chat.js: TIMER_MAX_MS)
+    const SUP_DUET_LIMIT_MS = 630000;    // ⚡ Дуэт: два запроса подряд (Zveno → GigaChat) — ждём вдвое дольше (chat.js: DUET_TIMEOUT_MS)
+    const SUP_FREEZE_MS = 5000;          // счётчик не менялся 5 с — считаем застывшим (chat.js: TIMER_FREEZE_MS)
+    const SUP_TICK_MS = 3000;            // проверка каждые 3 с
+    const SUP_TEXT_LIMIT = 2000;         // столько текста задачи храним в журнале
+    const SUP_ALIVE_MS = 120000;         // признак жизни держится 120 с: агент работает — остановка запрещена
+    const SUP_ACTIVITY_MS = 45000;       // движение в ленте за это время = агент жив
 
     const OWNER_LABEL = {
         arch: '🅰️ Zveno (Архитектор)',
         free: '🟣 GigaChat',
         duet: '⚡ Дуэт (Zveno + GigaChat)'
     };
-    /* ПЕРЕБОРА И ПЕРЕДАЧИ НЕТ (приказ Босса): цепочка замены пустая.
-       Отвечает только та модель, что выбрал Босс. */
-    const OWNER_NEXT = {};
 
     /* ---------- РЕЖИМ ШТАБА: ⚡ ДУЭТ ----------
        Босс включил ⚡ Дуэт — задачу ведут ОБА канала: 🅰️ Zveno пишет
@@ -82,11 +83,9 @@
     }
 
     let supTimer = null;
-    let supBusyCount = 0;           // идёт передача задачи — надзиратель не мешает сам себе
-    let supAliveUntil = 0;          // до этого времени задача считается ЖИВОЙ — передача запрещена
-    let supLastActivity = 0;        // когда в ленте последний раз было движение (печать/ответ)
-    let supStageInfo = null;        // { cur, total } — задача разбита на этапы, это НЕ молчание
-    let supDistributed = false;     // большую задачу уже раскидали по агентам — второй раз не раскидываем
+    let supAliveUntil = 0;        // до этого времени задача считается ЖИВОЙ — остановка запрещена
+    let supLastActivity = 0;      // когда в ленте последний раз было движение (печать/ответ)
+    let supStageInfo = null;      // { cur, total } — задача разбита на этапы, это НЕ молчание
 
     /* ---------- ЖУРНАЛ ---------- */
 
@@ -106,14 +105,13 @@
     function ownerLabel(o) { return OWNER_LABEL[o] || ('👤 ' + o); }
 
     /* ---------- ЖИВОЙ АГЕНТ: ПРИЗНАКИ ЖИЗНИ ----------
-       Передача задачи — только когда агент МЁРТВ. Пока он работает,
+       Остановка задачи — только когда агент МЁРТВ. Пока он работает,
        надзиратель молчит и ждёт. Признаки жизни:
        1) идёт запрос (isGenerating) или печатается ответ (typingTimer);
        2) крутятся этапы большой задачи ([ЭТАП N/M], N < M);
-       3) запущены фоновые задачи ([TASK:...]) или «раздели задачу»;
-       4) в ленте было движение за последние SUP_ACTIVITY_MS;
-       5) chat.js явно позвал supAlive() (этап, Совет, фон, ответ).
-       Любой из них — задача живая, передача запрещена. */
+       3) в ленте было движение за последние SUP_ACTIVITY_MS;
+       4) chat.js явно позвал supAlive() (этап, ответ, пинок).
+       Любой из них — задача живая, остановка запрещена. */
     function supAlive(ms) {
         supAliveUntil = Math.max(supAliveUntil, Date.now() + (ms || SUP_ALIVE_MS));
     }
@@ -134,29 +132,23 @@
         try { if (typeof isGenerating !== 'undefined' && isGenerating) return true; } catch (e) {}
         return false;
     }
-    function supDirectorCount() {
-        try {
-            const c = document.getElementById('chatContainer');
-            return c ? c.querySelectorAll('.msg-director').length : 0;
-        } catch (e) { return 0; }
-    }
 
     /* ---------- БОЛЬШАЯ ЗАДАЧА: ЭТАПЫ ----------
        Модель разбила задачу на этапы ([ЭТАП N/M]). Это НЕ молчание:
        задача живая, пока этапы идут. Надзиратель запоминает разбивку
-       и не передаёт задачу другому. */
+       и не останавливает задачу. */
     function supStage(stage) {
         if (!stage || !stage.total) { supStageInfo = null; return; }
         supStageInfo = { cur: Number(stage.cur) || 1, total: Number(stage.total) || 1 };
         supAlive(SUP_ALIVE_MS);
         const st = supLoad();
         if (st) { st.big = supStageInfo.total > 1; st.stage = supStageInfo.cur + '/' + supStageInfo.total; supSave(st); }
-        supLog('🧩 Задача разбита на этапы ' + supStageInfo.cur + '/' + supStageInfo.total + ' — агент жив, передача не нужна');
+        supLog('🧩 Задача разбита на этапы ' + supStageInfo.cur + '/' + supStageInfo.total + ' — агент жив, остановка не нужна');
     }
 
-    /* Задача взята в работу. owner: 'arch' | 'assistant' | 'free' | имя агента */
+    /* Задача взята в работу. owner: 'arch' | 'free' | 'duet' */
     function supStart(text, owner) {
-        supStageInfo = null; supDistributed = false;   // новая задача — этапы и распределение с нуля
+        supStageInfo = null;                           // новая задача — этапы с нуля
         supLastActivity = 0;                           // прошлая жизнь не считается
         supAlive(SUP_ALIVE_MS);                        // агент только взял задачу — он жив
         if (supDuetOn()) owner = 'duet';               // ⚡ Дуэт: задачу ведут оба канала
@@ -167,30 +159,22 @@
             text: String(text || '').slice(0, SUP_TEXT_LIMIT),
             owner: owner || 'arch',
             status: 'waiting',                 // waiting | answered | failed
-            handoffs: 0,
             startedAt: now,
             lastSeen: now,
             lastTimerText: '',
             lastTimerChange: now,
-            parts: [],
-            partIndex: 0,
             history: history
         });
         supLog('📋 Задачу взял ' + ownerLabel(owner));
-
-        /* БОЛЬШАЯ ЗАДАЧА + НЕСКОЛЬКО АГЕНТОВ ОНЛАЙН → делим сразу.
-           Надзиратель опрашивает агентов, считает, кто на связи, и раскидывает
-           задачу между ними. Это НЕ передача: счётчик handoffs не растёт. */
-        /* ❗ ДЕЛЕЖА И ПЕРЕБОРА НЕТ (приказ Босса): задача целиком у выбранной модели. */
     }
 
     /* Задача продолжается: авто-пинок, следующий этап, повтор после сбоя.
-       Журнал переоткрываем — агент снова в работе, передавать некому. */
+       Журнал переоткрываем — агент снова в работе. */
     function supResume(owner) {
         const st = supLoad();
         if (!st) return;
         const now = Date.now();
-        if ((!st.parts || !st.parts.length) && !st.owner) st.owner = owner || 'arch';   // ⚡ дуэт не перебиваем
+        if (!st.owner) st.owner = owner || 'arch';     // ⚡ дуэт не перебиваем
         st.status = 'waiting';
         st.startedAt = now;
         st.lastSeen = now;
@@ -205,39 +189,16 @@
     function supHeartbeat(owner) {
         const st = supLoad();
         if (!st) return;
-        if (owner && !(st.parts && st.parts.length) && st.owner && !supSameOwner(owner, st.owner)) return;
+        if (owner && st.owner && !supSameOwner(owner, st.owner)) return;
         st.lastSeen = Date.now();
         supSave(st);
     }
 
-    /* Агент ответил. Если задача разбита на части — двигаем очередь дальше. */
+    /* Агент ответил — задача закрыта. */
     function supAnswered(owner) {
         const st = supLoad();
         if (!st) return;
         supNoteActivity();   // ответ пришёл — агент жив, задача не брошена
-
-        if (st.parts && st.parts.length) {
-            const p = st.parts[st.partIndex];
-            if (p) { p.status = 'done'; p.lastSeen = Date.now(); }
-            const nextIdx = st.parts.findIndex(function (x) { return x.status !== 'done' && x.status !== 'failed'; });
-            if (nextIdx === -1) {
-                st.status = 'answered';
-                st.lastSeen = Date.now();
-                supSave(st);
-                supLog('✅ Разбитая задача собрана — все ' + st.parts.length + ' частей готовы');
-                return;
-            }
-            st.partIndex = nextIdx;
-            st.status = 'waiting';
-            st.lastSeen = Date.now();
-            st.lastTimerChange = Date.now();
-            st.lastTimerText = '';
-            supSave(st);
-            supLog('🧩 Часть ' + (nextIdx + 1) + '/' + st.parts.length + ' → ' + ownerLabel(st.parts[nextIdx].owner));
-            supDispatchPart(st.parts[nextIdx]);
-            return;
-        }
-
         if (owner && st.owner && !supSameOwner(owner, st.owner)) return;   // ответил не тот, кто ведёт — не закрываем
         st.status = 'answered';
         st.lastSeen = Date.now();
@@ -246,7 +207,7 @@
     }
 
     /* Агент сорвался (ошибка, пустой ответ, обрыв).
-       Не просто помечаем сбой — сразу пробуем передать задачу дальше. */
+       Перебора моделей нет — задача останавливается, слово Боссу. */
     function supFailed(owner, reason) {
         const st = supLoad();
         if (!st) return;
@@ -256,271 +217,21 @@
         st.reason = String(reason || 'сбой').slice(0, 300);
         supSave(st);
         supLog('⚠️ ' + ownerLabel(owner || st.owner) + ' сорвался — ' + st.reason);
-        supHandoff();                          // пробуем следующего по цепочке
+        supHandoff();                          // перебора нет — просто стоп
     }
 
-    /* ---------- ПЕРЕДАЧА ЗАДАЧИ ---------- */
-
+    /* ---------- ОСТАНОВКА ЗАДАЧИ ----------
+       ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
+       Задача НЕ передаётся другой модели: отвечает только та модель,
+       что выбрал Босс (или дуэт). Сбой — стоп и слово Боссу. */
     function supHandoff() {
         const st = supLoad();
         if (!st) return;
         if (st.status === 'answered') return;
-        /* ❗ ПЕРЕБОРА МОДЕЛЕЙ НЕТ (приказ Босса).
-           Задача НЕ передаётся другой модели (ни бесплатной, ни агенту):
-           отвечает только та модель, что выбрал Босс. Сбой — стоп и слово Боссу. */
         st.status = 'failed';
         st.lastSeen = Date.now();
         supSave(st);
         supLog('🛑 Перебора моделей нет — задача остановлена. Жду Босса.');
-        return;
-
-        /* Разбитая задача: передаём ТОЛЬКО зависшую часть, остальные не трогаем. */
-        if (st.parts && st.parts.length) {
-            const p = st.parts[st.partIndex];
-            if (!p) { supStopKran(st); return; }
-            if ((p.handoffs || 0) >= SUP_MAX_HANDOFFS) {
-                p.status = 'failed';
-                supSave(st);
-                supLog('🛑 Часть ' + (st.partIndex + 1) + ' не сделана (' + ownerLabel(p.owner) + ') — нужен Босс');
-                return;
-            }
-            const next = OWNER_NEXT[p.owner] || 'free';
-            p.handoffs = (p.handoffs || 0) + 1;
-            const prev = p.owner;
-            p.owner = next;
-            p.lastSeen = Date.now();
-            st.lastSeen = Date.now();
-            st.lastTimerChange = Date.now();
-            st.lastTimerText = '';
-            supSave(st);
-            supLog('🔄 Часть ' + (st.partIndex + 1) + ': ' + ownerLabel(prev) + ' → ' + ownerLabel(next) + ' (' + p.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
-            supDispatchPart(p);
-            return;
-        }
-
-        if ((st.handoffs || 0) >= SUP_MAX_HANDOFFS) { supStopKran(st); return; }
-
-        /* БОЛЬШАЯ ЗАДАЧА: не передаём её целиком одному — режем на части
-           и раздаём свободным агентам, чтобы работа шла параллельно. */
-        if (st.big && !supDistributed && supStageInfo && supStageInfo.total > 1) {
-            supDistributed = true;
-            if (supSplit(st.text)) return;
-        }
-
-        const prev = st.owner;
-        const next = OWNER_NEXT[prev];
-        if (!next) { supStopKran(st); return; }
-        const now = Date.now();
-        st.owner = next;
-        st.handoffs = (st.handoffs || 0) + 1;
-        st.status = 'waiting';
-        st.startedAt = now;
-        st.lastSeen = now;
-        st.lastTimerText = '';
-        st.lastTimerChange = now;
-        st.reason = '';
-        supSave(st);
-        supLog('🔄 ' + ownerLabel(prev) + ' → ' + ownerLabel(next) + ' (' + st.handoffs + '/' + SUP_MAX_HANDOFFS + ')');
-        supDispatch(st.text, next);
-    }
-
-    /* Стоп-кран: передачи исчерпаны — дальше только Босс. */
-    function supStopKran(st) {
-        st.status = 'failed';
-        st.lastSeen = Date.now();
-        supSave(st);
-        supLog('🛑 ' + ownerLabel(st.owner) + ' молчит, передачи исчерпаны — нужен Босс');
-    }
-
-    /* Отправляем задачу новому владельцу и следим за результатом. */
-    async function supDispatch(text, owner) {
-        supBusyCount++;
-        try {
-            if (owner === 'free' && typeof window.sendToFreeModel === 'function') {
-                const ok = await window.sendToFreeModel(text);
-                if (ok) supAnswered('free'); else supFailed('free', 'Бесплатная модель не ответила');
-            } else if (owner === 'arch' && typeof window.sendMessage === 'function') {
-                window.sendMessage(text, true);   // Архитектор сам закроет журнал
-            } else if (typeof window.askAgent === 'function') {
-                const ok = await window.askAgent(owner, text);
-                if (ok) supAnswered(owner); else supFailed(owner, 'агент не ответил');
-            } else {
-                supFailed(owner, 'нет канала для передачи');
-            }
-        } catch (e) {
-            supFailed(owner, (e && e.message) || 'сбой передачи');
-        } finally {
-            supBusyCount--;
-        }
-    }
-
-    async function supDispatchPart(p) {
-        if (!p) return;
-        await supDispatch(p.text, p.owner);
-    }
-
-    /* ---------- РАСПРЕДЕЛЕНИЕ БОЛЬШОЙ ЗАДАЧИ ---------- */
-
-    /* ---------- ОПРОС: КТО РЕАЛЬНО ОНЛАЙН ----------
-       Честная проверка, а не декоративная: Надзиратель спрашивает у ИИ-шлюза,
-       какие МОДЕЛИ живые прямо сейчас (GET /ai/ping — мини-запрос к каждой).
-       Результат кэшируется 30 с. Эти имена и есть «агенты онлайн»:
-       каждая часть большой задачи уходит СВОЕЙ модели через provider.
-       Карточки .agent-card в DOM — только признак «занят/ошибка». */
-    let supOnlineCache = { at: 0, list: [], models: [] };
-    let supOnlineBusy = false;
-    let supGatewayBase = '';
-
-    /* --- ИИ-ШЛЮЗ :8002 УБРАН ИЗ ШТАБА ---
-       Помощник и его шлюз (nexus_ws/ai.ts, порт 8002) больше не существуют.
-       Опрос «кто онлайн» и распределение задачи по моделям шлюза не нужны:
-       задача всегда идёт Архитектору, при сбое — бесплатной модели Штаба.
-       Функция оставлена заглушкой, чтобы не ломать вызовы. */
-    async function supPollOnline() {
-        supOnlineCache = { at: Date.now(), list: [], models: [] };
-        return supOnlineCache;
-    }
-
-    /* Карточки агентов — только «занят / в ошибке», не источник онлайна. */
-    function supAgentCards() {
-        const out = [];
-        try {
-            const cards = document.querySelectorAll('.agent-card');
-            for (let i = 0; i < cards.length; i++) {
-                const card = cards[i];
-                const name = String(card.id || '').replace('agent-', '');
-                if (!name) continue;
-                const stText = card.querySelector('.agent-status-text');
-                out.push({
-                    name: name,
-                    busy: card.classList.contains('working'),
-                    error: card.classList.contains('error'),
-                    status: stText ? String(stText.innerText || '') : ''
-                });
-            }
-        } catch (e) { /* нет DOM — работаем базовыми каналами */ }
-        return out;
-    }
-    function supOnlineAgents() {
-        const list = ['arch', 'free'];
-        supOnlineCache.list.forEach(function (n) { if (list.indexOf(n) === -1) list.push(n); });
-        return list;
-    }
-    /* Свободные = реально онлайн модели, не занятые локальной карточкой.
-       Именно им раздаём части большой задачи. */
-    function supFreeAgents() {
-        const busy = {};
-        supAgentCards().forEach(function (a) { if (a.busy || a.error) busy[a.name] = 1; });
-        return supOnlineCache.list.filter(function (n) { return !busy[n]; });
-    }
-    /* Агенты, которые реально отвечают (модели шлюза). Без базовых каналов. */
-    function supRealAgents() {
-        return supOnlineCache.list.slice();
-    }
-    /* Итог опроса для ленты: сколько моделей на связи. */
-    function supOnlineReport() {
-        const on = supOnlineCache.list;
-        const off = (supOnlineCache.models || []).filter(function (p) { return !p.online; });
-        let s = '🔎 Онлайн моделей: ' + on.length;
-        if (on.length) s += ' — ' + on.join(', ');
-        if (off.length) s += ' | молчат: ' + off.map(function (p) { return p.name; }).join(', ');
-        return s;
-    }
-
-    /* Режем задачу на части: по файлам → по пунктам → по абзацам. */
-    function supSplitText(text) {
-        const src = String(text || '').trim();
-        const parts = [];
-
-        // 1) по файлам [FILE: путь] / [READ: путь]
-        const fileRe = /\[(?:FILE|READ):\s*([^\]]+)\]/gi;
-        const files = [];
-        let m;
-        while ((m = fileRe.exec(src)) !== null) files.push(m[1].trim());
-        if (files.length >= 2) {
-            return files.map(function (f, i) {
-                return { text: 'Часть ' + (i + 1) + '/' + files.length + '. Работай только с файлом ' + f + '.\n\nОбщая задача: ' + src, file: f };
-            });
-        }
-
-        // 2) по пунктам списка
-        const lines = src.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
-        const bullets = lines.filter(function (l) { return /^([-•*]|\d+[.)])\s+/.test(l); });
-        if (bullets.length >= 2) {
-            return bullets.map(function (l, i) {
-                return { text: 'Часть ' + (i + 1) + '/' + bullets.length + '. Сделай ТОЛЬКО этот пункт, остальные не трогай:\n' + l };
-            });
-        }
-
-        // 3) по абзацам
-        const paras = src.split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
-        if (paras.length >= 2) {
-            return paras.map(function (p, i) {
-                return { text: 'Часть ' + (i + 1) + '/' + paras.length + '. Сделай ТОЛЬКО эту часть, остальные не трогай:\n' + p };
-            });
-        }
-
-        return [{ text: src }];
-    }
-
-    /* Разбить большую задачу и раздать частям разных агентов. */
-    function supSplit(text, owners) {
-        /* ❗ ДЕЛЕЖА НЕТ (приказ Босса): задача не дробится между моделями. */
-        supLog('🛑 Дележа задачи нет — работает только выбранная модель.');
-        return false;
-        const chunks = supSplitText(text);
-        if (chunks.length < 2) {
-            supLog('🧩 Задача не делится — веду её целиком');
-            return false;
-        }
-        const pool = (Array.isArray(owners) && owners.length) ? owners : supOnlineAgents();
-        const now = Date.now();
-        const parts = chunks.map(function (c, i) {
-            return {
-                text: c.text,
-                file: c.file || '',
-                owner: pool[i % pool.length],
-                status: 'waiting',
-                handoffs: 0,
-                lastSeen: now
-            };
-        });
-        supSave({
-            text: String(text || '').slice(0, SUP_TEXT_LIMIT),
-            owner: parts[0].owner,
-            status: 'waiting',
-            handoffs: 0,
-            startedAt: now,
-            lastSeen: now,
-            lastTimerText: '',
-            lastTimerChange: now,
-            parts: parts,
-            partIndex: 0,
-            history: []
-        });
-        supDistributed = true;
-        const who = parts.map(function (p) { return ownerLabel(p.owner); }).join(' · ');
-        supLog('🧩 Задача на ' + parts.length + ' частей: ' + who);
-        supDispatchPart(parts[0]);
-        return true;
-    }
-
-    /* ---------- ДЕЛЁЖ ПО ОНЛАЙНУ ----------
-       Опрашиваем модели и, если на связи минимум две, режем задачу между ними:
-       каждая часть уходит СВОЕЙ модели (provider), файлы не пересекаются. */
-    async function supSplitByOnline(text) {
-        /* ❗ ДЕЛЕЖА ПО ОНЛАЙНУ НЕТ (приказ Босса). */
-        return false;
-        const p = await supPollOnline();
-        supLog(supOnlineReport());
-        if (supDistributed) return false;
-        const online = (p.list || []).slice(0, SUP_DISTRIBUTE_MAX);
-        if (online.length >= 2) {
-            supLog('🧩 Делю между онлайн-моделями: ' + online.join(' · '));
-            return supSplit(text, online);
-        }
-        if (online.length === 1) supLog('🧩 Онлайн одна модель (' + online[0] + ') — веду задачу целиком');
-        return false;
     }
 
     /* ---------- ВЫВОД В ЛЕНТУ ---------- */
@@ -529,35 +240,6 @@
         try {
             if (typeof renderMessage === 'function') renderMessage(text, 'director', 'Надзиратель');
         } catch (e) { /* лента недоступна — молчим */ }
-    }
-
-    /* ---------- БОЛЬШАЯ ЛИ ЗАДАЧА ----------
-       Признаки: длинный текст, несколько файлов, несколько пунктов списка
-       или прямая просьба «раздели/распредели задачу». */
-    function supIsBigTask(text) {
-        const s = String(text || '');
-        if (s.length >= 400) return true;
-        if (/раздели\s+задач|распредели\s+задач|по\s+агентам|параллельно/i.test(s)) return true;
-        const files = s.match(/\[(?:FILE|READ):\s*[^\]]+\]/gi);
-        if (files && files.length >= 2) return true;
-        const bullets = s.split('\n').filter(function (l) { return /^\s*(?:[-•*]|\d+[.)])\s+/.test(l); });
-        if (bullets.length >= 2) return true;
-        return false;
-    }
-
-    /* ---------- 330 С ИСТЕКЛО, НО АГЕНТ ЖИВ ----------
-       Это не смерть, а большая задача. Не передаём её другому:
-       опрашиваем агентов и раскидываем задачу между ними. Если онлайн
-       мало — просим разбить задачу на этапы и отчитаться по каждому. */
-    function supSplitOrHandoff(st) {
-        /* ❗ ДЕЛЕЖА, ПЕРЕБОРА И ПЕРЕДАЧИ НЕТ (приказ Босса).
-           Задача не дробится между моделями и не уходит другой модели:
-           отвечает только та, что выбрал Босс. Долго — значит долго. */
-        st.status = 'failed';
-        st.reason = 'перебора моделей нет — задача остановлена';
-        st.lastSeen = Date.now();
-        supSave(st);
-        supLog('🛑 Перебора моделей нет — задача остановлена. Жду Босса.');
     }
 
     /* ---------- ДЕТЕКТ МОЛЧАНИЯ ---------- */
@@ -577,7 +259,6 @@
     function supTick() {
         const st = supLoad();
         if (!st || st.status !== 'waiting') return;
-        if (supBusyCount > 0) return;
 
         const now = Date.now();
         const t = timerState(st, now);
@@ -594,9 +275,8 @@
         if (generating && silent < limit) return;
         if (!generating && silent < SUP_FREEZE_MS) return;
 
-        // 2б) ЖИВОЙ АГЕНТ — НЕ ПЕРЕДАЁМ. Печатается ответ, крутятся этапы
-        //     большой задачи, работает Совет или фон — это работа, а не молчание.
-        //     Срок продлеваем и ждём дальше.
+        // 2б) ЖИВОЙ АГЕНТ — НЕ ОСТАНАВЛИВАЕМ. Печатается ответ, крутятся этапы
+        //     большой задачи — это работа, а не молчание. Срок продлеваем и ждём.
         if (supRecentlyAlive()) {
             st.lastSeen = now;
             st.startedAt = now;
@@ -606,17 +286,12 @@
             return;
         }
 
-        // 3) Причина передачи.
+        // 3) Причина остановки.
         let why = '';
         if (silent >= limit) why = 'лимит ' + Math.round(limit / 1000) + ' с истёк';
         else if (!generating && !t.alive) why = 'счётчик пропал, ответа нет';
         else if (t.alive) why = 'счётчик застыл на ' + t.text;
         else return;
-
-        /* 330 с истекли, а агент ЖИВОЙ (запрос идёт, счётчик тикает) —
-           это не смерть, а большая задача. Не передаём её другому:
-           делим между онлайн-агентами или просим разбить на этапы. */
-        if (generating && t.alive && silent >= limit) { supSplitOrHandoff(st); return; }
 
         st.status = 'failed';
         st.reason = why;
@@ -628,7 +303,7 @@
 
     /* ---------- ОБРЫВ (зов из chat.js) ----------
        chat.js зовёт это, когда счётчик на кнопке замер/пропал или вышло 330 с.
-       ЖИВОЙ АГЕНТ НЕ ПЕРЕДАЁТСЯ: если идёт печать, крутятся этапы или фон —
+       ЖИВОЙ АГЕНТ НЕ ОСТАНАВЛИВАЕТСЯ: если идёт печать или крутятся этапы —
        это работа, а не обрыв. Возвращает true, если надзиратель взял на себя. */
     function supBreak(reason) {
         const st = supLoad();
@@ -640,7 +315,7 @@
             st.lastTimerText = '';
             st.lastTimerChange = now;
             supSave(st);
-            return true;                        // агент жив — передачи не будет
+            return true;                        // агент жив — остановки не будет
         }
         st.status = 'failed';
         st.reason = String(reason || 'обрыв').slice(0, 300);
@@ -664,19 +339,23 @@
     window.supFailed = supFailed;
     window.supHeartbeat = supHeartbeat;
     window.supHandoff = supHandoff;
-    window.supSplit = supSplit;
-    window.supOnlineAgents = supOnlineAgents;
     window.supClear = supClear;
     window.supState = supLoad;
     window.supTick = supTick;
-    window.supTimerBroken = supBreak;        // chat.js: счётчик оборвался / 330 с → задача уходит дальше
-    window.supAlive = supAlive;              // chat.js: агент жив (этап, Совет, фон, ответ)
+    window.supTimerBroken = supBreak;        // chat.js: счётчик оборвался / 330 с → задача останавливается
+    window.supAlive = supAlive;              // chat.js: агент жив (этап, ответ, пинок)
     window.supNoteActivity = supNoteActivity;// chat.js: в ленте движение — агент работает
     window.supStage = supStage;              // chat.js: задача разбита на этапы [ЭТАП N/M]
     window.supIsAlive = supIsAlive;
     window.supDuetOn = supDuetOn;            // chat.js: включён ли ⚡ Дуэт — надзиратель ждёт вдвое дольше
     window.supLimitMs = supLimitMs;          // chat.js: текущий предел ожидания под режим
-    window.SUPERVISOR_VERSION = '1.8-duet';
+
+    /* Совместимость: дележа и опроса моделей больше нет — заглушки,
+       чтобы старые вызовы не падали. */
+    window.supSplit = function () { return false; };
+    window.supOnlineAgents = function () { return ['arch', 'free']; };
+
+    window.SUPERVISOR_VERSION = '2.0-lean';
 
     supStartWatch();
 })();
