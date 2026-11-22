@@ -1675,6 +1675,12 @@ async function sendMessage(overrideText = null, isKick = false) {
                     lastError = 'Модель выключена кнопкой';
                     return;
                 }
+                /* ⚡ ДУЭТ: нужны ОБА канала. Один выключен — честный отказ, без подмены. */
+                if (modelToUse === 'duet' && (!architectEnabled() || !modelEnabled('gigachat'))) {
+                    renderMessage('⚡ *[Дуэт требует оба канала: включи 🅰️ Zveno и 🟣 GigaChat.]*', 'director', 'Оркестратор');
+                    lastError = 'Дуэт: один из каналов выключен';
+                    return;
+                }
                 usedModel = modelToUse;   // запоминаем, кто реально отвечает — покажем Боссу
 
                 let currentMessages = trimHistory(messagesToSend);
