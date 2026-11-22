@@ -1973,6 +1973,10 @@ async function sendMessage(overrideText = null, isKick = false) {
                    каждая реплика сразу в чат, после шага 7 — РЕШЕНИЕ и слово Босса.
                    Полный ответ с инструментами делает Zveno на шаге 8. */
                 if (modelToUse === 'duet') {
+                    /* Дуэт ИНТЕРАКТИВНЫЙ: Босс читает обсуждение и добавляет своё.
+                       Авто-аборт по 630 с здесь не нужен — иначе пауза на слово
+                       Босса убила бы финальный шаг. Остановить можно кнопкой ⏹. */
+                    clearTimeout(timeoutId);
                     const dRes = await runDuetLive(text, trimHistory(messagesToSend), userKeys, myCtrl.signal);
                     if (dRes && dRes.final) {
                         lastSendSuccess = true; stallKicks = 0;
