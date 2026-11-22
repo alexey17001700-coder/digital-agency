@@ -1767,8 +1767,15 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // --- ПРОВЕРКА КЛЮЧА ПОД ВЫБРАННУЮ МОДЕЛЬ ---
                 // Ключ не введён — модель не работает. Запрос НЕ уходит,
                 // никаких подмен на серверный ключ и автопереключений.
-                const keyOk = isBossSecret || modelKeyOk(modelToUse);
-                if (!keyOk) {
+                /* --- МОДЕЛЬ НЕ ВЫБРАНА → СТОП (дефолта больше нет) ---
+                   Карточка без своего маршрута + пустой выбор модели: запрос
+                   с пустой моделью на сервер НЕ уходит. */
+                if (!modelToUse) {
+                    lastError = 'Модель не выбрана. Тапни 🧠 Платные или 🆓 Бесплатные (долгое нажатие — список моделей).';
+                    renderMessage('⚠️ **' + lastError + '**', 'director', 'Оркестратор');
+                }
+                const keyOk = isBossSecret || (!!modelToUse && modelKeyOk(modelToUse));
+                if (modelToUse && !keyOk) {
                     lastError = 'Модель ' + getModelInfo(usedModel).label + ': ключ не введён (' + modelKeyLabel(modelToUse) + '). Открой 🔑 API Ключи.';
                     renderMessage('⚠️ **' + lastError + '**', 'director', 'Оркестратор');
                 }
