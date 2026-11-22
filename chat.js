@@ -804,6 +804,67 @@ function stripDuplicateWeatherWidget(container, hasWeatherCard) {
     });
 }
 
+/* =========================================
+   ⚡ МЫСЛИ ДУЭТА — КОРОТКОЕ ОБСУЖДЕНИЕ В ЧАТЕ
+   =========================================
+   В режиме «Дуэт» сервер присылает короткую переписку моделей:
+   🅰️ Zveno — краткий черновик (до 5 строк), 🟣 GigaChat — короткая ремарка.
+   Босс видит ход мысли, но бюджет Штаба не тратится на простыни: шаги 1 и 2
+   идут БЕЗ инструментов и с лимитом токенов, а полный ответ с инструментами
+   делает Zveno на шаге 3.
+   Переписка приходит меткой [[DUET_THOUGHTS]]{json}[[/DUET_THOUGHTS]] и
+   рисуется компактным диалогом ПЕРЕД финальным ответом. */
+const DUET_THOUGHTS_RE = /\[\[DUET_THOUGHTS\]\]([\s\S]*?)\[\[\/DUET_THOUGHTS\]\]/;
+function extractDuetThoughts(text) {
+    const src = String(text || '');
+    const m = src.match(DUET_THOUGHTS_RE);
+    if (!m) return { cleanText: src, thoughts: null };
+    let thoughts = null;
+    try { thoughts = JSON.parse(m[1]); } catch (e) { thoughts = null; }
+    return { cleanText: src.replace(DUET_THOUGHTS_RE, '').trim(), thoughts: thoughts };
+}
+function _injectDuetThoughtsCss() {
+    if (document.getElementById('duetThoughtsCss')) return;
+    const st = document.createElement('style'); st.id = 'duetThoughtsCss';
+    st.textContent = `
+    .duet-thoughts {
+        margin: 10px 0; padding: 10px 12px;
+        background: rgba(255,215,0,.06);
+        border: 1px dashed rgba(255,215,0,.45); border-radius: 12px;
+        font-size: 13px; line-height: 1.45;
+    }
+    .duet-thoughts-title { font-size: 11px; letter-spacing: .4px; color: #ffd700; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; }
+    .duet-line { display: flex; gap: 8px; margin: 4px 0; }
+    .duet-who { flex: 0 0 auto; font-weight: 700; white-space: nowrap; }
+    .duet-who.zveno { color: #00e5ff; }
+    .duet-who.giga { color: #b9a8ff; }
+    .duet-text { color: #d8e9f2; white-space: pre-wrap; }
+    `;
+    document.head.appendChild(st);
+}
+function buildDuetThoughts(t) {
+    _injectDuetThoughtsCss();
+    const box = document.createElement('div'); box.className = 'duet-thoughts';
+    const title = document.createElement('div'); title.className = 'duet-thoughts-title'; title.textContent = '⚡ Дуэт — короткое обсуждение';
+    box.appendChild(title);
+    const add = (who, cls, text) => {
+        const s = String(text || '').trim();
+        if (!s) return;
+        const row = document.createElement('div'); row.className = 'duet-line';
+        const w = document.createElement('span'); w.className = 'duet-who ' + cls; w.textContent = who;
+        const tx = document.createElement('span'); tx.className = 'duet-text'; tx.textContent = s;
+        row.appendChild(w); row.appendChild(tx); box.appendChild(row);
+    };
+    add('🅰️ Zveno:', 'zveno', t && t.brief);
+    add('🟣 GigaChat:', 'giga', t && t.remark);
+    return box;
+}
+function renderDuetThoughts(div, thoughts) {
+    if (!div || !thoughts) return;
+    if (!thoughts.brief && !thoughts.remark) return;
+    div.appendChild(buildDuetThoughts(thoughts));
+}
+
 async function manualDeploy(file, code) {
     if (confirm(`Внедрить новый код в файл ${file}?`)) {
         try {
