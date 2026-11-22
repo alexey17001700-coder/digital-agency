@@ -493,6 +493,7 @@
         const body = document.getElementById('updateBody');
         const modal = document.getElementById('updateModal');
         if (!body || !modal) return;
+        lastShownVersion = String(d.version || '');
         body.innerHTML = '';
 
         const head = document.createElement('div');
