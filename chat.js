@@ -1417,14 +1417,12 @@ async function sendMessage(overrideText = null, isKick = false) {
         }
         let hasAnyKeys = Object.keys(userKeys).length > 0 && Object.values(userKeys).some(k => k && k.trim() !== '');
 
+        /* 🅰️ КОДОВОЕ СЛОВО БОССА (приказ): в поле ключа 🅰️ Zveno вписывается
+           слово "zveno". Оно уходит на сервер, а сервер САМ подставляет
+           реальный ZVENO_API_KEY из /root/.env. В коде ключей НЕТ. */
         let isBossSecret = false;
-        if (userKeys.deepseekKey && (userKeys.deepseekKey.trim().toLowerCase() === 'zveno' || userKeys.deepseekKey.trim().toLowerCase() === 'boss')) {
-            hasAnyKeys = true; isBossSecret = true; userKeys = {}; 
-        }
-        // Локальная модель на ПК (Ollama) работает БЕЗ ключей и без оплаты —
-        // идём основным путём, только запрос уходит на свой ПК через шлюз.
-        const isOllama = isOllamaModel(selectedAIModel);
-        if (isOllama) hasAnyKeys = true;
+        const _codeWord = String(userKeys.architectKey || userKeys.deepseekKey || '').trim().toLowerCase();
+        if (_codeWord === 'zveno' || _codeWord === 'boss') { hasAnyKeys = true; isBossSecret = true; userKeys = {}; }
         // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
         // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
         if (selectedAIModel === 'gigachat') hasAnyKeys = true;
