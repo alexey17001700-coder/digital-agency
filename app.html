@@ -471,10 +471,10 @@
             const d = await r.json();
             const ver = String(d.version || '');
             if (!ver) return;
-            const seen = localStorage.getItem(UPDATE_SEEN_KEY);
+            const seen = seenVersionGet();
             if (!force && seen === ver) return;   // это обновление уже видели — не мешаем
             buildUpdateNotice(d, force ? null : seen);
-            localStorage.setItem(UPDATE_SEEN_KEY, ver);
+            seenVersionSet(ver);
         } catch (e) {
             console.warn('Модалка обновления: shtab_version.json не прочитан', e);
         }
