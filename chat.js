@@ -1809,7 +1809,7 @@ async function sendMessage(overrideText = null, isKick = false) {
                 if (!isKick) {
                     // НАДЗИРАТЕЛЬ: пустой ответ = задача не сделана. Передаём её
                     // бесплатной модели Штаба, а не пинаем того же самого ещё раз.
-                    if (typeof supFailed === 'function') { supFailed('arch', emptyWhy); return; }
+                    if (typeof supFailed === 'function') { supFailed(activeAgent, emptyWhy); return; }
                     fireAutoKick(emptyWhy); return;
                 }
                 renderMessage('❌ **Модель вернула пустой ответ.**', 'director', 'Оркестратор');
