@@ -203,7 +203,7 @@ function updateArchitectButtonVisual() {
     if (!b) return;
     if (architectEnabled()) {
         b.classList.add('active', 'mode-on');
-        b.innerText = (selectedAIModel === 'zveno') ? '🅰️ Архитектор: ВКЛ' : '🅰️ Архитектор: ВКЛ';
+        b.innerText = '🅰️ Zveno: ВКЛ';
         b.style.borderColor = '#00e5ff';
         b.style.color = '#00e5ff';
         b.style.background = 'rgba(0,229,255,.14)';
