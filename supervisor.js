@@ -216,7 +216,7 @@
             return;
         }
 
-        if (owner && st.owner && owner !== st.owner) return;   // ответил не тот, кто ведёт — не закрываем
+        if (owner && st.owner && !supSameOwner(owner, st.owner)) return;   // ответил не тот, кто ведёт — не закрываем
         st.status = 'answered';
         st.lastSeen = Date.now();
         supSave(st);
