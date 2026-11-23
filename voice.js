@@ -91,21 +91,134 @@ async function speakText(text, agentName) {
 }
 
 let recognition = null; let isListening = false;
+let micUserStopped = true;   // Босс сам выключил микрофон?
+let micRestarts = 0;         // сколько раз авто-перезапускали (защита от петли)
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+// Единая точка отрисовки кнопки микрофона — одинаково на всех браузерах.
+function micUI(on, text) {
+    const b = document.getElementById('micBtn');
+    if (b) {
+        b.style.background = on ? '#ff0055' : '#333';
+        b.style.boxShadow = on ? '0 0 10px #ff0055' : 'none';
+        b.textContent = on ? '🔴' : '🎤';
+    }
+    if (text) micToast(text);
+}
+
+// Тост под кнопкой: Босс сразу видит, что происходит с микрофоном.
+let _micToastEl = null;
+function micToast(msg) {
+    try {
+        if (!_micToastEl) {
+            _micToastEl = document.createElement('div');
+            _micToastEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:150px;' +
+                'max-width:88vw;padding:8px 12px;border-radius:10px;background:rgba(20,30,45,.94);' +
+                'color:#DCE6F2;font:600 11.5px/1.35 system-ui,sans-serif;z-index:100000;' +
+                'box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;text-align:center';
+            document.body.appendChild(_micToastEl);
+        }
+        _micToastEl.textContent = msg;
+        _micToastEl.style.display = 'block';
+        clearTimeout(_micToastEl._t);
+        _micToastEl._t = setTimeout(function () { _micToastEl.style.display = 'none'; }, 3200);
+    } catch (e) {}
+}
+
+// РАЗРЕШЕНИЕ НА МИКРОФОН. На Android (в т.ч. Яндекс.Браузер) распознавание
+// стартует и ТУТ ЖЕ глохнет, если доступ ещё не выдан. Поэтому сначала явно
+// просим доступ через getUserMedia, отпускаем поток и только потом запускаем
+// распознавание — тогда onstart держится, а не гаснет мгновенно.
+async function micEnsurePermission() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 if (SpeechRecognition) {
-    recognition = new SpeechRecognition(); recognition.lang = 'ru-RU'; recognition.continuous = false; recognition.interimResults = false;
-    recognition.onstart = function() { isListening = true; const b = document.getElementById('micBtn'); if (b) { b.style.background = '#ff0055'; b.style.boxShadow = '0 0 10px #ff0055'; } };
-    recognition.onresult = function(event) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = true;       // слушаем дольше — не глохнет после первой паузы
+    recognition.interimResults = true;   // текст появляется по мере речи
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = function () {
+        isListening = true;
+        micUI(true, '🎤 Слушаю…');
+    };
+
+    recognition.onresult = function (event) {
         const chatInput = document.getElementById('chatInput');
-        if (chatInput) {
-            chatInput.value += (chatInput.value ? ' ' : '') + event.results[0][0].transcript;
-            setTimeout(() => { if (typeof handleSendClick === 'function') handleSendClick(); }, 100);
+        if (!chatInput) return;
+        let text = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            text += event.results[i][0].transcript;
+        }
+        if (!text) return;
+        chatInput.value = (chatInput.value ? chatInput.value + ' ' : '') + text.trim();
+        // Финальный результат — отправляем. Промежуточный — только показываем.
+        const last = event.results[event.results.length - 1];
+        if (last && last.isFinal) {
+            micUserStopped = true;
+            try { recognition.stop(); } catch (e) {}
+            setTimeout(function () { if (typeof handleSendClick === 'function') handleSendClick(); }, 120);
         }
     };
-    recognition.onerror = function() { const b = document.getElementById('micBtn'); if (b) { b.style.background = '#333'; b.style.boxShadow = 'none'; } };
-    recognition.onend = function() { isListening = false; const b = document.getElementById('micBtn'); if (b) { b.style.background = '#333'; b.style.boxShadow = 'none'; } };
+
+    recognition.onerror = function (event) {
+        const code = (event && event.error) ? event.error : 'unknown';
+        if (code === 'no-speech') { micUI(true, '🎤 Не слышу — говори громче'); return; }
+        if (code === 'aborted') return;
+        isListening = false;
+        micUserStopped = true;
+        let msg = '🎤 Микрофон: ' + code;
+        if (code === 'not-allowed' || code === 'service-not-allowed') msg = '🎤 Нет доступа к микрофону — разреши его в настройках браузера';
+        else if (code === 'audio-capture') msg = '🎤 Микрофон занят или недоступен';
+        else if (code === 'network') msg = '🎤 Распознаванию нужен интернет';
+        micUI(false, msg);
+    };
+
+    recognition.onend = function () {
+        // АВТО-ПЕРЕЗАПУСК: если Босс не останавливал вручную и лимит не превышен —
+        // продолжаем слушать. Так микрофон не «выключается сразу» на Android.
+        if (!micUserStopped && micRestarts < 8) {
+            micRestarts++;
+            setTimeout(function () {
+                if (micUserStopped) return;
+                try { recognition.start(); }
+                catch (e) { isListening = false; micUI(false, '🎤 Не удалось запустить микрофон'); }
+            }, 250);
+            return;
+        }
+        isListening = false;
+        micUI(false, null);
+    };
 }
-function toggleVoiceInput() { if (!recognition) return alert('Нет поддержки микрофона'); if (isListening) recognition.stop(); else try { recognition.start(); } catch (e) {} }
+
+async function toggleVoiceInput() {
+    if (!recognition) {
+        micToast('🎤 Браузер не поддерживает распознавание речи. Открой в Chrome.');
+        return;
+    }
+    if (isListening) {
+        micUserStopped = true;
+        try { recognition.stop(); } catch (e) {}
+        micUI(false, '🎤 Микрофон выключен');
+        return;
+    }
+    micUserStopped = false;
+    micRestarts = 0;
+    micUI(true, '🎤 Запрашиваю доступ…');
+    const ok = await micEnsurePermission();
+    if (!ok) { micUserStopped = true; micUI(false, '🎤 Нет доступа к микрофону — разреши его в настройках'); return; }
+    try { recognition.start(); }
+    catch (e) { micUserStopped = true; micUI(false, '🎤 Не удалось запустить микрофон'); }
+}
 
 /* ================= ЛАБОРАТОРИЯ ГОЛОСОВ ================= */
 // НЕЙРО-ГОЛОСА EDGE-TTS (бесплатные, от Microsoft). Синтез на сервере, ключ не нужен.
