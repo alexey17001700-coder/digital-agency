@@ -48,6 +48,30 @@
         .safe-key.clear { background: #662222; color: #ff8888; }
         #fab-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99998; }
         #fab-overlay.open { display: block; }
+
+        /* === ПРЕВЬЮ «ЧТО УМЕЕТ ШТАБ» — показывается после заставки === */
+        #features-preview { position: fixed; inset: 0; z-index: 9999998; background: radial-gradient(circle at 50% 18%, #0d1b22 0%, #050505 72%); display: none; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; opacity: 0; transition: opacity 0.6s ease; }
+        #features-preview.show { display: flex; opacity: 1; }
+        #preview-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.3; }
+        .preview-inner { position: relative; z-index: 1; width: 100%; max-width: 520px; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px 0; box-sizing: border-box; }
+        .preview-head { text-align: center; margin-bottom: 16px; }
+        .preview-crown { font-size: 44px; animation: float-crown 2s infinite ease-in-out, glow-crown 1.5s infinite alternate; }
+        .preview-title { color: #00e5ff; font-size: 20px; font-weight: bold; letter-spacing: 3px; text-shadow: 0 0 12px rgba(0,229,255,0.6); margin-top: 4px; }
+        .preview-sub { color: #8b98a5; font-size: 12px; letter-spacing: 1px; margin-top: 6px; }
+        .preview-cards { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; padding: 6px 20px; box-sizing: border-box; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .preview-cards::-webkit-scrollbar { display: none; }
+        .preview-card { flex: 0 0 78%; scroll-snap-align: center; background: rgba(18,18,18,0.92); border: 1px solid #1f3a42; border-radius: 18px; padding: 22px 18px; box-sizing: border-box; min-height: 236px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .preview-card .pc-icon { font-size: 40px; margin-bottom: 12px; }
+        .preview-card .pc-name { color: #00e5ff; font-size: 16px; font-weight: bold; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .preview-card .pc-text { color: #cfd8dc; font-size: 13px; line-height: 1.55; }
+        .preview-card .pc-tag { margin-top: auto; align-self: flex-start; font-size: 10px; color: #00ff88; border: 1px solid rgba(0,255,136,0.35); border-radius: 20px; padding: 3px 10px; letter-spacing: 1px; }
+        .preview-dots { display: flex; gap: 8px; margin: 18px 0; }
+        .preview-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: #2a3a40; transition: all 0.3s; }
+        .preview-dots .dot.on { background: #00e5ff; width: 22px; border-radius: 5px; box-shadow: 0 0 8px #00e5ff; }
+        .preview-enter { background: linear-gradient(90deg, #00e5ff, #00ff88); color: #001014; border: none; border-radius: 30px; padding: 14px 40px; font-size: 15px; font-weight: bold; letter-spacing: 2px; cursor: pointer; box-shadow: 0 0 24px rgba(0,229,255,0.5); transition: transform 0.15s; }
+        .preview-enter:active { transform: scale(0.96); }
+        .preview-hint { color: #556; font-size: 11px; margin-top: 12px; letter-spacing: 0.5px; }
+        .preview-skip { position: absolute; top: 16px; right: 18px; z-index: 2; color: #8b98a5; font-size: 12px; cursor: pointer; border: 1px solid #333; border-radius: 20px; padding: 6px 14px; background: rgba(20,20,20,0.8); }
     </style>
 </head>
 <body>
