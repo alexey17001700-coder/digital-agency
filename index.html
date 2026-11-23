@@ -496,7 +496,7 @@
             if (pvTypeTimer) { clearInterval(pvTypeTimer); pvTypeTimer = null; }
             if (previewMatrix) { clearInterval(previewMatrix); previewMatrix = null; }
             try { sessionStorage.setItem('shtabPreviewSeen', '1'); } catch (e) {}
-            setTimeout(() => { box.style.display = 'none'; }, 600);
+            pvHideTimer = setTimeout(() => { box.style.display = 'none'; }, 600);
         }
         // ТИХИЙ ЗАПУСК: оболочка обновилась сама (см. «ЖИВОЕ ОБНОВЛЕНИЕ ШТАБА») —
         // заставку не показываем вообще, чтобы Босс не видел перезагрузку.
