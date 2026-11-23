@@ -191,6 +191,9 @@
                     try { sessionStorage.removeItem(STUCK_KEY); } catch (er) {}
                 } else if (d.type === 'shtab-need-swap') {
                     hotSwap(parseInt(d.build, 10));
+                } else if (d.type === 'shtab-replay-preview') {
+                    // Кнопка «🎬 Инструкция» в кадре просит показать превью заново.
+                    replayFeaturesPreview();
                 }
             });
 
