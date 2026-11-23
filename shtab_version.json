@@ -3,9 +3,14 @@
   "name": "Штаб: Броня",
   "version": "60",
   "build": 60,
-  "edits": 2,
+  "shellBuild": 67,
+  "edits": 3,
   "limit": 5,
   "log": [
+    {
+      "n": 3,
+      "text": "Превью «Что умеет Штаб»: после заставки один раз за сессию показывается карусель из 8 карточек (Архитектор, Zveno, GigaChat, 3D-офис, голоса, фото и файлы, инструменты, ремонт сервера) с матричным фоном, точками и кнопкой «Войти в Штаб». index.html — блок #features-preview (CSS + HTML + JS), показ из hideSplashIfReady, автолистание 4.5 с, «Пропустить», флаг shtabPreviewSeen в sessionStorage. shellBuild 66 → 67."
+    },
     {
       "n": 2,
       "text": "Модели: из Штаба убраны ВСЕ бесплатные (Nemotron, Flint, dots), Yandex, DeepSeek и Ollama. Остались два канала: 🅰️ Архитектор (Zveno, свой ключ) и 🟣 GigaChat. chat.js — AI_MODELS_DEFAULT из двух записей, версия списка поднята (старый набор в localStorage перезапишется), firstFreeId() ведёт на GigaChat. ui.js — панель 🧠 показывает только два канала, кнопки 🧠 Платные и 🆓 Бесплатные скрыты. supervisor.js — цепочка замены пустая, передачи задачи другой модели нет."
