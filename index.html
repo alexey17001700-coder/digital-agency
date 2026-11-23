@@ -452,11 +452,15 @@
         }
 
         function showFeaturesPreview() {
+            // ВАЖНО: hideSplashIfReady() зовётся несколько раз (6 с, 20 с, onload).
+            // Без этого флага превью перезапускалось бы с первой сцены на каждом вызове.
+            if (previewShown) return;
             let seen = '0';
             try { seen = sessionStorage.getItem('shtabPreviewSeen') || '0'; } catch (e) {}
             if (seen === '1') return;
             const box = document.getElementById('features-preview');
             if (!box) return;
+            previewShown = true;
             buildFeaturesPreview();
             box.classList.add('show');
             startPreviewMatrix();
