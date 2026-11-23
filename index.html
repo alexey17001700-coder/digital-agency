@@ -336,7 +336,7 @@
             { icon: '🚑', name: 'РЕМОНТ СЕРВЕРА', text: 'Сервер упал? Пошаговая инструкция поднимет Штаб и Чат за пару минут.', tag: '24/7', narr: 'Если сервер упал — пошаговая инструкция поднимет Штаб и Чат за пару минут.' }
         ];
         const PV_DUR = 6500;   // сколько миллисекунд держится одна сцена
-        let previewBuilt = false, previewIdx = 0, previewMatrix = null;
+        let previewBuilt = false, previewIdx = 0, previewMatrix = null, previewShown = false;
         let pvPlaying = true, pvElapsed = 0, pvTick = null, pvTypeTimer = null;
 
         function buildFeaturesPreview() {
