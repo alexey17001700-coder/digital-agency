@@ -81,6 +81,13 @@
             document.body.appendChild(box);
         }
 
+        // Кнопка «🎬 Инструкция»: просит оболочку (index.html) показать
+        // видео-превью «Что умеет Штаб» заново. Само превью живёт в оболочке,
+        // поэтому кадр лишь посылает ей сигнал.
+        window.replayShtabPreview = function () {
+            try { parent.postMessage({ type: 'shtab-replay-preview' }, '*'); } catch (e) {}
+        };
+
         window.addEventListener('DOMContentLoaded', async () => {
             // РЕЖИМ «ЧАТ ОТДЕЛЬНО»: app.html?chatonly=1 — прячем агентов и панели,
             // чат занимает весь экран. Открывается кнопкой 🪟 Чат отдельно.
