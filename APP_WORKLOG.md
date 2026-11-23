@@ -15,6 +15,7 @@
 
 ## window_calc (калькулятор окон, Flutter)
 
+- 3.4.60+123 — СБОРКА APK: workflow переписан (pubspec.yaml защищён от flutter create, порядок create → pub get → analyze, compileSdk 36 → 35, подпись не роняет сборку, tee build.log + шаг «Показать ошибки сборки»); в мастере починена цепочка шагов (РАЗМЕРЫ → ВИЗУАЛЬНЫЙ ЗАМЕР → СМЕТА → ИЗДЕЛИЯ → ЛИСТ) и кнопки-«пустышки». Файлы: .github/workflows/build.yml, lib/onboarding.dart, pubspec.yaml, CHANGELOG.md, version.json
 - 3.4.57+120 — НЕСКОЛЬКО ИЗДЕЛИЙ, ШАГ 1: модель MeasureItem + список изделий в мастере + экран «ИЗДЕЛИЯ» (+ ИЗДЕЛИЕ / править / удалить), исправлен порядок заголовков шапки. Файлы: lib/measure_item.dart (новый), lib/onboarding.dart, lib/onboarding/widgets.dart, lib/STRUCTURE.md, pubspec.yaml, CHANGELOG.md
 - 3.4.25+88 — ШАГ 6: конфигурация в замерном листе, блок «КОНСТРУКЦИЯ» (створки, ПО ГОСТ, ширины секций). Файлы: lib/measure_sheet.dart, lib/onboarding.dart
 - 3.4.24+87 — ШАГ 5: размерные линии — габарит, промежуточные размеры, выносные линии, «?» при неизвестном габарите. Файлы: lib/window_visual.dart
