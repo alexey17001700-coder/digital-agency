@@ -321,57 +321,117 @@
         // Показывается ОДИН РАЗ за сессию сразу после заставки: коротко объясняет
         // Боссу, что умеет Штаб. Листается как карусель, закрывается кнопкой или
         // «Пропустить». Повторно не всплывает (sessionStorage), чтобы не мешать.
+        /* === ПРЕВЬЮ «ЧТО УМЕЕТ ШТАБ» — ВИДЕО-ИНСТРУКЦИЯ ===
+           Босс: «хочу, чтобы как видео выглядело, типа инструкции».
+           Каждая карточка — СЦЕНА фильма: иконка, название, текст и
+           «озвучка»-субтитр, который печатается по буквам. Сверху —
+           сегментный таймлайн (как в сторис), снизу — кнопки ⏮ ⏸ ⏭
+           и счётчик времени. Сцены листаются сами, пауза — по кнопке. */
         const PREVIEW_CARDS = [
-            { icon: '💬', name: 'АРХИТЕКТОР', text: 'Ставлю задачи словами — Архитектор пишет код, правит файлы и собирает приложения прямо в чате.', tag: 'ЯДРО' },
-            { icon: '🅰️', name: 'ZVENO', text: 'Основной канал Архитектора. Держит контекст, помнит историю проекта и ведёт его от идеи до релиза.', tag: 'ONLINE' },
-            { icon: '🟣', name: 'GIGACHAT', text: 'Вторая модель, включается отдельно. В режиме «Дуэт» две модели спорят и выдают лучшее решение.', tag: 'ДУЭТ' },
-            { icon: '🏢', name: '3D ОФИС', text: 'Живой офис с агентами. Видно, кто чем занят, можно зайти внутрь и посмотреть.', tag: '3D' },
-            { icon: '🗣️', name: 'ГОЛОСА', text: 'Агенты говорят вслух. Своя лаборатория голосов — подбери тембр каждому агенту.', tag: 'TTS' },
-            { icon: '📎', name: 'ФОТО И ФАЙЛЫ', text: 'Пришли фото или документ — Штаб разберёт, опишет и сразу сделает работу.', tag: 'ВВОД' },
-            { icon: '🛠️', name: 'ИНСТРУМЕНТЫ', text: 'GitHub, погода, поиск в сети, картинки — всё под рукой у Архитектора.', tag: 'TOOLS' },
-            { icon: '🚑', name: 'РЕМОНТ СЕРВЕРА', text: 'Сервер упал? Пошаговая инструкция поднимет Штаб и Чат за пару минут.', tag: '24/7' }
+            { icon: '💬', name: 'АРХИТЕКТОР', text: 'Ставлю задачи словами — Архитектор пишет код, правит файлы и собирает приложения прямо в чате.', tag: 'ЯДРО', narr: 'Просто скажи, что нужно сделать. Архитектор сам напишет код и внедрит его в проект.' },
+            { icon: '🅰️', name: 'ZVENO', text: 'Основной канал Архитектора. Держит контекст, помнит историю проекта и ведёт его от идеи до релиза.', tag: 'ONLINE', narr: 'Канал Zveno держит контекст и ведёт проект от идеи до релиза.' },
+            { icon: '🟣', name: 'GIGACHAT', text: 'Вторая модель, включается отдельно. В режиме «Дуэт» две модели спорят и выдают лучшее решение.', tag: 'ДУЭТ', narr: 'Включи «Дуэт» — и две модели обсудят задачу прямо в чате, прежде чем начать работу.' },
+            { icon: '🏢', name: '3D ОФИС', text: 'Живой офис с агентами. Видно, кто чем занят, можно зайти внутрь и посмотреть.', tag: '3D', narr: 'Загляни в 3D-офис: видно, кто из агентов чем занят прямо сейчас.' },
+            { icon: '🗣️', name: 'ГОЛОСА', text: 'Агенты говорят вслух. Своя лаборатория голосов — подбери тембр каждому агенту.', tag: 'TTS', narr: 'Агенты умеют говорить вслух. В лаборатории голосов подбери тембр каждому.' },
+            { icon: '📎', name: 'ФОТО И ФАЙЛЫ', text: 'Пришли фото или документ — Штаб разберёт, опишет и сразу сделает работу.', tag: 'ВВОД', narr: 'Пришли фото или файл — Штаб разберёт его и сразу возьмётся за работу.' },
+            { icon: '🛠️', name: 'ИНСТРУМЕНТЫ', text: 'GitHub, погода, поиск в сети, картинки — всё под рукой у Архитектора.', tag: 'TOOLS', narr: 'GitHub, погода, поиск в сети и картинки — всё под рукой у Архитектора.' },
+            { icon: '🚑', name: 'РЕМОНТ СЕРВЕРА', text: 'Сервер упал? Пошаговая инструкция поднимет Штаб и Чат за пару минут.', tag: '24/7', narr: 'Если сервер упал — пошаговая инструкция поднимет Штаб и Чат за пару минут.' }
         ];
-        let previewBuilt = false, previewIdx = 0, previewTimer = null, previewMatrix = null;
+        const PV_DUR = 6500;   // сколько миллисекунд держится одна сцена
+        let previewBuilt = false, previewIdx = 0, previewMatrix = null;
+        let pvPlaying = true, pvElapsed = 0, pvTick = null, pvTypeTimer = null;
 
         function buildFeaturesPreview() {
             if (previewBuilt) return;
-            const cards = document.getElementById('previewCards');
-            const dots = document.getElementById('previewDots');
-            if (!cards || !dots) return;
-            PREVIEW_CARDS.forEach((c, i) => {
-                const el = document.createElement('div');
-                el.className = 'preview-card';
-                el.innerHTML = '<div class="pc-icon">' + c.icon + '</div>' +
-                    '<div class="pc-name">' + c.name + '</div>' +
-                    '<div class="pc-text">' + c.text + '</div>' +
-                    '<div class="pc-tag">' + c.tag + '</div>';
-                cards.appendChild(el);
-                const d = document.createElement('div');
-                d.className = 'dot' + (i === 0 ? ' on' : '');
-                dots.appendChild(d);
+            const tl = document.getElementById('pvTimeline');
+            const st = document.getElementById('pvStage');
+            if (!tl || !st) return;
+            PREVIEW_CARDS.forEach((c) => {
+                const seg = document.createElement('div');
+                seg.className = 'pv-seg';
+                seg.innerHTML = '<i></i>';
+                tl.appendChild(seg);
+                const sc = document.createElement('div');
+                sc.className = 'pv-scene';
+                sc.innerHTML = '<div class="pv-icon">' + c.icon + '</div>' +
+                    '<div class="pv-name">' + c.name + '</div>' +
+                    '<div class="pv-text">' + c.text + '</div>' +
+                    '<div class="pv-tag">' + c.tag + '</div>';
+                st.appendChild(sc);
             });
-            cards.addEventListener('scroll', () => {
-                const w = cards.clientWidth;
-                const idx = Math.round(cards.scrollLeft / w);
-                setPreviewDot(idx);
-            }, { passive: true });
             previewBuilt = true;
         }
 
-        function setPreviewDot(idx) {
-            previewIdx = idx;
-            const dots = document.querySelectorAll('#previewDots .dot');
-            dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+        function pvFmt(ms) {
+            const s = Math.max(0, Math.round(ms / 1000));
+            return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
         }
 
-        function previewGoTo(idx) {
-            const cards = document.getElementById('previewCards');
-            if (!cards) return;
-            const n = PREVIEW_CARDS.length;
-            const next = (idx + n) % n;
-            cards.scrollTo({ left: next * cards.clientWidth, behavior: 'smooth' });
-            setPreviewDot(next);
+        function pvUpdateTime() {
+            const el = document.getElementById('pvTime');
+            if (!el) return;
+            const total = PREVIEW_CARDS.length * PV_DUR;
+            const cur = previewIdx * PV_DUR + Math.min(pvElapsed, PV_DUR);
+            el.textContent = pvFmt(cur) + ' / ' + pvFmt(total);
         }
+
+        function pvType(text) {
+            const el = document.getElementById('pvCaption');
+            if (!el) return;
+            clearInterval(pvTypeTimer);
+            el.textContent = '';
+            const s = String(text || '');
+            let i = 0;
+            pvTypeTimer = setInterval(() => {
+                if (!pvPlaying) return;                 // пауза — печать замирает
+                if (i >= s.length) { clearInterval(pvTypeTimer); return; }
+                el.textContent = s.slice(0, ++i);
+            }, 24);
+        }
+
+        function pvShow(i, keepPlaying) {
+            previewIdx = (i + PREVIEW_CARDS.length) % PREVIEW_CARDS.length;
+            pvElapsed = 0;
+            document.querySelectorAll('#pvStage .pv-scene').forEach((s, k) => s.classList.toggle('on', k === previewIdx));
+            document.querySelectorAll('#pvTimeline .pv-seg').forEach((s, k) => {
+                const bar = s.querySelector('i');
+                if (bar) bar.style.width = (k < previewIdx) ? '100%' : '0%';
+            });
+            pvType(PREVIEW_CARDS[previewIdx].narr || PREVIEW_CARDS[previewIdx].text);
+            pvUpdateTime();
+            if (!keepPlaying) { pvPlaying = true; pvPlayBtn(); }
+        }
+
+        function pvPlayBtn() {
+            const b = document.getElementById('pvPlay');
+            if (b) b.textContent = pvPlaying ? '⏸' : '▶';
+        }
+
+        function pvLoop() {
+            if (pvTick) return;
+            pvTick = setInterval(() => {
+                if (!pvPlaying) return;
+                pvElapsed += 100;
+                const seg = document.querySelectorAll('#pvTimeline .pv-seg')[previewIdx];
+                if (seg) {
+                    const bar = seg.querySelector('i');
+                    if (bar) bar.style.width = Math.min(100, (pvElapsed / PV_DUR) * 100) + '%';
+                }
+                pvUpdateTime();
+                if (pvElapsed >= PV_DUR) {
+                    if (previewIdx >= PREVIEW_CARDS.length - 1) {
+                        // Последняя сцена доиграла — останавливаемся, ждём Босса.
+                        pvPlaying = false; pvElapsed = PV_DUR; pvPlayBtn(); pvUpdateTime();
+                    } else {
+                        pvShow(previewIdx + 1, true);
+                    }
+                }
+            }, 100);
+        }
+
+        function previewToggle() { pvPlaying = !pvPlaying; pvPlayBtn(); }
+        function previewNext() { pvShow(previewIdx + 1, true); }
+        function previewPrev() { pvShow(previewIdx - 1, true); }
 
         function startPreviewMatrix() {
             const canvas = document.getElementById('preview-canvas');
@@ -402,14 +462,17 @@
             buildFeaturesPreview();
             box.classList.add('show');
             startPreviewMatrix();
-            previewTimer = setInterval(() => previewGoTo(previewIdx + 1), 4500);
+            pvShow(0);
+            pvLoop();
         }
 
         function closeFeaturesPreview() {
             const box = document.getElementById('features-preview');
             if (!box) return;
             box.classList.remove('show');
-            if (previewTimer) { clearInterval(previewTimer); previewTimer = null; }
+            pvPlaying = false;
+            if (pvTick) { clearInterval(pvTick); pvTick = null; }
+            if (pvTypeTimer) { clearInterval(pvTypeTimer); pvTypeTimer = null; }
             if (previewMatrix) { clearInterval(previewMatrix); previewMatrix = null; }
             try { sessionStorage.setItem('shtabPreviewSeen', '1'); } catch (e) {}
             setTimeout(() => { box.style.display = 'none'; }, 600);
