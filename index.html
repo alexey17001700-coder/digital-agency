@@ -476,6 +476,17 @@
             pvLoop();
         }
 
+        // Повторный показ инструкции по кнопке «🎬 Инструкция» из кадра.
+        // Сбрасываем оба «замка» (флаг показа и метку сессии) и запускаем заново.
+        function replayFeaturesPreview() {
+            if (pvHideTimer) { clearTimeout(pvHideTimer); pvHideTimer = null; }
+            previewShown = false;
+            try { sessionStorage.removeItem('shtabPreviewSeen'); } catch (e) {}
+            const box = document.getElementById('features-preview');
+            if (box) box.style.display = '';
+            showFeaturesPreview();
+        }
+
         function closeFeaturesPreview() {
             const box = document.getElementById('features-preview');
             if (!box) return;
