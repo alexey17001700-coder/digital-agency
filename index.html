@@ -86,6 +86,21 @@
             <div id="ai-model-list"></div>
         </div>
     </div>
+    <div id="features-preview">
+        <canvas id="preview-canvas"></canvas>
+        <div class="preview-skip" onclick="closeFeaturesPreview()">Пропустить ✕</div>
+        <div class="preview-inner">
+            <div class="preview-head">
+                <div class="preview-crown">👑</div>
+                <div class="preview-title">ЧТО УМЕЕТ ШТАБ</div>
+                <div class="preview-sub">Цифровое Агентство · твой личный штаб</div>
+            </div>
+            <div class="preview-cards" id="previewCards"></div>
+            <div class="preview-dots" id="previewDots"></div>
+            <button class="preview-enter" onclick="closeFeaturesPreview()">ВОЙТИ В ШТАБ →</button>
+            <div class="preview-hint">Листай карточки · нажми «Войти», когда готов</div>
+        </div>
+    </div>
     <iframe id="app-frame" src=""></iframe>
     <div id="fab-overlay" onclick="toggleMenu()"></div>
     <div id="control-panel">
