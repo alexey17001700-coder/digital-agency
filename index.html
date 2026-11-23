@@ -427,7 +427,12 @@
             }, 100);
         }
 
-        function previewToggle() { pvPlaying = !pvPlaying; pvPlayBtn(); }
+        function previewToggle() {
+            // Дошли до конца и жмём «играть» — начинаем инструкцию заново,
+            // иначе кнопка ▶ ничего бы не делала (pvElapsed уже = PV_DUR).
+            if (!pvPlaying && previewIdx >= PREVIEW_CARDS.length - 1 && pvElapsed >= PV_DUR) { pvShow(0); return; }
+            pvPlaying = !pvPlaying; pvPlayBtn();
+        }
         function previewNext() { pvShow(previewIdx + 1, true); }
         function previewPrev() { pvShow(previewIdx - 1, true); }
 
