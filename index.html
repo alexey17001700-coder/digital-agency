@@ -100,17 +100,22 @@
     </div>
     <div id="features-preview">
         <canvas id="preview-canvas"></canvas>
-        <div class="preview-skip" onclick="closeFeaturesPreview()">Пропустить ✕</div>
-        <div class="preview-inner">
-            <div class="preview-head">
-                <div class="preview-crown">👑</div>
-                <div class="preview-title">ЧТО УМЕЕТ ШТАБ</div>
-                <div class="preview-sub">Цифровое Агентство · твой личный штаб</div>
+        <div class="pv-player">
+            <div class="pv-top">
+                <span class="pv-badge">ИНСТРУКЦИЯ</span>
+                <span class="pv-rec"><span class="rec-dot"></span>REC</span>
+                <span class="pv-skip" onclick="closeFeaturesPreview()">Пропустить ✕</span>
             </div>
-            <div class="preview-cards" id="previewCards"></div>
-            <div class="preview-dots" id="previewDots"></div>
-            <button class="preview-enter" onclick="closeFeaturesPreview()">ВОЙТИ В ШТАБ →</button>
-            <div class="preview-hint">Листай карточки · нажми «Войти», когда готов</div>
+            <div class="pv-timeline" id="pvTimeline"></div>
+            <div class="pv-stage" id="pvStage"></div>
+            <div class="pv-caption" id="pvCaption"></div>
+            <div class="pv-controls">
+                <button class="pv-btn" onclick="previewPrev()" title="Предыдущая сцена">⏮</button>
+                <button class="pv-btn main" id="pvPlay" onclick="previewToggle()" title="Пауза / играть">⏸</button>
+                <button class="pv-btn" onclick="previewNext()" title="Следующая сцена">⏭</button>
+            </div>
+            <div class="pv-time" id="pvTime">0:00 / 0:00</div>
+            <button class="pv-enter" onclick="closeFeaturesPreview()">ВОЙТИ В ШТАБ →</button>
         </div>
     </div>
     <iframe id="app-frame" src=""></iframe>
