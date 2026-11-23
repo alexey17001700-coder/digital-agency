@@ -340,7 +340,7 @@
         ];
         const PV_DUR = 6500;   // сколько миллисекунд держится одна сцена
         let previewBuilt = false, previewIdx = 0, previewMatrix = null, previewShown = false;
-        let pvPlaying = true, pvElapsed = 0, pvTick = null, pvTypeTimer = null;
+        let pvPlaying = true, pvElapsed = 0, pvTick = null, pvTypeTimer = null, pvHideTimer = null;
 
         function buildFeaturesPreview() {
             if (previewBuilt) return;
