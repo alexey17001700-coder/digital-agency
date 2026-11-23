@@ -295,9 +295,107 @@
             if (el) { el.innerText = "❌ ОШИБКА: " + msg; el.style.color = "#ff3333"; }
         };
         function hideSplashIfReady() {
-            if (appLoaded && minTimePassed && aiReady) { splashScreen.classList.add('hidden'); clearInterval(matrixInterval); }
+            if (appLoaded && minTimePassed && aiReady) { splashScreen.classList.add('hidden'); clearInterval(matrixInterval); showFeaturesPreview(); }
             else if (minTimePassed && !appLoaded) { document.querySelector('.splash-title').innerText = "Загрузка Штаба..."; }
             else if (appLoaded && minTimePassed && !aiReady) { document.querySelector('.splash-title').innerText = "Загрузка нейросети..."; }
+        }
+
+        // === ПРЕВЬЮ «ЧТО УМЕЕТ ШТАБ» ===
+        // Показывается ОДИН РАЗ за сессию сразу после заставки: коротко объясняет
+        // Боссу, что умеет Штаб. Листается как карусель, закрывается кнопкой или
+        // «Пропустить». Повторно не всплывает (sessionStorage), чтобы не мешать.
+        const PREVIEW_CARDS = [
+            { icon: '💬', name: 'АРХИТЕКТОР', text: 'Ставлю задачи словами — Архитектор пишет код, правит файлы и собирает приложения прямо в чате.', tag: 'ЯДРО' },
+            { icon: '🅰️', name: 'ZVENO', text: 'Основной канал Архитектора. Держит контекст, помнит историю проекта и ведёт его от идеи до релиза.', tag: 'ONLINE' },
+            { icon: '🟣', name: 'GIGACHAT', text: 'Вторая модель, включается отдельно. В режиме «Дуэт» две модели спорят и выдают лучшее решение.', tag: 'ДУЭТ' },
+            { icon: '🏢', name: '3D ОФИС', text: 'Живой офис с агентами. Видно, кто чем занят, можно зайти внутрь и посмотреть.', tag: '3D' },
+            { icon: '🗣️', name: 'ГОЛОСА', text: 'Агенты говорят вслух. Своя лаборатория голосов — подбери тембр каждому агенту.', tag: 'TTS' },
+            { icon: '📎', name: 'ФОТО И ФАЙЛЫ', text: 'Пришли фото или документ — Штаб разберёт, опишет и сразу сделает работу.', tag: 'ВВОД' },
+            { icon: '🛠️', name: 'ИНСТРУМЕНТЫ', text: 'GitHub, погода, поиск в сети, картинки — всё под рукой у Архитектора.', tag: 'TOOLS' },
+            { icon: '🚑', name: 'РЕМОНТ СЕРВЕРА', text: 'Сервер упал? Пошаговая инструкция поднимет Штаб и Чат за пару минут.', tag: '24/7' }
+        ];
+        let previewBuilt = false, previewIdx = 0, previewTimer = null, previewMatrix = null;
+
+        function buildFeaturesPreview() {
+            if (previewBuilt) return;
+            const cards = document.getElementById('previewCards');
+            const dots = document.getElementById('previewDots');
+            if (!cards || !dots) return;
+            PREVIEW_CARDS.forEach((c, i) => {
+                const el = document.createElement('div');
+                el.className = 'preview-card';
+                el.innerHTML = '<div class="pc-icon">' + c.icon + '</div>' +
+                    '<div class="pc-name">' + c.name + '</div>' +
+                    '<div class="pc-text">' + c.text + '</div>' +
+                    '<div class="pc-tag">' + c.tag + '</div>';
+                cards.appendChild(el);
+                const d = document.createElement('div');
+                d.className = 'dot' + (i === 0 ? ' on' : '');
+                dots.appendChild(d);
+            });
+            cards.addEventListener('scroll', () => {
+                const w = cards.clientWidth;
+                const idx = Math.round(cards.scrollLeft / w);
+                setPreviewDot(idx);
+            }, { passive: true });
+            previewBuilt = true;
+        }
+
+        function setPreviewDot(idx) {
+            previewIdx = idx;
+            const dots = document.querySelectorAll('#previewDots .dot');
+            dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+        }
+
+        function previewGoTo(idx) {
+            const cards = document.getElementById('previewCards');
+            if (!cards) return;
+            const n = PREVIEW_CARDS.length;
+            const next = (idx + n) % n;
+            cards.scrollTo({ left: next * cards.clientWidth, behavior: 'smooth' });
+            setPreviewDot(next);
+        }
+
+        function startPreviewMatrix() {
+            const canvas = document.getElementById('preview-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            const chars = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%'.split('');
+            const fontSize = 14; const columns = canvas.width / fontSize; const drops = [];
+            for (let x = 0; x < columns; x++) drops[x] = 1;
+            previewMatrix = setInterval(() => {
+                ctx.fillStyle = 'rgba(5, 5, 5, 0.08)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00e5ff'; ctx.font = fontSize + 'px monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }, 40);
+        }
+
+        function showFeaturesPreview() {
+            let seen = '0';
+            try { seen = sessionStorage.getItem('shtabPreviewSeen') || '0'; } catch (e) {}
+            if (seen === '1') return;
+            const box = document.getElementById('features-preview');
+            if (!box) return;
+            buildFeaturesPreview();
+            box.classList.add('show');
+            startPreviewMatrix();
+            previewTimer = setInterval(() => previewGoTo(previewIdx + 1), 4500);
+        }
+
+        function closeFeaturesPreview() {
+            const box = document.getElementById('features-preview');
+            if (!box) return;
+            box.classList.remove('show');
+            if (previewTimer) { clearInterval(previewTimer); previewTimer = null; }
+            if (previewMatrix) { clearInterval(previewMatrix); previewMatrix = null; }
+            try { sessionStorage.setItem('shtabPreviewSeen', '1'); } catch (e) {}
+            setTimeout(() => { box.style.display = 'none'; }, 600);
         }
         // ТИХИЙ ЗАПУСК: оболочка обновилась сама (см. «ЖИВОЕ ОБНОВЛЕНИЕ ШТАБА») —
         // заставку не показываем вообще, чтобы Босс не видел перезагрузку.
