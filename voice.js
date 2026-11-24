@@ -243,6 +243,10 @@ async function toggleVoiceInput() {
     }
     micUserStopped = false;
     micRestarts = 0;
+    // Сброс накопленного: поле запоминаем как базу, текст сессии — с чистого листа.
+    const _ci = document.getElementById('chatInput');
+    micBase = _ci ? String(_ci.value || '').trim() : '';
+    micDone = ''; micFull = ''; micSent = '';
     micUI(true, '🎤 Запрашиваю доступ…');
     const ok = await micEnsurePermission();
     if (!ok) { micUserStopped = true; micUI(false, '🎤 Нет доступа к микрофону — разреши его в настройках'); return; }
