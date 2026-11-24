@@ -212,6 +212,8 @@ if (SpeechRecognition) {
     };
 
     recognition.onend = function () {
+        // Финал сессии запоминаем — авто-перезапуск продолжит текст, а не начнёт заново.
+        if (micFull) micDone = micFull;
         // АВТО-ПЕРЕЗАПУСК: если Босс не останавливал вручную и лимит не превышен —
         // продолжаем слушать. Так микрофон не «выключается сразу» на Android.
         if (!micUserStopped && micRestarts < 8) {
