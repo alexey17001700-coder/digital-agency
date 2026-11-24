@@ -2325,7 +2325,8 @@ function init() {
             if (e.key !== 'Enter') return;
             if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;   // Shift+Enter — перенос строки
             if (e.isComposing) return;                                      // идёт ввод иероглифов — не мешаем
-            if (typeof isTouchDevice === 'function' && isTouchDevice()) return;   // на телефоне Enter = новая строка
+            const _touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0 && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+            if (_touch) return;                                             // на телефоне Enter = новая строка
             e.preventDefault();
             if (isGenerating) return;                                       // идёт ответ — не дублируем
             sendMessage();
