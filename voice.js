@@ -236,7 +236,10 @@ if (SpeechRecognition) {
         isListening = false;
         micUserStopped = true;
         let msg = '🎤 Микрофон: ' + code;
-        if (code === 'not-allowed' || code === 'service-not-allowed') msg = '🎤 Нет доступа к микрофону — разреши его в настройках браузера';
+        if (code === 'not-allowed' || code === 'service-not-allowed') {
+            msg = '🎤 Нет доступа к микрофону — разреши его в настройках браузера';
+            micPermOK = false; micPermAsked = false;   // дадим шанс запросить заново
+        }
         else if (code === 'audio-capture') msg = '🎤 Микрофон занят или недоступен';
         else if (code === 'network') msg = '🎤 Распознаванию нужен интернет';
         micUI(false, msg);
