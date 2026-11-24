@@ -1550,28 +1550,6 @@ Deno.serve(async (request) => {
         const targetRepo = (body.repo && typeof body.repo === "string" && body.repo.trim()) ? body.repo.trim() : REPO_NAME;
         const isProtected = targetRepo === REPO_NAME;
 
-        // 🔒 ЗАМОК РЕПОЗИТОРИЯ: состояние и переключение (пишем LOCK.json).
-        // Запереть можно всегда; снять — только с верным паролем.
-        if (body.lockStatus) {
-            return json({ success: true, locked: await isRepoLocked() });
-        }
-        if (body.lockRepo) {
-            if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
-            const wantLocked = body.lockRepo === true || body.lockRepo === "lock";
-            if (!wantLocked) {
-                const given = String(body.lockPass || "").trim();
-                const expected = Deno.env.get("SHATAB_LOCK_PASS") || "";
-                const ok = expected ? given === expected : b64EncodeUnicode(given) === LOCK_PASS_B64;
-                if (!ok) return json({ success: false, error: "❌ Неверный пароль — замок остаётся." }, 403);
-            }
-            try {
-                await updateFileInRepo(LOCK_FILE, JSON.stringify({ locked: wantLocked, at: new Date().toISOString() }, null, 2) + "\n", REPO_NAME);
-                lockCache = { locked: wantLocked, at: Date.now() };
-                zlog(`[LOCK] репозиторий ${wantLocked ? "ЗАПЕРТ" : "ОТКРЫТ"}`);
-                return json({ success: true, locked: wantLocked, message: wantLocked ? "🔒 Репозиторий заперт" : "🔓 Репозиторий открыт" });
-            } catch (e: any) { return json({ success: false, error: e.message }, 500); }
-        }
-
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
             // 🔒 Замок: при запертом репозитории Штаба прямые правки запрещены.
