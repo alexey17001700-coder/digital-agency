@@ -1552,8 +1552,6 @@ Deno.serve(async (request) => {
 
         // РАБОТА С ФАЙЛАМИ (ПРЯМЫЕ ЗАПРОСЫ)
         if (body.updateFile) {
-            // 🔒 Замок: при запертом репозитории Штаба прямые правки запрещены.
-            if (isProtected && await isRepoLocked()) return json({ success: false, error: lockRefusal() }, 423);
             if (!GITHUB_TOKEN || !REPO_OWNER || !REPO_NAME) return json({ success: false, error: "GitHub не настроен" }, 500);
             if (isProtected && !isWriteAllowed(body.path, true)) return json({ success: false, error: `Запись в "${body.path}" запрещена.` }, 403);
             if (!isWriteAllowed(body.path, false)) return json({ success: false, error: `Расширение "${body.path}" не разрешено.` }, 403);
