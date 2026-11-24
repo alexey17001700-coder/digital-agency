@@ -133,20 +133,7 @@ function micToast(msg) {
     } catch (e) {}
 }
 
-// РАЗРЕШЕНИЕ НА МИКРОФОН. На Android (в т.ч. Яндекс.Браузер) распознавание
-// стартует и ТУТ ЖЕ глохнет, если доступ ещё не выдан. Поэтому сначала явно
-// просим доступ через getUserMedia, отпускаем поток и только потом запускаем
-// распознавание — тогда onstart держится, а не гаснет мгновенно.
-async function micEnsurePermission() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
+x
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
