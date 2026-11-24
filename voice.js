@@ -223,12 +223,8 @@ if (SpeechRecognition) {
         // продолжаем слушать. Так микрофон не «выключается сразу» на Android.
         if (!micUserStopped && micRestarts < 8) {
             micRestarts++;
-            // Перед перезапуском фиксируем уже сказанное как «базу»:
-            // новая сессия начнёт results с нуля, и без этого текст задублируется.
-            const ci = document.getElementById('chatInput');
-            if (ci) micBaseText = ci.value.trim();
-            micSessionText = '';
-            micLastWritten = '';
+            // micDone уже содержит всё сказанное — новая сессия продолжит текст,
+            // а не начнёт заново. Поэтому базу и счётчики НЕ сбрасываем.
             setTimeout(function () {
                 if (micUserStopped) return;
                 try { recognition.start(); }
