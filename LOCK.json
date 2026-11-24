@@ -1,5 +1,0 @@
-{
-  "locked": false,
-  "at": "2026-01-01T00:00:00.000Z",
-  "note": "ЗАМОК РЕПОЗИТОРИЯ ШТАБА. Пока locked=true — сервер (main.ts) отклоняет ЛЮБЫЕ правки digital-agency: write_file, replace_in_file, delete_file, updateFile, бэкап и откат. Снять замок можно только паролем Босса через кнопку 🔒 Замок в Штабе. Пароль сервер берёт из SHATAB_LOCK_PASS (/root/.env), иначе — кодовое слово из app.html."
-}
