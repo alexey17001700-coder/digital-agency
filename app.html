@@ -413,5 +413,50 @@
         document.body.removeChild(ta);
     }
     </script>
+
+    <script>
+    // === ЗАМОК ШТАБА ===
+    // Пока Босс не ввёл пароль — поле ввода и кнопка отправки заблокированы,
+    // ни одну задачу отправить нельзя. Пароль хранится в base64 (не открытым текстом).
+    (function () {
+        const LOCK_HASH = 'ODQ1Mg==';          // пароль в base64
+        const LOCK_KEY = 'shtab_lock_state';   // 'open' = разблокировано, иначе — заперто
+        function isLocked() { return localStorage.getItem(LOCK_KEY) !== 'open'; }
+
+        function applyLock() {
+            const locked = isLocked();
+            const input = document.getElementById('chatInput');
+            const send = document.getElementById('sendBtn');
+            const btn = document.getElementById('btnLock');
+            if (input) {
+                input.disabled = locked;
+                input.placeholder = locked ? '🔒 Штаб заблокирован — введи пароль' : 'Написать задачу...';
+            }
+            if (send) { send.disabled = locked; send.style.opacity = locked ? '0.4' : ''; }
+            if (btn) {
+                btn.textContent = locked ? '🔒 Замок' : '🔓 Открыто';
+                btn.style.borderColor = locked ? '#ff0055' : '#00ff88';
+                btn.style.color = locked ? '#ff0055' : '#00ff88';
+            }
+        }
+
+        window.toggleShtabLock = function () {
+            if (isLocked()) {
+                const p = prompt('Введи пароль для разблокировки Штаба:');
+                if (p === null) return;
+                if (btoa(p) === LOCK_HASH) { localStorage.setItem(LOCK_KEY, 'open'); applyLock(); }
+                else { alert('❌ Неверный пароль. Штаб остаётся заблокированным.'); }
+            } else {
+                localStorage.setItem(LOCK_KEY, 'locked');
+                applyLock();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', applyLock);
+        window.addEventListener('load', applyLock);
+        setTimeout(applyLock, 500);
+        setTimeout(applyLock, 2000);
+    })();
+    </script>
 </body>
 </html>
