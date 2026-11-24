@@ -148,7 +148,9 @@ async function micEnsurePermission() {
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = 'ru-RU';
-    recognition.continuous = true;       // слушаем дольше — не глохнет после первой паузы
+    // На iOS continuous игнорируется и всё равно рвётся после паузы,
+    // поэтому там ставим false и полагаемся на авто-перезапуск.
+    recognition.continuous = !IS_IOS;
     recognition.interimResults = true;   // текст появляется по мере речи
     recognition.maxAlternatives = 1;
 
