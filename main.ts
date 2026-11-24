@@ -26,6 +26,37 @@ const WRITE_ALLOWED_EXT = [
 ];
 const WRITE_DENY_NAMES = []; // Разрешаем всё, кроме удаления (проверяется в delete_file)
 const MAX_WRITE_SIZE = 500000;
+
+// =========================================
+// 🔒 ЗАМОК РЕПОЗИТОРИЯ ШТАБА (приказ Босса)
+// Пока замок ЗАПЕРТ — ЛЮБЫЕ правки репозитория digital-agency запрещены
+// (write_file, replace_in_file, delete_file, updateFile, бэкап/откат).
+// Состояние живёт в файле LOCK.json в корне репозитория.
+// Пароль: SHATAB_LOCK_PASS из /root/.env; если не задан — кодовое слово Босса.
+// =========================================
+const LOCK_FILE = "LOCK.json";
+const LOCK_PASS_B64 = "ODQ1Mg==";   // пароль Босса в base64 (тот же, что в app.html)
+let lockCache: { locked: boolean, at: number } = { locked: false, at: 0 };
+const LOCK_CACHE_MS = 5000;
+
+async function isRepoLocked(): Promise<boolean> {
+    const now = Date.now();
+    if (now - lockCache.at < LOCK_CACHE_MS) return lockCache.locked;
+    let locked = false;
+    try {
+        const raw = await getFileContent(LOCK_FILE, REPO_NAME);
+        if (raw) {
+            const j = JSON.parse(raw);
+            locked = !!(j && j.locked === true);
+        }
+    } catch (_e) { locked = false; }
+    lockCache = { locked, at: now };
+    return locked;
+}
+
+function lockRefusal(): string {
+    return "🔒 РЕПОЗИТОРИЙ ШТАБА ЗАПЕРТ. Правки запрещены. Босс должен снять замок кнопкой 🔒 Замок в Штабе (пароль).";
+}
 const MAX_TOOL_RESULT = 200000;
 
 // =========================================
