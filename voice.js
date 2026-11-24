@@ -184,6 +184,7 @@ if (SpeechRecognition) {
 
     recognition.onstart = function () {
         isListening = true;
+        micPermOK = true;   // распознавание стартовало — доступ точно есть
         micUI(true, '🎤 Слушаю…');
     };
 
