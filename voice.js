@@ -99,6 +99,9 @@ let micDone = '';            // финальный текст прошлых с�
 let micFull = '';            // накопленный текст текущей сессии
 let micSent = '';            // что уже отправлено — защита от двойной отправки
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Определяем iPhone/iPad: там continuous не работает и всё равно рвётся после паузы.
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 // Единая точка отрисовки кнопки микрофона — одинаково на всех браузерах.
 function micUI(on, text) {
