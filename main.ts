@@ -502,11 +502,6 @@ async function executeTool(name: string, args: any): Promise<string> {
         const targetRepo = (args.repo && typeof args.repo === "string" && args.repo.trim()) ? args.repo.trim() : REPO_NAME;
         const isProtected = targetRepo === REPO_NAME;
 
-        // 🔒 ЗАМОК: при запертом репозитории Штаба любые правки отклоняются.
-        if (isProtected && (name === "write_file" || name === "replace_in_file" || name === "delete_file" || name === "enable_github_pages")) {
-            if (await isRepoLocked()) return lockRefusal();
-        }
-
         if (name === "read_file") {
             if (!isReadAllowed(args.path)) return `Ошибка: чтение "${args.path}" запрещено.`;
             const content = await getFileContent(args.path, targetRepo);
