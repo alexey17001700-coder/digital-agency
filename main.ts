@@ -1537,8 +1537,6 @@ Deno.serve(async (request) => {
     try {
         // СТАРЫЕ РУЧКИ (БЭКАПЫ)
         if (body.isBackup || body.isRollback) {
-            // 🔒 Замок: при запертом репозитории бэкап и откат запрещены.
-            if (await isRepoLocked()) return json({ success: false, error: lockRefusal() }, 423);
             // ЗАМКА «только с ключом Администратора» здесь НЕТ и быть не должно:
             // флаг isBoss из тела запроса игнорируется, запрос пропускается всегда.
             body.isBoss = true;
