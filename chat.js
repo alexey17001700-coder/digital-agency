@@ -2318,6 +2318,21 @@ function init() {
     }
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
+        /* --- ENTER ОТПРАВЛЯЕТ СООБЩЕНИЕ (компьютер) ---
+           Раньше обработчика Enter не было вообще: на ПК клавиша просто
+           переносила строку, и отправить сообщение с клавиатуры было нельзя.
+           Теперь: Enter — отправить, Shift+Enter — перенос строки.
+           На телефоне (тач-экран) поведение прежнее: Enter = новая строка,
+           отправка — кнопкой ➤. */
+        chatInputEl.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' && e.keyCode !== 13) return;
+            if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;   // Shift+Enter — перенос строки
+            if (e.isComposing) return;                                      // идёт ввод/автозамена — не мешаем
+            const touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+            if (touch) return;                                              // на телефоне Enter — новая строка
+            e.preventDefault();
+            if (typeof handleSendClick === 'function') handleSendClick();
+        });
     }
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
     if (typeof ensureDuetButton === 'function') ensureDuetButton();         // ⚡ кнопка «Дуэт» в панели режимов
