@@ -160,15 +160,38 @@ if (SpeechRecognition) {
     recognition.onresult = function (event) {
         const chatInput = document.getElementById('chatInput');
         if (!chatInput) return;
-        let text = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            text += event.results[i][0].transcript;
+        // Собираем ВЕСЬ текст сессии (с 0, а не с resultIndex): на iOS resultIndex
+        // врёт, результаты перекрываются — отсюда и была лавина дублей.
+        let finalText = '', interimText = '';
+        for (let i = 0; i < event.results.length; i++) {
+            const r = event.results[i];
+            const t = (r[0] && r[0].transcript) ? r[0].transcript : '';
+            if (r.isFinal) finalText += t; else interimText += t;
         }
-        if (!text) return;
-        chatInput.value = (chatInput.value ? chatInput.value + ' ' : '') + text.trim();
-        // Финальный результат — отправляем. Промежуточный — только показываем.
+        finalText = finalText.trim();
+        interimText = interimText.trim();
+
+        // Склейка с прошлыми сессиями БЕЗ дублей: если iOS повторил весь текст —
+        // берём новую версию; если фрагмент уже есть — не добавляем.
+        let full = micDone;
+        if (finalText) {
+            if (full && finalText.indexOf(full) === 0) full = finalText;
+            else if (full && full.indexOf(finalText) === 0) { /* уже есть — пропускаем */ }
+            else full = full ? full + ' ' + finalText : finalText;
+        }
+        micFull = full;
+
+        // Поле собирается ЗАМЕНОЙ, а не приклеиванием — главный фикс дублей.
+        const parts = [];
+        if (micBase) parts.push(micBase);
+        if (full) parts.push(full);
+        if (interimText) parts.push(interimText);
+        chatInput.value = parts.join(' ');
+
+        // Финальный результат — отправляем РОВНО ОДИН раз.
         const last = event.results[event.results.length - 1];
-        if (last && last.isFinal) {
+        if (last && last.isFinal && full && full !== micSent) {
+            micSent = full;
             micUserStopped = true;
             try { recognition.stop(); } catch (e) {}
             setTimeout(function () { if (typeof handleSendClick === 'function') handleSendClick(); }, 120);
