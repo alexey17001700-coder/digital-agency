@@ -2318,6 +2318,18 @@ function init() {
     }
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
+        /* --- ENTER НА КЛАВИАТУРЕ = ОТПРАВКА (приказ Босса) ---
+           На ПК Enter отправляет сообщение, Shift+Enter — перенос строки.
+           На телефоне (тач) поведение прежнее: Enter = новая строка, отправка кнопкой ➤. */
+        chatInputEl.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter') return;
+            if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;   // Shift+Enter — перенос строки
+            if (e.isComposing) return;                                      // идёт ввод иероглифов — не мешаем
+            if (typeof isTouchDevice === 'function' && isTouchDevice()) return;   // на телефоне Enter = новая строка
+            e.preventDefault();
+            if (isGenerating) return;                                       // идёт ответ — не дублируем
+            sendMessage();
+        });
     }
     if (typeof applyGigaChatButton === 'function') applyGigaChatButton();   // кнопка 🟣 GigaChat показывает сохранённый выбор
     if (typeof ensureDuetButton === 'function') ensureDuetButton();         // ⚡ кнопка «Дуэт» в панели режимов
