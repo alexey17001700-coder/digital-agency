@@ -133,7 +133,45 @@ function micToast(msg) {
     } catch (e) {}
 }
 
-x
+// РАЗРЕШЕНИЕ НА МИКРОФОН. На Android (в т.ч. Яндекс.Браузер) распознавание
+// стартует и ТУТ ЖЕ глохнет, если доступ ещё не выдан. Поэтому сначала явно
+// просим доступ через getUserMedia, отпускаем поток и только потом запускаем
+// распознавание — тогда onstart держится, а не гаснет мгновенно.
+// ВАЖНО: доступ спрашиваем ОДИН РАЗ за сессию. Повторный getUserMedia на
+// каждом старте заставлял телефон показывать запрос снова и снова.
+let micPermOK = false;      // доступ уже выдан — больше не дёргаем браузер
+let micPermAsked = false;   // getUserMedia уже вызывали (второй раз не просим)
+
+async function micPermState() {
+    try {
+        if (navigator.permissions && navigator.permissions.query) {
+            const st = await navigator.permissions.query({ name: 'microphone' });
+            return st.state;   // 'granted' | 'denied' | 'prompt'
+        }
+    } catch (e) {}
+    return 'unknown';
+}
+
+async function micEnsurePermission() {
+    if (micPermOK) return true;                       // уже разрешено — молча
+    const st = await micPermState();
+    if (st === 'granted') { micPermOK = true; return true; }
+    if (st === 'denied') return false;
+    // На iOS распознавание речи само спрашивает доступ. Если дёрнуть ещё и
+    // getUserMedia — выскочат ДВА запроса подряд. Поэтому там не трогаем.
+    if (IS_IOS) return true;
+    if (micPermAsked) return true;                    // второй раз не спрашиваем
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+    micPermAsked = true;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+        micPermOK = true;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
