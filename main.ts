@@ -1605,13 +1605,14 @@ const GH_PROXY_ALLOWED = [
 ];
 
 async function handleGitHubProxy(req: Request): Promise<Response> {
-  // 🔒 ЗАЩИТА: прокси GitHub отдаёт данные ТОЛЬКО с верным секретом Штаба.
-  // Секрет живёт в /root/.env (SHATAB_SECRET), в браузер и в код не попадает.
-  if (!SHATAB_SECRET) {
-    return json({ success: false, error: "SHATAB_SECRET не задан на сервере (/root/.env)" }, 500);
+  // 🔒 ЗАЩИТА: прокси GitHub отдаёт данные ТОЛЬКО с ключом радара.
+  // Ключ живёт в /root/.env (GITRADAR_TOKEN), в код и в браузер не попадает.
+  // ВАЖНО: это НЕ SHATAB_SECRET — тот защищает запись в Штаб и в браузер не уходит.
+  if (!GITRADAR_TOKEN) {
+    return json({ success: false, error: "GITRADAR_TOKEN не задан на сервере (/root/.env)" }, 500);
   }
-  if (!checkSecret(req)) {
-    return json({ success: false, error: "Доступ запрещён: нужен заголовок X-Shtab-Token" }, 401);
+  if ((req.headers.get("X-Gitradar-Token") || "") !== GITRADAR_TOKEN) {
+    return json({ success: false, error: "Доступ запрещён: нужен заголовок X-Gitradar-Token" }, 401);
   }
 
   const url = new URL(req.url);
