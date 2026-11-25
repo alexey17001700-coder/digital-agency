@@ -1601,6 +1601,15 @@ const GH_PROXY_ALLOWED = [
 ];
 
 async function handleGitHubProxy(req: Request): Promise<Response> {
+  // 🔒 ЗАЩИТА: прокси GitHub отдаёт данные ТОЛЬКО с верным секретом Штаба.
+  // Секрет живёт в /root/.env (SHATAB_SECRET), в браузер и в код не попадает.
+  if (!SHATAB_SECRET) {
+    return json({ success: false, error: "SHATAB_SECRET не задан на сервере (/root/.env)" }, 500);
+  }
+  if (!checkSecret(req)) {
+    return json({ success: false, error: "Доступ запрещён: нужен заголовок X-Shtab-Token" }, 401);
+  }
+
   const url = new URL(req.url);
   const ghPath = url.pathname.replace(/^\/api\/github/, "") + url.search;
 
