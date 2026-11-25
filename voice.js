@@ -113,7 +113,18 @@ const MIC_STOP_WORDS = ['стоп', 'хватит', 'отмена', 'выклю�
 function micIsStop(phrase) {
     const t = String(phrase || '').toLowerCase().replace(/[.,!?]/g, '').trim();
     if (!t) return false;
+    // 1) фраза ЦЕЛИКОМ — это команда («стоп», «выключи микрофон»)
     for (let i = 0; i < MIC_STOP_WORDS.length; i++) if (t === MIC_STOP_WORDS[i]) return true;
+    // 2) команда ПРОЗВУЧАЛА В КОНЦЕ фразы: «включи свет стоп» — раньше не
+    // срабатывало, потому что сверялось только полное совпадение.
+    const tail = t.split(/\s+/).slice(-2).join(' ');
+    for (let i = 0; i < MIC_STOP_WORDS.length; i++) {
+        if (MIC_STOP_WORDS[i].indexOf(' ') > -1) { if (tail === MIC_STOP_WORDS[i]) return true; }
+    }
+    // 3) одиночное слово-команда где угодно («стоп», «хватит», «молчи»)
+    const words = t.split(/\s+/);
+    const oneWord = ['стоп', 'хватит', 'отмена', 'молчи', 'замолчи', 'stop', 'cancel'];
+    for (let i = 0; i < words.length; i++) if (oneWord.indexOf(words[i]) > -1) return true;
     return false;
 }
 // Сброс таймеров тишины и потолка — вызываем при новом слове и при выключении.
