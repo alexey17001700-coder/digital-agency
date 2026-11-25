@@ -2404,8 +2404,10 @@ function init() {
     renderChatList(); 
     const btnVoice = document.getElementById('btnVoiceToggle');
     if (btnVoice && typeof isVoiceEnabled !== 'undefined') {
-        if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active'); }
-        else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active'); }
+        // mode-on держит кнопку ВИДНОЙ в свёрнутой панели режимов —
+        // Босс сразу видит, включена озвучка или нет.
+        if (isVoiceEnabled) { btnVoice.innerText = '🗣️ Озвучка: ВКЛ'; btnVoice.classList.add('active', 'mode-on'); }
+        else { btnVoice.innerText = '🗣️ Озвучка: ВЫКЛ'; btnVoice.classList.remove('active', 'mode-on'); }
     }
     if (chatInputEl) {
         chatInputEl.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; if(this.value === '') this.style.height = 'auto'; });
