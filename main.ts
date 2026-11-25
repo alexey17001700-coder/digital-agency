@@ -18,6 +18,10 @@ const ZVENO_CODE_WORD = "zveno";   // кодовое слово Босса: се
    Это «глаза» канала Zveno: фото → описание → в контекст. */
 const VISION_MODEL = "nvidia/nemotron-3.5-super-vl:free";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
+/* 📡 GIT РАДАР — ОТДЕЛЬНЫЙ ключ для прокси GitHub.
+   НЕ SHATAB_SECRET: тот защищает запись в Штаб, и его нельзя светить в браузере.
+   Этот ключ даёт только ЧТЕНИЕ GitHub через прокси. Живёт в /root/.env. */
+const GITRADAR_TOKEN = Deno.env.get("GITRADAR_TOKEN") || "";
 
 /* 🟠 BAIDU ERNIE — ОТДЕЛЬНЫЙ КАНАЛ (бесплатная модель).
    Идёт через тот же шлюз ZvenoAI (api.zveno.ai), ключ серверный ZVENO_API_KEY.
