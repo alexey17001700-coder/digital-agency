@@ -1797,6 +1797,15 @@ async function sendMessage(overrideText = null, isKick = false) {
         stopSendTimer();   // старый секундомер гасим сразу, не ждём нового старта
     }
     const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
+    /* --- ДУБЛЬ ОТПРАВКИ ГАСИМ ЗДЕСЬ (до чата и до модели) ---
+       Если тот же самый текст от Босса пришёл повторно в течение 4 секунд —
+       это эхо голосового ввода, а не новое сообщение. Выходим молча:
+       в чате остаётся ОДНО сообщение и уходит ОДИН запрос. */
+    if (!overrideText && !isKick && text) {
+        const sameText = (text === lastBossText) && (Date.now() - lastBossAt) < DUP_SEND_GUARD_MS;
+        lastBossText = text; lastBossAt = Date.now();
+        if (sameText) { chatInputEl.value = ''; chatInputEl.style.height = 'auto'; return; }
+    }
     if (!overrideText) resetSearchGuard(); // новый вопрос Босса = чистый лист для поиска
     if (!overrideText && !isKick) resetStallKicks(); // новый вопрос Босса = счётчик авто-пинков с нуля
     if (!overrideText && !isKick) resetStageKicks(); // новый вопрос Босса = этапы с нуля
