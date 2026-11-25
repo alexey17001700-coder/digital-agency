@@ -1597,6 +1597,40 @@ async function handleTTS(body: any) {
 // =========================================
 Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+    /* 🌐 GET БОЛЬШЕ НЕ ОТДАЁТ 405 (был источник путаницы при проверке озвучки).
+       GET /tts?text=Привет — сервер сразу отдаёт mp3: удобно проверить в браузере.
+       GET /tts без текста — короткий JSON «сервер жив, озвучка на месте».
+       GET на любой другой путь — тоже JSON, а не 405.
+       Озвучку Штаб по-прежнему зовёт POST-ом — он остаётся главным методом. */
+    if (request.method === "GET") {
+        try {
+            const u = new URL(request.url);
+            const qText = (u.searchParams.get("text") || "").trim();
+            if (u.pathname.startsWith("/tts") || qText) {
+                if (qText) {
+                    return await handleTTS({
+                        tts: true,
+                        text: qText,
+                        voice: u.searchParams.get("voice") || "ru-RU-DmitryNeural",
+                        rate: u.searchParams.get("rate") || "+0%",
+                        volume: u.searchParams.get("volume") || "+0%",
+                        pitch: u.searchParams.get("pitch") || "+0Hz"
+                    });
+                }
+                return json({
+                    success: true,
+                    service: "Штаб",
+                    tts: "edge-tts",
+                    hint: "Добавь ?text=Привет — сервер сразу отдаст mp3."
+                });
+            }
+            return json({ success: true, service: "Штаб", status: "работает", tts: "edge-tts" });
+        } catch (e: any) {
+            return json({ success: false, error: String((e && e.message) || e) }, 500);
+        }
+    }
+
     if (request.method !== "POST") return json({ success: false, error: "Метод не поддерживается" }, 405);
 
     // ОЗВУЧКА — до проверки секрета (нужна и гостям, и Штабу)
