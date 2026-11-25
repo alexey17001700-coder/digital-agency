@@ -1207,7 +1207,7 @@ function renderMessage(text, sender, agentName = 'Оркестратор', file 
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(text); div.appendChild(shareBtn);
     if (sender === 'director') {
-        const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(text, agentName); div.appendChild(speakBtn);
+        const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => (typeof speakNow === 'function' ? speakNow(text, agentName) : speakText(text, agentName)); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; header.onclick = () => speakText(text, agentName); div.appendChild(header);
     }
     if (sender === 'boss' && file) div.appendChild(buildFileChip(file, false));
