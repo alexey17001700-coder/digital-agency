@@ -1724,6 +1724,9 @@ Deno.serve(async (request) => {
             } else if (/^gigachat/i.test(reqModel)) {
                 // 🟣 GigaChat (Сбер) — ключ с сервера, инструменты ВКЛЮЧЕНЫ.
                 aiText = await callGigaChatTools(body.messages, reqModel, gcKey);
+            } else if (/^ernie/i.test(reqModel)) {
+                // 🟠 Baidu ERNIE — бесплатная модель, ключ ZVENO_API_KEY с сервера, инструменты ВКЛЮЧЕНЫ.
+                aiText = await callErnieAI(body.messages, userKeys, reqModel);
             } else {
                 // 🅰️ Zveno — ключ ZVENO_API_KEY с сервера, инструменты ВКЛЮЧЕНЫ.
                 aiText = await callZvenoAI(body.messages, userKeys, true, reqModel);
