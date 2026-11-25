@@ -263,6 +263,17 @@ if (SpeechRecognition) {
         isListening = true;
         micPermOK = true;   // распознавание стартовало — доступ точно есть
         micConsumed = 0;    // новая сессия — читаем результаты с нуля
+        micLive = '';
+        // ЖЁСТКИЙ ПОТОЛОК 12 сек: даже если Босс говорит без остановки — сессия
+        // обрывается сама и всё сказанное уходит в чат. Дольше микрофон не висит.
+        micTimersReset();
+        micMaxTimer = setTimeout(function () {
+            if (!isListening) return;
+            micFlush();
+            micUserStopped = true;
+            try { recognition.stop(); } catch (e) {}
+            micUI(false, '🎤 12 сек — отправляю, что сказал');
+        }, MIC_MAX_MS);
         micUI(true, '🎤 Слушаю…');
     };
 
