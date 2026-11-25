@@ -326,7 +326,7 @@ if (SpeechRecognition) {
 
         // КОМАНДА ГОЛОСОМ: «стоп» / «хватит» / «отмена» — гасим микрофон СРАЗУ,
         // и в чат это слово не уходит. Проверяем ДО отправки.
-        if (micPhrase && micIsStop(micPhrase)) {
+        if (micIsStop(micPhrase) || micIsStop(interimText)) {
             micPhrase = ''; micLive = '';
             micTimersReset(); clearTimeout(micSendTimer);
             micConsumed = micLastCount;
