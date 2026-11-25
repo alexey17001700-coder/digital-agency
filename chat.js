@@ -1230,7 +1230,7 @@ function typeMessage(fullText, sender, agentName, onComplete) {
     const div = document.createElement('div'); div.className = 'chat-msg msg-' + sender;
     const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.innerText = '📤'; shareBtn.onclick = () => shareMessage(fullText); div.appendChild(shareBtn);
     if (sender === 'director') {
-        const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => speakText(fullText, agentName); div.appendChild(speakBtn);
+        const speakBtn = document.createElement('button'); speakBtn.className = 'share-btn'; speakBtn.style.right = '35px'; speakBtn.innerText = '🔊'; speakBtn.onclick = () => (typeof speakNow === 'function' ? speakNow(fullText, agentName) : speakText(fullText, agentName)); div.appendChild(speakBtn);
         const header = document.createElement('div'); header.className = 'msg-name'; header.innerHTML = `<span class="msg-avatar">${AGENT_ICONS[agentName] || '🤖'}</span> ${agentName}`; div.appendChild(header);
     }
     const dtParsed = extractDuetThoughts(fullText);
