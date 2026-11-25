@@ -1640,6 +1640,11 @@ async function handleGitHubProxy(req: Request): Promise<Response> {
 Deno.serve(async (request) => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+    // GIT РАДАР — прокси GitHub
+    if (new URL(request.url).pathname.startsWith("/api/github/")) {
+        return await handleGitHubProxy(request);
+    }
+
     /* 🌐 GET БОЛЬШЕ НЕ ОТДАЁТ 405 (был источник путаницы при проверке озвучки).
        GET /tts?text=Привет — сервер сразу отдаёт mp3: удобно проверить в браузере.
        GET /tts без текста — короткий JSON «сервер жив, озвучка на месте».
