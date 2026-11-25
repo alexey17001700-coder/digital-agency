@@ -229,6 +229,7 @@ if (SpeechRecognition) {
     recognition.onstart = function () {
         isListening = true;
         micPermOK = true;   // распознавание стартовало — доступ точно есть
+        micConsumed = 0;    // новая сессия — читаем результаты с нуля
         micUI(true, '🎤 Слушаю…');
     };
 
