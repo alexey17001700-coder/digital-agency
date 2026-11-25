@@ -295,7 +295,16 @@ if (SpeechRecognition) {
         if (!chatInput) return;
         micLastCount = event.results.length;
         // Поздний «хвост» уже отправленной фразы — не читаем его вовсе.
-        if (Date.now() < micLockUntil) return;
+        // КРИТИЧНО: при блокировке ВСЁ РАВНО сдвигаем micConsumed. Раньше здесь
+        // стоял просто return — результаты, пришедшие во время блокировки, после
+        // её снятия читались ЗАНОВО и та же фраза уходила в чат вторым сообщением.
+        // Это и был «присылает одно и то же».
+        if (Date.now() < micLockUntil) {
+            micConsumed = event.results.length;
+            micPhrase = '';
+            micLive = '';
+            return;
+        }
         // Читаем ТОЛЬКО новые результаты (micConsumed). На Android сессия одна и
         // длинная: старые результаты приходят в каждом событии снова — отсюда дубли.
         let finalText = '', interimText = '';
