@@ -347,14 +347,23 @@ if (SpeechRecognition) {
         // КОМАНДА ГОЛОСОМ: «стоп» / «хватит» / «отмена» — гасим микрофон СРАЗУ,
         // и в чат это слово не уходит. Проверяем ДО отправки.
         if (micIsStop(micPhrase) || micIsStop(interimText)) {
+            // Если кроме «стоп» в фразе было ЧТО-ТО ЕЩЁ («включи свет стоп») —
+            // эту часть НЕ выбрасываем, а отправляем, и только потом гасим микрофон.
+            const rest = micStripStop(micPhrase || interimText);
             micPhrase = ''; micLive = '';
             micTimersReset(); clearTimeout(micSendTimer);
             micConsumed = micLastCount;
             micLockUntil = Date.now() + 1500;
-            chatInput.value = micBase || '';
             micUserStopped = true;
             try { recognition.stop(); } catch (e) {}
-            micUI(false, '🎤 Стоп — микрофон выключен');
+            if (rest && rest.replace(/[^а-яёa-z0-9]/gi, '').length >= 2) {
+                micPhrase = rest;
+                micFlush();
+                micUI(false, '🎤 Стоп — микрофон выключен, остальное отправил');
+            } else {
+                chatInput.value = micBase || '';
+                micUI(false, '🎤 Стоп — микрофон выключен');
+            }
             return;
         }
 
