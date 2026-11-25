@@ -235,6 +235,14 @@ function micFlush() {
     const clean = phrase.replace(/[^а-яёa-z0-9]/gi, '');
     if (clean.length < 2) { micUI(true, '🎤 Не разобрал — повтори'); return; }
     const sent = phrase;
+    // ЗАЩИТА ОТ ПОВТОРОВ: движок отдал ту же фразу ещё раз — второй раз не шлём.
+    if (sent === micLastSent && Date.now() - micLastSentAt < 4000) {
+        micPhrase = ''; micLive = '';
+        micConsumed = micLastCount;
+        micLockUntil = Date.now() + 1200;
+        return;
+    }
+    micLastSent = sent; micLastSentAt = Date.now();
     micPhrase = '';                       // фраза ушла — начинаем следующую
     micLive = '';
     micConsumed = micLastCount;           // уже отданные результаты больше не читаем
