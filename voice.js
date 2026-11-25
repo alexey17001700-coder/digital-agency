@@ -313,7 +313,7 @@ if (SpeechRecognition) {
             micFlush();
             micUserStopped = true;
             try { recognition.stop(); } catch (e) {}
-            micUI(false, '🎤 12 сек — отправляю, что сказал');
+            micUI(false, '🎤 30 сек — отправляю, что сказал');
         }, MIC_MAX_MS);
         micUI(true, '🎤 Слушаю…');
     };
