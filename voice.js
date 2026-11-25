@@ -312,6 +312,7 @@ async function toggleVoiceInput() {
     }
     micUserStopped = false;
     micRestarts = 0;
+    clearTimeout(micSendTimer);
     // Сброс накопленного: поле запоминаем как базу, текст сессии — с чистого листа.
     const _ci = document.getElementById('chatInput');
     micBase = _ci ? String(_ci.value || '').trim() : '';
