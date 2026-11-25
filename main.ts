@@ -19,6 +19,11 @@ const ZVENO_CODE_WORD = "zveno";   // кодовое слово Босса: се
 const VISION_MODEL = "nvidia/nemotron-3.5-super-vl:free";
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 
+/* 🟠 BAIDU ERNIE — ОТДЕЛЬНЫЙ КАНАЛ (бесплатная модель).
+   Идёт через тот же шлюз ZvenoAI (api.zveno.ai), ключ серверный ZVENO_API_KEY.
+   Формат OpenAI, инструменты включены — как у канала Zveno. */
+const ERNIE_MODEL = "baidu/ernie-5.5-flash-preview:free";
+
 // БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
 const WRITE_ALLOWED_EXT = [
     ".js", ".css", ".html", ".json", ".md", ".txt", ".xml", ".yaml", ".yml",
