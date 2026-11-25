@@ -63,8 +63,12 @@ function toggleVoice() {
     if (!isVoiceEnabled) stopVoice();
 }
 
-async function speakText(text, agentName) {
-    if (!isVoiceEnabled || agentVoiceSettings[agentName] === false) return;
+async function speakText(text, agentName, force) {
+    // force = true — Босс САМ нажал 🔊, значит озвучить надо ВСЕГДА,
+    // даже если общий переключатель 🗣️ выключен. Раньше тап по 🔊 при
+    // выключенной озвучке молча ничего не делал (ни звука, ни ошибки) —
+    // выглядело как «озвучка сломана». Теперь 🔊 работает всегда.
+    if ((!isVoiceEnabled && !force) || agentVoiceSettings[agentName] === false) return;
     let cleanText = text.replace(/```[\s\S]*?```/g, ' [Код] ').replace(/[*#_`]/g, '').replace(/\[.*?\]/g, '').trim();
     if (!cleanText) return;
 
