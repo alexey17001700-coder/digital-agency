@@ -182,7 +182,7 @@ if (SpeechRecognition) {
     // поэтому там ставим false и полагаемся на авто-перезапуск.
     recognition.continuous = !IS_IOS;
     recognition.interimResults = true;   // текст появляется по мере речи
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;     // 5 вариантов — берём самый уверенный
 
     recognition.onstart = function () {
         isListening = true;
