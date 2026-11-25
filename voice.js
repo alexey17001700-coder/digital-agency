@@ -81,9 +81,9 @@ async function speakText(text, agentName, force) {
 
     try {
         const res = await ttsFetch(ttsBody(cleanText, v.voice, v.emotion));
-        if (!isVoiceEnabled) return;
+        if (!isVoiceEnabled && !force) return;
         const blob = await res.blob();
-        if (!isVoiceEnabled) return;
+        if (!isVoiceEnabled && !force) return;
         if (blob.size < 200) throw new Error("Нет аудио");
         currentAudio = new Audio(URL.createObjectURL(blob));
         await currentAudio.play();
