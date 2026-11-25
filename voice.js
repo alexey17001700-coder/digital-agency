@@ -200,6 +200,13 @@ function micFlush() {
     micSent = micFull;
     micUserStopped = true;
     try { recognition.stop(); } catch (e) {}
+    /* ЗАЩИТА ОТ ДУБЛЯ В ЧАТЕ (боль Босса: одно сказанное — два сообщения).
+       Движок распознавания после stop() часто присылает финал ЕЩЁ РАЗ, а
+       вариант текста (bestAlt по confidence) может отличаться на одно слово —
+       сравнение micFull === micSent не срабатывало, и фраза уходила второй раз.
+       Поэтому после отправки накопленное СТИРАЕМ: повторный флаш отправить
+       нечего. Поле ввода НЕ трогаем — его очистит сам sendMessage. */
+    micBase = ''; micDone = ''; micFull = ''; micSent = '';
     setTimeout(function () { if (typeof handleSendClick === 'function') handleSendClick(); }, 120);
 }
 
