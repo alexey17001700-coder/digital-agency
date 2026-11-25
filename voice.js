@@ -193,22 +193,28 @@ function bestAlt(result) {
 }
 
 // Отправка накопленной фразы ЦЕЛИКОМ — вызывается по паузе (micSendTimer).
+// ВАЖНО: после отправки поле НЕ перезаписывается поздними результатами движка —
+// раньше текст «возвращался» в строку ввода и уходил в чат вторым сообщением.
 function micFlush() {
     clearTimeout(micSendTimer);
-    if (!recognition || !micFull || micFull === micSent) return;
-    const clean = micFull.replace(/[^а-яёa-z0-9]/gi, '');
+    if (!micPhrase) return;
+    const clean = micPhrase.replace(/[^а-яёa-z0-9]/gi, '');
     if (clean.length < 2) { micUI(true, '🎤 Не разобрал — повтори'); return; }
-    micSent = micFull;
-    micUserStopped = true;
-    try { recognition.stop(); } catch (e) {}
-    /* ЗАЩИТА ОТ ДУБЛЯ В ЧАТЕ (боль Босса: одно сказанное — два сообщения).
-       Движок распознавания после stop() часто присылает финал ЕЩЁ РАЗ, а
-       вариант текста (bestAlt по confidence) может отличаться на одно слово —
-       сравнение micFull === micSent не срабатывало, и фраза уходила второй раз.
-       Поэтому после отправки накопленное СТИРАЕМ: повторный флаш отправить
-       нечего. Поле ввода НЕ трогаем — его очистит сам sendMessage. */
-    micBase = ''; micDone = ''; micFull = ''; micSent = '';
-    setTimeout(function () { if (typeof handleSendClick === 'function') handleSendClick(); }, 120);
+    const sent = micPhrase;
+    micPhrase = '';                       // фраза ушла — начинаем следующую
+    micConsumed = micLastCount;           // уже отданные результаты больше не читаем
+    micLockUntil = Date.now() + 1200;     // поздние «хвосты» движка игнорируем
+    const ci = document.getElementById('chatInput');
+    const full = (micBase ? micBase + ' ' : '') + sent;
+    if (ci) ci.value = full;
+    // Ответ ещё идёт — не обрываем его: текст остаётся в поле, Босс отправит кнопкой ➤.
+    if (typeof isGenerating !== 'undefined' && isGenerating) {
+        micBase = full;
+        micUI(true, '🎤 Ответ ещё идёт — текст в поле, отправь кнопкой ➤');
+        return;
+    }
+    micBase = '';
+    if (typeof handleSendClick === 'function') handleSendClick();   // поле очистит сам
 }
 
 if (SpeechRecognition) {
