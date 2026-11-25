@@ -226,11 +226,15 @@ function bestAlt(result) {
 // раньше текст «возвращался» в строку ввода и уходил в чат вторым сообщением.
 function micFlush() {
     clearTimeout(micSendTimer);
-    if (!micPhrase) return;
-    const clean = micPhrase.replace(/[^а-яёa-z0-9]/gi, '');
+    // Если движок так и не финалил фразу — берём промежуточный текст (micLive).
+    // Без этого при обрыве сессии не отправлялось ВООБЩЕ ничего.
+    let phrase = micPhrase || micLive;
+    if (!phrase) return;
+    const clean = phrase.replace(/[^а-яёa-z0-9]/gi, '');
     if (clean.length < 2) { micUI(true, '🎤 Не разобрал — повтори'); return; }
-    const sent = micPhrase;
+    const sent = phrase;
     micPhrase = '';                       // фраза ушла — начинаем следующую
+    micLive = '';
     micConsumed = micLastCount;           // уже отданные результаты больше не читаем
     micLockUntil = Date.now() + 1200;     // поздние «хвосты» движка игнорируем
     const ci = document.getElementById('chatInput');
