@@ -98,6 +98,8 @@ let micBase = '';            // текст, который был в поле Д
 let micDone = '';            // финальный текст прошлых сессий распознавания
 let micFull = '';            // накопленный текст текущей сессии
 let micSent = '';            // что уже отправлено — защита от двойной отправки
+let micSendTimer = null;     // отложенная отправка — ждём, пока Босс договорит
+const MIC_SEND_DELAY = 1400; // пауза перед отправкой, мс
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 // Определяем iPhone/iPad: там continuous не работает и всё равно рвётся после паузы.
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
