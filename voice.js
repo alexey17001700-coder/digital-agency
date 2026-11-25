@@ -10,8 +10,9 @@ const TTS_ENDPOINTS = [TTS_HOST + "/tts", TTS_HOST];
 let TTS_PROXY = TTS_ENDPOINTS[0];
 
 // Отправка запроса на синтез: перебирает адреса, пока не получит аудио.
+// Ошибки собираем ПО КАЖДОМУ адресу — Босс сразу видит, кто именно ответил 405/500.
 async function ttsFetch(body) {
-    let lastErr = null;
+    const errors = [];
     for (let i = 0; i < TTS_ENDPOINTS.length; i++) {
         const url = TTS_ENDPOINTS[i];
         try {
@@ -22,10 +23,10 @@ async function ttsFetch(body) {
             });
             const ct = res.headers.get('Content-Type') || '';
             if (res.ok && ct.indexOf('audio') > -1) { TTS_PROXY = url; return res; }
-            lastErr = new Error('Сервер ' + res.status + (ct ? ' · ' + ct.split(';')[0] : ''));
-        } catch (e) { lastErr = e; }
+            errors.push(url + ' → HTTP ' + res.status + (ct ? ' · ' + ct.split(';')[0] : ''));
+        } catch (e) { errors.push(url + ' → ' + ((e && e.message) || e)); }
     }
-    throw lastErr || new Error('Сервер озвучки не ответил');
+    throw new Error(errors.join('  |  ') || 'Сервер озвучки не ответил');
 }
 let isVoiceEnabled = localStorage.getItem('shtabVoiceEnabled') === 'true';
 let agentVoiceSettings = {};
