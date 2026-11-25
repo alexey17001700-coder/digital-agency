@@ -530,6 +530,48 @@ function ttsToast(msg) {
         _ttsToastEl._t = setTimeout(function () { _ttsToastEl.style.display = 'none'; }, 4500);
     } catch (e) {}
 }
+// ЗЕЛЁНЫЙ тост: озвучка РЕАЛЬНО зазвучала. Раньше при успехе не было никакой
+// обратной связи — Босс не понимал, сработало или нет.
+let _ttsOkToastEl = null;
+function ttsToastOk(msg) {
+    try {
+        if (!_ttsOkToastEl) {
+            _ttsOkToastEl = document.createElement('div');
+            _ttsOkToastEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:120px;' +
+                'max-width:88vw;padding:9px 13px;border-radius:12px;background:rgba(20,120,70,.94);' +
+                'color:#fff;font:600 11.5px/1.35 system-ui,sans-serif;z-index:100000;' +
+                'box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;text-align:center';
+            document.body.appendChild(_ttsOkToastEl);
+        }
+        _ttsOkToastEl.textContent = msg;
+        _ttsOkToastEl.style.display = 'block';
+        clearTimeout(_ttsOkToastEl._t);
+        _ttsOkToastEl._t = setTimeout(function () { _ttsOkToastEl.style.display = 'none'; }, 2600);
+    } catch (e) {}
+}
+// МИНИ-ПЛЕЕР «тапни ▶»: спасает озвучку, когда браузер блокирует автозапуск
+// (политика Android/iOS — звук только НЕПОСРЕДСТВЕННО по тапу).
+let _tapPlayerEl = null;
+function showTapPlayer(url) {
+    try {
+        if (_tapPlayerEl) { try { _tapPlayerEl.remove(); } catch (e0) {} _tapPlayerEl = null; }
+        const box = document.createElement('div');
+        box.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:64px;z-index:100001;' +
+            'display:flex;align-items:center;gap:8px;max-width:92vw;padding:8px 10px;border-radius:12px;' +
+            'background:rgba(20,30,45,.96);border:1px solid rgba(0,229,255,.5);box-shadow:0 8px 24px rgba(0,0,0,.55)';
+        const a = document.createElement('audio');
+        a.src = url; a.controls = true; a.autoplay = true;
+        a.style.cssText = 'height:34px;max-width:60vw';
+        const x = document.createElement('button');
+        x.textContent = '✖';
+        x.style.cssText = 'background:transparent;border:none;color:#ff6688;font-size:15px;cursor:pointer';
+        x.onclick = function () { try { box.remove(); } catch (e1) {} _tapPlayerEl = null; };
+        box.appendChild(a); box.appendChild(x);
+        document.body.appendChild(box);
+        _tapPlayerEl = box;
+        setTimeout(function () { if (_tapPlayerEl === box) { try { box.remove(); } catch (e2) {} _tapPlayerEl = null; } }, 30000);
+    } catch (e) {}
+}
 
 // Ключ Яндекс Облака (SpeechKit). Хранится ТОЛЬКО в браузере (localStorage),
 // в репозиторий не попадает и на сервер не пишется.
