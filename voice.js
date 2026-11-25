@@ -580,11 +580,17 @@ async function vlabCheckServer() {
         }
     }
 
-    // 2) проверка доступности сервера — отвечает ли он вообще
+    // 2) проверка доступности сервера — GET больше НЕ отдаёт 405:
+    //    main.ts отвечает на него коротким JSON «сервер жив, озвучка на месте».
     try {
         const t1 = Date.now();
-        await fetch(TTS_PROXY, { method: 'GET', mode: 'no-cors', cache: 'no-store' });
-        lines.push('Доступность: сервер ОТВЕЧАЕТ ✅ (' + (Date.now() - t1) + ' мс)');
+        const hres = await fetch(TTS_HOST + '/tts', { method: 'GET', cache: 'no-store' });
+        const hct = hres.headers.get('Content-Type') || '';
+        let htxt = '';
+        try {
+            htxt = hct.indexOf('json') > -1 ? JSON.stringify(await hres.json()).slice(0, 160) : (await hres.text()).slice(0, 160);
+        } catch (e) {}
+        lines.push('Доступность: сервер ОТВЕЧАЕТ ✅ HTTP ' + hres.status + ' · ' + (Date.now() - t1) + ' мс · ' + htxt);
     } catch (e) {
         lines.push('Доступность: сервер НЕ отвечает ❌ → Штаб не запущен или нет связи');
     }
