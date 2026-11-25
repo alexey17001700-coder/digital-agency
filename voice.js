@@ -246,8 +246,10 @@ function micFlush() {
     const clean = phrase.replace(/[^а-яёa-z0-9]/gi, '');
     if (clean.length < 2) { micUI(true, '🎤 Не разобрал — повтори'); return; }
     const sent = phrase;
-    // ЗАЩИТА ОТ ПОВТОРОВ: движок отдал ту же фразу ещё раз — второй раз не шлём.
-    if (sent === micLastSent && Date.now() - micLastSentAt < 4000) {
+    // ЗАЩИТА ОТ ПОВТОРОВ: сравниваем БЕЗ регистра, пробелов и знаков — движок
+    // часто отдаёт ту же фразу с другой пунктуацией, и проверка «в лоб» не ловила.
+    const norm = function (s) { return String(s || '').toLowerCase().replace(/[^а-яёa-z0-9]/gi, ''); };
+    if (norm(sent) && norm(sent) === norm(micLastSent) && Date.now() - micLastSentAt < 8000) {
         micPhrase = ''; micLive = '';
         micConsumed = micLastCount;
         micLockUntil = Date.now() + 1200;
