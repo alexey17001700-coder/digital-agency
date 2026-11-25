@@ -101,6 +101,34 @@ let micLastCount = 0;        // сколько результатов пришл
 let micLockUntil = 0;        // до этого времени результаты игнорируем (поздние «хвосты»)
 let micSendTimer = null;     // отложенная отправка — ждём, пока Босс договорит
 const MIC_SEND_DELAY = 2000; // пауза перед отправкой, мс
+const MIC_SILENCE_MS = 4000; // тишина 4 сек — микрофон выключается сам, не висит
+const MIC_MAX_MS = 12000;    // потолок сессии 12 сек — дольше не слушаем
+let micSilenceTimer = null;  // тишина: ждём, Босс ещё говорит или уже всё
+let micMaxTimer = null;      // жёсткий потолок сессии
+// Слова-команды: голосом «стоп» — микрофон гаснет сразу.
+const MIC_STOP_WORDS = ['стоп', 'хватит', 'отмена', 'выключи микрофон', 'выключить микрофон', 'молчи', 'замолчи', 'stop', 'cancel'];
+function micIsStop(phrase) {
+    const t = String(phrase || '').toLowerCase().replace(/[.,!?]/g, '').trim();
+    if (!t) return false;
+    for (let i = 0; i < MIC_STOP_WORDS.length; i++) if (t === MIC_STOP_WORDS[i]) return true;
+    return false;
+}
+// Сброс таймеров тишины и потолка — вызываем при новом слове и при выключении.
+function micTimersReset() {
+    clearTimeout(micSilenceTimer);
+    clearTimeout(micMaxTimer);
+}
+// Тишина: Босс замолчал — отправляем фразу и гасим микрофон, чтобы не висел.
+function micArmSilence() {
+    clearTimeout(micSilenceTimer);
+    micSilenceTimer = setTimeout(function () {
+        if (!isListening) return;
+        micFlush();
+        micUserStopped = true;
+        try { recognition.stop(); } catch (e) {}
+        micUI(false, '🎤 Тишина — микрофон выключен');
+    }, MIC_SILENCE_MS);
+}
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 // Определяем iPhone/iPad: там continuous не работает и всё равно рвётся после паузы.
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
