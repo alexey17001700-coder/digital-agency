@@ -1633,16 +1633,31 @@ async function handleGitHubProxy(req: Request): Promise<Response> {
     return json({ success: false, error: "GITHUB_TOKEN не задан на сервере" }, 500);
   }
 
+  /* ✍️ ЗАПИСЬ ЧЕРЕЗ ШТАБ (приказ Босса): радар откатывает коммиты и
+     восстанавливает файлы СВОИМ ключом — отдельный токен GitHub в браузере
+     не нужен. Токен GitHub остаётся на сервере. */
+  const method = (req.method || "GET").toUpperCase();
+  if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    return json({ success: false, error: "метод не разрешён: " + method }, 405);
+  }
+
+  let bodyText: string | undefined;
+  if (method !== "GET" && method !== "HEAD") {
+    try { bodyText = await req.text(); } catch (_e) { bodyText = undefined; }
+  }
+
   let up: Response;
   try {
     up = await fetch("https://api.github.com" + ghPath, {
-      method: "GET",
+      method,
       headers: {
         "Authorization": `Bearer ${GITHUB_TOKEN}`,
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "shtab-gitradar",
+        ...(bodyText ? { "Content-Type": "application/json" } : {}),
       },
+      body: bodyText,
     });
   } catch (e: any) {
     return json({ success: false, error: "upstream: " + String(e?.message || e) }, 502);
