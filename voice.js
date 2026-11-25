@@ -95,11 +95,12 @@ let micUserStopped = true;   // Босс сам выключил микрофо�
 let micRestarts = 0;         // сколько раз авто-перезапускали (защита от петли)
 // ── Защита от дублей при голосовом вводе (главная боль на iPhone) ──
 let micBase = '';            // текст, который был в поле ДО старта микрофона
-let micDone = '';            // финальный текст прошлых сессий распознавания
-let micFull = '';            // накопленный текст текущей сессии
-let micSent = '';            // что уже отправлено — защита от двойной отправки
+let micPhrase = '';          // накопленный текст ТЕКУЩЕЙ фразы
+let micConsumed = 0;         // сколько результатов движка уже учтено (защита от повторов)
+let micLastCount = 0;        // сколько результатов пришло в последнем событии
+let micLockUntil = 0;        // до этого времени результаты игнорируем (поздние «хвосты»)
 let micSendTimer = null;     // отложенная отправка — ждём, пока Босс договорит
-const MIC_SEND_DELAY = 1400; // пауза перед отправкой, мс
+const MIC_SEND_DELAY = 2000; // пауза перед отправкой, мс
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 // Определяем iPhone/iPad: там continuous не работает и всё равно рвётся после паузы.
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
