@@ -379,6 +379,9 @@ async function toggleVoiceInput() {
     }
     if (isListening) {
         micUserStopped = true;
+        micTimersReset();
+        // Босс выключил микрофон вручную — не теряем уже сказанное, отправляем сразу.
+        if (micPhrase || micLive) micFlush();
         try { recognition.stop(); } catch (e) {}
         micUI(false, '🎤 Микрофон выключен');
         return;
