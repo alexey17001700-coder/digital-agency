@@ -120,7 +120,10 @@ const AI_MODELS_DEFAULT = [
     /* 🅰️ АРХИТЕКТОР — ОТДЕЛЬНЫЙ КАНАЛ. exclusive: true — автоподбор и
        автосмена моделей его НЕ трогают. Вход только через кнопку 🅰️. */
     { id: 'zveno',    label: 'Архитектор (Zveno)', color: '#00e5ff', text: '#000', exclusive: true },
-    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' }
+    { id: 'gigachat', label: 'GigaChat',  color: '#7B61FF', text: '#fff' },
+    /* 🟠 BAIDU ERNIE — бесплатная модель (baidu/ernie-5.5-flash-preview:free).
+       Идёт через шлюз ZvenoAI на серверном ключе. Вход — отдельная кнопка 🟠. */
+    { id: 'ernie',    label: 'Baidu ERNIE', color: '#ff9800', text: '#000' }
 ];
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
