@@ -127,6 +127,21 @@ function micIsStop(phrase) {
     for (let i = 0; i < words.length; i++) if (oneWord.indexOf(words[i]) > -1) return true;
     return false;
 }
+// Убирает слово-команду из фразы: «включи свет стоп» → «включи свет».
+// Нужно, чтобы вместе со «стоп» не потерялся реальный текст.
+function micStripStop(phrase) {
+    const src = String(phrase || '');
+    const oneWord = ['стоп', 'хватит', 'отмена', 'молчи', 'замолчи', 'stop', 'cancel'];
+    const multi = ['выключи микрофон', 'выключить микрофон'];
+    let out = src;
+    for (let i = 0; i < multi.length; i++) {
+        out = out.replace(new RegExp('\\s*' + multi[i] + '\\s*', 'gi'), ' ');
+    }
+    const words = out.split(/\s+/).filter(function (w) {
+        return oneWord.indexOf(String(w).toLowerCase().replace(/[.,!?]/g, '')) === -1;
+    });
+    return words.join(' ').replace(/\s+/g, ' ').trim();
+}
 // Сброс таймеров тишины и потолка — вызываем при новом слове и при выключении.
 function micTimersReset() {
     clearTimeout(micSilenceTimer);
