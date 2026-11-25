@@ -236,10 +236,13 @@ if (SpeechRecognition) {
     recognition.onresult = function (event) {
         const chatInput = document.getElementById('chatInput');
         if (!chatInput) return;
-        // Собираем ВЕСЬ текст сессии (с 0, а не с resultIndex): на iOS resultIndex
-        // врёт, результаты перекрываются — отсюда и была лавина дублей.
+        micLastCount = event.results.length;
+        // Поздний «хвост» уже отправленной фразы — не читаем его вовсе.
+        if (Date.now() < micLockUntil) return;
+        // Читаем ТОЛЬКО новые результаты (micConsumed). На Android сессия одна и
+        // длинная: старые результаты приходят в каждом событии снова — отсюда дубли.
         let finalText = '', interimText = '';
-        for (let i = 0; i < event.results.length; i++) {
+        for (let i = micConsumed; i < event.results.length; i++) {
             const r = event.results[i];
             const t = bestAlt(r);
             if (r.isFinal) finalText += t; else interimText += t;
@@ -247,20 +250,18 @@ if (SpeechRecognition) {
         finalText = finalText.trim();
         interimText = interimText.trim();
 
-        // Склейка с прошлыми сессиями БЕЗ дублей: если iOS повторил весь текст —
-        // берём новую версию; если фрагмент уже есть — не добавляем.
-        let full = micDone;
+        // Склейка внутри ТЕКУЩЕЙ фразы БЕЗ дублей: если движок повторил весь
+        // текст — берём новую версию; если фрагмент уже есть — не добавляем.
         if (finalText) {
-            if (full && finalText.indexOf(full) === 0) full = finalText;
-            else if (full && full.indexOf(finalText) === 0) { /* уже есть — пропускаем */ }
-            else full = full ? full + ' ' + finalText : finalText;
+            if (micPhrase && finalText.indexOf(micPhrase) === 0) micPhrase = finalText;
+            else if (micPhrase && micPhrase.indexOf(finalText) === 0) { /* уже есть — пропускаем */ }
+            else micPhrase = micPhrase ? micPhrase + ' ' + finalText : finalText;
         }
-        micFull = full;
 
         // Поле собирается ЗАМЕНОЙ, а не приклеиванием — главный фикс дублей.
         const parts = [];
         if (micBase) parts.push(micBase);
-        if (full) parts.push(full);
+        if (micPhrase) parts.push(micPhrase);
         if (interimText) parts.push(interimText);
         chatInput.value = parts.join(' ');
 
