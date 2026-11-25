@@ -92,10 +92,12 @@ async function speakText(text, agentName, force) {
         ttsToast(ttsLastError);
         const _dg = document.getElementById('vlabDiag');
         if (_dg) _dg.textContent = ttsLastError;
-        if (!isVoiceEnabled) return;
+        if (!isVoiceEnabled && !force) return;
         phoneSpeak(cleanText, agentName);
     }
 }
+// 🔊 Босс нажал «озвучить» вручную — читаем ВСЕГДА, независимо от 🗣️.
+window.speakNow = function (text, agentName) { return speakText(text, agentName, true); };
 
 let recognition = null; let isListening = false;
 let micUserStopped = true;   // Босс сам выключил микрофон?
