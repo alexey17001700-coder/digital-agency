@@ -1592,6 +1592,48 @@ async function handleTTS(body: any) {
     }
 }
 
+// ── GIT РАДАР: прокси GitHub (токен на сервере, в браузер не уходит) ──
+const GH_PROXY_ALLOWED = [
+  /^\/users\/[^/]+\/repos(\?|$)/,
+  /^\/users\/[^/]+(\?|$)/,
+  /^\/repos\/[^/]+\/[^/]+(\?|$)/,
+  /^\/user(\/repos)?(\?|$)/,
+];
+
+async function handleGitHubProxy(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const ghPath = url.pathname.replace(/^\/api\/github/, "") + url.search;
+
+  if (!GH_PROXY_ALLOWED.some((rx) => rx.test(ghPath))) {
+    return json({ success: false, error: "path not allowed: " + ghPath }, 403);
+  }
+  if (!GITHUB_TOKEN) {
+    return json({ success: false, error: "GITHUB_TOKEN не задан на сервере" }, 500);
+  }
+
+  let up: Response;
+  try {
+    up = await fetch("https://api.github.com" + ghPath, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "shtab-gitradar",
+      },
+    });
+  } catch (e: any) {
+    return json({ success: false, error: "upstream: " + String(e?.message || e) }, 502);
+  }
+
+  const out = new Headers(up.headers);
+  for (const [k, v] of Object.entries(corsHeaders)) out.set(k, v);
+  out.delete("content-encoding");
+  out.delete("content-length");
+  return new Response(up.body, { status: up.status, headers: out });
+}
+// ─────────────────────────────────────────────────────────────────────
+
 // =========================================
 // СЕРВЕР (БЕЗ ДУБЛЕЙ WSROOMS)
 // =========================================
