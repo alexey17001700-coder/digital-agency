@@ -117,6 +117,7 @@ function openAIModelPanel() {
         localStorage.setItem('shtabAIModel', selectedAIModel);
         if (typeof applyArchitectButton === 'function') applyArchitectButton();
         if (typeof applyGigaChatButton === 'function') applyGigaChatButton();
+        if (typeof applyErnieButton === 'function') applyErnieButton();
         ov.remove();
     };
     const section = (label, color) => {
