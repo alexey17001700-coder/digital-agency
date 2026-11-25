@@ -280,7 +280,6 @@ if (SpeechRecognition) {
         micArmSilence();
         // ЖЁСТКИЙ ПОТОЛОК 12 сек: даже если Босс говорит без остановки — сессия
         // обрывается сама и всё сказанное уходит в чат. Дольше микрофон не висит.
-        micTimersReset();
         micMaxTimer = setTimeout(function () {
             if (!isListening) return;
             micFlush();
