@@ -69,7 +69,8 @@ async function speakText(text, agentName, force) {
     // даже если общий переключатель 🗣️ выключен. Раньше тап по 🔊 при
     // выключенной озвучке молча ничего не делал (ни звука, ни ошибки) —
     // выглядело как «озвучка сломана». Теперь 🔊 работает всегда.
-    if ((!isVoiceEnabled && !force) || agentVoiceSettings[agentName] === false) return;
+    // 🔊 РУЧНОЙ ТАП БОССА (force) ОБХОДИТ ВСЕ запреты: и общий 🗣️, и «не озвучивать агента».
+    if (!force && (!isVoiceEnabled || agentVoiceSettings[agentName] === false)) return;
     let cleanText = text.replace(/```[\s\S]*?```/g, ' [Код] ').replace(/[*#_`]/g, '').replace(/\[.*?\]/g, '').trim();
     if (!cleanText) return;
 
