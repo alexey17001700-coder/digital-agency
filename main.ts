@@ -1600,8 +1600,16 @@ async function handleTTS(body: any) {
 const GH_PROXY_ALLOWED = [
   /^\/users\/[^/]+\/repos(\?|$)/,
   /^\/users\/[^/]+(\?|$)/,
-  /^\/repos\/[^/]+\/[^/]+(\?|$)/,
   /^\/user(\/repos)?(\?|$)/,
+  // ── ОТКАТ ДО КОММИТА (запись) ──
+  /^\/repos\/[^/]+\/[^/]+\/commits(\?|$)/,
+  /^\/repos\/[^/]+\/[^/]+\/git\/commits(\/[0-9a-fA-F]{7,40})?(\?|$)/,
+  /^\/repos\/[^/]+\/[^/]+\/git\/refs?\/heads\/[^/]+(\?|$)/,
+  /^\/repos\/[^/]+\/[^/]+\/git\/trees(\?|$)/,
+  // ── ВОССТАНОВЛЕНИЕ ФАЙЛА (запись) ──
+  /^\/repos\/[^/]+\/[^/]+\/contents\/.+(\?|$)/,
+  // ── ОБЩЕЕ ЧТЕНИЕ РЕПОЗИТОРИЯ ──
+  /^\/repos\/[^/]+\/[^/]+(\?|$)/,
 ];
 
 async function handleGitHubProxy(req: Request): Promise<Response> {
