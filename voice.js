@@ -226,7 +226,7 @@ if (SpeechRecognition) {
         let finalText = '', interimText = '';
         for (let i = 0; i < event.results.length; i++) {
             const r = event.results[i];
-            const t = (r[0] && r[0].transcript) ? r[0].transcript : '';
+            const t = bestAlt(r);
             if (r.isFinal) finalText += t; else interimText += t;
         }
         finalText = finalText.trim();
