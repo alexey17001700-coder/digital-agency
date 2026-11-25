@@ -59,7 +59,8 @@ function stopVoice() {
 function toggleVoice() {
     isVoiceEnabled = !isVoiceEnabled; localStorage.setItem('shtabVoiceEnabled', isVoiceEnabled);
     const btn = document.getElementById('btnVoiceToggle');
-    if (btn) { btn.innerText = isVoiceEnabled ? '🗣️ Озвучка: ВКЛ' : '🗣️ Озвучка: ВЫКЛ'; btn.classList.toggle('active', isVoiceEnabled); }
+    // mode-on оставляет кнопку видимой в свёрнутой панели режимов.
+    if (btn) { btn.innerText = isVoiceEnabled ? '🗣️ Озвучка: ВКЛ' : '🗣️ Озвучка: ВЫКЛ'; btn.classList.toggle('active', isVoiceEnabled); btn.classList.toggle('mode-on', isVoiceEnabled); }
     if (!isVoiceEnabled) stopVoice();
 }
 
