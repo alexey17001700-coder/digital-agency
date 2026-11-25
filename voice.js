@@ -81,14 +81,31 @@ async function speakText(text, agentName, force) {
     const _base = (typeof AGENT_VOICES !== 'undefined' && AGENT_VOICES[agentName]) ? AGENT_VOICES[agentName] : { voice: "ru-RU-SvetlanaNeural", emotion: "neutral" };
     const v = _ov ? _ov : (defaultVoice ? { voice: defaultVoice, emotion: _base.emotion } : _base);
 
+    const _t0 = Date.now();
     try {
         const res = await ttsFetch(ttsBody(cleanText, v.voice, v.emotion));
-        if (!isVoiceEnabled && !force) return;
+        if (!force && !isVoiceEnabled) return;
         const blob = await res.blob();
-        if (!isVoiceEnabled && !force) return;
-        if (blob.size < 200) throw new Error("Нет аудио");
-        currentAudio = new Audio(URL.createObjectURL(blob));
-        await currentAudio.play();
+        if (!force && !isVoiceEnabled) return;
+        if (blob.size < 200) throw new Error("аудио пришло пустым (" + blob.size + " Б)");
+        const _url = URL.createObjectURL(blob);
+        currentAudio = new Audio(_url);
+        currentAudio.preload = 'auto';
+        try { currentAudio.setAttribute('playsinline', ''); } catch (e2) {}
+        try {
+            await currentAudio.play();
+            ttsLastError = 'ok: ' + v.voice + ' · ' + (Date.now() - _t0) + ' мс';
+            ttsToastOk('🔊 Голос: ' + String(v.voice).replace('Neural', '') + ' · ' + Math.round(blob.size / 1024) + ' КБ · ' + (Date.now() - _t0) + ' мс');
+            return;
+        } catch (playErr) {
+            // АВТОЗАПУСК ЗАБЛОКИРОВАН (Android/iOS: звук только по тапу).
+            // Даём мини-плеер — Босс тапает ▶ и слышит голос. И сразу дублируем телефоном.
+            showTapPlayer(_url);
+            ttsToast('Автозапуск заблокирован браузером — тапни ▶ на плашке');
+            ttsLastError = 'автозапуск заблокирован: ' + ((playErr && playErr.name) || playErr);
+            phoneSpeak(cleanText, agentName);
+            return;
+        }
     } catch (e) {
         ttsLastError = 'озвучка: ' + (e && e.message ? e.message : e) + ' → голос телефона';
         ttsToast(ttsLastError);
