@@ -175,6 +175,34 @@ async function micEnsurePermission() {
     }
 }
 
+// Из нескольких вариантов распознавания берём самый УВЕРЕННЫЙ, а не первый.
+// Chrome/Android часто кладёт верный вариант не на первое место — это заметно
+// повышает точность. Если движок не даёт confidence — остаётся первый вариант.
+function bestAlt(result) {
+    try {
+        let best = (result[0] && result[0].transcript) ? result[0].transcript : '';
+        let bestConf = (result[0] && typeof result[0].confidence === 'number') ? result[0].confidence : 0;
+        for (let i = 1; i < result.length; i++) {
+            const c = (typeof result[i].confidence === 'number') ? result[i].confidence : 0;
+            const t = (result[i] && result[i].transcript) ? result[i].transcript : '';
+            if (t && c > bestConf + 0.01) { bestConf = c; best = t; }
+        }
+        return best;
+    } catch (e) { return ''; }
+}
+
+// Отправка накопленной фразы ЦЕЛИКОМ — вызывается по паузе (micSendTimer).
+function micFlush() {
+    clearTimeout(micSendTimer);
+    if (!recognition || !micFull || micFull === micSent) return;
+    const clean = micFull.replace(/[^а-яёa-z0-9]/gi, '');
+    if (clean.length < 2) { micUI(true, '🎤 Не разобрал — повтори'); return; }
+    micSent = micFull;
+    micUserStopped = true;
+    try { recognition.stop(); } catch (e) {}
+    setTimeout(function () { if (typeof handleSendClick === 'function') handleSendClick(); }, 120);
+}
+
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = 'ru-RU';
