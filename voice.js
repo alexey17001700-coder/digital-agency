@@ -298,16 +298,30 @@ if (SpeechRecognition) {
         if (interimText) parts.push(interimText);
         chatInput.value = parts.join(' ');
 
-        // Финальный результат — НЕ отправляем сразу: ждём паузу 1.4 сек и шлём
-        // ВСЮ фразу целиком. Раньше уходило по кускам («включи», «свет» отдельно)
-        // — отсюда и кривые обрывки слов в чате.
-        const last = event.results[event.results.length - 1];
-        if (last && last.isFinal && full && full !== micSent) {
-            if (full.replace(/[^а-яёa-z0-9]/gi, '').length >= 2) {
-                clearTimeout(micSendTimer);
-                micSendTimer = setTimeout(micFlush, MIC_SEND_DELAY);
-                micUI(true, '🎤 Понял — отправлю через секунду…');
-            }
+        micLive = interimText;   // запомним «сырое» — пригодится, если финала не будет
+
+        // КОМАНДА ГОЛОСОМ: «стоп» / «хватит» / «отмена» — гасим микрофон СРАЗУ,
+        // и в чат это слово не уходит. Проверяем ДО отправки.
+        if (micPhrase && micIsStop(micPhrase)) {
+            micPhrase = ''; micLive = '';
+            micTimersReset(); clearTimeout(micSendTimer);
+            micConsumed = micLastCount;
+            micLockUntil = Date.now() + 1500;
+            chatInput.value = micBase || '';
+            micUserStopped = true;
+            try { recognition.stop(); } catch (e) {}
+            micUI(false, '🎤 Стоп — микрофон выключен');
+            return;
+        }
+
+        // Пауза перед отправкой: сбрасываем на ЛЮБОМ новом результате — и на
+        // промежуточном, и на финальном. Раньше сбрасывалось только на финальном,
+        // поэтому улетало одно первое слово, пока Босс продолжал говорить.
+        if (micPhrase) {
+            clearTimeout(micSendTimer);
+            micSendTimer = setTimeout(micFlush, MIC_SEND_DELAY);
+            micArmSilence();   // тишина 4 сек — микрофон выключится сам
+            micUI(true, '🎤 Понял — отправлю через секунду…');
         }
     };
 
