@@ -647,6 +647,48 @@
             }
         }
 
+        // Эквалайзер под плеером — «звуковая дорожка» инструкции.
+        function buildPreviewViz() {
+            const viz = document.getElementById('pvViz');
+            if (!viz || viz.dataset.built) return;
+            for (let i = 0; i < 26; i++) {
+                const bar = document.createElement('i');
+                bar.style.animationDelay = (i * 0.06).toFixed(2) + 's';
+                bar.style.animationDuration = (0.7 + (i % 5) * 0.12).toFixed(2) + 's';
+                viz.appendChild(bar);
+            }
+            viz.dataset.built = '1';
+        }
+
+        // Отсчёт плёнки 3-2-1 перед началом — «кинозальный» старт.
+        // done() зовём, когда отсчёт закончился (или если элементов нет).
+        function pvRunLeader(done) {
+            const lead = document.getElementById('pvLeader');
+            const num = document.getElementById('pvLeaderNum');
+            if (!lead || !num) { if (done) done(); return; }
+            lead.style.display = 'flex';
+            lead.classList.remove('off');
+            let n = 3;
+            const pop = () => {
+                num.textContent = n;
+                num.style.animation = 'none';
+                void num.offsetWidth;
+                num.style.animation = '';
+            };
+            pop();
+            const t = setInterval(() => {
+                n--;
+                if (n <= 0) {
+                    clearInterval(t);
+                    lead.classList.add('off');
+                    setTimeout(() => { lead.style.display = 'none'; }, 600);
+                    if (done) done();
+                    return;
+                }
+                pop();
+            }, 700);
+        }
+
         // Повторный показ инструкции по кнопке «🎬 Инструкция» из кадра.
         // Сбрасываем оба «замка» (флаг показа и метку сессии) и запускаем заново.
         function replayFeaturesPreview() {
