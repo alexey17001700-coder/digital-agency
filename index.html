@@ -569,6 +569,9 @@
             // Вспышка кадра при переходе — как склейка в кино.
             const flash = document.getElementById('pvFlash');
             if (flash) { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); }
+            // ИНСТРУКЦИЯ 3.0: лёгкая встряска плеера при склейке сцены.
+            const pl = document.querySelector('#features-preview .pv-player');
+            if (pl) { pl.classList.remove('shake'); void pl.offsetWidth; pl.classList.add('shake'); }
             // Кольцо прогресса вокруг кнопки — сброс на начало сцены.
             const ring = document.getElementById('pvRingProg');
             if (ring) ring.style.strokeDashoffset = '289';
