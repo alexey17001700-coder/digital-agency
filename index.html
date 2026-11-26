@@ -624,10 +624,12 @@
             if (!box) return;
             previewShown = true;
             buildFeaturesPreview();
+            buildPreviewViz();
             box.classList.add('show');
             startPreviewMatrix();
-            pvShow(0);
-            pvLoop();
+            // Сначала отсчёт плёнки 3-2-1, и только потом первая сцена —
+            // иначе кинетика первой сцены проиграла бы за кадром.
+            pvRunLeader(function () { pvShow(0); pvLoop(); });
             // Управление с клавиатуры и свайпом — пока инструкция открыта.
             if (!pvKeysOn) { document.addEventListener('keydown', pvOnKey); pvKeysOn = true; }
             if (!pvSwipeOn) {
