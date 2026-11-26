@@ -629,7 +629,13 @@
             startPreviewMatrix();
             // Сначала отсчёт плёнки 3-2-1, и только потом первая сцена —
             // иначе кинетика первой сцены проиграла бы за кадром.
-            pvRunLeader(function () { pvShow(0); pvLoop(); });
+            // СТРАХОВКА: если Босс нажал «Пропустить» во время отсчёта —
+            // инструкцию НЕ перезапускаем (иначе плеер ожил бы после закрытия).
+            pvRunLeader(function () {
+                const b = document.getElementById('features-preview');
+                if (!b || !b.classList.contains('show')) return;
+                pvShow(0); pvLoop();
+            });
             // Управление с клавиатуры и свайпом — пока инструкция открыта.
             if (!pvKeysOn) { document.addEventListener('keydown', pvOnKey); pvKeysOn = true; }
             if (!pvSwipeOn) {
