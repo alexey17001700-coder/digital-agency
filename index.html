@@ -583,6 +583,7 @@
             if (pvTick) { clearInterval(pvTick); pvTick = null; }
             if (pvTypeTimer) { clearInterval(pvTypeTimer); pvTypeTimer = null; }
             if (previewMatrix) { clearInterval(previewMatrix); previewMatrix = null; }
+            if (pvKeysOn) { document.removeEventListener('keydown', pvOnKey); pvKeysOn = false; }
             try { sessionStorage.setItem('shtabPreviewSeen', '1'); } catch (e) {}
             pvHideTimer = setTimeout(() => { box.style.display = 'none'; }, 600);
         }
