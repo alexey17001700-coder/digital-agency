@@ -427,29 +427,43 @@
             el.textContent = pvFmt(cur) + ' / ' + pvFmt(total);
         }
 
+        // Субтитр печатается по буквам, в конце мигает курсор-каретка.
         function pvType(text) {
             const el = document.getElementById('pvCaption');
             if (!el) return;
             clearInterval(pvTypeTimer);
-            el.textContent = '';
             const s = String(text || '');
             let i = 0;
+            el.textContent = '';
+            const caret = document.createElement('span');
+            caret.className = 'pv-caret';
+            el.appendChild(caret);
             pvTypeTimer = setInterval(() => {
                 if (!pvPlaying) return;                 // пауза — печать замирает
                 if (i >= s.length) { clearInterval(pvTypeTimer); return; }
-                el.textContent = s.slice(0, ++i);
-            }, 24);
+                caret.insertAdjacentText('beforebegin', s.charAt(i));
+                i++;
+            }, 22);
         }
 
         function pvShow(i, keepPlaying) {
             previewIdx = (i + PREVIEW_CARDS.length) % PREVIEW_CARDS.length;
             pvElapsed = 0;
+            const card = PREVIEW_CARDS[previewIdx];
+            // Цвет сцены (кольцо, название, каретка) — через CSS-переменную.
+            const stage = document.getElementById('pvStage');
+            if (stage) stage.style.setProperty('--pv-accent', card.accent || '#00e5ff');
             document.querySelectorAll('#pvStage .pv-scene').forEach((s, k) => s.classList.toggle('on', k === previewIdx));
             document.querySelectorAll('#pvTimeline .pv-seg').forEach((s, k) => {
                 const bar = s.querySelector('i');
                 if (bar) bar.style.width = (k < previewIdx) ? '100%' : '0%';
             });
-            pvType(PREVIEW_CARDS[previewIdx].narr || PREVIEW_CARDS[previewIdx].text);
+            const cnt = document.getElementById('pvCount');
+            if (cnt) cnt.textContent = (previewIdx + 1) + '/' + PREVIEW_CARDS.length;
+            // На последней сцене кнопка «ВОЙТИ В ШТАБ» начинает пульсировать.
+            const enter = document.getElementById('pvEnter');
+            if (enter) enter.classList.toggle('pulse', previewIdx === PREVIEW_CARDS.length - 1);
+            pvType(card.narr || card.text);
             pvUpdateTime();
             if (!keepPlaying) { pvPlaying = true; pvPlayBtn(); }
         }
