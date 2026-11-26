@@ -207,7 +207,13 @@
             <div class="pv-caption" id="pvCaption"></div>
             <div class="pv-controls">
                 <button class="pv-btn" onclick="previewPrev()" title="Предыдущая сцена">⏮</button>
-                <button class="pv-btn main" id="pvPlay" onclick="previewToggle()" title="Пауза / играть">⏸</button>
+                <button class="pv-btn main" id="pvPlay" onclick="previewToggle()" title="Пауза / играть">
+                    <svg class="pv-ring-prog" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="7"></circle>
+                        <circle id="pvRingProg" cx="50" cy="50" r="46" fill="none" stroke="#00ff88" stroke-width="7" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" transform="rotate(-90 50 50)"></circle>
+                    </svg>
+                    <span id="pvPlayIcon">⏸</span>
+                </button>
                 <button class="pv-btn" onclick="previewNext()" title="Следующая сцена">⏭</button>
             </div>
             <div class="pv-time" id="pvTime">0:00 / 0:00</div>
