@@ -84,6 +84,48 @@
         .pv-time { color: #8b98a5; font-size: 12px; font-family: monospace; letter-spacing: 1px; text-align: center; margin-top: 8px; }
         .pv-enter { align-self: center; margin-top: 14px; background: linear-gradient(90deg, #00e5ff, #00ff88); color: #001014; border: none; border-radius: 30px; padding: 13px 36px; font-size: 14px; font-weight: bold; letter-spacing: 2px; cursor: pointer; box-shadow: 0 0 24px rgba(0,229,255,0.5); }
         .pv-enter:active { transform: scale(0.96); }
+
+        /* --- АПГРЕЙД ИНСТРУКЦИИ: «киношный» вид ---
+           Добавлено поверх старого плеера, старые правила не тронуты:
+           световые орбы + зерно плёнки + виньетка (живой фон),
+           вращающееся кольцо вокруг иконки, 3D-влёт сцены, блик по таймлайну,
+           курсор-каретка в субтитре, счётчик сцен и пульс кнопок. */
+        .pv-orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.32; z-index: 0; pointer-events: none; }
+        .pv-orb.a { width: 260px; height: 260px; background: #00e5ff; top: -70px; left: -80px; animation: pvOrbA 14s infinite ease-in-out; }
+        .pv-orb.b { width: 230px; height: 230px; background: #7B61FF; bottom: -80px; right: -70px; animation: pvOrbB 17s infinite ease-in-out; }
+        .pv-orb.c { width: 190px; height: 190px; background: #00ff88; bottom: 28%; left: -90px; animation: pvOrbA 21s infinite ease-in-out reverse; }
+        @keyframes pvOrbA { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(60px, 50px) scale(1.18); } }
+        @keyframes pvOrbB { 0%, 100% { transform: translate(0, 0) scale(1.1); } 50% { transform: translate(-70px, -40px) scale(0.9); } }
+        .pv-grain { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0.045; background-image: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); animation: pvGrain 0.6s steps(2) infinite; }
+        @keyframes pvGrain { from { transform: translateY(0); } to { transform: translateY(3px); } }
+        .pv-vignette { position: absolute; inset: 0; z-index: 2; pointer-events: none; box-shadow: inset 0 0 150px 40px rgba(0,0,0,0.85); }
+        .pv-player { z-index: 3; }
+        .pv-count { font: 11px monospace; color: #8b98a5; letter-spacing: 1px; }
+        .pv-skip { transition: 0.2s; }
+        .pv-skip:hover { color: #fff; border-color: #ff0055; }
+        .pv-seg i { background: linear-gradient(90deg, #00e5ff, #00ff88); position: relative; }
+        .pv-seg i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.75), transparent); animation: pvShine 1.4s infinite; }
+        @keyframes pvShine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+        .pv-stage { perspective: 900px; }
+        .pv-scene.on { animation: pvIn 0.7s cubic-bezier(0.2, 0.9, 0.25, 1); }
+        @keyframes pvIn { from { opacity: 0; transform: translateY(26px) rotateX(14deg) scale(0.9); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+        .pv-ring { position: relative; width: 132px; height: 132px; display: flex; align-items: center; justify-content: center; }
+        .pv-ring::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent, var(--pv-accent, #00e5ff), transparent 65%); animation: pvSpin 3.4s linear infinite; opacity: 0.85; }
+        .pv-ring::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #050505; }
+        @keyframes pvSpin { to { transform: rotate(360deg); } }
+        .pv-icon { position: relative; z-index: 1; font-size: 58px; filter: drop-shadow(0 0 20px var(--pv-accent, #00e5ff)); }
+        .pv-name { color: var(--pv-accent, #00e5ff); text-shadow: 0 0 18px var(--pv-accent, #00e5ff); }
+        .pv-tag { animation: pvTag 2s infinite; }
+        @keyframes pvTag { 0%, 100% { box-shadow: 0 0 0 rgba(0,255,136,0); } 50% { box-shadow: 0 0 14px rgba(0,255,136,0.5); } }
+        .pv-caption { min-height: 40px; background: rgba(0,0,0,0.6); border-left-color: var(--pv-accent, #00e5ff); }
+        .pv-caret { display: inline-block; width: 7px; height: 12px; background: var(--pv-accent, #00e5ff); margin-left: 2px; vertical-align: -1px; animation: pvCaret 0.9s steps(2) infinite; }
+        @keyframes pvCaret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .pv-btn { transition: 0.2s; }
+        .pv-btn:hover { background: rgba(0,229,255,0.25); }
+        .pv-btn.main { width: 60px; height: 60px; animation: pvPulse 2.4s infinite; }
+        @keyframes pvPulse { 0%, 100% { box-shadow: 0 0 18px rgba(0,229,255,0.45); } 50% { box-shadow: 0 0 34px rgba(0,255,136,0.7); } }
+        .pv-enter.pulse { animation: pvEnterPulse 1.6s infinite; }
+        @keyframes pvEnterPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0,229,255,0.45); } 50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(0,255,136,0.8); } }
     </style>
 </head>
 <body>
