@@ -166,6 +166,32 @@
         .pv-btn.main { position: relative; }
         .pv-ring-prog { position: absolute; inset: -7px; width: calc(100% + 14px); height: calc(100% + 14px); pointer-events: none; }
         .pv-ring-prog circle { transition: stroke-dashoffset 0.12s linear; }
+
+        /* === ИНСТРУКЦИЯ 3.0 «ГОЛОГРАММА» ===
+           Босс: «переделай поэффектней, покрасивее». Добавлено ПОВЕРХ версии 2.0,
+           старые правила не тронуты. Новое: голографический пол в перспективе
+           (сетка бесконечно бежит вниз), вращающиеся лучи света за иконкой,
+           искры-частицы поднимаются вверх, название главы рядом с таймкодом,
+           неоновая обводка таймлайна и лёгкая встряска плеера при склейке сцены. */
+        .pv-floor { position: absolute; left: -25%; right: -25%; bottom: -8%; height: 48%; z-index: 0; pointer-events: none; opacity: 0.5;
+            background-image: linear-gradient(rgba(0,229,255,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.25) 1px, transparent 1px);
+            background-size: 46px 34px;
+            transform: perspective(300px) rotateX(66deg); transform-origin: bottom center;
+            animation: pvFloor 3.4s linear infinite;
+            -webkit-mask-image: linear-gradient(transparent, #000 45%); mask-image: linear-gradient(transparent, #000 45%); }
+        @keyframes pvFloor { from { background-position: 0 0; } to { background-position: 0 34px; } }
+        .pv-rays { position: absolute; top: 50%; left: 50%; width: 360px; height: 360px; margin: -180px 0 0 -180px; z-index: 0; pointer-events: none; opacity: 0.16;
+            background: conic-gradient(from 0deg, transparent 0 6%, var(--pv-accent, #00e5ff) 7% 8%, transparent 9% 20%, var(--pv-accent, #00e5ff) 21% 22%, transparent 23% 38%, var(--pv-accent, #00e5ff) 39% 40%, transparent 41% 58%, var(--pv-accent, #00e5ff) 59% 60%, transparent 61% 78%, var(--pv-accent, #00e5ff) 79% 80%, transparent 81%);
+            filter: blur(1px); animation: pvRays 26s linear infinite;
+            -webkit-mask-image: radial-gradient(circle, #000 0 26%, transparent 70%); mask-image: radial-gradient(circle, #000 0 26%, transparent 70%); }
+        @keyframes pvRays { to { transform: rotate(360deg); } }
+        .pv-sparks { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+        .pv-sparks i { position: absolute; bottom: -12px; border-radius: 50%; background: var(--pv-accent, #00e5ff); box-shadow: 0 0 10px var(--pv-accent, #00e5ff); opacity: 0; animation: pvSpark linear infinite; }
+        @keyframes pvSpark { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 12% { opacity: 0.9; } 85% { opacity: 0.5; } 100% { opacity: 0; transform: translateY(-80vh) scale(1.15); } }
+        .pv-timeline { padding: 3px; border-radius: 6px; background: rgba(0,229,255,0.06); box-shadow: inset 0 0 12px rgba(0,229,255,0.12); }
+        .pv-player { background: radial-gradient(circle at 50% 0%, rgba(0,229,255,0.05), transparent 62%); }
+        .pv-player.shake { animation: pvShake 0.4s ease; }
+        @keyframes pvShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
     </style>
 </head>
 <body>
