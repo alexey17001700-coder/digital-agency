@@ -504,6 +504,14 @@
         function previewNext() { pvShow(previewIdx + 1, true); }
         function previewPrev() { pvShow(previewIdx - 1, true); }
 
+        // Клавиатура: ← назад, → вперёд, пробел — пауза, Esc — закрыть инструкцию.
+        function pvOnKey(e) {
+            if (e.key === 'Escape') { closeFeaturesPreview(); return; }
+            if (e.key === ' ') { e.preventDefault(); previewToggle(); return; }
+            if (e.key === 'ArrowRight') { previewNext(); return; }
+            if (e.key === 'ArrowLeft') { previewPrev(); }
+        }
+
         function startPreviewMatrix() {
             const canvas = document.getElementById('preview-canvas');
             if (!canvas) return;
