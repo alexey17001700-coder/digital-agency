@@ -561,6 +561,9 @@
                     const bar = seg.querySelector('i');
                     if (bar) bar.style.width = Math.min(100, (pvElapsed / PV_DUR) * 100) + '%';
                 }
+                // Кольцо прогресса на главной кнопке: 289 = длина окружности (2πr, r=46).
+                const ring = document.getElementById('pvRingProg');
+                if (ring) ring.style.strokeDashoffset = String(289 * (1 - Math.min(1, pvElapsed / PV_DUR)));
                 pvUpdateTime();
                 if (pvElapsed >= PV_DUR) {
                     if (previewIdx >= PREVIEW_CARDS.length - 1) {
