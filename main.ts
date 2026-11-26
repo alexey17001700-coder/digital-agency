@@ -1874,6 +1874,17 @@ Deno.serve(async (request) => {
 
         // ГЛАВНАЯ РУЧКА: ИИ
         if (body.messages) {
+            /* 💰 РЕЖИМ ЭКОНОМИИ ТОКЕНОВ И КЭША — приклеиваем блок к системному
+               промту ОДИН раз на запрос. Работает для всех каналов:
+               Zveno, GigaChat, ERNIE, зрение. */
+            try {
+                const _msgs = body.messages;
+                if (Array.isArray(_msgs)) {
+                    const _si = _msgs.findIndex((m: any) => m && m.role === "system");
+                    if (_si !== -1) _msgs[_si].content = withEconomy(_msgs[_si].content);
+                    else _msgs.unshift({ role: "system", content: ECONOMY_PROMPT });
+                }
+            } catch (_e) { /* не массив — пропускаем */ }
             const userKeys = body.userKeys || {};
             /* 🟣 КЛЮЧ СБЕРА ИЗ ПОЛЯ ⚙️ (userKeys.gigachat). Пусто — серверный. */
             const gcKey = String((userKeys && (userKeys.gigachat || userKeys.gigachatKey)) || "").trim();
