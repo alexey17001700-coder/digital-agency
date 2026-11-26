@@ -542,8 +542,13 @@
         }
 
         function pvPlayBtn() {
-            const b = document.getElementById('pvPlay');
+            // Иконка живёт в отдельном span — саму кнопку не трогаем,
+            // иначе SVG-кольцо прогресса внутри неё стиралось бы.
+            const b = document.getElementById('pvPlayIcon');
             if (b) b.textContent = pvPlaying ? '⏸' : '▶';
+            // Эквалайзер замирает на паузе.
+            const viz = document.getElementById('pvViz');
+            if (viz) viz.classList.toggle('paused', !pvPlaying);
         }
 
         function pvLoop() {
