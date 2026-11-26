@@ -500,6 +500,20 @@
                     '<div class="pv-tag">' + c.tag + '</div>';
                 st.appendChild(sc);
             });
+            // ИНСТРУКЦИЯ 3.0: искры-частицы, поднимающиеся вверх (голограмма).
+            const sp = document.getElementById('pvSparks');
+            if (sp && !sp.dataset.built) {
+                for (let i = 0; i < 24; i++) {
+                    const s = document.createElement('i');
+                    s.style.left = (Math.random() * 100).toFixed(1) + '%';
+                    s.style.animationDelay = (Math.random() * 7).toFixed(2) + 's';
+                    s.style.animationDuration = (4 + Math.random() * 5).toFixed(2) + 's';
+                    const sz = (2 + Math.random() * 3).toFixed(1) + 'px';
+                    s.style.width = sz; s.style.height = sz;
+                    sp.appendChild(s);
+                }
+                sp.dataset.built = '1';
+            }
             previewBuilt = true;
         }
 
