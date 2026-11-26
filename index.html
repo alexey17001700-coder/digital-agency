@@ -451,17 +451,22 @@
             const tl = document.getElementById('pvTimeline');
             const st = document.getElementById('pvStage');
             if (!tl || !st) return;
-            PREVIEW_CARDS.forEach((c) => {
+            PREVIEW_CARDS.forEach((c, idx) => {
                 const seg = document.createElement('div');
                 seg.className = 'pv-seg';
                 seg.innerHTML = '<i></i>';
                 tl.appendChild(seg);
                 const sc = document.createElement('div');
                 sc.className = 'pv-scene';
+                // Кинетический заголовок: каждая буква влетает со своей задержкой.
+                const letters = c.name.split('').map((ch, li) =>
+                    '<span style="animation-delay:' + (li * 0.045).toFixed(3) + 's">' + ch + '</span>').join('');
                 // Иконка живёт внутри вращающегося светового кольца (.pv-ring),
                 // цвет кольца и свечения берётся из accent сцены.
-                sc.innerHTML = '<div class="pv-ring"><div class="pv-icon">' + c.icon + '</div></div>' +
-                    '<div class="pv-name">' + c.name + '</div>' +
+                // .pv-ghost — призрачный номер главы за иконкой.
+                sc.innerHTML = '<div class="pv-ghost">' + String(idx + 1).padStart(2, '0') + '</div>' +
+                    '<div class="pv-ring"><div class="pv-icon">' + c.icon + '</div></div>' +
+                    '<div class="pv-name">' + letters + '</div>' +
                     '<div class="pv-text">' + c.text + '</div>' +
                     '<div class="pv-tag">' + c.tag + '</div>';
                 st.appendChild(sc);
