@@ -514,7 +514,19 @@
             // Ставим на весь блок превью, чтобы субтитр (он вне сцены) тоже её видел.
             const box = document.getElementById('features-preview');
             if (box) box.style.setProperty('--pv-accent', card.accent || '#00e5ff');
-            document.querySelectorAll('#pvStage .pv-scene').forEach((s, k) => s.classList.toggle('on', k === previewIdx));
+            // Смена сцены: у нужной принудительно перезапускаем анимацию влёта
+            // (reflow), чтобы кинетика играла КАЖДЫЙ раз, а не только в первый.
+            document.querySelectorAll('#pvStage .pv-scene').forEach((s, k) => {
+                const want = k === previewIdx;
+                s.classList.remove('on');
+                if (want) { void s.offsetWidth; s.classList.add('on'); }
+            });
+            // Вспышка кадра при переходе — как склейка в кино.
+            const flash = document.getElementById('pvFlash');
+            if (flash) { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); }
+            // Кольцо прогресса вокруг кнопки — сброс на начало сцены.
+            const ring = document.getElementById('pvRingProg');
+            if (ring) ring.style.strokeDashoffset = '289';
             document.querySelectorAll('#pvTimeline .pv-seg').forEach((s, k) => {
                 const bar = s.querySelector('i');
                 if (bar) bar.style.width = (k < previewIdx) ? '100%' : '0%';
