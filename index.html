@@ -513,7 +513,9 @@
             if (!el) return;
             const total = PREVIEW_CARDS.length * PV_DUR;
             const cur = previewIdx * PV_DUR + Math.min(pvElapsed, PV_DUR);
-            el.textContent = pvFmt(cur) + ' / ' + pvFmt(total);
+            // ИНСТРУКЦИЯ 3.0: к таймкоду добавляем название текущей главы.
+            const card = PREVIEW_CARDS[previewIdx] || {};
+            el.textContent = pvFmt(cur) + ' / ' + pvFmt(total) + (card.name ? '  ·  ' + card.name : '');
         }
 
         // Субтитр печатается по буквам, в конце мигает курсор-каретка.
