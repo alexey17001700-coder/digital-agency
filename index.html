@@ -705,6 +705,9 @@
             if (!box) return;
             box.classList.remove('show');
             pvPlaying = false;
+            // Гасим отсчёт плёнки, если Босс закрыл инструкцию во время 3-2-1.
+            const lead = document.getElementById('pvLeader');
+            if (lead) { lead.classList.add('off'); lead.style.display = 'none'; }
             if (pvTick) { clearInterval(pvTick); pvTick = null; }
             if (pvTypeTimer) { clearInterval(pvTypeTimer); pvTypeTimer = null; }
             if (previewMatrix) { clearInterval(previewMatrix); previewMatrix = null; }
