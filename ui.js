@@ -682,3 +682,196 @@ function openVersionPanel() {
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
     document.body.appendChild(ov);
 }
+
+/* =========================================
+   🎚 КРУТИЛКИ БОССА — ПРАВИЛА, ПО КОТОРЫМ ОТЧИТЫВАЕТСЯ АРХИТЕКТОР
+   Босс: «чтобы ты меньше врал». Честно: это НЕ переключатель в голове
+   модели — у Архитектора нет доступа к своей прошивке. Это ЧЕК-ЛИСТ:
+   значения хранятся на устройстве и одной кнопкой ВСТАВЛЯЮТСЯ В ЧАТ —
+   тогда Архитектор видит правила прямо в задаче и обязан по ним
+   отчитываться. Никакой магии: рычаг у Босса, отчёт по факту.
+   ========================================= */
+const BOSS_RULES = [
+    { id: 'fact',    label: 'ПРОВЕРКА ФАКТОМ',   hint: 'После каждой правки — перечитать файл и показать факт', def: 100 },
+    { id: 'noguess', label: 'ЗАПРЕТ ДОГАДОК',    hint: 'Не утверждать без проверки. Нет факта — нет утверждения', def: 100 },
+    { id: 'quotes',  label: 'ЦИТАТЫ',            hint: 'Показывать кусок кода или строку как доказательство', def: 80 },
+    { id: 'surgery', label: 'ХИРУРГИЯ',          hint: 'Минимальные правки, остальной код не трогать', def: 90 },
+    { id: 'honest',  label: 'ЧЕСТНОЕ «НЕ ЗНАЮ»', hint: 'Прямо говорить «не знаю», а не выдумывать', def: 100 },
+    { id: 'short',   label: 'КОРОТКОСТЬ',        hint: 'Без воды и пересказа кода', def: 70 }
+];
+
+const BOSS_RULES_PRESETS = {
+    max:  { fact: 100, noguess: 100, quotes: 100, surgery: 100, honest: 100, short: 40 },
+    norm: { fact: 100, noguess: 100, quotes: 80,  surgery: 90,  honest: 100, short: 70 },
+    fast: { fact: 60,  noguess: 70,  quotes: 30,  surgery: 70,  honest: 90,  short: 100 }
+};
+
+function getBossRules() {
+    const out = {};
+    BOSS_RULES.forEach(r => { out[r.id] = r.def; });
+    try {
+        const raw = localStorage.getItem('shtabBossRules');
+        if (raw) {
+            const d = JSON.parse(raw);
+            BOSS_RULES.forEach(r => {
+                if (typeof d[r.id] === 'number') out[r.id] = Math.max(0, Math.min(100, d[r.id]));
+            });
+        }
+    } catch (e) {}
+    return out;
+}
+
+function setBossRules(vals) {
+    try { localStorage.setItem('shtabBossRules', JSON.stringify(vals)); } catch (e) {}
+}
+
+/* Текст правил для вставки в чат. Именно его Архитектор видит в задаче. */
+function bossRulesText(vals) {
+    const v = vals || getBossRules();
+    const avg = Math.round(BOSS_RULES.reduce((s, r) => s + v[r.id], 0) / BOSS_RULES.length);
+    const lines = ['[ПРАВИЛА БОССА — соблюдать строго, отчитываться по факту]'];
+    BOSS_RULES.forEach((r, i) => {
+        lines.push((i + 1) + '. ' + r.label + ': ' + v[r.id] + '/100 — ' + r.hint + '.');
+    });
+    lines.push('Общий уровень строгости: ' + avg + '/100.');
+    lines.push('Если факта нет — писать «не знаю», а не выдумывать.');
+    return lines.join('\n');
+}
+
+function openBossRulesPanel() {
+    const old = document.getElementById('bossRulesPanel');
+    if (old) old.remove();
+
+    let vals = getBossRules();
+
+    const ov = document.createElement('div');
+    ov.id = 'bossRulesPanel';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:360px;background:#0d1418;border:1px solid #ffd700;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(255,215,0,.18);max-height:88vh;overflow-y:auto;';
+
+    const title = document.createElement('div');
+    title.textContent = '🎚 КРУТИЛКИ БОССА';
+    title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;color:#ffd700;margin-bottom:4px;';
+    box.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.textContent = 'Правила, по которым Архитектор обязан отчитываться. Значения хранятся на устройстве. Кнопка «Вставить в чат» кладёт их в задачу — тогда Архитектор их видит.';
+    sub.style.cssText = 'font-size:11px;color:#8b98a5;line-height:1.4;margin-bottom:12px;';
+    box.appendChild(sub);
+
+    const avgEl = document.createElement('div');
+    avgEl.style.cssText = 'font-size:12px;font-weight:700;color:#00e5ff;margin-bottom:10px;';
+    box.appendChild(avgEl);
+
+    const updAvg = () => {
+        const avg = Math.round(BOSS_RULES.reduce((s, r) => s + vals[r.id], 0) / BOSS_RULES.length);
+        avgEl.textContent = 'Уровень строгости: ' + avg + '/100';
+    };
+
+    const sliders = {};
+    BOSS_RULES.forEach(r => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'margin-bottom:12px;';
+
+        const head = document.createElement('div');
+        head.style.cssText = 'display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;margin-bottom:2px;';
+        const l = document.createElement('span'); l.textContent = r.label; l.style.color = '#e6edf3';
+        const val = document.createElement('span'); val.textContent = String(vals[r.id]); val.style.color = '#ffd700';
+        head.appendChild(l); head.appendChild(val);
+        wrap.appendChild(head);
+
+        const hint = document.createElement('div');
+        hint.textContent = r.hint;
+        hint.style.cssText = 'font-size:10px;color:#8b98a5;margin-bottom:4px;line-height:1.3;';
+        wrap.appendChild(hint);
+
+        const sl = document.createElement('input');
+        sl.type = 'range'; sl.min = '0'; sl.max = '100'; sl.step = '5';
+        sl.value = String(vals[r.id]);
+        sl.style.cssText = 'width:100%;accent-color:#ffd700;cursor:pointer;';
+        sl.oninput = () => { vals[r.id] = parseInt(sl.value, 10); val.textContent = sl.value; updAvg(); };
+        wrap.appendChild(sl);
+
+        sliders[r.id] = { sl: sl, val: val };
+        box.appendChild(wrap);
+    });
+
+    updAvg();
+
+    const applyVals = (p) => {
+        vals = Object.assign({}, p);
+        BOSS_RULES.forEach(r => {
+            if (sliders[r.id]) { sliders[r.id].sl.value = String(vals[r.id]); sliders[r.id].val.textContent = String(vals[r.id]); }
+        });
+        updAvg();
+    };
+
+    const presetRow = document.createElement('div');
+    presetRow.style.cssText = 'display:flex;gap:6px;margin:6px 0 10px;';
+    const mkPreset = (label, key, color) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.style.cssText = 'flex:1;padding:8px 4px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;border:1px solid ' + color + ';background:transparent;color:' + color + ';';
+        b.onclick = () => applyVals(BOSS_RULES_PRESETS[key]);
+        presetRow.appendChild(b);
+    };
+    mkPreset('🔒 МАКС', 'max', '#ff0055');
+    mkPreset('⚖️ ОБЫЧНО', 'norm', '#00e5ff');
+    mkPreset('⚡ БЫСТРО', 'fast', '#7ee08a');
+    box.appendChild(presetRow);
+
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:12px;line-height:1.4;margin:4px 0 2px;min-height:14px;';
+    box.appendChild(msg);
+    const setMsg = (t, c) => { msg.textContent = t || ''; msg.style.color = c || '#8b98a5'; };
+
+    const btn = (label, bg, color, border, fn) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.style.cssText = 'display:block;width:100%;padding:11px;margin-top:8px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';';
+        b.onclick = fn;
+        box.appendChild(b);
+        return b;
+    };
+
+    btn('💾 Сохранить правила', '#ffd700', '#000', '#ffd700', () => {
+        setBossRules(vals);
+        setMsg('✅ Правила сохранены на устройстве.', '#7ee08a');
+    });
+
+    btn('📌 Вставить правила в чат', 'transparent', '#00e5ff', '#00e5ff', () => {
+        setBossRules(vals);
+        const ta = document.getElementById('chatInput');
+        if (!ta) { setMsg('Поле чата не найдено.', '#ff8888'); return; }
+        const txt = bossRulesText(vals);
+        ta.value = (ta.value ? ta.value.replace(/\s*$/, '') + '\n\n' : '') + txt;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        ta.focus();
+        setMsg('✅ Правила вставлены в чат. Жми ➤ отправить.', '#7ee08a');
+    });
+
+    btn('📋 Скопировать правила', 'transparent', '#ffd700', '#ffd700', () => {
+        const txt = bossRulesText(vals);
+        const done = () => setMsg('✅ Скопировано.', '#7ee08a');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(done).catch(() => setMsg('Не удалось — выдели вручную.', '#ff8888'));
+        } else { setMsg('Копирование недоступно.', '#ff8888'); }
+    });
+
+    btn('♻️ Сбросить к «ОБЫЧНО»', 'transparent', '#8b98a5', '#2a333d', () => {
+        applyVals(BOSS_RULES_PRESETS.norm);
+        setMsg('Сброшено к «ОБЫЧНО».', '#8b98a5');
+    });
+
+    const close = document.createElement('button');
+    close.textContent = 'ЗАКРЫТЬ';
+    close.style.cssText = 'display:block;width:100%;padding:10px;margin-top:12px;border:1px solid #2a333d;border-radius:9px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;';
+    close.onclick = () => ov.remove();
+    box.appendChild(close);
+
+    ov.appendChild(box);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+}
+window.openBossRulesPanel = openBossRulesPanel;
