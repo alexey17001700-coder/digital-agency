@@ -547,6 +547,21 @@
             startPreviewMatrix();
             pvShow(0);
             pvLoop();
+            // Управление с клавиатуры и свайпом — пока инструкция открыта.
+            if (!pvKeysOn) { document.addEventListener('keydown', pvOnKey); pvKeysOn = true; }
+            if (!pvSwipeOn) {
+                let tx = 0, ty = 0;
+                box.addEventListener('touchstart', (e) => {
+                    tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+                }, { passive: true });
+                box.addEventListener('touchend', (e) => {
+                    const dx = e.changedTouches[0].clientX - tx;
+                    const dy = e.changedTouches[0].clientY - ty;
+                    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;   // это скролл, не свайп
+                    if (dx < 0) previewNext(); else previewPrev();
+                }, { passive: true });
+                pvSwipeOn = true;
+            }
         }
 
         // Повторный показ инструкции по кнопке «🎬 Инструкция» из кадра.
