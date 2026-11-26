@@ -450,9 +450,10 @@
             previewIdx = (i + PREVIEW_CARDS.length) % PREVIEW_CARDS.length;
             pvElapsed = 0;
             const card = PREVIEW_CARDS[previewIdx];
-            // Цвет сцены (кольцо, название, каретка) — через CSS-переменную.
-            const stage = document.getElementById('pvStage');
-            if (stage) stage.style.setProperty('--pv-accent', card.accent || '#00e5ff');
+            // Цвет сцены (кольцо, название, каретка, субтитр) — через CSS-переменную.
+            // Ставим на весь блок превью, чтобы субтитр (он вне сцены) тоже её видел.
+            const box = document.getElementById('features-preview');
+            if (box) box.style.setProperty('--pv-accent', card.accent || '#00e5ff');
             document.querySelectorAll('#pvStage .pv-scene').forEach((s, k) => s.classList.toggle('on', k === previewIdx));
             document.querySelectorAll('#pvTimeline .pv-seg').forEach((s, k) => {
                 const bar = s.querySelector('i');
