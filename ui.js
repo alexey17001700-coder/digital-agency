@@ -171,12 +171,9 @@ function openAIModelPanel() {
     if (gInfo) box.appendChild(modelRow(gInfo));
     else hint('Канал GigaChat не загружен.');
 
-    const eInfo = (typeof AI_MODELS !== 'undefined') ? AI_MODELS.find(m => m && m.id === 'ernie') : null;
-    section('🟠 BAIDU ERNIE — бесплатная, ключ серверный', '#ff9800');
-    if (eInfo) box.appendChild(modelRow(eInfo));
-    else hint('Канал ERNIE не загружен.');
-
-    hint('Три канала: 🅰️ Архитектор, 🟣 GigaChat и 🟠 Baidu ERNIE (бесплатная).');
+    /* ❗ КАНАЛ ERNIE УБРАН (приказ Босса): бесплатные модели через шлюз Zveno
+       больше не используются. В Штабе строго ДВА канала. */
+    hint('Два канала: 🅰️ Архитектор и 🟣 GigaChat.');
 
     const close = document.createElement('button');
     close.textContent = 'ЗАКРЫТЬ';
