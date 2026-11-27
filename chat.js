@@ -1957,8 +1957,6 @@ async function sendMessage(overrideText = null, isKick = false) {
         // GigaChat работает на серверном ключе Сбера (GIGACHAT_KEY) — свои ключи
         // Боссу для него не нужны, поэтому запрос уходит даже при пустых полях.
         if (selectedAIModel === 'gigachat') hasAnyKeys = true;
-        // 🟠 ERNIE работает на серверном ключе ZVENO_API_KEY — свои поля не нужны.
-        if (selectedAIModel === 'ernie') hasAnyKeys = true;
         // ⚡ ДУЭТ: оба канала работают на серверных ключах — свои поля не нужны.
         if (typeof duetEnabled === 'function' && duetEnabled()) hasAnyKeys = true;
                 if (hasAnyKeys) {
