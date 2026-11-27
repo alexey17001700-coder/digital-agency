@@ -1987,6 +1987,14 @@ Deno.serve(async (request) => {
 
         if (body.scanRepo) return await scanRepoFiles();
 
+        /* 👁 ПРОВЕРКА ЗРЕНИЯ (кнопка «👁 Зрение»): отчёт по каждой vision-модели. */
+        if (body.visionTest) {
+            try {
+                const report = await runVisionTest();
+                return json({ success: true, answer: report });
+            } catch (e: any) { return json({ success: false, error: e.message }, 500); }
+        }
+
         // ПРОВЕРКА GIGACHAT — «жив ли помощник»
         if (body.gigachatTest) {
             try {
