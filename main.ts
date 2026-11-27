@@ -160,10 +160,9 @@ const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
    Этот ключ даёт только ЧТЕНИЕ GitHub через прокси. Живёт в /root/.env. */
 const GITRADAR_TOKEN = Deno.env.get("GITRADAR_TOKEN") || "";
 
-/* 🟠 BAIDU ERNIE — ОТДЕЛЬНЫЙ КАНАЛ (бесплатная модель).
-   Идёт через тот же шлюз ZvenoAI (api.zveno.ai), ключ серверный ZVENO_API_KEY.
-   Формат OpenAI, инструменты включены — как у канала Zveno. */
-const ERNIE_MODEL = "baidu/ernie-5.5-flash-preview:free";
+/* ❗ КАНАЛ ERNIE УБРАН (приказ Босса): бесплатные модели через шлюз Zveno
+   больше не используются. В Штабе строго ДВА канала: 🅰️ Zveno (DeepSeek)
+   и 🟣 GigaChat. */
 
 // БЕЛЫЙ СПИСОК РАСШИРЕНИЙ (разрешаем .ts для main.ts)
 const WRITE_ALLOWED_EXT = [
