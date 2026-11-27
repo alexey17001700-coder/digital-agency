@@ -442,6 +442,43 @@ window.toggleErnie = toggleErnie;
 window.applyErnieButton = applyErnieButton;
 window.ensureErnieButton = ensureErnieButton;
 
+/* --- КНОПКА «👁 ЗРЕНИЕ» ---
+   Босс нажимает — Штаб спрашивает сервер, читает ли он картинки, и печатает
+   отчёт: какая vision-модель шлюза ZvenoAI ответила, какая отказала и почему.
+   Нужна, чтобы не гадать, почему фото не разобрано, а видеть причину. */
+async function runVisionTest() {
+    renderMessage('👁 *[Зрение: проверяю vision-модели шлюза Zveno…]*', 'director', 'Оркестратор');
+    try {
+        const res = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ visionTest: true })
+        });
+        const data = await res.json();
+        const txt = (data && data.answer) ? String(data.answer) : ('❌ Ошибка: ' + ((data && data.error) || res.status));
+        renderMessage(txt, 'director', 'Оркестратор');
+        addMessageToHistory('[ПРОВЕРКА ЗРЕНИЯ]:\n' + txt, 'director', 'Оркестратор');
+    } catch (e) {
+        renderMessage('❌ Зрение: сбой сети — ' + ((e && e.message) || e), 'director', 'Оркестратор');
+    }
+}
+function ensureVisionButton() {
+    if (document.getElementById('btnVision')) return;
+    const anchor = document.getElementById('btnErnie') || document.getElementById('btnDuet') || document.getElementById('btnGigaChat');
+    if (!anchor || !anchor.parentNode) return;
+    const b = document.createElement('button');
+    b.id = 'btnVision';
+    b.className = 'mode-btn';
+    b.type = 'button';
+    b.onclick = () => runVisionTest();
+    b.title = 'Проверить зрение: читает ли Штаб картинки через Zveno.';
+    b.innerText = '👁 Зрение';
+    b.style.borderColor = '#00e5ff';
+    b.style.color = '#00e5ff';
+    anchor.parentNode.insertBefore(b, anchor.nextSibling);
+}
+window.runVisionTest = runVisionTest;
+window.ensureVisionButton = ensureVisionButton;
+
 /* =========================================
    ⚡ РЕЖИМ «ДУЭТ» (МУЛЬТИАГЕНТНЫЙ)
    Босс включает «Дуэт» — над задачей работают ОБЕ модели сразу:
