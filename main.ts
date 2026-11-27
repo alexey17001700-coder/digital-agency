@@ -2035,7 +2035,7 @@ Deno.serve(async (request) => {
         if (body.messages) {
             /* 💰 РЕЖИМ ЭКОНОМИИ ТОКЕНОВ И КЭША + 🚧 ЖЁСТКИЙ ЛИМИТ ВИТКОВ —
                оба блока приклеиваем к системному промту ОДИН раз на запрос.
-               Работает для всех каналов: Zveno, GigaChat, ERNIE, зрение. */
+               Работает для всех каналов: Zveno, GigaChat, зрение. */
             try {
                 const _msgs = body.messages;
                 if (Array.isArray(_msgs)) {
