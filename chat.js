@@ -148,7 +148,7 @@ function getModelInfo(id) { return AI_MODELS.find(m => m.id === id) || AI_MODELS
    Строчка ставится в чат после каждого ответа. */
 function modelBadgeText(id) {
     if (id === 'zveno') return '🅰️ *[Ответил АРХИТЕКТОР (ZVENO) — ключ ZVENO_API_KEY с сервера]*';
-    if (id === 'gigachat') return '🟣 *[Ответила модель: GigaChat (Сбер) — ключ с сервера]*';
+    if (id === 'gigachat') return '🟣 *[Ответил GIGACHAT (Сбер) — работает как Архитектор: боевой промпт + инструменты, ключ с сервера]*';
     if (id === 'duet') return '⚡ *[Режим ДУЭТ: 🅰️ Zveno — черновик → 🟣 GigaChat — супер-дизайн → 🅰️ Zveno — уточнение → 🟣 GigaChat — мега-кодер 3D → 🅰️ Zveno — сводка → 🟣 GigaChat — тест на ошибки → 🅰️ Zveno — проверка замечаний → 🅰️ Zveno — финал]*';
     const info = AI_MODELS.find(m => m.id === id);
     return '❔ *[Модель: ' + ((info && info.label) || id) + ']*';
