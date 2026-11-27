@@ -1302,7 +1302,8 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
     } as any);
 
     const finalData = await finalRes.json();
-    return finalData?.choices?.[0]?.message?.content || "Не удалось получить финальный ответ";
+    const finalText = finalData?.choices?.[0]?.message?.content || "Не удалось получить финальный ответ";
+    return weatherCard ? weatherCard + "\n\n" + finalText : finalText;
 }
 
 // =========================================
