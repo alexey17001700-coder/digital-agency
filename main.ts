@@ -1871,7 +1871,7 @@ Deno.serve(async (request) => {
 
         if (body.scanRepo) return await scanRepoFiles();
 
-        /* 👁 ПРОВЕРКА ЗРЕНИЯ (кнопка «👁 Зрение»): отчёт по каждой vision-модели. */
+        /* 👁 ПРОВЕРКА ЗРЕНИЯ (кнопка «👁 Зрение»): отчёт по каналу GigaChat. */
         if (body.visionTest) {
             try {
                 const report = await runVisionTest();
