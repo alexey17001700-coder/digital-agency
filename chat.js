@@ -2016,13 +2016,14 @@ async function sendMessage(overrideText = null, isKick = false) {
                 // («сисадмин», «управляешь кодом», «Архитектор») её триггерит. Для неё — нейтральный текст.
                 // 🅰️ Zveno и остальные — боевой SYSTEM_PROMPT без изменений.
                 const isGigaChatTurn = !duetTurn && String(modelToUse).indexOf('gigachat') !== -1;
-                /* --- ЖЁСТКАЯ ИЗОЛЯЦИЯ ПРОМПТОВ ПО МОДЕЛИ ---
-                   GigaChat (Сбер) — корпоративная модель с жёсткими фильтрами: ей уходит
-                   ТОЛЬКО нейтральный короткий промпт. Ни память о Боссе, ни инструкции
-                   агентов к нему НЕ подмешиваются — иначе снова сработают фильтры.
-                   Zveno и остальные — полный боевой SYSTEM_PROMPT без изменений. */
-                let finalPrompt = isGigaChatTurn ? NEUTRAL_PROMPT : SYSTEM_PROMPT;
-                if (!isGigaChatTurn) {
+                /* --- 🟣 GIGACHAT РАБОТАЕТ КАК АРХИТЕКТОР (приказ Босса) ---
+                   GigaChat больше НЕ получает нейтральный промпт: ему уходит ТОТ ЖЕ
+                   боевой SYSTEM_PROMPT, что и Zveno, вместе с памятью о Боссе и
+                   инструкциями агентов. Инструменты у него свои — формат Сбера
+                   (functions / function_call), сервер вызывает их сам.
+                   isGigaChatTurn оставлен для совместимости (в логике не участвует). */
+                let finalPrompt = SYSTEM_PROMPT;
+                {
                     if (bossMemory && bossMemory !== "Босс.") finalPrompt += `\n\nПАМЯТЬ О БОССЕ: ${bossMemory}`;
 
                     if (selectedAgents.length > 0) {
