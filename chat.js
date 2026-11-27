@@ -1905,7 +1905,7 @@ async function sendMessage(overrideText = null, isKick = false) {
         clearTimeout(typingTimer); 
         stopSendTimer();   // старый секундомер гасим сразу, не ждём нового старта
     }
-    const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile) return;
+    const text = overrideText || chatInputEl.value.trim(); if (!text && !attachedFile && !attachedImageBase64) return;
     /* --- ДУБЛЬ ОТПРАВКИ ГАСИМ ЗДЕСЬ (до чата и до модели) ---
        Если тот же самый текст от Босса пришёл повторно в течение 4 секунд —
        это эхо голосового ввода, а не новое сообщение. Выходим молча:
