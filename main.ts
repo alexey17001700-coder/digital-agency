@@ -1236,6 +1236,17 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
                 toolFailed = true;
                 toolResult = String(e?.message || e);
             }
+            /* 🌤 КАРТОЧКА ПОГОДЫ — КАК У АРХИТЕКТОРА (приказ Босса).
+               get_weather отдаёт служебный блок [[WEATHER_CARD]]…[[/WEATHER_CARD]].
+               У Zveno он вырезается и возвращается Боссу отдельно — теперь так же
+               у GigaChat: модель не видит служебный JSON, карточка не теряется. */
+            if (fc.name === "get_weather") {
+                const cardMatch = String(toolResult).match(/\[\[WEATHER_CARD\]\]([\s\S]*?)\[\[\/WEATHER_CARD\]\]/);
+                if (cardMatch) {
+                    weatherCard = cardMatch[0];
+                    toolResult = String(toolResult).replace(cardMatch[0], "").trim();
+                }
+            }
             const safeResult = String(toolResult).slice(0, MAX_TOOL_RESULT);
             /* ❗ Сбер требует валидный JSON в результате функции (иначе 422
                "invalid function result json string"). Ошибку тоже отдаём JSON. */
