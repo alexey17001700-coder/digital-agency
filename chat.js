@@ -2502,6 +2502,7 @@ function init() {
     if (typeof ensureDuetButton === 'function') ensureDuetButton();         // ⚡ кнопка «Дуэт» в панели режимов
     if (typeof applyDuetButton === 'function') applyDuetButton();           // ⚡ Дуэт: своё состояние на кнопке
     if (typeof ensureErnieButton === 'function') ensureErnieButton();       // 🟠 кнопка «ERNIE» в панели режимов
+    if (typeof ensureVisionButton === 'function') ensureVisionButton();     // 👁 кнопка «Зрение» — проверка картинок
     if (typeof applyErnieButton === 'function') applyErnieButton();         // 🟠 ERNIE: своё состояние на кнопке
     if (typeof applyArchitectButton === 'function') applyArchitectButton(); // 🅰️ Архитектор: своя кнопка, своё состояние
     // Страховка: выбрана ZVENO, а Архитектор выключен — уходим на разрешённую модель.
