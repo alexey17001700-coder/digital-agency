@@ -1145,7 +1145,10 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
 
     // Копируем историю, чтобы не мутировать оригинал
     const history: any[] = JSON.parse(JSON.stringify(messages));
-    const MAX_LOOPS = 15;
+    /* 🟣 ЛИМИТ ВИТКОВ КАК У АРХИТЕКТОРА (приказ Босса): GigaChat делает ту же
+       работу, значит и шагов с инструментами у него столько же — 20. */
+    const MAX_LOOPS = 20;
+    let weatherCard = "";
 
     // Приводим историю к формату Сбера: content ВСЕГДА строка,
     // роль function обязательно с полем name,
