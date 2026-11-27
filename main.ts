@@ -1283,7 +1283,8 @@ async function callGigaChatTools(messages: any[], requestedModel: string = "", u
 
         // 3. Вызова нет — это финальный ответ
         zlog(`[GIGACHAT-TOOLS] ответила модель: ${model}`);
-        return msg.content || "Пустой ответ";
+        const finalAnswer = msg.content || "Пустой ответ";
+        return weatherCard ? weatherCard + "\n\n" + finalAnswer : finalAnswer;
     }
 
     // Лимит шагов: финальный запрос БЕЗ инструментов, чтобы получить хоть какой-то текст
