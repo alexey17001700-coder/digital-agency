@@ -872,51 +872,19 @@ async function callGigaChatVision(messages: any[], imageBase64: string, userKey:
    кто ответил, кто отказал и почему. Так видно, что чинить в списке,
    а не гадать, почему фото не разобрано. */
 async function runVisionTest(): Promise<string> {
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
-    if (!apiKey) return "❌ ZVENO_API_KEY не задан на сервере (/root/.env)";
+    /* 👁 ДИАГНОСТИКА ЗРЕНИЯ — ТОЛЬКО 🟣 GIGACHAT (приказ Босса).
+       Гоняем одну картинку 1×1 px через канал GigaChat и показываем,
+       ответил он или нет. Ключ — свой из поля ⚙️ или серверный GIGACHAT_KEY. */
     const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
-    const lines: string[] = [];
-    let ok = 0;
-    for (const m of VISION_MODELS) {
-        try {
-            const res = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({
-                    model: m,
-                    messages: [{
-                        role: "user",
-                        content: [
-                            { type: "text", text: "Ответь одним словом: видишь картинку?" },
-                            { type: "image_url", image_url: { url: PIXEL } }
-                        ]
-                    }],
-                    max_tokens: 20,
-                    temperature: 0
-                }),
-                signal: AbortSignal.timeout(60000)
-            });
-            const data = await res.json();
-            const txt = data?.choices?.[0]?.message?.content;
-            if (res.ok && txt) {
-                ok++;
-                if (!goodVisionModel) goodVisionModel = m;
-                lines.push(`✅ ${m} — «${String(txt).slice(0, 60)}»`);
-                zlog(`[VISION-TEST] ✅ ${m}`);
-            } else {
-                const why = data?.error?.message || ("HTTP " + res.status);
-                lines.push(`❌ ${m} — ${why}`);
-                zlog(`[VISION-TEST] ❌ ${m}: ${why}`);
-            }
-        } catch (e: any) {
-            lines.push(`⚠️ ${m} — сбой: ${e?.message || e}`);
-            zlog(`[VISION-TEST] ⚠️ ${m}: ${e?.message || e}`);
-        }
+    try {
+        const txt = await callGigaChatVision([{ role: "user", content: "Ответь одним словом: видишь картинку?" }], PIXEL, "");
+        zlog(`[VISION-TEST] ✅ GigaChat: ${String(txt).slice(0, 60)}`);
+        return `✅ Зрение работает: ответил 🟣 GigaChat.\n\n✅ ${GIGACHAT_MODEL} — «${String(txt).slice(0, 80)}»`;
+    } catch (e: any) {
+        const why = e?.message || String(e);
+        zlog(`[VISION-TEST] ❌ GigaChat: ${why}`);
+        return `❌ Зрение не работает: 🟣 GigaChat не ответил.\n\n❌ ${GIGACHAT_MODEL} — ${why}`;
     }
-    const head = ok > 0
-        ? `✅ Зрение работает: ответили ${ok} из ${VISION_MODELS.length} моделей.`
-        : `❌ Ни одна модель зрения не ответила (0 из ${VISION_MODELS.length}).`;
-    return head + "\n\n" + lines.join("\n");
 }
 
 // =========================================
