@@ -605,7 +605,7 @@ function openVersionPanel() {
     ov.id = 'versionPanel';
     ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
     const box = document.createElement('div');
-    box.style.cssText = 'width:100%;max-width:340px;background:#101418;border:1px solid #2a333d;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6);';
+    box.style.cssText = 'width:100%;max-width:340px;background:#101418;border:1px solid #2a333d;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(0,0,0,.6);max-height:85vh;overflow-y:auto;';
 
     const title = document.createElement('div');
     title.textContent = '📦 ПРАВКИ: ШТАБ';
