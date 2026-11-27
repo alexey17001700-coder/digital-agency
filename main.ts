@@ -797,70 +797,73 @@ if (name === "create_github_repo") {
     }
         }
 // =========================================
-// ЗАПРОС К ZVENO (ЗРЕНИЕ)
+// ЗАПРОС К 🟣 GIGACHAT (ЗРЕНИЕ)
 // =========================================
-async function callZvenoVision(messages: any[], imageBase64: string, userKeys: any = {}, requestedModel: string = ""): Promise<string> {
-    /* 👁 ЗРЕНИЕ — ЛИНЕЙНО, ОДНА модель, БЕЗ ПЕРЕБОРА.
-       Ключ ВСЕГДА серверный: ZVENO_API_KEY из /root/.env. В коде ключей НЕТ. */
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
+async function callGigaChatVision(messages: any[], imageBase64: string, userKey: string = ""): Promise<string> {
+    /* 👁 ЗРЕНИЕ ШТАБА — ТОЛЬКО 🟣 GIGACHAT (приказ Босса).
+       В Штабе строго ДВА канала: 🅰️ Zveno (DeepSeek) и 🟣 GigaChat.
+       DeepSeek картинки не читает, поэтому «глаза» — GigaChat:
+       1) фото загружается в Сбер (POST /files) → получаем file_id;
+       2) file_id уходит вложением в чат (attachments).
+       Ключ — свой из поля ⚙️ или серверный GIGACHAT_KEY. */
+    const token = await gigachatToken(userKey);
 
-    const visionMessages = JSON.parse(JSON.stringify(messages));
+    const m = String(imageBase64 || "").match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+    const mime = m ? m[1] : "image/jpeg";
+    const b64 = m ? m[2] : String(imageBase64 || "");
+    if (!b64) throw new Error("Зрение: пустая картинка");
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const ext = /png/i.test(mime) ? "png" : (/webp/i.test(mime) ? "webp" : "jpg");
 
-    // Жестко перебиваем промпт, чтобы модель не отказывалась смотреть фото
-    const systemIndex = visionMessages.findIndex((m: any) => m.role === "system");
-    const visionPrompt = "Ты зрячий ИИ-помощник. Ты ОБЯЗАН анализировать изображения. Если пользователь прислал фото и задал вопрос — опиши, что на нем изображено, в деталях. Не отказывайся от ответа.";
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type: mime }), "photo." + ext);
+    form.append("purpose", "general");
 
-    if (systemIndex !== -1) {
-        visionMessages[systemIndex].content = visionPrompt;
-    } else {
-        visionMessages.unshift({ role: "system", content: visionPrompt });
+    const up = await fetch("https://gigachat.devices.sberbank.ru/api/v1/files", {
+        method: "POST",
+        headers: { "Accept": "application/json", "Authorization": `Bearer ${token}` },
+        body: form,
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    } as any);
+    const upData = await up.json();
+    if (!up.ok || !upData?.id) {
+        throw new Error(`GigaChat files ${up.status}: ${upData?.message || "не отдал id файла"}`);
     }
+    const fileId = String(upData.id);
+    zlog(`[VISION] фото загружено в GigaChat, id=${fileId}`);
 
-    const lastMsg = visionMessages[visionMessages.length - 1];
-
-    if (lastMsg && lastMsg.role === "user") {
-        const textPrompt = lastMsg.content || "Опиши, что изображено на этом фото.";
-        lastMsg.content = [
-            { type: "text", text: textPrompt },
-            { type: "image_url", image_url: { url: imageBase64 } }
-        ];
-    }
-
-    /* Перебор vision-моделей: первая рабочая запоминается и дальше идёт первой. */
-    const order = goodVisionModel
-        ? [goodVisionModel, ...VISION_MODELS.filter((m) => m !== goodVisionModel)]
-        : VISION_MODELS.slice();
-    let lastVisionErr = "";
-    for (const visionModel of order) {
-        try {
-            const res = await fetch(ZVENO_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({ model: visionModel, messages: visionMessages, max_tokens: 1024, temperature: 0.7 }),
-                signal: AbortSignal.timeout(FETCH_TIMEOUT)
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                lastVisionErr = `${visionModel}: ${data?.error?.message || res.status}`;
-                zlog(`[VISION] отказ — ${lastVisionErr}`);
-                continue;
-            }
-            const text = data?.choices?.[0]?.message?.content;
-            if (!text) {
-                lastVisionErr = `${visionModel}: пустой ответ`;
-                zlog(`[VISION] ${lastVisionErr}`);
-                continue;
-            }
-            goodVisionModel = visionModel;
-            zlog(`[VISION] ответила модель: ${visionModel}`);
-            return String(text);
-        } catch (e: any) {
-            lastVisionErr = `${visionModel}: ${e?.message || e}`;
-            zlog(`[VISION] сбой — ${lastVisionErr}`);
+    const visionPrompt = "Ты зрячий ИИ-помощник. Ты ОБЯЗАН анализировать изображения. Опиши, что на фото, максимально подробно и технически.";
+    let userText = visionPrompt;
+    for (let i = (messages || []).length - 1; i >= 0; i--) {
+        const mm = messages[i];
+        if (mm && mm.role === "user") {
+            userText = typeof mm.content === "string" ? mm.content : JSON.stringify(mm.content);
+            break;
         }
     }
-    throw new Error(`Vision: ни одна модель не ответила (${lastVisionErr || "нет кандидатов"})`);
+
+    const res = await fetch(GIGACHAT_API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            model: GIGACHAT_MODEL,
+            messages: [{ role: "user", content: userText, attachments: [fileId] }],
+            temperature: 0.3,
+        }),
+        client: getGigaChatClient(),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    } as any);
+    const data = await res.json();
+    if (!res.ok) throw new Error(`GigaChat зрение ${res.status}: ${data?.message || "ошибка"}`);
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error("GigaChat зрение: пустой ответ");
+    zlog("[VISION] ответил GigaChat");
+    return String(text);
 }
 
 /* 👁 ДИАГНОСТИКА ЗРЕНИЯ (кнопка «👁 Зрение»).
