@@ -881,6 +881,60 @@ async function callZvenoVision(messages: any[], imageBase64: string, userKeys: a
     }
     throw new Error(`Vision: ни одна модель не ответила (${lastVisionErr || "нет кандидатов"})`);
 }
+
+/* 👁 ДИАГНОСТИКА ЗРЕНИЯ (кнопка «👁 Зрение»).
+   Прогоняет ВСЕ vision-модели шлюза по одной на крошечной картинке
+   (1×1 px, base64 в коде — сеть для неё не нужна) и возвращает отчёт:
+   кто ответил, кто отказал и почему. Так видно, что чинить в списке,
+   а не гадать, почему фото не разобрано. */
+async function runVisionTest(): Promise<string> {
+    const apiKey = Deno.env.get("ZVENO_API_KEY");
+    if (!apiKey) return "❌ ZVENO_API_KEY не задан на сервере (/root/.env)";
+    const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
+    const lines: string[] = [];
+    let ok = 0;
+    for (const m of VISION_MODELS) {
+        try {
+            const res = await fetch(ZVENO_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model: m,
+                    messages: [{
+                        role: "user",
+                        content: [
+                            { type: "text", text: "Ответь одним словом: видишь картинку?" },
+                            { type: "image_url", image_url: { url: PIXEL } }
+                        ]
+                    }],
+                    max_tokens: 20,
+                    temperature: 0
+                }),
+                signal: AbortSignal.timeout(60000)
+            });
+            const data = await res.json();
+            const txt = data?.choices?.[0]?.message?.content;
+            if (res.ok && txt) {
+                ok++;
+                if (!goodVisionModel) goodVisionModel = m;
+                lines.push(`✅ ${m} — «${String(txt).slice(0, 60)}»`);
+                zlog(`[VISION-TEST] ✅ ${m}`);
+            } else {
+                const why = data?.error?.message || ("HTTP " + res.status);
+                lines.push(`❌ ${m} — ${why}`);
+                zlog(`[VISION-TEST] ❌ ${m}: ${why}`);
+            }
+        } catch (e: any) {
+            lines.push(`⚠️ ${m} — сбой: ${e?.message || e}`);
+            zlog(`[VISION-TEST] ⚠️ ${m}: ${e?.message || e}`);
+        }
+    }
+    const head = ok > 0
+        ? `✅ Зрение работает: ответили ${ok} из ${VISION_MODELS.length} моделей.`
+        : `❌ Ни одна модель зрения не ответила (0 из ${VISION_MODELS.length}).`;
+    return head + "\n\n" + lines.join("\n");
+}
+
 // =========================================
 // ЗАПРОС К ZVENO (ТЕКСТ И ИНСТРУМЕНТЫ)
 // =========================================
