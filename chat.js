@@ -127,7 +127,7 @@ const AI_MODELS_DEFAULT = [
 let AI_MODELS = AI_MODELS_DEFAULT;
 /* Версия списка: подняли — старый сохранённый список в localStorage
    перезаписывается новым (иначе у Босса остался бы старый набор моделей). */
-const AI_MODELS_VERSION = '2026-02-20-zveno-gigachat-ernie';   // Архитектор + GigaChat + бесплатная Baidu ERNIE
+const AI_MODELS_VERSION = '2026-02-21-zveno-gigachat';   // Архитектор + GigaChat (бесплатный ERNIE убран)
 try {
     const ver = localStorage.getItem('shtabAIModelsVer');
     const sm = localStorage.getItem('shtabAIModels');
