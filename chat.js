@@ -371,74 +371,8 @@ function toggleGigaChat() {
 window.toggleGigaChat = toggleGigaChat;
 window.applyGigaChatButton = applyGigaChatButton;
 
-/* --- ОТДЕЛЬНАЯ КНОПКА «🟠 ERNIE» ---
-   Босс включает бесплатную модель Baidu ERNIE (baidu/ernie-5.5-flash-preview:free)
-   одним тапом, не заходя в список моделей. Идёт через шлюз ZvenoAI на серверном
-   ключе ZVENO_API_KEY — свой ключ не нужен.
-   Тап — включить, повторный тап — вернуть ту модель, что была до этого. */
-function isErnieActive() { return selectedAIModel === 'ernie'; }
-/* ТОЛЬКО внешний вид кнопки — без вызова соседних apply-функций (без рекурсии). */
-function updateErnieButtonVisual() {
-    const b = document.getElementById('btnErnie');
-    if (!b) return;
-    if (isErnieActive()) {
-        b.classList.add('active');
-        b.innerText = '🟠 ERNIE: ВКЛ';
-        b.style.borderColor = '#ff9800';
-        b.style.color = '#ffb74d';
-        b.style.background = 'rgba(255,152,0,.16)';
-    } else {
-        b.classList.remove('active');
-        b.innerText = '🟠 ERNIE';
-        b.style.borderColor = '#ff9800';
-        b.style.color = '#ff9800';
-        b.style.background = '';
-    }
-}
-function applyErnieButton() {
-    updateErnieButtonVisual();
-    if (typeof applyAIModelButton === 'function') { try { applyAIModelButton(); } catch (e) {} }
-    if (typeof applyFreeModelButton === 'function') { try { applyFreeModelButton(); } catch (e) {} }
-}
-function toggleErnie() {
-    /* ⚡ В дуэте оба канала в работе: тап по 🟠 сначала выключает дуэт. */
-    if (typeof duetEnabled === 'function' && duetEnabled()) {
-        setDuet(false);
-        renderMessage('⚡ *[Дуэт выключен тапом по 🟠 — теперь отвечает одна модель.]*', 'director', 'Оркестратор');
-        return;
-    }
-    if (isErnieActive()) {
-        /* Возврат на прежнюю модель. Если её больше нет в списке — встаём на GigaChat. */
-        const prev = localStorage.getItem('shtabAIModelBeforeErnie') || 'gigachat';
-        selectedAIModel = AI_MODELS.some(m => m.id === prev) ? prev : 'gigachat';
-        renderMessage('🟠 *[ERNIE выключен — вернул прежнюю модель]*', 'director', 'Оркестратор');
-    } else {
-        localStorage.setItem('shtabAIModelBeforeErnie', selectedAIModel);
-        selectedAIModel = 'ernie';
-        renderMessage('🟠 *[Baidu ERNIE включён — следующие ответы идут через бесплатную модель baidu/ernie-5.5-flash-preview:free]*', 'director', 'Оркестратор');
-    }
-    try { localStorage.setItem('shtabAIModel', selectedAIModel); } catch (e) {}
-    applyErnieButton();
-    if (typeof syncModeButtons === 'function') syncModeButtons();
-}
-/* Кнопка «🟠 ERNIE» ставится в панель режимов рядом с 🟣 GigaChat / ⚡ Дуэт.
-   HTML не трогаем — кнопка создаётся здесь и живёт как остальные mode-btn. */
-function ensureErnieButton() {
-    if (document.getElementById('btnErnie')) return;
-    const anchor = document.getElementById('btnDuet') || document.getElementById('btnGigaChat');
-    if (!anchor || !anchor.parentNode) return;
-    const b = document.createElement('button');
-    b.id = 'btnErnie';
-    b.className = 'mode-btn';
-    b.type = 'button';
-    b.onclick = () => toggleErnie();
-    b.title = 'Baidu ERNIE — бесплатная модель. Тап — включить/выключить.';
-    anchor.parentNode.insertBefore(b, anchor.nextSibling);
-    updateErnieButtonVisual();
-}
-window.toggleErnie = toggleErnie;
-window.applyErnieButton = applyErnieButton;
-window.ensureErnieButton = ensureErnieButton;
+/* ❗ КНОПКА «🟠 ERNIE» УБРАНА (приказ Босса): бесплатные модели через шлюз
+   Zveno больше не используются. В Штабе строго ДВА канала: 🅰️ Zveno и 🟣 GigaChat. */
 
 /* --- КНОПКА «👁 ЗРЕНИЕ» ---
    Босс нажимает — Штаб спрашивает сервер, читает ли он картинки, и печатает
