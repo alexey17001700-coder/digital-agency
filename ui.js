@@ -645,7 +645,11 @@ function openVersionPanel() {
             h.textContent = '📝 ЧТО СЧИТАЛОСЬ ПРАВКОЙ';
             h.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:.6px;color:#8b98a5;margin:12px 0 6px;';
             box.appendChild(h);
-            d.log.slice().reverse().forEach(it => {
+            /* --- ЖУРНАЛ: СНАЧАЛА ТОЛЬКО ПОСЛЕДНЯЯ ПРАВКА ---
+               Босс: список длинный и не проматывался. Теперь наверху видна
+               ТОЛЬКО последняя правка (самая свежая), остальные спрятаны
+               под кнопкой «Показать все правки». Сама панель прокручивается. */
+            const makeLogRow = (it) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #1d242c;font-size:12px;line-height:1.35;';
                 const n = document.createElement('span');
@@ -655,8 +659,26 @@ function openVersionPanel() {
                 t.textContent = it.text || '';
                 t.style.color = '#c9d6e2';
                 row.appendChild(n); row.appendChild(t);
-                box.appendChild(row);
-            });
+                return row;
+            };
+            const logList = d.log.slice().reverse();
+            box.appendChild(makeLogRow(logList[0]));   // последняя правка — всегда на виду
+            if (logList.length > 1) {
+                const rest = document.createElement('div');
+                rest.style.cssText = 'display:none;';
+                logList.slice(1).forEach(it => rest.appendChild(makeLogRow(it)));
+                box.appendChild(rest);
+                const more = document.createElement('button');
+                const moreLabel = '▾ Показать все правки (' + (logList.length - 1) + ')';
+                more.textContent = moreLabel;
+                more.style.cssText = 'width:100%;padding:8px;margin-top:8px;border:1px solid #2a333d;border-radius:8px;background:transparent;color:#8b98a5;font-size:12px;cursor:pointer;';
+                more.onclick = () => {
+                    const open = rest.style.display !== 'none';
+                    rest.style.display = open ? 'none' : 'block';
+                    more.textContent = open ? moreLabel : '▴ Свернуть список';
+                };
+                box.appendChild(more);
+            }
         }
         if (d.note) {
             const n = document.createElement('div');
