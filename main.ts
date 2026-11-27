@@ -989,77 +989,10 @@ async function callZvenoAI(messages: any[], userKeys: any = {}, isBoss: boolean 
 }
 
 // =========================================
-// 🟠 BAIDU ERNIE — ОТДЕЛЬНЫЙ КАНАЛ (бесплатная модель)
-// Модель: baidu/ernie-5.5-flash-preview:free (шлюз ZvenoAI, ключ серверный).
-// Формат OpenAI, инструменты включены — как у канала Zveno.
+// ❗ КАНАЛ ERNIE УДАЛЁН (приказ Босса).
+// Бесплатные модели через шлюз Zveno больше не используются.
+// В Штабе строго ДВА канала: 🅰️ Zveno (DeepSeek) и 🟣 GigaChat.
 // =========================================
-async function callErnieAI(messages: any[], userKeys: any = {}, requestedModel: string = ""): Promise<string> {
-    const apiKey = Deno.env.get("ZVENO_API_KEY");
-    if (!apiKey) throw new Error("ZVENO_API_KEY не задан на сервере (/root/.env)");
-
-    const activeModel = ERNIE_MODEL;
-    const currentMessages = JSON.parse(JSON.stringify(messages));
-    let weatherCard = "";
-
-    for (let loop = 0; loop < 20; loop++) {
-        const res = await fetch(ZVENO_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-            body: JSON.stringify({ model: activeModel, messages: currentMessages, temperature: 0.5, tools: TOOLS, tool_choice: "auto" }),
-            signal: AbortSignal.timeout(FETCH_TIMEOUT)
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            const errMsg = `${activeModel}: ${data?.error?.message || res.status}`;
-            zlog(`[ERNIE] ошибка: ${errMsg}`);
-            throw new Error(errMsg);   // ошибка уходит в чат как есть — без переключений
-        }
-        const msg = data?.choices?.[0]?.message;
-        if (!msg) throw new Error(`${activeModel}: пустой ответ`);
-
-        if (msg.tool_calls && msg.tool_calls.length > 0) {
-            currentMessages.push(msg);
-            for (const tc of msg.tool_calls) {
-                const fnName = tc.function.name;
-                const fnArgs = JSON.parse(tc.function.arguments || "{}");
-                zlog(`[ERNIE][TOOL] ${fnName}(${JSON.stringify(fnArgs).slice(0, 100)})`);
-                const result = await executeTool(fnName, fnArgs);
-                let toolResult = result;
-                if (fnName === "get_weather") {
-                    const cardMatch = result.match(/\[\[WEATHER_CARD\]\]([\s\S]*?)\[\[\/WEATHER_CARD\]\]/);
-                    if (cardMatch) { weatherCard = cardMatch[0]; toolResult = result.replace(cardMatch[0], "").trim(); }
-                }
-                currentMessages.push({ role: "tool", tool_call_id: tc.id, content: toolResult.slice(0, MAX_TOOL_RESULT) });
-            }
-            continue;
-        }
-
-        const answer = msg.content || "Пустой ответ";
-        zlog(`[ERNIE] ответила: ${activeModel}`);
-        return weatherCard ? weatherCard + "\n\n" + answer : answer;
-    }
-
-    // ЛИМИТ ШАГОВ — финальный вызов БЕЗ инструментов.
-    try {
-        const finalMessages = currentMessages.concat([{
-            role: "user",
-            content: "[СИСТЕМА: Лимит шагов исчерпан, инструменты ОТКЛЮЧЕНЫ. Выдай финальный ответ Боссу ТЕКСТОМ: что сделано, где, результат.]"
-        }]);
-        const fres = await fetch(ZVENO_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-            body: JSON.stringify({ model: activeModel, messages: finalMessages, temperature: 0.5, tools: [], tool_choice: "none" }),
-            signal: AbortSignal.timeout(FETCH_TIMEOUT)
-        });
-        const fdata = await fres.json();
-        const ftext = fdata?.choices?.[0]?.message?.content;
-        if (fres.ok && ftext) {
-            zlog(`[ERNIE] финальный ответ без инструментов: ${activeModel}`);
-            return weatherCard ? weatherCard + "\n\n" + ftext : ftext;
-        }
-    } catch (e: any) { zlog(`[ERNIE][FINAL] ${e?.message || e}`); }
-    return "⚠️ Слишком много шагов. Задача прервана.";
-}
 
 // =========================================
 // GIGACHAT (СБЕР) — ПОМОЩНИК
