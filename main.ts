@@ -2000,8 +2000,33 @@ Deno.serve(async (request) => {
             /* ❗ ДВА КАНАЛА, ЛИНЕЙНО, БЕЗ ПЕРЕБОРА (приказ Босса).
                Инструменты (Tools) включены в ОБОИХ каналах. */
             if (body.image) {
-                // 👁 Фото — зрение канала Zveno.
-                aiText = await callZvenoVision(body.messages, body.image, userKeys, reqModel);
+                /* 👁 ФОТО — ЗРЕНИЕ КАНАЛА ZVENO (приказ Босса).
+                   Раньше сервер на фото отвечал ТОЛЬКО описанием, а задачу Босса
+                   не решал. Теперь: фото → подробное описание → описание
+                   подмешивается в последнее сообщение Босса → и дальше идёт
+                   ОБЫЧНЫЙ канал с инструментами. Архитектор и «видит» картинку,
+                   и делает работу. */
+                const msgsWithPhoto = JSON.parse(JSON.stringify(body.messages || []));
+                let visionDesc = "";
+                try {
+                    visionDesc = await callZvenoVision(msgsWithPhoto, String(body.image), userKeys, reqModel);
+                } catch (e: any) {
+                    zlog(`[VISION] фото не прочитано: ${e?.message || e}`);
+                }
+                if (!visionDesc) {
+                    return json({ choices: [{ message: { content: "👁 Не смог прочитать фото: ни одна vision-модель шлюза не ответила. Скинь скрин ещё раз или опиши словами." } }] });
+                }
+                for (let i = msgsWithPhoto.length - 1; i >= 0; i--) {
+                    if (msgsWithPhoto[i] && msgsWithPhoto[i].role === "user") {
+                        const cur = typeof msgsWithPhoto[i].content === "string" ? msgsWithPhoto[i].content : JSON.stringify(msgsWithPhoto[i].content);
+                        msgsWithPhoto[i].content = `[ФОТО ОТ БОССА — ЧТО НА НЁМ]\n${visionDesc}\n\n[ЗАДАЧА БОССА]\n${cur}`;
+                        break;
+                    }
+                }
+                if (isDuetReq) aiText = await callDuet(msgsWithPhoto, userKeys, gcKey);
+                else if (/^gigachat/i.test(reqModel)) aiText = await callGigaChatTools(msgsWithPhoto, reqModel, gcKey);
+                else if (/^ernie/i.test(reqModel)) aiText = await callErnieAI(msgsWithPhoto, userKeys, reqModel);
+                else aiText = await callZvenoAI(msgsWithPhoto, userKeys, true, reqModel);
             } else if (isDuetReq) {
                 // ⚡ ДУЭТ: Zveno (черновик) → GigaChat (критик и финал). Максимум 2 шага.
                 aiText = await callDuet(body.messages, userKeys, gcKey);
