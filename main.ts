@@ -2030,12 +2030,12 @@ Deno.serve(async (request) => {
                 const msgsWithPhoto = JSON.parse(JSON.stringify(body.messages || []));
                 let visionDesc = "";
                 try {
-                    visionDesc = await callZvenoVision(msgsWithPhoto, String(body.image), userKeys, reqModel);
+                    visionDesc = await callGigaChatVision(msgsWithPhoto, String(body.image), gcKey);
                 } catch (e: any) {
                     zlog(`[VISION] фото не прочитано: ${e?.message || e}`);
                 }
                 if (!visionDesc) {
-                    return json({ choices: [{ message: { content: "👁 Не смог прочитать фото: ни одна vision-модель шлюза не ответила. Скинь скрин ещё раз или опиши словами." } }] });
+                    return json({ choices: [{ message: { content: "👁 Не смог прочитать фото: канал GigaChat не ответил. Скинь скрин ещё раз или опиши словами." } }] });
                 }
                 for (let i = msgsWithPhoto.length - 1; i >= 0; i--) {
                     if (msgsWithPhoto[i] && msgsWithPhoto[i].role === "user") {
