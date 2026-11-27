@@ -395,7 +395,7 @@ async function runVisionTest() {
 }
 function ensureVisionButton() {
     if (document.getElementById('btnVision')) return;
-    const anchor = document.getElementById('btnErnie') || document.getElementById('btnDuet') || document.getElementById('btnGigaChat');
+    const anchor = document.getElementById('btnDuet') || document.getElementById('btnGigaChat');
     if (!anchor || !anchor.parentNode) return;
     const b = document.createElement('button');
     b.id = 'btnVision';
