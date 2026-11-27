@@ -141,7 +141,19 @@ function withEconomy(systemPrompt: string): string {
 
 /* 👁 ЗРЕНИЕ — ОДНА модель, Босс её не выбирает.
    Это «глаза» канала Zveno: фото → описание → в контекст. */
-const VISION_MODEL = "nvidia/nemotron-3.5-super-vl:free";
+/* 👁 ЗРЕНИЕ — СПИСОК МОДЕЛЕЙ-КАНДИДАТОВ (приказ Босса: картинки читаем через Zveno).
+   Шлюз ZvenoAI отдаёт разные vision-модели, и какая жива сегодня — заранее
+   неизвестно. Поэтому пробуем по очереди и ЗАПОМИНАЕМ рабочую: дальше зрение
+   ходит прямо в неё, без перебора. Ключ всегда серверный (ZVENO_API_KEY). */
+const VISION_MODELS = [
+    "nvidia/nemotron-3.5-super-vl:free",
+    "qwen/qwen2.5-vl-72b-instruct:free",
+    "qwen/qwen2.5-vl-7b-instruct:free",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
+    "google/gemma-3-27b-it:free",
+    "openai/gpt-4o-mini"
+];
+let goodVisionModel = "";   // рабочая модель зрения, найденная один раз
 const SHATAB_SECRET = Deno.env.get("SHATAB_SECRET") || "";
 /* 📡 GIT РАДАР — ОТДЕЛЬНЫЙ ключ для прокси GitHub.
    НЕ SHATAB_SECRET: тот защищает запись в Штаб, и его нельзя светить в браузере.
