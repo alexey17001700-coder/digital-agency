@@ -2086,7 +2086,6 @@ Deno.serve(async (request) => {
                 }
                 if (isDuetReq) aiText = await callDuet(msgsWithPhoto, userKeys, gcKey);
                 else if (/^gigachat/i.test(reqModel)) aiText = await callGigaChatTools(msgsWithPhoto, reqModel, gcKey);
-                else if (/^ernie/i.test(reqModel)) aiText = await callErnieAI(msgsWithPhoto, userKeys, reqModel);
                 else aiText = await callZvenoAI(msgsWithPhoto, userKeys, true, reqModel);
             } else if (isDuetReq) {
                 // ⚡ ДУЭТ: Zveno (черновик) → GigaChat (критик и финал). Максимум 2 шага.
