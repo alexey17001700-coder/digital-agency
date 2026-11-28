@@ -527,6 +527,114 @@ function openModelSettingsPanel(id, onBack) {
 }
 window.openModelSettingsPanel = openModelSettingsPanel;
 
+/* =========================================
+   🔐 ЗАМОК УДАЛЕНИЯ РЕПОЗИТОРИЕВ (приказ Босса)
+   Кодовое слово НЕ хранится в открытом виде. В файле secret_lock.json
+   лежит только его хеш (djb2, 32 бита) — восстановить слово нельзя.
+   Кнопка «🔐 Пароль» даёт Боссу ввести слово и проверить его.
+   Удаление репозитория выполняется ТОЛЬКО при совпадении хеша.
+   ========================================= */
+const SECRET_LOCK_FILE = 'secret_lock.json';
+let __secretLockData = null;
+
+/* djb2 — тот же алгоритм, что и на сервере (main.ts). 32-битная арифметика. */
+function secretHash(str) {
+    let h = 5381;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) {
+        h = (Math.imul(h, 33) + s.charCodeAt(i)) >>> 0;
+    }
+    return h;
+}
+
+async function loadSecretLock() {
+    if (__secretLockData) return __secretLockData;
+    try {
+        const r = await fetch(SECRET_LOCK_FILE + '?v=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        __secretLockData = await r.json();
+    } catch (e) {
+        console.warn('secret_lock.json не прочитан:', e);
+        __secretLockData = null;
+    }
+    return __secretLockData;
+}
+
+async function openSecretLockPanel() {
+    const old = document.getElementById('secretLockPanel');
+    if (old) old.remove();
+
+    const data = await loadSecretLock();
+
+    const ov = document.createElement('div');
+    ov.id = 'secretLockPanel';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:340px;background:#0d1418;border:1px solid #ffd700;border-radius:14px;padding:18px;color:#e6edf3;box-shadow:0 12px 40px rgba(255,215,0,.18);max-height:85vh;overflow-y:auto;';
+
+    const title = document.createElement('div');
+    title.textContent = '🔐 ПАРОЛЬ НА УДАЛЕНИЕ';
+    title.style.cssText = 'font-size:15px;font-weight:700;letter-spacing:.5px;color:#ffd700;margin-bottom:4px;';
+    box.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.textContent = 'Кодовое слово для удаления репозиториев. В файле лежит только его хеш — само слово не хранится.';
+    sub.style.cssText = 'font-size:11px;color:#8b98a5;line-height:1.4;margin-bottom:12px;';
+    box.appendChild(sub);
+
+    const st = document.createElement('div');
+    st.textContent = data ? ('✅ Замок загружен · алгоритм ' + (data.algo || 'djb2')) : '⚠️ secret_lock.json не прочитан';
+    st.style.cssText = 'font-size:11px;color:' + (data ? '#7ee08a' : '#ff8888') + ';margin-bottom:10px;line-height:1.4;';
+    box.appendChild(st);
+
+    const keyWrap = document.createElement('div');
+    keyWrap.style.cssText = 'position:relative;margin-bottom:8px;';
+    const inp = document.createElement('input');
+    inp.type = 'password';
+    inp.className = 'modal-textarea';
+    inp.placeholder = 'Кодовое слово';
+    inp.style.cssText = 'height:40px;margin-bottom:0;padding-right:42px;width:100%;box-sizing:border-box;';
+    const eye = document.createElement('button');
+    eye.textContent = '👁';
+    eye.style.cssText = 'position:absolute;right:10px;top:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#aaa;';
+    eye.onclick = () => { inp.type = inp.type === 'password' ? 'text' : 'password'; eye.textContent = inp.type === 'password' ? '👁' : '🙈'; };
+    keyWrap.appendChild(inp); keyWrap.appendChild(eye);
+    box.appendChild(keyWrap);
+
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:12px;line-height:1.4;margin:8px 0;min-height:16px;';
+    box.appendChild(msg);
+
+    const check = document.createElement('button');
+    check.textContent = '🔓 ПРОВЕРИТЬ';
+    check.style.cssText = 'display:block;width:100%;padding:11px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid #ffd700;background:#ffd700;color:#000;';
+    check.onclick = () => {
+        const v = String(inp.value || '').trim();
+        if (!v) { msg.textContent = 'Впиши слово — поле пустое.'; msg.style.color = '#ffd700'; return; }
+        if (!data || typeof data.hash !== 'number') { msg.textContent = '❌ Замок не загружен — проверять нечем.'; msg.style.color = '#ff8888'; return; }
+        if (secretHash(v) === data.hash) {
+            msg.textContent = '✅ Верно. Слово подходит — можно удалять (кроме digital-agency и window_calc).';
+            msg.style.color = '#7ee08a';
+        } else {
+            msg.textContent = '❌ Неверно. Это не то слово.';
+            msg.style.color = '#ff8888';
+        }
+    };
+    box.appendChild(check);
+
+    const close = document.createElement('button');
+    close.textContent = 'ЗАКРЫТЬ';
+    close.style.cssText = 'display:block;width:100%;padding:10px;margin-top:10px;border:1px solid #2a333d;border-radius:9px;background:transparent;color:#8b98a5;font-size:13px;cursor:pointer;';
+    close.onclick = () => ov.remove();
+    box.appendChild(close);
+
+    ov.appendChild(box);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+    setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
+}
+window.openSecretLockPanel = openSecretLockPanel;
+
 function refreshShtab() {
     if (!confirm("🔄 Обновить Штаб? Страница перезагрузится.")) return;
     if ('caches' in window) {
