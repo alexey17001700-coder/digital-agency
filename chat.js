@@ -2330,7 +2330,13 @@ async function sendMessage(overrideText = null, isKick = false) {
         } else {
             // НАДЗИРАТЕЛЬ: Архитектор сорвался — помечаем сбой в журнале.
             if (typeof supFailed === 'function') supFailed('arch', lastError || 'сбой');
-            renderMessage(`❌ **Ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
+            /* 💸 Ключ вписан, канал включён, вопрос задан — а сервер отказал
+               по деньгам. Пишем Боссу по-человечески, а не сухой код. */
+            if (isBalanceError(lastError)) {
+                renderMessage(balanceErrorMessage(lastError), 'director', 'Оркестратор');
+            } else {
+                renderMessage(`❌ **Ошибка AI:**\n${lastError}`, 'director', 'Оркестратор');
+            }
             if (elAi) elAi.className = 'status-item offline'; if (typeof updateAgentStatus === 'function') updateAgentStatus(activeAgent, 'error');
         }
     } finally {
