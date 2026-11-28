@@ -607,11 +607,14 @@ const TOOLS = [
         type: "function",
         function: {
             name: "delete_github_repo",
-            description: "Удаляет репозиторий с GitHub. ЗАПРЕЩЕНО удалять digital-agency (Штаб) и window_calc.",
+            description: "Удаляет репозиторий с GitHub. ТРЕБУЕТ кодовое слово Босса (password). ЗАПРЕЩЕНО удалять digital-agency (Штаб) и window_calc.",
             parameters: {
                 type: "object",
-                properties: { name: { type: "string", description: "Имя репозитория для удаления" } },
-                required: ["name"]
+                properties: {
+                    name: { type: "string", description: "Имя репозитория для удаления" },
+                    password: { type: "string", description: "Кодовое слово Босса. Без него удаление НЕ выполняется." }
+                },
+                required: ["name", "password"]
             }
         }
     },
