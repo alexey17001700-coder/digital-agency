@@ -1882,6 +1882,27 @@ function trimHistory(messages) {
     return systemMsg ? [systemMsg, ...kept] : kept;
 }
 
+/* --- 💸 ДЕНЬГИ НА КЛЮЧЕ КОНЧИЛИСЬ ---
+   Ключ вписан, канал включён, вопрос задан — а сервер вернул ошибку.
+   Раньше в чат летел сухой текст провайдера («insufficient_quota», «402»),
+   и Босс не понимал, что стряслось. Теперь такой ответ распознаём и пишем
+   по-человечески: на ключе кончились деньги. */
+const BALANCE_ERROR_RE = /(?:insufficient|no\s+credit|out\s+of\s+credit|credit\s+balance|not\s+enough|balance|quota|payment\s+required|billing|402|429|лимит|баланс|пополн|средств|оплат|деньг|закончил|исчерпан)/i;
+function isBalanceError(text) {
+    const s = String(text || '');
+    if (BALANCE_ERROR_RE.test(s)) return true;
+    /* Ключ вписан и канал 🅰️ включён, а сервер отказал — по опыту это
+       деньги/лимит ключа. Показываем Боссу понятную причину, но ответ
+       сервера печатаем как есть — ничего не скрываем. */
+    return (String(selectedAIModel || '') === 'zveno' && !!architectKey());
+}
+function balanceErrorMessage(raw) {
+    return '💸 **НА КЛЮЧЕ ЗАКОНЧИЛИСЬ ДЕНЬГИ.**\n\n' +
+        'Ключ вписан и канал включён, но провайдер отказал: баланс исчерпан или лимит запросов.\n' +
+        'Пополни счёт ключа — и я снова заработаю.\n\n' +
+        'Ответ сервера: ' + String(raw || '').trim();
+}
+
 async function sendMessage(overrideText = null, isKick = false) {
     if (isGenerating && !isKick) { 
         if (currentAbortController) currentAbortController.abort(); 
